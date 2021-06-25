@@ -1,0 +1,7 @@
+node_modules/
+dist/
+output/
+/sample
+*.log
+.history
+*.map

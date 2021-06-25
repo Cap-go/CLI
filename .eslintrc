@@ -1,0 +1,53 @@
+{
+  "extends": ["airbnb-base", "plugin:@typescript-eslint/recommended", "eslint-config-prettier"],
+  "parser": "@typescript-eslint/parser",
+  "plugins": ["@typescript-eslint", "prettier", "drill4j"],
+  "settings": {
+    "import/parsers": {
+      "@typescript-eslint/parser": [".ts", ".tsx"]
+    },
+    "import/resolver": {
+      "typescript": {}
+    }
+  },
+  "rules": {
+    "drill4j/license-header": ["error"],
+    "import/prefer-default-export": 0,
+    "import/no-extraneous-dependencies": [
+      2,
+      {
+        "devDependencies": ["**/spec.tsx", "**/spec.ts", "__tests__/**/*"]
+      }
+    ],
+    "import/extensions": 0,
+    "indent": "off",
+    "@typescript-eslint/indent": ["error", 2],
+    "eofline": 0,
+    "arrow-parens": 0,
+    "ordered-imports": 0,
+    "object-literal-sort-keys": 0,
+    "no-empty": 2,
+    "no-unused-expression": 0,
+    "linebreak-style": 0,
+    "@typescript-eslint/explicit-function-return-type": 0,
+    "max-len": [
+      "error",
+      {
+        "code": 140
+      }
+    ],
+    "@typescript-eslint/no-use-before-define": 0,
+    "@typescript-eslint/no-empty-function": 0,
+    "no-unused-expressions": 0,
+    "operator-linebreak": 0,
+    "implicit-arrow-linebreak": 0,
+    "no-implicit-dependencies": 0,
+    "no-use-before-define": 0,
+    "class-methods-use-this": 0,
+    "no-restricted-syntax": 0,
+    "no-await-in-loop": 0,
+    "no-continue": 0,
+    "no-underscore-dangle": 0,
+    "no-console": 0
+  }
+}

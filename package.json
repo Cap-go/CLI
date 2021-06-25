@@ -1,0 +1,42 @@
+{
+  "name": "typescript-cli-boilerplate",
+  "version": "0.0.1",
+  "description": "A boilerplate project to help bootstrapping CLI development with TypeScript",
+  "main": "dist/index.js",
+  "scripts": {
+    "dev": "set NODE_ENV=development&& npx webpack --config webpack.config.js",
+    "no-debug": "node dist/index.js",
+    "build": "set NODE_ENV=production&& npx webpack --config webpack.config.js",
+    "pack": "pkg",
+    "lint": "eslint . --ext .ts --fix"
+  },
+  "author": "github.com/RomanDavlyatshin",
+  "license": "Apache 2.0",
+  "dependencies": {
+    "commander": "^7.2.0",
+    "fs-extra": "^9.1.0",
+    "upath": "^2.0.1"
+  },
+  "devDependencies": {
+    "@types/fs-extra": "^9.0.1",
+    "@typescript-eslint/eslint-plugin": "^4.1.1",
+    "awesome-typescript-loader": "^5.2.1",
+    "eslint-config-airbnb-base": "^14.2.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-import-resolver-typescript": "^2.3.0",
+    "eslint-plugin-drill4j": "0.0.2",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-prettier": "^3.1.4",
+    "git-format-staged": "^2.1.0",
+    "husky": "^4.3.0",
+    "nodemon": "^2.0.4",
+    "pkg": "^5.3.0",
+    "prettier": "^2.1.2",
+    "ts-node": "^8.5.2",
+    "tsconfig-paths": "^3.9.0",
+    "typescript": "^4.2.3",
+    "webpack": "^4.44.2",
+    "webpack-cli": "^3.3.12",
+    "webpack-node-externals": "^2.5.2"
+  }
+}
