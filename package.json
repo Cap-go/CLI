@@ -1,8 +1,9 @@
 {
   "name": "capgo",
-  "version": "0.0.3",
+  "version": "0.0.5",
   "description": "A CLI to upload to capacitor go servers",
   "main": "dist/index.js",
+  "bin": "dist/index.js",
   "scripts": {
     "dev": "set NODE_ENV=development&& npx webpack --config webpack.config.js",
     "no-debug": "node dist/index.js",
@@ -13,6 +14,7 @@
   "author": "github.com/riderx",
   "license": "Apache 2.0",
   "dependencies": {
+    "@capacitor/cli": "^3.3.3",
     "adm-zip": "^0.5.9",
     "axios": "^0.24.0",
     "commander": "^7.2.0",
@@ -22,7 +24,6 @@
     "upath": "^2.0.1"
   },
   "devDependencies": {
-    "@capacitor/cli": "^3.3.3",
     "@types/adm-zip": "^0.4.34",
     "@types/fs-extra": "^9.0.1",
     "@typescript-eslint/eslint-plugin": "^4.1.1",
