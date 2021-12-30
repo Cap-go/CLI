@@ -6,6 +6,7 @@ import axios from 'axios'
 program
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-i, --icon <icon>', 'icon to link to your app')
+  .option('-p, --production <production>', 'set version for production')
   .option('-p, --path <path>', 'path of the file to upload')
   .option('-v, --version <version>', 'version number of the file to upload')
   .option('-n, --name <name>', 'name of the app to upload');
@@ -15,7 +16,7 @@ const options = program.opts();
 
 start();
 async function start() {
-  let { name, apikey, version, path, icon } = options;
+  let { name, apikey, version, path, icon, production } = options;
   let config;
   try {
     config = await loadConfig();
@@ -45,6 +46,7 @@ async function start() {
       version,
       name,
       icon,
+      mode: production ? 'prod' : 'dev',
       app: zip.toBuffer().toString('base64')
     }, {
     headers: {
