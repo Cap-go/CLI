@@ -1,8 +1,16 @@
-# Typescript CLI boilerplate
+# Capacitor Go CLI
 
-A boilerplate project to help bootstrapping CLI development with TypeScript
+A CLI to upload and download files from the Capacitor go Cloud.
 
-## Development build & debug
+## Install 
+
+`npm i -g capgo`
+## Usage
+
+# Send Dev version to Cloud
+`capgo --apikey=******** --path=./dist --version=0.0.4 --name=mimesis`
+# Send Producition version to Cloud
+`capgo --apikey=******** --path=./dist --version=0.0.4 --name=mimesis --production`
 
 1. Install development dependencies
 
