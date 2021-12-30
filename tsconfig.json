@@ -7,7 +7,7 @@
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": "src",
-    "lib": ["es2016"],
+    "lib": ["es2016", "dom"]
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "__tests__", "**/*.spec.ts"]

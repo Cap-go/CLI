@@ -1,27 +1,57 @@
 import program from 'commander';
-import fsExtra from 'fs-extra';
-import * as upath from 'upath';
+import { loadConfig } from '@capacitor/cli/dist';
+import AdmZip from 'adm-zip';
+import axios from 'axios'
 
 program
-  .option('-u, --username <username>', 'username to greet')
-  .option('-w, --write <write>', 'write to file? Y/N')
-  .option('-o, --out-folder <out-folder>', 'folder to write results to');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-i, --icon <icon>', 'icon to link to your app')
+  .option('-p, --path <path>', 'path of the file to upload')
+  .option('-v, --version <version>', 'version number of the file to upload')
+  .option('-n, --name <name>', 'name of the app to upload');
 
 program.parse(process.argv);
 const options = program.opts();
 
 start();
 async function start() {
-  const { username, write, outFolder = 'output' } = options;
-  console.log(`Welcome, ${username}`);
-  if (write?.toLowerCase() === 'y') {
-    const targetDir = upath.join(outFolder, 'another-dir');
-    await fsExtra.ensureDir(targetDir);
-    const filePath = upath.join(targetDir, `${Date.now()}.json`);
-    await fsExtra.writeJson(filePath, {
-      date: new Date(),
-      username,
-      event: 'CLI was launched',
-    });
+  let { name, apikey, version, path, icon } = options;
+  let config;
+  try {
+    config = await loadConfig();
+  } catch {
+    console.log('No capacitor config file found');
+  }
+  name = name ? name : config?.app?.appName
+  version = version ? version : config?.app?.package?.version
+  path = path ? path : config?.app?.webDir
+  icon = icon ? icon : ''
+  if (!apikey) {
+    console.log('You need to provide an API key to upload your app');
+    return;
+  }
+  if(!name || !version || !path) {
+    console.log('You need to provide a name a version and a path or be in a capacitor project');
+    return;
+  }
+  console.log(`Upload ${name}@${version} from path ${path}`);
+  try {
+    const zip = new AdmZip();
+    zip.addLocalFolder(path);
+    console.log('Uploading...');
+    const host = "https://capacitorgo.com"
+    // const host = "http://localhost:3334"
+    const res = await axios.post(`${host}/api/upload`, {
+      version,
+      name,
+      icon,
+      app: zip.toBuffer().toString('base64')
+    }, {
+    headers: {
+      'authorization': apikey
+    }})
+    console.log("App sent to server, Check Capacitor Go ap too test it");
+  } catch (err) {
+    console.log('Cannot upload app', err);
   }
 }
