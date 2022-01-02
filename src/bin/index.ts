@@ -1,5 +1,5 @@
 import program from 'commander';
-import { loadConfig } from '@capacitor/cli/dist';
+import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
 import axios from 'axios'
 
@@ -30,7 +30,7 @@ async function start() {
     return;
   }
   if(!appid || !version || !path) {
-    console.log('You need to provide a name a version and a path or be in a capacitor project');
+    console.log('You need to provide a appid a version and a path or be in a capacitor project');
     return;
   }
   console.log(`Upload ${appid}@${version} from path ${path}`);
@@ -49,7 +49,7 @@ async function start() {
     headers: {
       'authorization': apikey
     }})
-    console.log("App sent to server, Check Capacitor Go ap too test it");
+    console.log("App sent to server, Check Capacitor Go ap to test it");
   } catch (err) {
     console.log('Cannot upload app', err);
   }
