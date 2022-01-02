@@ -1,56 +1,30 @@
 import program from 'commander';
-import { loadConfig } from '@capacitor/cli/dist/config';
-import AdmZip from 'adm-zip';
-import axios from 'axios'
+import { addApp } from './add';
+import { setVersion } from './set';
+import { uploadVersion } from './upload';
 
 program
+  .description('add one packages')
+  .command('add [appid]').alias('a')
+  .action(addApp)
+  .option('-n, --name <name>', 'app name')
+  .option('-i, --icon <icon>', 'app icon path')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+program
+  .description('upload one package')
+  .command('upload [appid]').alias('u')
+  .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --production <production>', 'set version for production')
   .option('-p, --path <path>', 'path of the file to upload')
-  .option('-v, --version <version>', 'version number of the file to upload')
-  .option('-i, --appid <appid>', 'app id of the app to upload');
+  .option('-v, --version <version>', 'version number of the file to upload');
+
+program
+  .description('set one version to mode')
+  .command('set [appid] [version]').alias('s')
+  .action(setVersion)
+  .option('-p, --production <production>', 'set version for production')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program.parse(process.argv);
-const options = program.opts();
-
-start();
-async function start() {
-  let { appid, apikey, version, path, production } = options;
-  let config;
-  try {
-    config = await loadConfig();
-  } catch {
-    console.log('No capacitor config file found');
-  }
-  appid = appid ? appid : config?.app?.appId
-  version = version ? version : config?.app?.package?.version
-  path = path ? path : config?.app?.webDir
-  if (!apikey) {
-    console.log('You need to provide an API key to upload your app');
-    return;
-  }
-  if(!appid || !version || !path) {
-    console.log('You need to provide a appid a version and a path or be in a capacitor project');
-    return;
-  }
-  console.log(`Upload ${appid}@${version} from path ${path}`);
-  try {
-    const zip = new AdmZip();
-    zip.addLocalFolder(path);
-    console.log('Uploading...');
-    const host = "https://capacitorgo.com"
-    // const host = "http://localhost:3334"
-    const res = await axios.post(`${host}/api/upload`, {
-      version,
-      appid,
-      mode: production ? 'prod' : 'dev',
-      app: zip.toBuffer().toString('base64')
-    }, {
-    headers: {
-      'authorization': apikey
-    }})
-    console.log("App sent to server, Check Capacitor Go ap to test it");
-  } catch (err) {
-    console.log('Cannot upload app', err);
-  }
-}
