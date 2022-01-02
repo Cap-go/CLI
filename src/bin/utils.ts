@@ -1,2 +1,2 @@
-// export const host = 'https://capacitorgo.com';
-export const host = 'http://localhost:3334';
+export const host = 'https://capacitorgo.com';
+// export const host = 'http://localhost:3334';
