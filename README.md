@@ -7,10 +7,37 @@ A CLI to upload and download files from the Capacitor go Cloud.
 `npm i -g capgo`
 ## Usage
 
-# Send Dev version to Cloud
-`capgo --apikey=******** --path=./dist --version=0.0.4 --name=mimesis`
-# Send Producition version to Cloud
-`capgo --apikey=******** --path=./dist --version=0.0.4 --name=mimesis --production`
+Before use the CLI you should register here : https://capacitorgo.com/
+
+Then go in you account in apikey section and click in the read/write key to copy it.
+
+## Add new app to Cloud
+`capgo add [appId] --apikey=********`
+`[appId]` is your app ID the format `com.test.app` is explined here : https://capacitorjs.com/docs/cli/init
+Optionally you can give :
+- icon with `--icon /path/to/my/icon` to have a custom icon in the list
+- name with `--name test` to have a custom name in the list
+
+
+### Send version to Cloud
+`capgo upload [appId] --apikey=********`
+`[appId]` is your app ID the format is explined here : https://capacitorjs.com/docs/cli/init
+Optionally you can give :
+- icon with `--path /path/to/my/dist/folder` to send your code to the cloud
+- name with `--name test` to have a custom name in the list
+
+### Send version to Cloud channel
+`capgo set [appId] [version] [channel] --apikey=********`
+`[appId]` is your app ID the format is explined here : https://capacitorjs.com/docs/cli/init
+`[version]` is your app version already sended to the cloud
+`[channel]` is the channel your want to link the version
+
+### Delete package to Cloud
+`capgo delete [appId] --apikey=********`
+`[appId]` is your app ID present in the Cloud
+
+
+## Dev contribution
 
 1. Install development dependencies
 
