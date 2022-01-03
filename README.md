@@ -13,28 +13,30 @@ Then go in you account in apikey section and click in the read/write key to copy
 
 ## Add new app to Cloud
 `capgo add [appId] --apikey=********`
-`[appId]` is your app ID the format `com.test.app` is explined here : https://capacitorjs.com/docs/cli/init
-Optionally you can give :
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+
+Optionally you can give:
 - icon with `--icon /path/to/my/icon` to have a custom icon in the list
 - name with `--name test` to have a custom name in the list
 
 
 ### Send version to Cloud
 `capgo upload [appId] --apikey=********`
-`[appId]` is your app ID the format is explined here : https://capacitorjs.com/docs/cli/init
-Optionally you can give :
+`[appId]` is your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
+
+Optionally you can give:
 - icon with `--path /path/to/my/dist/folder` to send your code to the cloud
 - name with `--name test` to have a custom name in the list
-
+- channel with `--channel prod` to link this version to channel
 ### Send version to Cloud channel
 `capgo set [appId] [version] [channel] --apikey=********`
-`[appId]` is your app ID the format is explined here : https://capacitorjs.com/docs/cli/init
-`[version]` is your app version already sended to the cloud
-`[channel]` is the channel your want to link the version
+`[appId]` your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
+`[version]` your app version already sended to the cloud
+`[channel]` the channel you want to link the version
 
 ### Delete package to Cloud
 `capgo delete [appId] --apikey=********`
-`[appId]` is your app ID present in the Cloud
+`[appId]` your app ID present in the Cloud
 
 
 ## Dev contribution

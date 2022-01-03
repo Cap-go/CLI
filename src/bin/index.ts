@@ -18,6 +18,7 @@ program
   .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the file to upload')
+  .option('-c, --channel <channel>', 'channel to link to')
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
