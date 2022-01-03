@@ -31,7 +31,7 @@ export const deleteApp = async (appid: string, options: any) => {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
-      console.log('Cannot delete app', axiosErr.response.data);
+      console.log('Cannot delete app', axiosErr.message, axiosErr.response?.data);
     } else {
       console.log('Cannot delete app', err);
     }

@@ -42,7 +42,7 @@ export const addApp = async (appid: string, options: any) => {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
-      console.log('Cannot add app', axiosErr.response.data);
+      console.log('Cannot add app', axiosErr.message, axiosErr.response?.data);
     } else {
       console.log('Cannot add app', err);
     }

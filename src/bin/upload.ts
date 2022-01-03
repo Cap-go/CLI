@@ -33,6 +33,8 @@ export const uploadVersion = async (appid, options) => {
       channel: channel || 'dev',
       app: zip.toBuffer().toString('base64')
     }, {
+    maxContentLength: Infinity,
+    maxBodyLength: Infinity,
     headers: {
       'authorization': apikey
     }})
@@ -40,7 +42,7 @@ export const uploadVersion = async (appid, options) => {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
-      console.log('Cannot upload app', axiosErr.response);
+      console.log('Cannot upload app', axiosErr.message, axiosErr.response?.data);
     } else {
       console.log('Cannot upload app', err);
     }

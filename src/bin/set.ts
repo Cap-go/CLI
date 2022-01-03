@@ -35,7 +35,7 @@ export const setVersion = async (appid, version, channel, options) => {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
-      console.log('Cannot set version to channel', axiosErr.response.data);
+      console.log('Cannot set version to channel', axiosErr.message, axiosErr.response?.data);
     } else {
       console.log('Cannot set version to channel', err);
     }
