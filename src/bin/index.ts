@@ -5,7 +5,6 @@ import { setVersion } from './set';
 import { uploadVersion } from './upload';
 
 program
-  .description('add one packages')
   .command('add [appid]').alias('a')
   .action(addApp)
   .option('-n, --name <name>', 'app name')
@@ -13,7 +12,6 @@ program
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .description('upload one package')
   .command('upload [appid]').alias('u')
   .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
@@ -22,13 +20,12 @@ program
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
-  .description('set one version to channel')
   .command('set [appid] [version] [channel]').alias('s')
   .action(setVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .description('delete one packages')
+  .description('Manage package and version in capgo Cloud')
   .command('delete [appid]').alias('a')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
