@@ -17,7 +17,6 @@ program
   .command('upload [appid]').alias('u')
   .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-p, --production <production>', 'set version for production')
   .option('-p, --path <path>', 'path of the file to upload')
   .option('-v, --version <version>', 'version number of the file to upload');
 
