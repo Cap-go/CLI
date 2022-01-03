@@ -1,5 +1,5 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { host } from './utils';
 
 export const deleteApp = async (appid: string, options: any) => {
@@ -29,6 +29,11 @@ export const deleteApp = async (appid: string, options: any) => {
     }})
     res.status === 200 ? console.log("App deleted to server") : console.log("Error", res.status, res.data);
   } catch (err) {
-    console.log('Cannot upload app', err);
+    if (axios.isAxiosError(err)) {
+      const axiosErr = err as AxiosError
+      console.log('Cannot delete app', axiosErr.response.data);
+    } else {
+      console.log('Cannot delete app', err);
+    }
   }
 }

@@ -1,6 +1,6 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { host } from './utils';
 
 export const uploadVersion = async (appid, options) => {
@@ -38,6 +38,11 @@ export const uploadVersion = async (appid, options) => {
     }})
     res.status === 200 ? console.log("App sent to server, Check Capacitor Go ap to test it") : console.log("Error", res.status, res.data);
   } catch (err) {
-    console.log('Cannot upload app', err);
+    if (axios.isAxiosError(err)) {
+      const axiosErr = err as AxiosError
+      console.log('Cannot upload app', axiosErr.response.data);
+    } else {
+      console.log('Cannot upload app', err);
+    }
   }
 }

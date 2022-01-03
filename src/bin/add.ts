@@ -1,6 +1,7 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import  { readFileSync } from 'fs'; 
+import { existsSync } from 'fs-extra';
 import  { getType } from 'mime'; 
 import { host } from './utils';
 
@@ -14,6 +15,7 @@ export const addApp = async (appid: string, options: any) => {
   }
   appid = appid ? appid : config?.app?.appId
   name = name ? name : config?.app?.appName || 'Unknown'
+  icon = icon ? icon : "resources/icon.png" // default path for capacitor app
   if (!apikey) {
     console.log('You need to provide an API key to upload your app');
     return;
@@ -25,8 +27,8 @@ export const addApp = async (appid: string, options: any) => {
   console.log(`Add ${appid} to Capacitor Go`);
   try {
     console.log('Adding...');
-    const data: any = {appid, name}
-    if(icon) {
+    const data: any = { appid, name }
+    if(icon && existsSync(icon)) {
       const iconBuff = readFileSync(icon);
       const contentType = getType(icon);
       data.icon = iconBuff.toString('base64');
@@ -38,6 +40,11 @@ export const addApp = async (appid: string, options: any) => {
     }})
     res.status === 200 ? console.log("App added to server, you can upload a version now") : console.log("Error", res.status, res.data);
   } catch (err) {
-    console.log('Cannot upload app', err);
+    if (axios.isAxiosError(err)) {
+      const axiosErr = err as AxiosError
+      console.log('Cannot add app', axiosErr.response.data);
+    } else {
+      console.log('Cannot add app', err);
+    }
   }
 }

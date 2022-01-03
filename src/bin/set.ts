@@ -1,5 +1,5 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { host } from './utils';
 
 export const setVersion = async (appid, version, channel, options) => {
@@ -33,6 +33,11 @@ export const setVersion = async (appid, version, channel, options) => {
     }})
     res.status === 200 ? console.log(`Version set to ${channel}`) : console.log("Error", res.status, res.data);
   } catch (err) {
-    console.log('Cannot upload app', err);
+    if (axios.isAxiosError(err)) {
+      const axiosErr = err as AxiosError
+      console.log('Cannot set version to channel', axiosErr.response.data);
+    } else {
+      console.log('Cannot set version to channel', err);
+    }
   }
 }
