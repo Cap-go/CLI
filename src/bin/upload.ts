@@ -4,7 +4,7 @@ import axios from 'axios'
 import { host } from './utils';
 
 export const uploadVersion = async (appid, options) => {
-  let { apikey, version, path, production } = options;
+  let { apikey, version, path, channel } = options;
   let config;
   try {
     config = await loadConfig();
@@ -30,7 +30,7 @@ export const uploadVersion = async (appid, options) => {
     const res = await axios.post(`${host}/api/upload`, {
       version,
       appid,
-      mode: production ? 'prod' : 'dev',
+      channel: channel || 'dev',
       app: zip.toBuffer().toString('base64')
     }, {
     headers: {

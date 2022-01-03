@@ -22,10 +22,9 @@ program
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
-  .description('set one version to mode')
-  .command('set [appid] [version]').alias('s')
+  .description('set one version to channel')
+  .command('set [appid] [version] [channel]').alias('s')
   .action(setVersion)
-  .option('-p, --production <production>', 'set version for production')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
