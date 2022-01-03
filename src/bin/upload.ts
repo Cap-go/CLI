@@ -40,7 +40,7 @@ export const uploadVersion = async (appid, options) => {
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
-      console.log('Cannot upload app', axiosErr.response.data);
+      console.log('Cannot upload app', axiosErr.response);
     } else {
       console.log('Cannot upload app', err);
     }
