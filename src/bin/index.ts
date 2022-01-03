@@ -1,5 +1,6 @@
 import program from 'commander';
 import { addApp } from './add';
+import { deleteApp } from './delete';
 import { setVersion } from './set';
 import { uploadVersion } from './upload';
 
@@ -25,6 +26,12 @@ program
   .command('set [appid] [version]').alias('s')
   .action(setVersion)
   .option('-p, --production <production>', 'set version for production')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+program
+  .description('delete one packages')
+  .command('delete [appid]').alias('a')
+  .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program.parse(process.argv);

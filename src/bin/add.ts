@@ -13,7 +13,7 @@ export const addApp = async (appid: string, options: any) => {
     console.log('No capacitor config file found');
   }
   appid = appid ? appid : config?.app?.appId
-  name = name ? name : config?.app?.appName
+  name = name ? name : config?.app?.appName || 'Unknown'
   if (!apikey) {
     console.log('You need to provide an API key to upload your app');
     return;
