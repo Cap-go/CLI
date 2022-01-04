@@ -4,7 +4,7 @@ import axios, { AxiosError } from 'axios'
 import { host } from './utils';
 import cliProgress from 'cli-progress';
 
-const oneMb = 1048576;
+const oneMb = 1048576; // size of one mb
 export const uploadVersion = async (appid, options) => {
   let { apikey, version, path, channel } = options;
   let config;
@@ -46,8 +46,9 @@ export const uploadVersion = async (appid, options) => {
         version,
         appid,
         fileName,
+        channel: channel ? channel : 'dev',
         app: chunks[i],
-        isMultipart: true,
+        isMultipart: chunks.length > 1,
         chunk: i + 1,
         totalChunks: chunks.length,
       }, {
