@@ -19,7 +19,7 @@ export const deleteApp = async (appid: string, options: any) => {
     console.log('You need to provide a appid or be in a capacitor project');
     return;
   }
-  console.log(`Add ${appid} to Capgo`);
+  console.log(`Delete ${appid} to Capgo`);
   try {
     console.log('Deleting...');
     const data: any = {appid}
