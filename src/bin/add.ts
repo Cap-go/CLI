@@ -38,7 +38,12 @@ export const addApp = async (appid: string, options: any) => {
     headers: {
       'authorization': apikey
     }})
-    res.status === 200 ? console.log("App added to server, you can upload a version now") : console.log("Error", res.status, res.data);
+    if (res.status !== 200) {
+      return console.log("Error", res.status, res.data);
+    }
+    else {
+      console.log("App added to server, you can upload a version now")
+    }
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
