@@ -1,4 +1,4 @@
-# Capacitor Go CLI
+# Capgo CLI
 
 A CLI to upload and download files from the Capacitor go Cloud.
 

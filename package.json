@@ -1,7 +1,7 @@
 {
   "name": "capgo",
-  "version": "0.1.12",
-  "description": "A CLI to upload to capacitor go servers",
+  "version": "0.1.13",
+  "description": "A CLI to upload to capgo servers",
   "main": "dist/index.js",
   "bin": "dist/index.js",
   "scripts": {

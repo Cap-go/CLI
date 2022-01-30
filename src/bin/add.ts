@@ -24,7 +24,7 @@ export const addApp = async (appid: string, options: any) => {
     console.log('You need to provide a appid and a name or be in a capacitor project');
     return;
   }
-  console.log(`Add ${appid} to Capacitor Go`);
+  console.log(`Add ${appid} to Capgo`);
   try {
     console.log('Adding...');
     const data: any = { appid, name }
