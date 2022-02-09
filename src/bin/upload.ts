@@ -1,3 +1,4 @@
+import program from 'commander';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
 import axios, { AxiosError } from 'axios'
@@ -67,5 +68,6 @@ export const uploadVersion = async (appid, options) => {
     } else {
       console.log('Cannot upload app', err);
     }
+    throw new Error('Cannot upload app');
   }
 }
