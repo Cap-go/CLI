@@ -1,9 +1,9 @@
-import program from 'commander';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
 import axios, { AxiosError } from 'axios'
 import { host } from './utils';
 import cliProgress from 'cli-progress';
+import commander from 'commander';
 
 const oneMb = 1048576; // size of one mb
 export const uploadVersion = async (appid, options) => {
@@ -11,19 +11,18 @@ export const uploadVersion = async (appid, options) => {
   let config;
   try {
     config = await loadConfig();
-  } catch {
+  } catch (err) {
     console.log('No capacitor config file found');
+    throw new commander.CommanderError(2, 'No capacitor config file found', err)
   }
   appid = appid ? appid : config?.app?.appId
   version = version ? version : config?.app?.package?.version
   path = path ? path : config?.app?.webDir
   if (!apikey) {
-    console.log('You need to provide an API key to upload your app');
-    return;
+    throw new commander.CommanderError(2, 'Missing api , API key', 'You need to provide an API key to delete your app')
   }
   if(!appid || !version || !path) {
-    console.log('You need to provide a appid a version and a path or be in a capacitor project');
-    return;
+    throw new commander.CommanderError(2, 'Missing argument', 'You need to provide a appid a version and a path or be in a capacitor project')
   }
   console.log(`Upload ${appid}@${version} from path ${path}`);
   const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey);
@@ -56,7 +55,10 @@ export const uploadVersion = async (appid, options) => {
       headers: {
         'authorization': apikey
       }})
-      res.status === 200 ? b1.update(i+1) : console.log("Error", res.status, res.data);
+      if (res.status !== 200) {
+        throw new commander.CommanderError(2, 'Server Error',  res.data)
+      }
+      b1.update(i+1)
       fileName = res.data.fileName
     }
     b1.stop();
@@ -68,6 +70,6 @@ export const uploadVersion = async (appid, options) => {
     } else {
       console.log('Cannot upload app', err);
     }
-    throw new Error('Cannot upload app');
+    throw new commander.CommanderError(2, 'Cannot upload app', err)
   }
 }

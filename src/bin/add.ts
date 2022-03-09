@@ -1,5 +1,6 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import axios, { AxiosError } from 'axios'
+import commander from 'commander';
 import  { readFileSync } from 'fs'; 
 import { existsSync } from 'fs-extra';
 import  { getType } from 'mime'; 
@@ -10,19 +11,18 @@ export const addApp = async (appid: string, options: any) => {
   let config;
   try {
     config = await loadConfig();
-  } catch {
+  } catch (err) {
     console.log('No capacitor config file found');
+    throw new commander.CommanderError(2, 'No capacitor config file found', err)
   }
   appid = appid ? appid : config?.app?.appId
   name = name ? name : config?.app?.appName || 'Unknown'
   icon = icon ? icon : "resources/icon.png" // default path for capacitor app
   if (!apikey) {
-    console.log('You need to provide an API key to upload your app');
-    return;
+    throw new commander.CommanderError(2, 'Missing api , API key', 'You need to provide an API key to delete your app')
   }
   if(!appid || !name) {
-    console.log('You need to provide a appid and a name or be in a capacitor project');
-    return;
+    throw new commander.CommanderError(2, 'Missing argument', 'You need to provide a appid and a name, or be in a capacitor project')
   }
   console.log(`Add ${appid} to Capgo`);
   try {
@@ -39,11 +39,9 @@ export const addApp = async (appid: string, options: any) => {
       'authorization': apikey
     }})
     if (res.status !== 200) {
-      return console.log("Error", res.status, res.data);
+      throw new commander.CommanderError(2, 'Server Error',  res.data)
     }
-    else {
-      console.log("App added to server, you can upload a version now")
-    }
+    console.log("App added to server, you can upload a version now")
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
@@ -51,5 +49,6 @@ export const addApp = async (appid: string, options: any) => {
     } else {
       console.log('Cannot add app', err);
     }
+    throw new commander.CommanderError(2, 'Cannot add app', err)
   }
 }

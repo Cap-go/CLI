@@ -1,5 +1,6 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import axios, { AxiosError } from 'axios'
+import commander from 'commander';
 import { host } from './utils';
 
 export const deleteApp = async (appid: string, options: any) => {
@@ -7,17 +8,16 @@ export const deleteApp = async (appid: string, options: any) => {
   let config;
   try {
     config = await loadConfig();
-  } catch {
+  } catch (err) {
     console.log('No capacitor config file found');
+    throw new commander.CommanderError(2, 'No capacitor config file found', err)
   }
   appid = appid ? appid : config?.app?.appId
   if (!apikey) {
-    console.log('You need to provide an API key to delete your app');
-    return;
+    throw new commander.CommanderError(2, 'Missing api , API key', 'You need to provide an API key to delete your app')
   }
   if(!appid) {
-    console.log('You need to provide a appid or be in a capacitor project');
-    return;
+    throw new commander.CommanderError(2, 'Missing argument', 'You need to provide a appid, or be in a capacitor project')
   }
   console.log(`Delete ${appid} to Capgo`);
   try {
@@ -27,7 +27,10 @@ export const deleteApp = async (appid: string, options: any) => {
     headers: {
       'authorization': apikey
     }})
-    res.status === 200 ? console.log("App deleted to server") : console.log("Error", res.status, res.data);
+    if (res.status !== 200) {
+      throw new commander.CommanderError(2, 'Server Error',  res.data)
+    }
+    console.log("App deleted to server") 
   } catch (err) {
     if (axios.isAxiosError(err)) {
       const axiosErr = err as AxiosError
@@ -35,5 +38,6 @@ export const deleteApp = async (appid: string, options: any) => {
     } else {
       console.log('Cannot delete app', err);
     }
+    throw new commander.CommanderError(2, 'Cannot add app', err)
   }
 }
