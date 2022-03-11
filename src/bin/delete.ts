@@ -38,6 +38,6 @@ export const deleteApp = async (appid: string, options: any) => {
     } else {
       console.log('Cannot delete app', err);
     }
-    throw new commander.CommanderError(2, 'Cannot add app', err)
+    throw new commander.CommanderError(2, 'Cannot delete app', err)
   }
 }
