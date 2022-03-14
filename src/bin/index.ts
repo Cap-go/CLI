@@ -1,4 +1,4 @@
-import program from 'commander';
+import { program } from 'commander';
 import { addApp } from './add';
 import { deleteApp } from './delete';
 import { setVersion } from './set';
@@ -28,6 +28,7 @@ program
   .description('Manage package and version in capgo Cloud')
   .command('delete [appid]').alias('a')
   .action(deleteApp)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-v, --version <version>', 'version number of the app to delete');
 
 program.parse(process.argv);

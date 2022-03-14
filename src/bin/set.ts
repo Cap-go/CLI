@@ -1,47 +1,46 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
-import axios, { AxiosError } from 'axios'
-import commander from 'commander';
+import axios from 'axios';
+import prettyjson from 'prettyjson';
+import { program } from 'commander';
 import { host } from './utils';
 
 export const setVersion = async (appid, version, channel, options) => {
-  let { apikey } = options;
+  const { apikey } = options;
   let config;
+  let res;
   try {
     config = await loadConfig();
   } catch (err) {
-    console.log('No capacitor config file found');
-    throw new commander.CommanderError(2, 'No capacitor config file found', err)
+    program.error("No capacitor config file found, run `cap init` first");
   }
-  appid = appid ? appid : config?.app?.appId
+  appid = appid || config?.app?.appId
   channel = channel || 'dev'
-  version = version ? version : config?.app?.package?.version
+  version = version || config?.app?.package?.version
   if (!apikey) {
-    throw new commander.CommanderError(2, 'Missing api , API key', 'You need to provide an API key to delete your app')
+    program.error("Missing API key, you need to provide a API key to add your app");
   }
   if(!appid || !version) {
-    throw new commander.CommanderError(2, 'Missing argument', 'You need to provide a appid a version, or be in a capacitor project')
+    program.error("Missing argument, you need to provide a appid and a version, or be in a capacitor project");
   }
   console.log(`Set ${appid}@${version} to ${channel}`);
   try {
-    const res = await axios.post(`${host}/api/channel`, {
-      version,
-      appid,
-      channel,
-    }, {
-    headers: {
-      'authorization': apikey
-    }})
-    if (res.status !== 200) {
-      throw new commander.CommanderError(2, 'Server Error',  res.data)
-    }
-    console.log(`Version set to ${channel}`)
+    res = await axios({
+      method: 'POST',
+      url:`${host}/api/channel`,
+      data: {
+        version,
+        appid,
+        channel,
+      },
+      validateStatus: () => true,
+      headers: {
+        'authorization': apikey
+      }})
   } catch (err) {
-    if (axios.isAxiosError(err)) {
-      const axiosErr = err as AxiosError
-      console.log('Cannot set version to channel', axiosErr.message, axiosErr.response?.data);
-    } else {
-      console.log('Cannot set version to channel', err);
-    }
-    throw new commander.CommanderError(2, 'Cannot upload app', err)
+    program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
   }
+  if (!res || res.status !== 200) {
+    program.error(`Server Error \n${prettyjson.render(res.data)}`);
+  }
+  console.log(`Version set to ${channel}`)
 }

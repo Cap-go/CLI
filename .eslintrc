@@ -1,7 +1,7 @@
 {
   "extends": ["airbnb-base", "plugin:@typescript-eslint/recommended", "eslint-config-prettier"],
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "prettier", "drill4j"],
+  "plugins": ["@typescript-eslint", "prettier"],
   "settings": {
     "import/parsers": {
       "@typescript-eslint/parser": [".ts", ".tsx"]
@@ -11,8 +11,8 @@
     }
   },
   "rules": {
-    "drill4j/license-header": ["error"],
     "import/prefer-default-export": 0,
+    "no-param-reassign": 0,
     "import/no-extraneous-dependencies": [
       2,
       {

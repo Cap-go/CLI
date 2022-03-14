@@ -1,28 +1,30 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
-import axios, { AxiosError } from 'axios'
-import { host } from './utils';
+import axios from 'axios';
+import prettyjson from 'prettyjson';
+import { program } from 'commander';
 import cliProgress from 'cli-progress';
-import commander from 'commander';
+import { host } from './utils';
 
 const oneMb = 1048576; // size of one mb
 export const uploadVersion = async (appid, options) => {
-  let { apikey, version, path, channel } = options;
+  let { version, path, channel } = options;
+  const { apikey } = options;
+  channel = channel || 'dev';
   let config;
   try {
     config = await loadConfig();
   } catch (err) {
-    console.log('No capacitor config file found');
-    throw new commander.CommanderError(2, 'No capacitor config file found', err)
+    program.error("No capacitor config file found, run `cap init` first");
   }
-  appid = appid ? appid : config?.app?.appId
-  version = version ? version : config?.app?.package?.version
-  path = path ? path : config?.app?.webDir
+  appid = appid || config?.app?.appId
+  version = version || config?.app?.package?.version
+  path = path || config?.app?.webDir
   if (!apikey) {
-    throw new commander.CommanderError(2, 'Missing api , API key', 'You need to provide an API key to delete your app')
+    program.error("Missing API key, you need to provide a API key to add your app");
   }
   if(!appid || !version || !path) {
-    throw new commander.CommanderError(2, 'Missing argument', 'You need to provide a appid a version and a path or be in a capacitor project')
+    program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
   }
   console.log(`Upload ${appid}@${version} from path ${path}`);
   const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey);
@@ -38,25 +40,29 @@ export const uploadVersion = async (appid, options) => {
       chunks.push(appData.slice(i, i + chunkSize).toString('base64'));
     }
     b1.start(chunks.length, 0, {
-        speed: "N/A"
+      speed: "N/A"
     });
     let fileName
-    for (let i = 0; i < chunks.length; i++) {
-      const res = await axios.post(`${host}/api/upload`, {
-        version,
-        appid,
-        fileName,
-        channel: channel ? channel : 'dev',
-        app: chunks[i],
-        isMultipart: chunks.length > 1,
-        chunk: i + 1,
-        totalChunks: chunks.length,
-      }, {
-      headers: {
-        'authorization': apikey
-      }})
+    for (let i = 0; i < chunks.length; i +=1) {
+      const res = await axios({
+        method: 'POST',
+        url:`${host}/api/upload`,
+        data: {
+          version,
+          appid,
+          fileName,
+          channel,
+          app: chunks[i],
+          isMultipart: chunks.length > 1,
+          chunk: i + 1,
+          totalChunks: chunks.length,
+        },
+        validateStatus: () => true,
+        headers: {
+          'authorization': apikey
+        }})
       if (res.status !== 200) {
-        throw new commander.CommanderError(2, 'Server Error',  res.data)
+        program.error(`Server Error \n${prettyjson.render(res.data)}`);
       }
       b1.update(i+1)
       fileName = res.data.fileName
@@ -64,12 +70,10 @@ export const uploadVersion = async (appid, options) => {
     b1.stop();
   } catch (err) {
     b1.stop();
-    if (axios.isAxiosError(err)) {
-      const axiosErr = err as AxiosError
-      console.log('Cannot upload app', axiosErr.message, axiosErr.response?.data);
-    } else {
-      console.log('Cannot upload app', err);
-    }
-    throw new commander.CommanderError(2, 'Cannot upload app', err)
+    program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
   }
+  console.log("App uploaded to server")
+  console.log(`Try it in mobile app: ${host}`)
+  console.log(`Or set the channel ${channel} as public here: ${host}/app/package/${appid}`)
+  console.log("To use with live update in your own app")
 }
