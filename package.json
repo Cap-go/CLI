@@ -4,6 +4,17 @@
   "description": "A CLI to upload to capgo servers",
   "main": "dist/index.js",
   "bin": "dist/index.js",
+  "keywords": [
+    "appflow alternative",
+    "ionic",
+    "capacitor",
+    "auto update",
+    "live update",
+    "capgo",
+    "cli",
+    "upload",
+    "capgo-cli"
+  ],
   "scripts": {
     "dev": "set NODE_ENV=development&& npx webpack --config webpack.config.js",
     "no-debug": "node dist/index.js",
