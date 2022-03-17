@@ -7,6 +7,8 @@ import cliProgress from 'cli-progress';
 import { host } from './utils';
 
 const oneMb = 1048576; // size of one mb
+const demiMb = oneMb / 2; // size of 1/2 mb
+const formatType = 'binary';
 export const uploadVersion = async (appid, options) => {
   let { version, path, channel } = options;
   const { apikey } = options;
@@ -32,12 +34,12 @@ export const uploadVersion = async (appid, options) => {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     console.log('Uploading...');
-    const appData = zip.toBuffer();
+    const appData = zip.toBuffer().toString(formatType);
     // split appData in chunks and send them sequentially with axios
-    const chunkSize = oneMb;
+    const chunkSize = demiMb;
     const chunks = [];
-    for (let i = 0; i < appData.byteLength; i += chunkSize) {
-      chunks.push(appData.slice(i, i + chunkSize).toString('base64'));
+    for (let i = 0; i < appData.length; i += chunkSize) {
+      chunks.push(appData.slice(i, i + chunkSize));
     }
     b1.start(chunks.length, 0, {
       speed: "N/A"
@@ -52,6 +54,7 @@ export const uploadVersion = async (appid, options) => {
           appid,
           fileName,
           channel,
+          format: formatType,
           app: chunks[i],
           isMultipart: chunks.length > 1,
           chunk: i + 1,
