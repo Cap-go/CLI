@@ -8,7 +8,7 @@ import { host } from './utils';
 
 const oneMb = 1048576; // size of one mb
 const demiMb = oneMb / 2; // size of 1/2 mb
-const formatType = 'binary';
+const formatType = 'base64';
 export const uploadVersion = async (appid, options) => {
   let { version, path, channel } = options;
   const { apikey } = options;
