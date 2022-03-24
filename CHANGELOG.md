@@ -1,3 +1,9 @@
+## 0.4.2 (2022-03-24)
+
+### Fix
+
+- remove version from mendatory field in set
+
 ## 0.4.1 (2022-03-24)
 
 ### Fix
