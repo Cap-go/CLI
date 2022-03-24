@@ -4,8 +4,8 @@ import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import { host } from './utils';
 
-export const setVersion = async (appid, version, channel, options) => {
-  const { apikey } = options;
+export const setChannel = async (appid, channel, options) => {
+  const { apikey, version, state } = options;
   let config;
   let res;
   try {
@@ -15,7 +15,9 @@ export const setVersion = async (appid, version, channel, options) => {
   }
   appid = appid || config?.app?.appId
   channel = channel || 'dev'
-  version = version || config?.app?.package?.version
+  let parsedState
+  if (state === 'public' || state === 'private') 
+    parsedState = state === 'public'
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
@@ -29,6 +31,7 @@ export const setVersion = async (appid, version, channel, options) => {
       url:`${host}/api/channel`,
       data: {
         version,
+        public: parsedState,
         appid,
         channel,
       },

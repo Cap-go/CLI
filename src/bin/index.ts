@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import { addApp } from './add';
 import { deleteApp } from './delete';
-import { setVersion } from './set';
+import { setChannel } from './set';
 import { uploadVersion } from './upload';
 
 program
@@ -21,7 +21,9 @@ program
 
 program
   .command('set [appid] [version] [channel]').alias('s')
-  .action(setVersion)
+  .action(setChannel)
+  .option('-v, --version <version>', 'version number of the file to upload')
+  .option('-s, --state <state>', 'set the state of the channel, public or private')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
