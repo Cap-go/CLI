@@ -20,7 +20,7 @@ program
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
-  .command('set [appid] [version] [channel]').alias('s')
+  .command('set [appid] [channel]').alias('s')
   .action(setChannel)
   .option('-v, --version <version>', 'version number of the file to upload')
   .option('-s, --state <state>', 'set the state of the channel, public or private')
