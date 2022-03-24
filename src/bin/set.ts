@@ -22,9 +22,16 @@ export const setChannel = async (appid, channel, options) => {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
   if(!appid || !version) {
-    program.error("Missing argument, you need to provide a appid and a version, or be in a capacitor project");
+    program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
-  console.log(`Set ${appid}@${version} to ${channel}`);
+  if(!version && !parsedState) {
+    program.error("Missing argument, you need to provide a state or a version");
+  }
+  if (version) {
+    console.log(`Set ${channel} to @${version} in ${appid}`);
+  } else {
+    console.log(`Set${channel} to @${state} in ${appid}`);
+  }
   try {
     res = await axios({
       method: 'POST',
@@ -45,5 +52,9 @@ export const setChannel = async (appid, channel, options) => {
   if (!res || res.status !== 200) {
     program.error(`Server Error \n${prettyjson.render(res.data)}`);
   }
-  console.log(`Version set to ${channel}`)
+  if (version) {
+    console.log(`Done ✅`);
+  } else {
+    console.log(`You can use now is channel in your app with the url: ${host}/api/latest?appid=${appid}&channel=${channel}`);
+  }
 }
