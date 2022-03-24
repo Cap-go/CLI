@@ -4,8 +4,8 @@ import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import { host } from './utils';
 
-export const setChannel = async (appid, channel, options) => {
-  const { apikey, version, state } = options;
+export const setChannel = async (appid, options) => {
+  const { apikey, version, state, channel = 'dev' } = options;
   let config;
   let res;
   try {
@@ -14,14 +14,13 @@ export const setChannel = async (appid, channel, options) => {
     program.error("No capacitor config file found, run `cap init` first");
   }
   appid = appid || config?.app?.appId
-  channel = channel || 'dev'
   let parsedState
   if (state === 'public' || state === 'private') 
     parsedState = state === 'public'
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
-  if(!appid || !version) {
+  if(!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
   if(!version && !parsedState) {

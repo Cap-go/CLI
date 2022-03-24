@@ -20,8 +20,9 @@ program
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
-  .command('set [appid] [channel]').alias('s')
+  .command('set [appid]').alias('s')
   .action(setChannel)
+  .option('-c, --channel <channel>', 'channel to link to')
   .option('-v, --version <version>', 'version number of the file to upload')
   .option('-s, --state <state>', 'set the state of the channel, public or private')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
