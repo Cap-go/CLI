@@ -1,3 +1,9 @@
+## 0.5.1 (2022-04-01)
+
+### Fix
+
+- put all env var in same file
+
 ## 0.5.0 (2022-04-01)
 
 ### Feat
