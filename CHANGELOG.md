@@ -1,3 +1,9 @@
+## 0.5.0 (2022-04-01)
+
+### Feat
+
+- use supbase function instead of netlify to handle timeout
+
 ## 0.4.5 (2022-03-31)
 
 ### Fix
