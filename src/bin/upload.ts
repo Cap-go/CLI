@@ -29,12 +29,12 @@ export const uploadVersion = async (appid, options) => {
   if(!appid || !version || !path) {
     program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
   }
-  console.log(`Upload ${appid}@${version} from path ${path}`);
+  console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
   const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey);
   try {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
-    console.log('Uploading...');
+    console.log('Uploading:');
     const appData = zip.toBuffer().toString(formatType);
     // split appData in chunks and send them sequentially with axios
     const chunkSize = oneMb;
