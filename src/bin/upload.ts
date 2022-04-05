@@ -4,63 +4,81 @@ import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
-import { host, hostUpload, supaAnon } from './utils';
+import { host } from './utils';
 
-const formatType = 'binary';
+const oneMb = 1048576; // size of one mb
+const demiMb = oneMb / 2; // size of 1/2 mb
+const formatType = 'base64';
 
 export const uploadVersion = async (appid, options) => {
-  let { version, path, channel } = options
-  const { apikey } = options
-  channel = channel || 'dev'
-  let config
+  let { version, path, channel } = options;
+  const { apikey } = options;
+  channel = channel || 'dev';
+  let config;
   try {
-    config = await loadConfig()
+    config = await loadConfig();
   } catch (err) {
-    program.error("No capacitor config file found, run `cap init` first")
+    program.error("No capacitor config file found, run `cap init` first");
   }
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
   path = path || config?.app?.webDir
   if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to add your app")
+    program.error("Missing API key, you need to provide a API key to add your app");
   }
   if(!appid || !version || !path) {
-    program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project")
+    program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
   }
-  console.log(`Upload ${appid}@${version} from path ${path}`)
-  const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey)
+  console.log(`Upload ${appid}@${version} from path ${path}`);
+  const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey);
   try {
-    const zip = new AdmZip()
-    zip.addLocalFolder(path)
-    console.log('Uploading...')
-    const appData = zip.toBuffer().toString(formatType)
-    b1.start(1, 0, {
-      speed: "N/A"
-    })
-    const res = await axios({
-      method: 'POST',
-      url: hostUpload,
-      data: {
-        version,
-        appid,
-        channel,
-        format: formatType,
-        app: appData,
-      },
-      validateStatus: () => true,
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': apikey,
-        authorization : `Bearer ${supaAnon}`
-      }})
-    if (res.status !== 200) {
-      program.error(`Server Error \n${prettyjson.render(res.data)}`)
+    const zip = new AdmZip();
+    zip.addLocalFolder(path);
+    console.log('Uploading...');
+    const appData = zip.toBuffer().toString(formatType);
+    // split appData in chunks and send them sequentially with axios
+    const chunkSize = demiMb;
+    const chunks = [];
+    for (let i = 0; i < appData.length; i += chunkSize) {
+      chunks.push(appData.slice(i, i + chunkSize));
     }
-    b1.update(1)
-    b1.stop()
+    b1.start(chunks.length, 0, {
+      speed: "N/A"
+    });
+    let fileName
+    for (let i = 0; i < chunks.length; i +=1) {
+      const res = await axios({
+        method: 'POST',
+        url:`${host}/api/upload`,
+        data: {
+          version,
+          appid,
+          fileName,
+          channel,
+          format: formatType,
+          app: chunks[i],
+          isMultipart: chunks.length > 1,
+          chunk: i + 1,
+          totalChunks: chunks.length,
+        },
+        validateStatus: () => true,
+        headers: {
+          'authorization': apikey
+        }})
+      if (res.status !== 200) {
+        program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
+      }
+      b1.update(i+1)
+      fileName = res.data.fileName
+    }
+    b1.stop();
   } catch (err) {
-    b1.stop()
-    program.error(`Network Error \n${prettyjson.render(err.response.data)}`)
+    b1.stop();
+    if (err.response) {
+      program.error(`Network Error \n${prettyjson.render(err.response?.data || "")}`)
+    } else {
+      program.error(`Network Error \n${prettyjson.render(err || "")}`)
+    }
   }
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}`)
