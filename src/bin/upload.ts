@@ -4,10 +4,10 @@ import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
-import { host } from './utils';
+import { host, hostUpload, supaAnon } from './utils';
 
 const oneMb = 1048576; // size of one mb
-const demiMb = oneMb / 2; // size of 1/2 mb
+// const demiMb = oneMb / 2; // size of 1/2 mb
 const formatType = 'base64';
 
 export const uploadVersion = async (appid, options) => {
@@ -37,7 +37,7 @@ export const uploadVersion = async (appid, options) => {
     console.log('Uploading...');
     const appData = zip.toBuffer().toString(formatType);
     // split appData in chunks and send them sequentially with axios
-    const chunkSize = demiMb;
+    const chunkSize = oneMb;
     const chunks = [];
     for (let i = 0; i < appData.length; i += chunkSize) {
       chunks.push(appData.slice(i, i + chunkSize));
@@ -49,7 +49,7 @@ export const uploadVersion = async (appid, options) => {
     for (let i = 0; i < chunks.length; i +=1) {
       const res = await axios({
         method: 'POST',
-        url:`${host}/api/upload`,
+        url: hostUpload,
         data: {
           version,
           appid,
@@ -63,9 +63,12 @@ export const uploadVersion = async (appid, options) => {
         },
         validateStatus: () => true,
         headers: {
-          'authorization': apikey
+          'Content-Type': 'application/json',
+          'apikey': apikey,
+          authorization : `Bearer ${supaAnon}`
         }})
       if (res.status !== 200) {
+        b1.stop();
         program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
       }
       b1.update(i+1)
