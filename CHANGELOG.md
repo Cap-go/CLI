@@ -1,3 +1,9 @@
+## 0.5.2 (2022-04-05)
+
+### Fix
+
+- revert to old upload logic
+
 ## 0.5.1 (2022-04-01)
 
 ### Fix
