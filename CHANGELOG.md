@@ -1,3 +1,9 @@
+## 0.5.4 (2022-04-05)
+
+### Fix
+
+- upload multipart on new supabase function
+
 ## 0.5.3 (2022-04-05)
 
 ### Fix
