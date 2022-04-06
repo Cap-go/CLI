@@ -1,3 +1,9 @@
+## 0.6.0 (2022-04-06)
+
+### Feat
+
+- allow external url for upload
+
 ## 0.5.6 (2022-04-06)
 
 ### Fix
