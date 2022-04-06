@@ -84,7 +84,7 @@ export const uploadVersion = async (appid, options) => {
     }
   }
   console.log("App uploaded to server")
-  console.log(`Try it in mobile app: ${host}`)
+  console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${host}/app/package/${appid}`)
   console.log("To use with live update in your own app")
 }
