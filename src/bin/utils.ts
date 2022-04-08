@@ -1,5 +1,6 @@
 /* eslint-disable */
 export const host = 'https://capgo.app';
+export const hostWeb = 'https://web.capgo.app';
 export const hostUpload = 'https://xvwzpoazmxkqosrdewyv.functions.supabase.co/upload';
 // For local test purposes
 // export const host = 'http://localhost:3334';

@@ -4,11 +4,11 @@ import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
-import { host, hostUpload, supaAnon } from './utils';
+import { host, hostWeb, hostUpload, supaAnon } from './utils';
 
 const oneMb = 1048576; // size of one mb
 // const demiMb = oneMb / 2; // size of 1/2 mb
-const formatType = 'base64';
+const formatType = 'binary';
 
 export const uploadVersion = async (appid, options) => {
   let { version, path, channel } = options;
@@ -115,6 +115,6 @@ export const uploadVersion = async (appid, options) => {
 
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
-  console.log(`Or set the channel ${channel} as public here: ${host}/app/package/${appid}`)
+  console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appid}`)
   console.log("To use with live update in your own app")
 }

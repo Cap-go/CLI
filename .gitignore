@@ -5,3 +5,4 @@ output/
 *.log
 .history
 *.map
+.DS_Store
