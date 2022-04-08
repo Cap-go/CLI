@@ -1,3 +1,9 @@
+## 0.6.1 (2022-04-08)
+
+### Fix
+
+- upload in new supabase method
+
 ## 0.6.0 (2022-04-06)
 
 ### Feat
