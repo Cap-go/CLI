@@ -7,7 +7,8 @@ import cliProgress from 'cli-progress';
 import { host, hostWeb, hostUpload, supaAnon } from './utils';
 
 const oneMb = 1048576; // size of one mb
-// const demiMb = oneMb / 2; // size of 1/2 mb
+const maxMb = 30;
+const limitMb = oneMb * maxMb; // size of 1/2 mb
 const formatType = 'binary';
 
 export const uploadVersion = async (appid, options) => {
@@ -66,6 +67,9 @@ export const uploadVersion = async (appid, options) => {
       const appData = zip.toBuffer().toString(formatType);
       // split appData in chunks and send them sequentially with axios
       const chunkSize = oneMb;
+      if (appData.length > limitMb) {
+        program.error(`The app is too big, the limit is ${maxMb} Mb`);
+      }
       const chunks = [];
       for (let i = 0; i < appData.length; i += chunkSize) {
         chunks.push(appData.slice(i, i + chunkSize));
