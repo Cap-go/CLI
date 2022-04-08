@@ -1,3 +1,9 @@
+## 0.7.0 (2022-04-08)
+
+### Feat
+
+- add hard limit of big app, max 30mb
+
 ## 0.6.1 (2022-04-08)
 
 ### Fix
