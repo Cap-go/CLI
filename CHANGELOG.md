@@ -1,3 +1,9 @@
+## 0.7.1 (2022-04-16)
+
+### Fix
+
+- migrate to new npm namespace
+
 ## 0.7.0 (2022-04-08)
 
 ### Feat
