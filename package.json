@@ -1,9 +1,11 @@
 {
-  "name": "capgo",
+  "name": "@capgo/cli",
   "version": "0.6.1",
   "description": "A CLI to upload to capgo servers",
   "main": "dist/index.js",
-  "bin": "dist/index.js",
+  "bin": {
+    "capgo": "dist/index.js"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Cap-go/capgo-cli.git"
