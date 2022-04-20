@@ -27,7 +27,7 @@ export const uploadVersion = async (appid, options) => {
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
-  if(!appid || !version || !path) {
+  if (!appid || !version || !path) {
     program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
   }
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
@@ -46,8 +46,9 @@ export const uploadVersion = async (appid, options) => {
         headers: {
           'Content-Type': 'application/json',
           'apikey': apikey,
-          authorization : `Bearer ${supaAnon}`
-        }})
+          authorization: `Bearer ${supaAnon}`
+        }
+      })
       if (res.status !== 200) {
         program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
       }
@@ -68,7 +69,7 @@ export const uploadVersion = async (appid, options) => {
       // split appData in chunks and send them sequentially with axios
       const chunkSize = oneMb;
       if (appData.length > limitMb) {
-        program.error(`The app is too big, the limit is ${maxMb} Mb`);
+        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${Math.round(appData.length / oneMb)} Mb`);
       }
       const chunks = [];
       for (let i = 0; i < appData.length; i += chunkSize) {
@@ -78,7 +79,7 @@ export const uploadVersion = async (appid, options) => {
         speed: "N/A"
       });
       let fileName
-      for (let i = 0; i < chunks.length; i +=1) {
+      for (let i = 0; i < chunks.length; i += 1) {
         const res = await axios({
           method: 'POST',
           url: hostUpload,
@@ -97,13 +98,14 @@ export const uploadVersion = async (appid, options) => {
           headers: {
             'Content-Type': 'application/json',
             'apikey': apikey,
-            authorization : `Bearer ${supaAnon}`
-          }})
+            authorization: `Bearer ${supaAnon}`
+          }
+        })
         if (res.status !== 200) {
           b1.stop();
           program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
         }
-        b1.update(i+1)
+        b1.update(i + 1)
         fileName = res.data.fileName
       }
       b1.stop();
