@@ -1,3 +1,9 @@
+## 0.7.4 (2022-04-21)
+
+### Fix
+
+- upload use base64 to have more portable
+
 ## 0.7.3 (2022-04-20)
 
 ### Fix
