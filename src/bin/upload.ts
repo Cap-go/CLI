@@ -6,10 +6,18 @@ import { program } from 'commander';
 import cliProgress from 'cli-progress';
 import { host, hostWeb, hostUpload, supaAnon } from './utils';
 
-const oneMb = 1048576; // size of one mb
+const oneMb = 1048576; // size of one mb in bytes
 const maxMb = 30;
 const limitMb = oneMb * maxMb; // size of 1/2 mb
-const formatType = 'binary';
+const formatType = 'base64';
+const byteConvert = {
+  'base64': (s: string) => (3 * (s.length / 4)) - ((s.match(/=/g) || []).length),
+  'hex': (s: string) => s.length / 2,
+  'binary': (s: string) => s.length / 10,
+  'utf8': (s: string) => s.length,
+}
+const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.round(l / divider)
+const chuckSize = (l: number, divider: number) => Math.round(l / chuckNumber(l, divider))
 
 export const uploadVersion = async (appid, options) => {
   let { version, path, channel } = options;
@@ -65,11 +73,13 @@ export const uploadVersion = async (appid, options) => {
       const zip = new AdmZip();
       zip.addLocalFolder(path);
       console.log('Uploading:');
-      const appData = zip.toBuffer().toString(formatType);
+      const zipped = zip.toBuffer();
+      const appData = zipped.toString(formatType);
       // split appData in chunks and send them sequentially with axios
-      const chunkSize = oneMb;
-      if (appData.length > limitMb) {
-        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${Math.round(appData.length / oneMb)} Mb`);
+      const zippedSize = Buffer.byteLength(zipped);
+      const chunkSize = chuckSize(zipped.length, oneMb);
+      if (zippedSize > limitMb) {
+        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${Math.round(zippedSize / oneMb)} Mb`);
       }
       const chunks = [];
       for (let i = 0; i < appData.length; i += chunkSize) {
