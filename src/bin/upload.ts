@@ -9,7 +9,7 @@ import { host, hostWeb, hostUpload, supaAnon } from './utils';
 const oneMb = 1048576; // size of one mb in bytes
 const maxMb = 30;
 const limitMb = oneMb * maxMb; // size of 1/2 mb
-const formatType = 'base64';
+const formatType = 'binary';
 const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.round(l / divider)
 const chuckSize = (l: number, divider: number) => Math.round(l / chuckNumber(l, divider))
 
