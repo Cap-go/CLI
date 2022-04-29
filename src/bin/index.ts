@@ -19,7 +19,7 @@ program
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the file to upload')
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --externa <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
   .option('-v, --version <version>', 'version number of the file to upload');
 
 program
