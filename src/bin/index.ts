@@ -3,8 +3,10 @@ import { addApp } from './add';
 import { deleteApp } from './delete';
 import { setChannel } from './set';
 import { uploadVersion } from './upload';
+import pack from '../../package.json'
 
 program
+  .version(pack.version)
   .command('add [appid]').alias('a')
   .action(addApp)
   .option('-n, --name <name>', 'app name')
