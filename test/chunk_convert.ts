@@ -1,10 +1,16 @@
 import { lorem } from './data'
 
 const byteConvert = {
-    'base64': (s: string) => (3 * (s.length / 4)) - ((s.match(/=/g) || []).length),
-    'hex': (s: string) => s.length / 2,
-    'binary': (s: string) => s.length / 10,
-    'utf8': (s: string) => s.length,
+  'base64': (s: string) => (3 * (s.length / 4)) - ((s.match(/=/g) || []).length),
+  'hex': (s: string) => s.length / 2,
+  'binary': (s: string) => s.length / 10,
+  'utf8': (s: string) => s.length,
+}
+const mbConvert = {
+  'base64': (l: number) => (3 * (l / 4)),
+  'hex': (l: number) => l / 2,
+  'binary': (l: number) => l / 10,
+  'utf8': (l: number) => l,
 }
 const oneMb = 1048576;
 

@@ -20,8 +20,8 @@ program
   .option('-p, --path <path>', 'path of the file to upload')
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-f, --format <base64|hex|binary|utf8>', 'choose the upload format default base64')
   .option('-v, --version <version>', 'version number of the file to upload');
-
 program
   .command('set [appid]').alias('s')
   .action(setChannel)

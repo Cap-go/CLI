@@ -5,19 +5,66 @@ import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
 import { host, hostWeb, hostUpload, supaAnon } from './utils';
+import axiosRetry from 'axios-retry';
 
+axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 const oneMb = 1048576; // size of one mb in bytes
 const maxMb = 30;
-const limitMb = oneMb * maxMb; // size of 1/2 mb
-const formatType = 'binary';
-const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.round(l / divider)
-const chuckSize = (l: number, divider: number) => Math.round(l / chuckNumber(l, divider))
+const alertMb = 25;
+// enum string format
+enum UploadFormat {
+  uft8 = 'utf8',
+  base64 = 'base64',
+  hex = 'hex',
+  binary = 'binary'
+}
+interface uploadPayload {
+  version: string
+  appid: string
+  fileName: string
+  channel: string
+  format: UploadFormat
+  app: string,
+  isMultipart: boolean,
+  chunk: number,
+  totalChunks: number,
+}
+
+const formatDefault: UploadFormat = 'binary' as UploadFormat;
+const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.floor(l / divider)
+const chuckSize = (l: number, divider: number) => Math.floor(l / chuckNumber(l, divider))
+
+const mbConvert = {
+  'base64': (l: number) => ((l * 4) / 3),
+  'hex': (l: number) => l * 2,
+  'binary': (l: number) => l,
+  'utf8': (l: number) => l,
+}
+
+const sendToBack = async (data: uploadPayload, apikey: string) => {
+  const res = await axios({
+    method: 'POST',
+    url: hostUpload,
+    data,
+    validateStatus: () => true,
+    headers: {
+      'Content-Type': 'application/json',
+      'apikey': apikey,
+      authorization: `Bearer ${supaAnon}`
+    }
+  })
+  return res
+}
 
 export const uploadVersion = async (appid, options) => {
   let { version, path, channel } = options;
-  const { apikey, external } = options;
+  const { apikey, external, format } = options;
   channel = channel || 'dev';
   let config;
+  let formatType = formatDefault;
+  if (format in UploadFormat) {
+    formatType = format as UploadFormat;
+  }
   try {
     config = await loadConfig();
   } catch (err) {
@@ -62,18 +109,25 @@ export const uploadVersion = async (appid, options) => {
       }
     }
   } else {
-    const b1 = new cliProgress.SingleBar({}, cliProgress.Presets.shades_grey);
+    const b1 = new cliProgress.SingleBar({
+      format: 'Uploading: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} Mb'
+    }, cliProgress.Presets.shades_grey);
     try {
       const zip = new AdmZip();
       zip.addLocalFolder(path);
-      console.log('Uploading:');
       const zipped = zip.toBuffer();
       const appData = zipped.toString(formatType);
       // split appData in chunks and send them sequentially with axios
-      const zippedSize = Buffer.byteLength(zipped);
-      const chunkSize = chuckSize(zipped.length, oneMb);
-      if (zippedSize > limitMb) {
-        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${Math.round(zippedSize / oneMb)} Mb`);
+      console.log('appData size', appData.length)
+      const zippedSize = appData.length;
+      const mbSize = Math.floor(zippedSize / mbConvert[formatType](oneMb));
+      console.log('mbSize', zippedSize, mbSize, mbConvert[formatType](oneMb))
+      const chunkSize = chuckSize(zippedSize, mbConvert[formatType](oneMb));
+      if (mbSize > maxMb) {
+        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
+      }
+      if (mbSize > alertMb) {
+        console.log(`WARNING !!\nThe app size is ${mbSize} Mb, the limit is ${maxMb} Mb`);
       }
       const chunks = [];
       for (let i = 0; i < appData.length; i += chunkSize) {
@@ -84,27 +138,17 @@ export const uploadVersion = async (appid, options) => {
       });
       let fileName
       for (let i = 0; i < chunks.length; i += 1) {
-        const res = await axios({
-          method: 'POST',
-          url: hostUpload,
-          data: {
-            version,
-            appid,
-            fileName,
-            channel,
-            format: formatType,
-            app: chunks[i],
-            isMultipart: chunks.length > 1,
-            chunk: i + 1,
-            totalChunks: chunks.length,
-          },
-          validateStatus: () => true,
-          headers: {
-            'Content-Type': 'application/json',
-            'apikey': apikey,
-            authorization: `Bearer ${supaAnon}`
-          }
-        })
+        const res = await sendToBack({
+          version,
+          appid,
+          fileName,
+          channel,
+          format: formatType,
+          app: chunks[i],
+          isMultipart: chunks.length > 1,
+          chunk: i + 1,
+          totalChunks: chunks.length,
+        }, apikey)
         if (res.status !== 200) {
           b1.stop();
           program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
