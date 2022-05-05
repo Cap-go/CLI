@@ -1,3 +1,10 @@
+## 0.8.3 (2022-05-05)
+
+### Fix
+
+- remove debug comments
+- build and add auto retry
+
 ## 0.8.2 (2022-04-29)
 
 ### Fix
