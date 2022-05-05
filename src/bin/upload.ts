@@ -118,10 +118,10 @@ export const uploadVersion = async (appid, options) => {
       const zipped = zip.toBuffer();
       const appData = zipped.toString(formatType);
       // split appData in chunks and send them sequentially with axios
-      console.log('appData size', appData.length)
+      // console.log('appData size', appData.length)
       const zippedSize = appData.length;
       const mbSize = Math.floor(zippedSize / mbConvert[formatType](oneMb));
-      console.log('mbSize', zippedSize, mbSize, mbConvert[formatType](oneMb))
+      // console.log('mbSize', zippedSize, mbSize, mbConvert[formatType](oneMb))
       const chunkSize = chuckSize(zippedSize, mbConvert[formatType](oneMb));
       if (mbSize > maxMb) {
         program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
