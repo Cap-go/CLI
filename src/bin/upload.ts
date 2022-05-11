@@ -31,7 +31,7 @@ interface uploadPayload {
 }
 
 const formatDefault = UploadMode.binary;
-const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.floor(l / divider)
+const chuckNumber = (l: number, divider: number) => l < divider ? 1 : Math.floor(l / divider)
 const chuckSize = (l: number, divider: number) => Math.floor(l / chuckNumber(l, divider))
 
 const mbConvert = {
