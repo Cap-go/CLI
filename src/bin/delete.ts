@@ -16,7 +16,7 @@ export const deleteApp = async (appid: string, options: any) => {
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
   }
-  if(!appid) {
+  if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
   console.log(`Delete ${appid} to Capgo`);
@@ -30,12 +30,13 @@ export const deleteApp = async (appid: string, options: any) => {
       validateStatus: () => true,
       headers: {
         'authorization': apikey
-      }})
+      }
+    })
   } catch (err) {
     program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
   }
   if (!res || res.status !== 200) {
     program.error(`Server Error \n${prettyjson.render(res.data)}`);
   }
-  console.log("App deleted to server") 
+  console.log("App deleted to server")
 }

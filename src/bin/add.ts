@@ -2,9 +2,9 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import  { readFileSync } from 'fs'; 
+import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
-import  { getType } from 'mime'; 
+import { getType } from 'mime';
 import { host } from './utils';
 
 export const addApp = async (appid: string, options: any) => {
@@ -22,7 +22,7 @@ export const addApp = async (appid: string, options: any) => {
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
-  if(!appid || !name) {
+  if (!appid || !name) {
     program.error("Missing argument, you need to provide a appid and a name, or be in a capacitor project");
   }
   console.log(`Add ${appid} to Capgo`);
@@ -30,7 +30,7 @@ export const addApp = async (appid: string, options: any) => {
   try {
     console.log('Adding...');
     const data: any = { appid, name }
-    if(icon && existsSync(icon)) {
+    if (icon && existsSync(icon)) {
       const iconBuff = readFileSync(icon);
       const contentType = getType(icon);
       data.icon = iconBuff.toString('base64');
@@ -38,12 +38,13 @@ export const addApp = async (appid: string, options: any) => {
     }
     res = await axios({
       method: 'POST',
-      url:`${host}/api/add`,
+      url: `${host}/api/add`,
       data,
       validateStatus: () => true,
       headers: {
         'authorization': apikey
-      }})
+      }
+    })
   } catch (err) {
     program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
   }

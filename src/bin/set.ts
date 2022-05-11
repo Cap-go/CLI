@@ -15,15 +15,15 @@ export const setChannel = async (appid, options) => {
   }
   appid = appid || config?.app?.appId
   let parsedState
-  if (state === 'public' || state === 'private') 
+  if (state === 'public' || state === 'private')
     parsedState = state === 'public'
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
-  if(!appid) {
+  if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
-  if(!version && !parsedState) {
+  if (!version && !parsedState) {
     program.error("Missing argument, you need to provide a state or a version");
   }
   if (version) {
@@ -34,7 +34,7 @@ export const setChannel = async (appid, options) => {
   try {
     res = await axios({
       method: 'POST',
-      url:`${host}/api/channel`,
+      url: `${host}/api/channel`,
       data: {
         version,
         public: parsedState,
@@ -44,7 +44,8 @@ export const setChannel = async (appid, options) => {
       validateStatus: () => true,
       headers: {
         'authorization': apikey
-      }})
+      }
+    })
   } catch (err) {
     program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
   }
