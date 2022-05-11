@@ -4,15 +4,15 @@ import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
-import { host, hostWeb, hostUpload, supaAnon } from './utils';
 import axiosRetry from 'axios-retry';
+import { host, hostWeb, hostUpload, supaAnon } from './utils';
 
 axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
 const oneMb = 1048576; // size of one mb in bytes
 const maxMb = 30;
 const alertMb = 25;
 // enum string format
-enum UploadFormat {
+enum UploadMode {
   uft8 = 'utf8',
   base64 = 'base64',
   hex = 'hex',
@@ -23,20 +23,20 @@ interface uploadPayload {
   appid: string
   fileName: string
   channel: string
-  format: UploadFormat
+  format: UploadMode
   app: string,
   isMultipart: boolean,
   chunk: number,
   totalChunks: number,
 }
 
-const formatDefault: UploadFormat = 'binary' as UploadFormat;
+const formatDefault = UploadMode.binary;
 const chuckNumber = (l: number, divider: number) => l < divider ? l : Math.floor(l / divider)
 const chuckSize = (l: number, divider: number) => Math.floor(l / chuckNumber(l, divider))
 
 const mbConvert = {
-  'base64': (l: number) => ((l * 4) / 3),
-  'hex': (l: number) => l * 2,
+  'base64': (l: number) => Math.floor((l * 4) / 3),
+  'hex': (l: number) => Math.floor(l * 2),
   'binary': (l: number) => l,
   'utf8': (l: number) => l,
 }
@@ -62,8 +62,8 @@ export const uploadVersion = async (appid, options) => {
   channel = channel || 'dev';
   let config;
   let formatType = formatDefault;
-  if (format in UploadFormat) {
-    formatType = format as UploadFormat;
+  if (format in UploadMode) {
+    formatType = format as UploadMode;
   }
   try {
     config = await loadConfig();
@@ -122,7 +122,8 @@ export const uploadVersion = async (appid, options) => {
       const zippedSize = appData.length;
       const mbSize = Math.floor(zippedSize / mbConvert[formatType](oneMb));
       // console.log('mbSize', zippedSize, mbSize, mbConvert[formatType](oneMb))
-      const chunkSize = chuckSize(zippedSize, mbConvert[formatType](oneMb));
+      const chunkSize = chuckNumber(zippedSize, mbConvert[formatType](oneMb)) > 1
+        ? chuckSize(zippedSize, mbConvert[formatType](oneMb)) : zippedSize;
       if (mbSize > maxMb) {
         program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
       }
