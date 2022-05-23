@@ -1,18 +1,19 @@
-import { loadConfig } from '@capacitor/cli/dist/config';
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { host, hostSet, supaAnon } from './utils';
+import { getConfig, host, hostSupa, supaAnon } from './utils';
 
-export const setChannel = async (appid, options) => {
+interface Options {
+  apikey: string;
+  version: string;
+  state: string;
+  channel?: string;
+}
+
+export const setChannel = async (appid: string, options: Options) => {
   const { apikey, version, state, channel = 'dev' } = options;
-  let config;
+  const config = await getConfig();
   let res;
-  try {
-    config = await loadConfig();
-  } catch (err) {
-    program.error("No capacitor config file found, run `cap init` first");
-  }
   appid = appid || config?.app?.appId
   let parsedState
   if (state === 'public' || state === 'private')
@@ -34,7 +35,7 @@ export const setChannel = async (appid, options) => {
   try {
     res = await axios({
       method: 'POST',
-      url: hostSet,
+      url: `${hostSupa}/channel`,
       data: {
         version,
         public: parsedState,
@@ -48,7 +49,11 @@ export const setChannel = async (appid, options) => {
       }
     })
   } catch (err) {
-    program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
+    if (axios.isAxiosError(err) && err.response) {
+      program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
+    } else {
+      program.error(`Unknow error \n${prettyjson.render(err)}`);
+    }
   }
   if (!res || res.status !== 200) {
     program.error(`Server Error \n${prettyjson.render(res.data)}`);

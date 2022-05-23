@@ -1,17 +1,16 @@
-import { loadConfig } from '@capacitor/cli/dist/config';
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { supaAnon, hostDelete } from './utils';
+import { supaAnon, hostSupa, getConfig } from './utils';
 
-export const deleteApp = async (appid: string, options: any) => {
+interface Options {
+  apikey: string;
+  version: string;
+}
+
+export const deleteApp = async (appid: string, options: Options) => {
   const { apikey, version } = options;
-  let config;
-  try {
-    config = await loadConfig();
-  } catch (err) {
-    program.error("No capacitor config file found, run `cap init` first");
-  }
+  const config = await getConfig();
   appid = appid || config?.app?.appId
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
@@ -25,7 +24,7 @@ export const deleteApp = async (appid: string, options: any) => {
     console.log('Deleting...');
     res = await axios({
       method: 'POST',
-      url: hostDelete,
+      url: `${hostSupa}/delete`,
       data: { appid, version },
       validateStatus: () => true,
       headers: {
@@ -34,7 +33,11 @@ export const deleteApp = async (appid: string, options: any) => {
       }
     })
   } catch (err) {
-    program.error(`Network Error \n${prettyjson.render(err.response.data)}`);
+    if (axios.isAxiosError(err) && err.response) {
+      program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
+    } else {
+      program.error(`Unknow error \n${prettyjson.render(err)}`);
+    }
   }
   if (!res || res.status !== 200) {
     program.error(`Server Error \n${prettyjson.render(res.data)}`);

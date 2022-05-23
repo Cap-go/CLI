@@ -1,13 +1,12 @@
-import { loadConfig } from '@capacitor/cli/dist/config';
 import AdmZip from 'adm-zip';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
 import cliProgress from 'cli-progress';
 import axiosRetry from 'axios-retry';
-import { host, hostWeb, hostUpload, supaAnon } from './utils';
+import { host, hostWeb, supaAnon, hostSupa, getConfig } from './utils';
 
-axiosRetry(axios, { retries: 3, retryDelay: axiosRetry.exponentialDelay });
+axiosRetry(axios, { retries: 5, retryDelay: axiosRetry.exponentialDelay });
 const oneMb = 1048576; // size of one mb in bytes
 const maxMb = 30;
 const alertMb = 25;
@@ -21,13 +20,23 @@ enum UploadMode {
 interface uploadPayload {
   version: string
   appid: string
-  fileName: string
+  fileName?: string
   channel: string
   format: UploadMode
   app: string,
   isMultipart: boolean,
   chunk: number,
   totalChunks: number,
+}
+interface uploadExternal {
+  version: string
+  appid: string
+  channel: string
+  external: string
+}
+
+interface ResApi {
+  fileName: string
 }
 
 const formatDefault = UploadMode.binary;
@@ -41,34 +50,34 @@ const mbConvert = {
   'utf8': (l: number) => l,
 }
 
-const sendToBack = async (data: uploadPayload, apikey: string) => {
-  const res = await axios({
-    method: 'POST',
-    url: hostUpload,
-    data,
-    validateStatus: () => true,
-    headers: {
-      'Content-Type': 'application/json',
-      'apikey': apikey,
-      authorization: `Bearer ${supaAnon}`
-    }
-  })
-  return res
-}
+const sendToBack = async (data: uploadPayload | uploadExternal, apikey: string): Promise<AxiosResponse<ResApi>> => axios({
+  method: 'POST',
+  url: `${hostSupa}/upload`,
+  data,
+  validateStatus: () => true,
+  headers: {
+    'Content-Type': 'application/json',
+    'apikey': apikey,
+    authorization: `Bearer ${supaAnon}`
+  }
+})
 
-export const uploadVersion = async (appid, options) => {
+interface Options {
+  version: string
+  path: string
+  apikey: string
+  channel?: string
+  external?: string
+  format?: UploadMode
+}
+export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
   const { apikey, external, format } = options;
   channel = channel || 'dev';
-  let config;
+  const config = await getConfig();
   let formatType = formatDefault;
-  if (format in UploadMode) {
-    formatType = format as UploadMode;
-  }
-  try {
-    config = await loadConfig();
-  } catch (err) {
-    program.error("No capacitor config file found, run `cap init` first");
+  if (format && format in UploadMode) {
+    formatType = format;
   }
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
@@ -82,30 +91,20 @@ export const uploadVersion = async (appid, options) => {
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
   if (external) {
     try {
-      const res = await axios({
-        method: 'POST',
-        url: hostUpload,
-        data: {
-          version,
-          appid,
-          channel,
-          external,
-        },
-        validateStatus: () => true,
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': apikey,
-          authorization: `Bearer ${supaAnon}`
-        }
-      })
+      const res = await sendToBack({
+        version,
+        appid,
+        channel,
+        external
+      }, apikey)
       if (res.status !== 200) {
         program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
       }
     } catch (err) {
-      if (err.response) {
-        program.error(`Network Error \n${prettyjson.render(err.response?.data || "")}`)
+      if (axios.isAxiosError(err) && err.response) {
+        program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
       } else {
-        program.error(`Network Error \n${prettyjson.render(err || "")}`)
+        program.error(`Unknow error \n${prettyjson.render(err)}`);
       }
     }
   } else {
@@ -139,7 +138,7 @@ export const uploadVersion = async (appid, options) => {
       });
       let fileName
       for (let i = 0; i < chunks.length; i += 1) {
-        const res = await sendToBack({
+        const response = await sendToBack({
           version,
           appid,
           fileName,
@@ -150,20 +149,21 @@ export const uploadVersion = async (appid, options) => {
           chunk: i + 1,
           totalChunks: chunks.length,
         }, apikey)
-        if (res.status !== 200) {
+        if (response.status !== 200 || !response.data.fileName) {
           b1.stop();
-          program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
+          program.error(`Server Error \n${prettyjson.render(response?.data || "")}`);
         }
         b1.update(i + 1)
-        fileName = res.data.fileName
+        const data: ResApi = response.data as ResApi
+        fileName = data.fileName
       }
       b1.stop();
     } catch (err) {
       b1.stop();
-      if (err.response) {
-        program.error(`Network Error \n${prettyjson.render(err.response?.data || "")}`)
+      if (axios.isAxiosError(err) && err.response) {
+        program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
       } else {
-        program.error(`Network Error \n${prettyjson.render(err || "")}`)
+        program.error(`Unknow error \n${prettyjson.render(err)}`);
       }
     }
   }
