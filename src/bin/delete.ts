@@ -2,7 +2,7 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { host } from './utils';
+import { supaAnon, hostDelete } from './utils';
 
 export const deleteApp = async (appid: string, options: any) => {
   const { apikey, version } = options;
@@ -25,11 +25,12 @@ export const deleteApp = async (appid: string, options: any) => {
     console.log('Deleting...');
     res = await axios({
       method: 'POST',
-      url: `${host}/api/delete`,
+      url: hostDelete,
       data: { appid, version },
       validateStatus: () => true,
       headers: {
-        'authorization': apikey
+        'apikey': apikey,
+        'authorization': `Bearer ${supaAnon}`
       }
     })
   } catch (err) {

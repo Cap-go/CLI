@@ -5,7 +5,7 @@ import { program } from 'commander';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
-import { host } from './utils';
+import { host, hostAdd, supaAnon } from './utils';
 
 export const addApp = async (appid: string, options: any) => {
   let { name, icon } = options;
@@ -38,11 +38,12 @@ export const addApp = async (appid: string, options: any) => {
     }
     res = await axios({
       method: 'POST',
-      url: `${host}/api/add`,
+      url: hostAdd,
       data,
       validateStatus: () => true,
       headers: {
-        'authorization': apikey
+        'apikey': apikey,
+        'authorization': `Bearer ${supaAnon}`
       }
     })
   } catch (err) {

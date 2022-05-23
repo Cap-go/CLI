@@ -2,7 +2,7 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { host } from './utils';
+import { host, hostSet, supaAnon } from './utils';
 
 export const setChannel = async (appid, options) => {
   const { apikey, version, state, channel = 'dev' } = options;
@@ -34,7 +34,7 @@ export const setChannel = async (appid, options) => {
   try {
     res = await axios({
       method: 'POST',
-      url: `${host}/api/channel`,
+      url: hostSet,
       data: {
         version,
         public: parsedState,
@@ -43,7 +43,8 @@ export const setChannel = async (appid, options) => {
       },
       validateStatus: () => true,
       headers: {
-        'authorization': apikey
+        'apikey': apikey,
+        'authorization': `Bearer ${supaAnon}`
       }
     })
   } catch (err) {
