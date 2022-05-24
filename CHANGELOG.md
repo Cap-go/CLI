@@ -1,3 +1,14 @@
+## 0.9.0 (2022-05-24)
+
+### Fix
+
+- supa config
+- typing issues
+
+### Feat
+
+- convert to supabase edge functions
+
 ## 0.8.6 (2022-05-11)
 
 ### Fix
