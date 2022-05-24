@@ -11,10 +11,12 @@ interface Options {
 }
 
 export const setChannel = async (appid: string, options: Options) => {
-  const { apikey, version, state, channel = 'dev' } = options;
+  let { version } = options;
+  const { apikey, state, channel = 'dev' } = options;
   const config = await getConfig();
   let res;
   appid = appid || config?.app?.appId
+  version = version || config?.app?.package?.version
   let parsedState
   if (state === 'public' || state === 'private')
     parsedState = state === 'public'

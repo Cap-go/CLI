@@ -17,7 +17,7 @@ interface Options {
   name?: string;
   icon?: string;
 }
-
+const newIconPath = "assets/icon.png"
 export const addApp = async (appid: string, options: Options) => {
   let { name, icon } = options;
   const { apikey } = options;
@@ -40,6 +40,14 @@ export const addApp = async (appid: string, options: Options) => {
     const contentType = getType(icon);
     data.icon = iconBuff.toString('base64');
     data.iconType = contentType || 'image/png';
+  }
+  else if (existsSync(newIconPath)) {
+    const iconBuff = readFileSync(newIconPath);
+    const contentType = getType(newIconPath);
+    data.icon = iconBuff.toString('base64');
+    data.iconType = contentType || 'image/png';
+  } else {
+    console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
   }
   try {
     res = await axios({
