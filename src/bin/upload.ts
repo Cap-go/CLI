@@ -1,10 +1,10 @@
 import AdmZip from 'adm-zip';
 import axios, { AxiosResponse } from 'axios';
-import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import cliProgress from 'cli-progress';
 import axiosRetry from 'axios-retry';
-import { host, hostWeb, supaAnon, hostSupa, getConfig } from './utils';
+import { randomUUID } from 'crypto';
+import { host, hostWeb, getConfig, createSupabaseClient, updateOrCreateChannel, updateOrCreateVersion } from './utils';
+import {definitions} from './types_supabase'
 
 axiosRetry(axios, { retries: 5, retryDelay: axiosRetry.exponentialDelay });
 const oneMb = 1048576; // size of one mb in bytes
@@ -50,18 +50,6 @@ const mbConvert = {
   'utf8': (l: number) => l,
 }
 
-const sendToBack = async (data: uploadPayload | uploadExternal, apikey: string): Promise<AxiosResponse<ResApi>> => axios({
-  method: 'POST',
-  url: `${hostSupa}/upload`,
-  data,
-  validateStatus: () => true,
-  headers: {
-    'Content-Type': 'application/json',
-    'apikey': apikey,
-    authorization: `Bearer ${supaAnon}`
-  }
-})
-
 interface Options {
   version: string
   path: string
@@ -88,86 +76,91 @@ export const uploadVersion = async (appid: string, options: Options) => {
   if (!appid || !version || !path) {
     program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
   }
-  console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
-  if (external) {
-    try {
-      const res = await sendToBack({
-        version,
-        appid,
-        channel,
-        external
-      }, apikey)
-      if (res.status !== 200) {
-        program.error(`Server Error \n${prettyjson.render(res?.data || "")}`);
-      }
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response) {
-        program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
-      } else {
-        program.error(`Unknow error \n${prettyjson.render(err)}`);
-      }
-    }
-  } else {
-    const b1 = new cliProgress.SingleBar({
-      format: 'Uploading: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} Mb'
-    }, cliProgress.Presets.shades_grey);
-    try {
-      const zip = new AdmZip();
-      zip.addLocalFolder(path);
-      const zipped = zip.toBuffer();
-      const appData = zipped.toString(formatType);
-      // split appData in chunks and send them sequentially with axios
-      // console.log('appData size', appData.length)
-      const zippedSize = appData.length;
-      const mbSize = Math.floor(zippedSize / mbConvert[formatType](oneMb));
-      // console.log('mbSize', zippedSize, mbSize, mbConvert[formatType](oneMb))
-      const chunkSize = chuckNumber(zippedSize, mbConvert[formatType](oneMb)) > 1
-        ? chuckSize(zippedSize, mbConvert[formatType](oneMb)) : zippedSize;
-      if (mbSize > maxMb) {
-        program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
-      }
-      if (mbSize > alertMb) {
-        console.log(`WARNING !!\nThe app size is ${mbSize} Mb, the limit is ${maxMb} Mb`);
-      }
-      const chunks = [];
-      for (let i = 0; i < appData.length; i += chunkSize) {
-        chunks.push(appData.slice(i, i + chunkSize));
-      }
-      b1.start(chunks.length, 0, {
-        speed: "N/A"
-      });
-      let fileName
-      for (let i = 0; i < chunks.length; i += 1) {
-        const response = await sendToBack({
-          version,
-          appid,
-          fileName,
-          channel,
-          format: formatType,
-          app: chunks[i],
-          isMultipart: chunks.length > 1,
-          chunk: i + 1,
-          totalChunks: chunks.length,
-        }, apikey)
-        if (response.status !== 200 || !response.data.fileName) {
-          b1.stop();
-          program.error(`Server Error \n${prettyjson.render(response?.data || "")}`);
-        }
-        b1.update(i + 1)
-        const data: ResApi = response.data as ResApi
-        fileName = data.fileName
-      }
-      b1.stop();
-    } catch (err) {
-      b1.stop();
-      if (axios.isAxiosError(err) && err.response) {
-        program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
-      } else {
-        program.error(`Unknow error \n${prettyjson.render(err)}`);
-      }
-    }
+
+  const supabase = createSupabaseClient(apikey)
+
+  // checking if user has access rights before uploading
+  const { data: apiAccess, error: apiAccessError } = await supabase
+    .rpc('is_allowed_capgkey', { apikey, keymode: ['upload', 'write', 'all'] })
+
+  if(!apiAccess || apiAccessError) {
+    console.log('Invalid API key');
+    return
   }
 
+  const response = await supabase
+    .rpc('get_user_id', { apikey })
+
+  const userId = response.data!.toString();
+  const userIdError = response.error
+
+  if(!userId || userIdError) {
+    console.error('Cannot verify user');
+    return
+  }
+
+  const { data: app, error: dbError0 } = await supabase
+    .from<definitions['apps']>('apps')
+    .select()
+    .eq('app_id', appid)
+    .eq('user_id', userId)
+  if (!app?.length || dbError0) {
+    console.error(`Cannot find app ${appid} in your account`)
+    return
+  }
+
+  console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
+
+  if(!external) {
+    const zip = new AdmZip();
+    zip.addLocalFolder(path);
+    const zipped = zip.toBuffer();
+    const appData = zipped.toString(formatType);
+    const filePath = `apps/${userId}/${appid}/versions`
+    const fileName = randomUUID()
+
+    const { error: upError } = await supabase.storage
+      .from(filePath)
+      .upload(fileName, appData, {
+        contentType: 'application/zip',
+      })
+    if (upError) {
+      console.error('Cannot upload', upError)
+      return
+    }
+  } else if (external && !external.startsWith('https://')) {
+      console.error(`External link should should start with "https://" current is "${external}"`)
+      return
+  } else {
+    const fileName = randomUUID()
+    const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
+      bucket_id: external ? undefined : fileName,
+      user_id: userId,
+      name: version,
+      app_id: appid,
+      external_url: external,
+    })
+    const { error: dbError2 } = await supabase
+      .from<definitions['apps']>('apps')
+      .update({
+        last_version: version,
+      }).eq('app_id', appid)
+      .eq('user_id', userId)
+    if (dbError || dbError2 || !version || !version.length) {
+      console.error('Cannot add version', dbError || dbError2 || 'unknow error')
+      return
+    }
+      const { error: dbError3 } = await updateOrCreateChannel(supabase, {
+        name: channel,
+        app_id: appid,
+        created_by: userId,
+        version: versionData[0].id,
+      })
+      if (dbError3) {
+        console.error('Cannot update or add channel', dbError3)
+        return
+      }
+    }
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appid}`)
