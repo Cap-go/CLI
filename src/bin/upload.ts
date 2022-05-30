@@ -1,18 +1,9 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
+import prettyjson from 'prettyjson';
 import { host, hostWeb, getConfig, createSupabaseClient, updateOrCreateChannel, updateOrCreateVersion } from './utils';
 import { definitions } from './types_supabase'
-
-// enum string format
-enum UploadMode {
-  uft8 = 'utf8',
-  base64 = 'base64',
-  hex = 'hex',
-  binary = 'binary'
-}
-
-const formatDefault = UploadMode.binary;
 
 interface Options {
   version: string
@@ -20,17 +11,12 @@ interface Options {
   apikey: string
   channel?: string
   external?: string
-  format?: UploadMode
 }
 export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
-  const { apikey, external, format } = options;
+  const { apikey, external } = options;
   channel = channel || 'dev';
   const config = await getConfig();
-  let formatType = formatDefault;
-  if (format && format in UploadMode) {
-    formatType = format;
-  }
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
   path = path || config?.app?.webDir
@@ -75,13 +61,12 @@ export const uploadVersion = async (appid: string, options: Options) => {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
-    const appData = zipped.toString(formatType);
     const filePath = `apps/${userId}/${appid}/versions`
     const fileName = randomUUID()
 
     const { error: upError } = await supabase.storage
       .from(filePath)
-      .upload(fileName, appData, {
+      .upload(fileName, zipped, {
         contentType: 'application/zip',
       })
     if (upError) {
@@ -105,7 +90,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       }).eq('app_id', appid)
       .eq('user_id', userId)
     if (dbError || dbError2 || !version || !version.length) {
-      program.error(`Cannot add version ${dbError || dbError2 || 'unknow error'}`)
+      program.error(`Cannot add version \n${prettyjson.render(dbError || dbError2 || 'unknow error')}`)
     }
     const { error: dbError3 } = await updateOrCreateChannel(supabase, {
       name: channel,
@@ -114,7 +99,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       version: versionData[0].id,
     })
     if (dbError3) {
-      program.error(`Cannot update or add channel ${dbError3}`)
+      program.error(`Cannot update or add channel \n${prettyjson.render(dbError3)}`)
     }
   }
   console.log("App uploaded to server")
