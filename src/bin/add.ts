@@ -3,14 +3,10 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
+import prettyjson from 'prettyjson';
+import { definitions } from './types_supabase'
 import { getConfig, checkAppOwner, createSupabaseClient } from './utils';
 
-interface AppAdd {
-  appid: string;
-  name: string;
-  icon?: string;
-  iconType?: string;
-}
 interface Options {
   apikey: string;
   name?: string;
@@ -44,18 +40,20 @@ export const addApp = async (appid: string, options: Options) => {
   }
 
   console.log('Adding...');
-  const data: AppAdd = { appid, name }
+  let iconBuff;
+  let iconType;
+
   if (icon && existsSync(icon)) {
-    const iconBuff = readFileSync(icon);
+    iconBuff = readFileSync(icon);
     const contentType = getType(icon);
-    data.icon = iconBuff.toString('base64');
-    data.iconType = contentType || 'image/png';
+    iconType = contentType || 'image/png';
+    console.warn(`Found app icon ${icon}`);
   }
   else if (existsSync(newIconPath)) {
-    const iconBuff = readFileSync(newIconPath);
+    iconBuff = readFileSync(newIconPath);
     const contentType = getType(newIconPath);
-    data.icon = iconBuff.toString('base64');
-    data.iconType = contentType || 'image/png';
+    iconType = contentType || 'image/png';
+    console.warn(`Found app icon ${newIconPath}`);
   } else {
     console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
   }
@@ -78,14 +76,14 @@ export const addApp = async (appid: string, options: Options) => {
   let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
 
   // upload image if available
-  if (data.icon && data.iconType) {
+  if (iconBuff && iconType) {
     const { error } = await supabase.storage
       .from(`images/${userId}/${appid}`)
-      .upload(fileName, data.icon, {
-        contentType: data.iconType,
+      .upload(fileName, iconBuff, {
+        contentType: iconType,
       })
     if (error) {
-      program.error(`Could not add app ${error}`);
+      program.error(`Could not add app \n${prettyjson.render(error)}`);
     }
     const { data: signedURLData } = await supabase
       .storage
@@ -96,16 +94,15 @@ export const addApp = async (appid: string, options: Options) => {
 
   // add app to db
   const { error: dbError } = await supabase
-    .from('apps')
+    .from<definitions['apps']>('apps')
     .insert({
       icon_url: signedURL,
       user_id: userId,
       name,
       app_id: appid,
-    })
+    }, { returning: "minimal" })
   if (dbError) {
-    console.error('Could not add app.', dbError)
-    return
+    program.error(`Could not add app \n${prettyjson.render(dbError)}`);
   }
   console.log("App added to server, you can upload a version now")
 }
