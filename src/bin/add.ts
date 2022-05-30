@@ -38,11 +38,11 @@ export const addApp = async (appid: string, options: Options) => {
   const { data: apiAccess, error: apiAccessError } = await supabase
     .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
 
-  if(!apiAccess || apiAccessError) {
+  if (!apiAccess || apiAccessError) {
     console.log('Invalid API key');
     return
   }
-  
+
   console.log('Adding...');
   const data: AppAdd = { appid, name }
   if (icon && existsSync(icon)) {
@@ -60,13 +60,12 @@ export const addApp = async (appid: string, options: Options) => {
     console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
   }
 
-  const response = await supabase
-    .rpc('get_user_id', { apikey })
+  const { data: dataUser, error: userIdError } = await supabase
+    .rpc<string>('get_user_id', { apikey })
 
-  const userId = response.data!;
-  const userIdError = response.error
+  const userId = dataUser ? dataUser.toString() : '';
 
-  if(!userId || userIdError) {
+  if (!userId || userIdError) {
     console.error('Cannot verify user');
     return
   }
@@ -79,7 +78,7 @@ export const addApp = async (appid: string, options: Options) => {
 
   const fileName = `icon_${randomUUID()}`
   let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
-  
+
   // upload image if available
   if (data.icon && data.iconType) {
     const { error } = await supabase.storage
@@ -109,7 +108,7 @@ export const addApp = async (appid: string, options: Options) => {
     })
   if (dbError) {
     console.error('Could not add app.', dbError)
-      return
+    return
   }
   console.log("App added to server, you can upload a version now")
 }

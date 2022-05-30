@@ -1,7 +1,8 @@
 import axios from 'axios';
 import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { getConfig, host, hostSupa, supaAnon } from './utils';
+import { getConfig, createSupabaseClient, updateOrCreateChannel, host } from './utils';
+import { definitions } from './types_supabase';
 
 interface Options {
   apikey: string;
@@ -14,7 +15,6 @@ export const setChannel = async (appid: string, options: Options) => {
   let { version } = options;
   const { apikey, state, channel = 'dev' } = options;
   const config = await getConfig();
-  let res;
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
   let parsedState
@@ -35,30 +35,49 @@ export const setChannel = async (appid: string, options: Options) => {
     console.log(`Set${channel} to @${state} in ${appid}`);
   }
   try {
-    res = await axios({
-      method: 'POST',
-      url: `${hostSupa}/channel`,
-      data: {
-        version,
-        public: parsedState,
-        appid,
-        channel,
-      },
-      validateStatus: () => true,
-      headers: {
-        'apikey': apikey,
-        'authorization': `Bearer ${supaAnon}`
-      }
-    })
+    const supabase = createSupabaseClient(apikey)
+    const { data: dataUser, error: userIdError } = await supabase
+      .rpc<string>('get_user_id', { apikey })
+
+    const userId = dataUser ? dataUser.toString() : '';
+
+    if (!userId || userIdError) {
+      console.error('Cannot verify user');
+      return
+    }
+    const channelPayload: Partial<definitions['channels']> = {
+      created_by: userId,
+      app_id: appid,
+      name: channel,
+    }
+    if (version) {
+      const { data, error: vError } = await supabase
+        .from<definitions['app_versions']>('app_versions')
+        .select()
+        .eq('app_id', appid)
+        .eq('name', version)
+        .eq('user_id', userId)
+        .eq('deleted', false)
+      if (vError || !data || !data.length)
+        program.error(`Cannot find version ${version}`);
+      channelPayload.version = data[0].id
+    }
+    if (parsedState !== undefined)
+      channelPayload.public = parsedState
+    try {
+      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
+      if (dbError)
+        program.error(`Cannot set channel \n${prettyjson.render(dbError)}`);
+    }
+    catch (e) {
+      program.error(`Cannot set channel \n${prettyjson.render(e)}`);
+    }
   } catch (err) {
     if (axios.isAxiosError(err) && err.response) {
       program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
     } else {
       program.error(`Unknow error \n${prettyjson.render(err)}`);
     }
-  }
-  if (!res || res.status !== 200) {
-    program.error(`Server Error \n${prettyjson.render(res.data)}`);
   }
   if (version) {
     console.log(`Done ✅`);

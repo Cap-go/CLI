@@ -18,7 +18,6 @@ export const deleteApp = async (appid: string, options: Options) => {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
   console.log(`Delete ${appid} to Capgo`);
-  let res;
 
   const supabase = createSupabaseClient(apikey)
 
@@ -26,18 +25,17 @@ export const deleteApp = async (appid: string, options: Options) => {
   const { data: apiAccess, error: apiAccessError } = await supabase
     .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
 
-  if(!apiAccess || apiAccessError) {
+  if (!apiAccess || apiAccessError) {
     console.log('Invalid API key');
     return
   }
 
-  const response = await supabase
-    .rpc('get_user_id', { apikey })
+  const { data: dataUser, error: userIdError } = await supabase
+    .rpc<string>('get_user_id', { apikey })
 
-  const userId = response.data!.toString();
-  const userIdError = response.error
+  const userId = dataUser ? dataUser.toString() : '';
 
-  if(!userId || userIdError) {
+  if (!userId || userIdError) {
     console.error('Cannot verify user');
     return
   }
@@ -48,7 +46,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     return;
   }
 
-  if(version) {
+  if (version) {
     const { data: versions, error: versionIdError } = await supabase
       .from<definitions['app_versions']>('app_versions')
       .select()
@@ -67,7 +65,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('created_by', userId)
       .eq('version', versions[0].id)
     if ((channelFound && channelFound.length) || errorChannel) {
-      console.error( `Version ${appid}@${version} is used in a channel, unlink it first`, errorChannel);
+      console.error(`Version ${appid}@${version} is used in a channel, unlink it first`, errorChannel);
       return
     }
     const { data: deviceFound, error: errorDevice } = await supabase
@@ -146,7 +144,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (dbAppError) {
-    console.error('Cannot delete aoo from database', dbAppError)
+    console.error('Cannot delete from database', dbAppError)
     return
   }
 

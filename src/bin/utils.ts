@@ -41,73 +41,73 @@ export const getConfig = async () => {
     return config;
 }
 
-export const checkAppOwner = async(supabase: SupabaseClient, userId: any, appId: string | undefined): Promise<boolean> => {
+export const checkAppOwner = async (supabase: SupabaseClient, userId: any, appId: string | undefined): Promise<boolean> => {
     if (!appId || !userId)
-      return false
-    try {
-      const { data, error } = await supabase
-        .from<definitions['apps']>('apps')
-        .select()
-        .eq('user_id', userId)
-        .eq('app_id', appId)
-      if (!data || !data.length || error)
         return false
-      return true
+    try {
+        const { data, error } = await supabase
+            .from<definitions['apps']>('apps')
+            .select()
+            .eq('user_id', userId)
+            .eq('app_id', appId)
+        if (!data || !data.length || error)
+            return false
+        return true
     }
     catch (error) {
-      console.error(error)
-      return false
+        console.error(error)
+        return false
     }
-  }
-
-export const updateOrCreateVersion = async(supabase: SupabaseClient, update: Partial<definitions['app_versions']>) => {
-  // eslint-disable-next-line no-console
-  console.log('updateOrCreateVersion', update)
-  const { data, error } = await supabase
-    .from<definitions['app_versions']>('app_versions')
-    .select()
-    .eq('app_id', update.app_id)
-    .eq('name', update.name)
-  if (data && data.length && !error) {
-  // eslint-disable-next-line no-console
-    console.log('update Version')
-    update.deleted = false
-    return supabase
-      .from<definitions['app_versions']>('app_versions')
-      .update(update)
-      .eq('app_id', update.app_id)
-      .eq('name', update.name)
-  }
-  
-  return supabase
-    .from<definitions['app_versions']>('app_versions')
-    .insert(update)
-  
 }
-  
-export const updateOrCreateChannel = async(supabase: SupabaseClient,update: Partial<definitions['channels']>) => {
-  // eslint-disable-next-line no-console
-  console.log('updateOrCreateChannel', update)
-  if (!update.app_id || !update.name || !update.created_by) {
-    console.error('missing app_id, name, or created_by')
-    return Promise.reject(new Error('missing app_id, name, or created_by'))
-  }
-  const { data, error } = await supabase
-    .from<definitions['channels']>('channels')
-    .select()
-    .eq('app_id', update.app_id)
-    .eq('name', update.name)
-    .eq('created_by', update.created_by)
-  if (data && data.length && !error) {
+
+export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<definitions['app_versions']>) => {
+    // eslint-disable-next-line no-console
+    console.log('updateOrCreateVersion', update)
+    const { data, error } = await supabase
+        .from<definitions['app_versions']>('app_versions')
+        .select()
+        .eq('app_id', update.app_id)
+        .eq('name', update.name)
+    if (data && data.length && !error) {
+        // eslint-disable-next-line no-console
+        console.log('update Version')
+        update.deleted = false
+        return supabase
+            .from<definitions['app_versions']>('app_versions')
+            .update(update)
+            .eq('app_id', update.app_id)
+            .eq('name', update.name)
+    }
+
     return supabase
-      .from<definitions['channels']>('channels')
-      .update(update)
-      .eq('app_id', update.app_id)
-      .eq('name', update.name)
-      .eq('created_by', update.created_by)
-  }
-  
+        .from<definitions['app_versions']>('app_versions')
+        .insert(update)
+
+}
+
+export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<definitions['channels']>) => {
+    // eslint-disable-next-line no-console
+    console.log('updateOrCreateChannel', update)
+    if (!update.app_id || !update.name || !update.created_by) {
+        console.error('missing app_id, name, or created_by')
+        return Promise.reject(new Error('missing app_id, name, or created_by'))
+    }
+    const { data, error } = await supabase
+        .from<definitions['channels']>('channels')
+        .select()
+        .eq('app_id', update.app_id)
+        .eq('name', update.name)
+        .eq('created_by', update.created_by)
+    if (data && data.length && !error) {
+        return supabase
+            .from<definitions['channels']>('channels')
+            .update(update)
+            .eq('app_id', update.app_id)
+            .eq('name', update.name)
+            .eq('created_by', update.created_by)
+    }
+
     return supabase
-      .from<definitions['channels']>('channels')
-      .insert(update)
+        .from<definitions['channels']>('channels')
+        .insert(update)
 }
