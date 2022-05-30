@@ -48,8 +48,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     .rpc('is_allowed_capgkey', { apikey, keymode: ['upload', 'write', 'all'] })
 
   if (!apiAccess || apiAccessError) {
-    console.log('Invalid API key');
-    return
+    program.error("Invalid API key");
   }
 
   const { data, error: userIdError } = await supabase
@@ -58,8 +57,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const userId = data ? data.toString() : '';
 
   if (!userId || userIdError) {
-    console.error('Cannot verify user');
-    return
+    program.error("Cannot verify user");
   }
 
   const { data: app, error: dbError0 } = await supabase
@@ -68,8 +66,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     .eq('app_id', appid)
     .eq('user_id', userId)
   if (!app?.length || dbError0) {
-    console.error(`Cannot find app ${appid} in your account`)
-    return
+    program.error(`Cannot find app ${appid} in your account`)
   }
 
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
@@ -88,12 +85,10 @@ export const uploadVersion = async (appid: string, options: Options) => {
         contentType: 'application/zip',
       })
     if (upError) {
-      console.error('Cannot upload', upError)
-      return
+      program.error(`Cannot upload ${upError}`)
     }
   } else if (external && !external.startsWith('https://')) {
-    console.error(`External link should should start with "https://" current is "${external}"`)
-    return
+    program.error(`External link should should start with "https://" current is "${external}"`)
   } else {
     const fileName = randomUUID()
     const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
@@ -110,8 +105,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       }).eq('app_id', appid)
       .eq('user_id', userId)
     if (dbError || dbError2 || !version || !version.length) {
-      console.error('Cannot add version', dbError || dbError2 || 'unknow error')
-      return
+      program.error(`Cannot add version ${dbError || dbError2 || 'unknow error'}`)
     }
     const { error: dbError3 } = await updateOrCreateChannel(supabase, {
       name: channel,
@@ -120,8 +114,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       version: versionData[0].id,
     })
     if (dbError3) {
-      console.error('Cannot update or add channel', dbError3)
-      return
+      program.error(`Cannot update or add channel ${dbError3}`)
     }
   }
   console.log("App uploaded to server")

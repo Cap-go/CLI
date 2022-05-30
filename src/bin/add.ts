@@ -66,14 +66,12 @@ export const addApp = async (appid: string, options: Options) => {
   const userId = dataUser ? dataUser.toString() : '';
 
   if (!userId || userIdError) {
-    console.error('Cannot verify user');
-    return
+    program.error('Cannot verify user');
   }
 
   // check if app already exist
   if (await checkAppOwner(supabase, userId, appid)) {
-    console.error('App already exists')
-    return;
+    program.error('App already exists');
   }
 
   const fileName = `icon_${randomUUID()}`
@@ -87,8 +85,7 @@ export const addApp = async (appid: string, options: Options) => {
         contentType: data.iconType,
       })
     if (error) {
-      console.error('Could not add app.', error)
-      return
+      program.error(`Could not add app ${error}`);
     }
     const { data: signedURLData } = await supabase
       .storage

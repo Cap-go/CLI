@@ -42,7 +42,7 @@ export const setChannel = async (appid: string, options: Options) => {
     const userId = dataUser ? dataUser.toString() : '';
 
     if (!userId || userIdError) {
-      console.error('Cannot verify user');
+      program.error('Cannot verify user');
       return
     }
     const channelPayload: Partial<definitions['channels']> = {

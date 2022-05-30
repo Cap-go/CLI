@@ -36,14 +36,12 @@ export const deleteApp = async (appid: string, options: Options) => {
   const userId = dataUser ? dataUser.toString() : '';
 
   if (!userId || userIdError) {
-    console.error('Cannot verify user');
-    return
+    program.error('Cannot verify user')
   }
 
   // check if user is the owner of the app
   if (!(await checkAppOwner(supabase, userId, appid))) {
-    console.error('No permission to delete')
-    return;
+    program.error('No permission to delete')
   }
 
   if (version) {
@@ -55,8 +53,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('name', version)
       .eq('deleted', false)
     if (!versions || !versions.length || versionIdError) {
-      console.error(`Version ${appid}@${version} don't exist`, versionIdError)
-      return
+      program.error(`Version ${appid}@${version} don't exist ${versionIdError || 'unknown error'}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
       .from<definitions['channels']>('channels')
@@ -65,8 +62,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('created_by', userId)
       .eq('version', versions[0].id)
     if ((channelFound && channelFound.length) || errorChannel) {
-      console.error(`Version ${appid}@${version} is used in a channel, unlink it first`, errorChannel);
-      return
+      program.error(`Version ${appid}@${version} is used in a channel, unlink it first ${errorChannel || 'unknown error'}`)
     }
     const { data: deviceFound, error: errorDevice } = await supabase
       .from<definitions['devices_override']>('devices_override')
@@ -74,8 +70,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('app_id', appid)
       .eq('version', versions[0].id)
     if ((deviceFound && deviceFound.length) || errorDevice) {
-      console.error(`Version ${appid}@${version} is used in a device override, unlink it first`, errorChannel)
-      return
+      program.error(`Version ${appid}@${version} is used in a device override, unlink it first ${errorChannel || 'unknown error'}`)
     }
     // Delete only a specific version in storage
     const { error: delError } = await supabase
@@ -83,8 +78,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .from('apps')
       .remove([`${userId}/${appid}/versions/${versions[0].bucket_id}`])
     if (delError) {
-      console.error(`Something went wrong when trying to delete ${appid}@${version}`, delError)
-      return
+      program.error(`Something went wrong when trying to delete ${appid}@${version} ${delError}`)
     }
 
     const { error: delAppSpecVersionError } = await supabase
@@ -96,8 +90,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('name', version)
       .eq('user_id', userId)
     if (delAppSpecVersionError) {
-      console.error(`App ${appid}@${version} not found in database`, delAppSpecVersionError)
-      return
+      program.error(`App ${appid}@${version} not found in database ${delAppSpecVersionError}`)
     }
     console.log("App version deleted from server")
     return
@@ -110,8 +103,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (vError) {
-    console.error(`App ${appid} not found in database`, vError)
-    return
+    program.error(`App ${appid} not found in database ${vError}`)
   }
 
   if (data && data.length) {
@@ -121,8 +113,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .from('apps')
       .remove(filesToRemove)
     if (delError) {
-      console.error(`Cannot delete stored version for app ${appid} from storage`, delError)
-      return
+      program.error(`Cannot delete stored version for app ${appid} from storage ${delError}`)
     }
   }
 
@@ -133,8 +124,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (delAppVersionError) {
-    console.error(`Cannot delete version for app ${appid} from database`, delAppVersionError)
-    return
+    program.error(`Cannot delete version for app ${appid} from database ${delAppVersionError}`)
   }
 
   const { error: dbAppError } = await supabase
@@ -144,8 +134,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (dbAppError) {
-    console.error('Cannot delete from database', dbAppError)
-    return
+    program.error(`Cannot delete from database ${dbAppError}`)
   }
 
   console.log("App deleted from server")
