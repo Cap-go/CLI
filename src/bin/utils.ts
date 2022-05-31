@@ -41,7 +41,7 @@ export const getConfig = async () => {
     return config;
 }
 
-export const checkAppOwner = async (supabase: SupabaseClient, userId: any, appId: string | undefined): Promise<boolean> => {
+export const checkAppOwner = async (supabase: SupabaseClient, userId: string, appId: string | undefined): Promise<boolean> => {
     if (!appId || !userId)
         return false
     try {
@@ -60,54 +60,45 @@ export const checkAppOwner = async (supabase: SupabaseClient, userId: any, appId
     }
 }
 
-export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<definitions['app_versions']>) => {
-    // eslint-disable-next-line no-console
-    console.log('updateOrCreateVersion', update)
+export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<definitions['app_versions']>, apikey: string) => {
+    // console.log('updateOrCreateVersion', update, apikey)
     const { data, error } = await supabase
-        .from<definitions['app_versions']>('app_versions')
-        .select()
-        .eq('app_id', update.app_id)
-        .eq('name', update.name)
-    if (data && data.length && !error) {
-        // eslint-disable-next-line no-console
-        console.log('update Version')
+        .rpc<string>('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
+    if (data && !error) {
         update.deleted = false
         return supabase
             .from<definitions['app_versions']>('app_versions')
-            .update(update)
+            .update(update, { returning: "minimal" })
             .eq('app_id', update.app_id)
             .eq('name', update.name)
     }
+    // console.log('create Version', data, error)
 
     return supabase
         .from<definitions['app_versions']>('app_versions')
-        .insert(update)
+        .insert(update, { returning: "minimal" })
 
 }
 
-export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<definitions['channels']>) => {
-    // eslint-disable-next-line no-console
-    console.log('updateOrCreateChannel', update)
+export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<definitions['channels']>, apikey: string) => {
+    // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
         console.error('missing app_id, name, or created_by')
         return Promise.reject(new Error('missing app_id, name, or created_by'))
     }
     const { data, error } = await supabase
-        .from<definitions['channels']>('channels')
-        .select()
-        .eq('app_id', update.app_id)
-        .eq('name', update.name)
-        .eq('created_by', update.created_by)
-    if (data && data.length && !error) {
+        .rpc<string>('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
+    if (data && !error) {
         return supabase
             .from<definitions['channels']>('channels')
-            .update(update)
+            .update(update, { returning: "minimal" })
             .eq('app_id', update.app_id)
             .eq('name', update.name)
             .eq('created_by', update.created_by)
     }
+    // console.log('create Channel', data, error)
 
     return supabase
         .from<definitions['channels']>('channels')
-        .insert(update)
+        .insert(update, { returning: "minimal" })
 }

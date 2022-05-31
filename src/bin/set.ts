@@ -36,6 +36,12 @@ export const setChannel = async (appid: string, options: Options) => {
   }
   try {
     const supabase = createSupabaseClient(apikey)
+    const { data: apiAccess, error: apiAccessError } = await supabase
+      .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
+
+    if (!apiAccess || apiAccessError) {
+      program.error("Invalid API key or insufisant rights");
+    }
     const { data: dataUser, error: userIdError } = await supabase
       .rpc<string>('get_user_id', { apikey })
 
@@ -65,7 +71,7 @@ export const setChannel = async (appid: string, options: Options) => {
     if (parsedState !== undefined)
       channelPayload.public = parsedState
     try {
-      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
+      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, apikey)
       if (dbError)
         program.error(`Cannot set channel \n${prettyjson.render(dbError)}`);
     }

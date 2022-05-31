@@ -34,7 +34,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     .rpc('is_allowed_capgkey', { apikey, keymode: ['upload', 'write', 'all'] })
 
   if (!apiAccess || apiAccessError) {
-    program.error("Invalid API key");
+    program.error("Invalid API key or insufisant rights");
   }
 
   const { data, error: userIdError } = await supabase
@@ -82,26 +82,25 @@ export const uploadVersion = async (appid: string, options: Options) => {
     name: version,
     app_id: appid,
     external_url: external,
-  })
-  const { error: dbError2 } = await supabase
-    .from<definitions['apps']>('apps')
-    .update({
-      last_version: version,
-    }, { returning: "minimal" }).eq('app_id', appid)
-    .eq('user_id', userId)
-  // console.log('appData', appData)
-  if (dbError || dbError2 || !version || !version.length) {
-    program.error(`Cannot add version \n${prettyjson.render(dbError || dbError2 || 'unknow error')}`)
+  }, apikey)
+  if (dbError) {
+    program.error(`Cannot add version \n${prettyjson.render(dbError || 'unknow error')}`)
   }
-  const { error: dbError3 } = await updateOrCreateChannel(supabase, {
-    name: channel,
-    app_id: appid,
-    created_by: userId,
-    version: versionData[0].id,
-  })
-  if (dbError3) {
-    program.error(`Cannot update or add channel \n${prettyjson.render(dbError3)}`)
+  if (versionData && versionData.length) {
+    const { error: dbError3 } = await updateOrCreateChannel(supabase, {
+      name: channel,
+      app_id: appid,
+      created_by: userId,
+      version: versionData[0].id,
+    }, apikey)
+    if (dbError3) {
+      console.log('\n=> Cannot set version with upload key, use key with more rights for that\n')
+    }
+  } else {
+    console.log('Cannot set version with upload key, use key with more rights for that')
+
   }
+
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appid}`)
