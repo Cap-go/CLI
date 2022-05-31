@@ -2,6 +2,7 @@ import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import prettyjson from 'prettyjson';
+import cliProgress from 'cli-progress';
 import { host, hostWeb, getConfig, createSupabaseClient, updateOrCreateChannel, updateOrCreateVersion } from './utils';
 import { definitions } from './types_supabase'
 
@@ -62,6 +63,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
 
   if (!external) {
+    const b1 = new cliProgress.SingleBar({
+      format: 'Uploading: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} Mb'
+    }, cliProgress.Presets.shades_grey);
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
