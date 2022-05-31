@@ -12,6 +12,10 @@ interface Options {
   channel?: string
   external?: string
 }
+
+const maxMb = 30;
+const alertMb = 25;
+
 export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
   const { apikey, external } = options;
@@ -61,8 +65,16 @@ export const uploadVersion = async (appid: string, options: Options) => {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
+    const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
     const fileName = randomUUID()
+    // program.error(`mbSize ${mbSize} Mb`);
+    if (mbSize > maxMb) {
+      program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
+    }
+    if (mbSize > alertMb) {
+      console.log(`WARNING !!\nThe app size is ${mbSize} Mb, the limit is ${maxMb} Mb`);
+    }
 
     const { error: upError } = await supabase.storage
       .from(filePath)
