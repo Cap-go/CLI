@@ -74,33 +74,33 @@ export const uploadVersion = async (appid: string, options: Options) => {
     }
   } else if (external && !external.startsWith('https://')) {
     program.error(`External link should should start with "https://" current is "${external}"`)
-  } else {
-    const fileName = randomUUID()
-    const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
-      bucket_id: external ? undefined : fileName,
-      user_id: userId,
-      name: version,
-      app_id: appid,
-      external_url: external,
-    })
-    const { error: dbError2 } = await supabase
-      .from<definitions['apps']>('apps')
-      .update({
-        last_version: version,
-      }).eq('app_id', appid)
-      .eq('user_id', userId)
-    if (dbError || dbError2 || !version || !version.length) {
-      program.error(`Cannot add version \n${prettyjson.render(dbError || dbError2 || 'unknow error')}`)
-    }
-    const { error: dbError3 } = await updateOrCreateChannel(supabase, {
-      name: channel,
-      app_id: appid,
-      created_by: userId,
-      version: versionData[0].id,
-    })
-    if (dbError3) {
-      program.error(`Cannot update or add channel \n${prettyjson.render(dbError3)}`)
-    }
+  }
+  const fileName = randomUUID()
+  const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
+    bucket_id: external ? undefined : fileName,
+    user_id: userId,
+    name: version,
+    app_id: appid,
+    external_url: external,
+  })
+  const { error: dbError2 } = await supabase
+    .from<definitions['apps']>('apps')
+    .update({
+      last_version: version,
+    }, { returning: "minimal" }).eq('app_id', appid)
+    .eq('user_id', userId)
+  // console.log('appData', appData)
+  if (dbError || dbError2 || !version || !version.length) {
+    program.error(`Cannot add version \n${prettyjson.render(dbError || dbError2 || 'unknow error')}`)
+  }
+  const { error: dbError3 } = await updateOrCreateChannel(supabase, {
+    name: channel,
+    app_id: appid,
+    created_by: userId,
+    version: versionData[0].id,
+  })
+  if (dbError3) {
+    program.error(`Cannot update or add channel \n${prettyjson.render(dbError3)}`)
   }
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
