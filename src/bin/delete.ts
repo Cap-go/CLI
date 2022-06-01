@@ -24,7 +24,7 @@ export const deleteApp = async (appid: string, options: Options) => {
 
   // checking if user has access rights before deleting
   const { data: apiAccess, error: apiAccessError } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'], app_id: appid })
+    .rpc('is_allowed_capgkey', { apikey, keymode: ['all'], app_id: appid })
 
   if (!apiAccess || apiAccessError) {
     console.log('Invalid API key or insufisant rights');
