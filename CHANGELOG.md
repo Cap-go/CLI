@@ -1,3 +1,9 @@
+## 0.11.1 (2022-06-01)
+
+### Fix
+
+- add check if version exist
+
 ## 0.11.0 (2022-06-01)
 
 ### Feat
