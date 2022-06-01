@@ -1,3 +1,9 @@
+## 0.11.3 (2022-06-01)
+
+### Fix
+
+- message for delete version
+
 ## 0.11.2 (2022-06-01)
 
 ### Fix
