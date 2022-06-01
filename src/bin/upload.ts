@@ -64,7 +64,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
 
   if (versionExist || versionExistError) {
     multibar.stop()
-    program.error(`This app version already exist ${formatError(versionExistError)}`);
+    program.error(`This app version already exist ${formatError(versionExistError)}, or was deleted, you cannot re-upload it`);
   }
   b1.increment();
 
