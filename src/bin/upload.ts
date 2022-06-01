@@ -64,7 +64,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
 
   if (versionExist || versionExistError) {
     multibar.stop()
-    program.error(`This app version already exist ${formatError(versionExistError)}, or was deleted, you cannot re-upload it`);
+    program.error(`This app version already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
   }
   b1.increment();
 
@@ -85,14 +85,13 @@ export const uploadVersion = async (appid: string, options: Options) => {
     program.error(`Cannot find app ${appid} in your account \n${formatError(dbError0)}`)
   }
   b1.increment();
-
+  const fileName = randomUUID()
   if (!external) {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
-    const fileName = randomUUID()
     b1.increment();
     if (mbSize > maxMb) {
       multibar.stop()
@@ -116,7 +115,6 @@ export const uploadVersion = async (appid: string, options: Options) => {
     program.error(`External link should should start with "https://" current is "${external}"`)
   }
   b1.increment();
-  const fileName = randomUUID()
   const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
