@@ -8,7 +8,7 @@ import { definitions } from './types_supabase';
 
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
-export const hostSupa = 'https://xvwzpoazmxkqosrdewyv.functions.supabase.co';
+export const hostSupa = 'https://xvwzpoazmxkqosrdewyv.supabase.co';
 // export const hostSupa = 'https://aucsybvnhavogdmzwtcw.supabase.co';
 
 // For local test purposes
