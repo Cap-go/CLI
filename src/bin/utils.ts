@@ -1,6 +1,7 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import prettyjson from 'prettyjson';
 import { definitions } from './types_supabase';
 
 export const host = 'https://capgo.app';
@@ -21,6 +22,9 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
         capgkey: apikey,
     }
 })
+
+export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
+
 interface Config {
     app: {
         appId: string;
@@ -39,25 +43,6 @@ export const getConfig = async () => {
         program.error("No capacitor config file found, run `cap init` first");
     }
     return config;
-}
-
-export const checkAppOwner = async (supabase: SupabaseClient, userId: string, appId: string | undefined): Promise<boolean> => {
-    if (!appId || !userId)
-        return false
-    try {
-        const { data, error } = await supabase
-            .from<definitions['apps']>('apps')
-            .select()
-            .eq('user_id', userId)
-            .eq('app_id', appId)
-        if (!data || !data.length || error)
-            return false
-        return true
-    }
-    catch (error) {
-        console.error(error)
-        return false
-    }
 }
 
 export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<definitions['app_versions']>, apikey: string) => {

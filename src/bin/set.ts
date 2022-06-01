@@ -1,7 +1,5 @@
-import axios from 'axios';
-import prettyjson from 'prettyjson';
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, updateOrCreateChannel, host } from './utils';
+import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError } from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
@@ -37,7 +35,7 @@ export const setChannel = async (appid: string, options: Options) => {
   try {
     const supabase = createSupabaseClient(apikey)
     const { data: apiAccess, error: apiAccessError } = await supabase
-      .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
+      .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'], app_id: appid })
 
     if (!apiAccess || apiAccessError) {
       program.error("Invalid API key or insufisant rights");
@@ -48,8 +46,7 @@ export const setChannel = async (appid: string, options: Options) => {
     const userId = dataUser ? dataUser.toString() : '';
 
     if (!userId || userIdError) {
-      program.error('Cannot verify user');
-      return
+      program.error('Cannot verify user')
     }
     const channelPayload: Partial<definitions['channels']> = {
       created_by: userId,
@@ -73,17 +70,13 @@ export const setChannel = async (appid: string, options: Options) => {
     try {
       const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, apikey)
       if (dbError)
-        program.error(`Cannot set channel \n${prettyjson.render(dbError)}`);
+        program.error(`Cannot set channel ${formatError(dbError)}`);
     }
     catch (e) {
-      program.error(`Cannot set channel \n${prettyjson.render(e)}`);
+      program.error(`Cannot set channel ${formatError(e)}`);
     }
   } catch (err) {
-    if (axios.isAxiosError(err) && err.response) {
-      program.error(`Network Error \n${prettyjson.render(err.response?.data)}`);
-    } else {
-      program.error(`Unknow error \n${prettyjson.render(err)}`);
-    }
+    program.error(`Unknow error ${formatError(err)}`);
   }
   if (version) {
     console.log(`Done ✅`);

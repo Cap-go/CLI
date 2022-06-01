@@ -5,7 +5,7 @@ import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import prettyjson from 'prettyjson';
 import { definitions } from './types_supabase'
-import { getConfig, checkAppOwner, createSupabaseClient } from './utils';
+import { getConfig, createSupabaseClient, formatError } from './utils';
 
 interface Options {
   apikey: string;
@@ -64,12 +64,14 @@ export const addApp = async (appid: string, options: Options) => {
   const userId = dataUser ? dataUser.toString() : '';
 
   if (!userId || userIdError) {
-    program.error('Cannot verify user');
+    program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
 
   // check if app already exist
-  if (await checkAppOwner(supabase, userId, appid)) {
-    program.error('App already exists');
+  const { data: app, error: dbError0 } = await supabase
+    .rpc<string>('exist_app', { appid, apikey })
+  if (app || dbError0) {
+    program.error(`App already exists ${formatError(dbError0)}`)
   }
 
   const fileName = `icon_${randomUUID()}`
@@ -83,7 +85,7 @@ export const addApp = async (appid: string, options: Options) => {
         contentType: iconType,
       })
     if (error) {
-      program.error(`Could not add app \n${prettyjson.render(error)}`);
+      program.error(`Could not add app ${formatError(error)}`);
     }
     const { data: signedURLData } = await supabase
       .storage
@@ -102,7 +104,7 @@ export const addApp = async (appid: string, options: Options) => {
       app_id: appid,
     }, { returning: "minimal" })
   if (dbError) {
-    program.error(`Could not add app \n${prettyjson.render(dbError)}`);
+    program.error(`Could not add app ${formatError(dbError)}`);
   }
   console.log("App added to server, you can upload a version now")
 }

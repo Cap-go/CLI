@@ -1,5 +1,6 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, checkAppOwner } from './utils';
+import prettyjson from 'prettyjson';
+import { getConfig, createSupabaseClient, formatError } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -23,7 +24,7 @@ export const deleteApp = async (appid: string, options: Options) => {
 
   // checking if user has access rights before deleting
   const { data: apiAccess, error: apiAccessError } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
+    .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'], app_id: appid })
 
   if (!apiAccess || apiAccessError) {
     console.log('Invalid API key or insufisant rights');
@@ -36,11 +37,12 @@ export const deleteApp = async (appid: string, options: Options) => {
   const userId = dataUser ? dataUser.toString() : '';
 
   if (!userId || userIdError) {
-    program.error('Cannot verify user')
+    program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
 
-  // check if user is the owner of the app
-  if (!(await checkAppOwner(supabase, userId, appid))) {
+  const { data: app, error: dbError0 } = await supabase
+    .rpc<string>('exist_app', { appid, apikey })
+  if (!app || dbError0) {
     program.error('No permission to delete')
   }
 
@@ -53,7 +55,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('name', version)
       .eq('deleted', false)
     if (!versions || !versions.length || versionIdError) {
-      program.error(`Version ${appid}@${version} don't exist ${versionIdError || 'unknown error'}`)
+      program.error(`Version ${appid}@${version} don't exist ${formatError(versionIdError)}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
       .from<definitions['channels']>('channels')
@@ -62,7 +64,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('created_by', userId)
       .eq('version', versions[0].id)
     if ((channelFound && channelFound.length) || errorChannel) {
-      program.error(`Version ${appid}@${version} is used in a channel, unlink it first ${errorChannel || 'unknown error'}`)
+      program.error(`Version ${appid}@${version} is used in a channel, unlink it first ${formatError(errorChannel)}`)
     }
     const { data: deviceFound, error: errorDevice } = await supabase
       .from<definitions['devices_override']>('devices_override')
@@ -70,15 +72,15 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('app_id', appid)
       .eq('version', versions[0].id)
     if ((deviceFound && deviceFound.length) || errorDevice) {
-      program.error(`Version ${appid}@${version} is used in a device override, unlink it first ${errorChannel || 'unknown error'}`)
+      program.error(`Version ${appid} @${version} is used in a device override, unlink it first ${formatError(errorDevice)}`)
     }
     // Delete only a specific version in storage
     const { error: delError } = await supabase
       .storage
       .from('apps')
-      .remove([`${userId}/${appid}/versions/${versions[0].bucket_id}`])
+      .remove([`${userId} /${appid}/versions / ${versions[0].bucket_id} `])
     if (delError) {
-      program.error(`Something went wrong when trying to delete ${appid}@${version} ${delError}`)
+      program.error(`Something went wrong when trying to delete ${appid} @${version} ${delError} `)
     }
 
     const { error: delAppSpecVersionError } = await supabase
@@ -90,7 +92,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('name', version)
       .eq('user_id', userId)
     if (delAppSpecVersionError) {
-      program.error(`App ${appid}@${version} not found in database ${delAppSpecVersionError}`)
+      program.error(`App ${appid} @${version} not found in database ${delAppSpecVersionError} `)
     }
     console.log("App version deleted from server")
     return
@@ -103,17 +105,17 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (vError) {
-    program.error(`App ${appid} not found in database ${vError}`)
+    program.error(`App ${appid} not found in database ${vError} `)
   }
 
   if (data && data.length) {
-    const filesToRemove = data.map(x => `${userId}/${appid}/versions/${x.bucket_id}`)
+    const filesToRemove = data.map(x => `${userId} /${appid}/versions / ${x.bucket_id} `)
     const { error: delError } = await supabase
       .storage
       .from('apps')
       .remove(filesToRemove)
     if (delError) {
-      program.error(`Cannot delete stored version for app ${appid} from storage ${delError}`)
+      program.error(`Cannot delete stored version for app ${appid} from storage ${delError} `)
     }
   }
 
@@ -124,7 +126,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (delAppVersionError) {
-    program.error(`Cannot delete version for app ${appid} from database ${delAppVersionError}`)
+    program.error(`Cannot delete version for app ${appid} from database ${delAppVersionError} `)
   }
 
   const { error: dbAppError } = await supabase
@@ -134,7 +136,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (dbAppError) {
-    program.error(`Cannot delete from database ${dbAppError}`)
+    program.error(`Cannot delete from database ${dbAppError} `)
   }
 
   console.log("App deleted from server")
