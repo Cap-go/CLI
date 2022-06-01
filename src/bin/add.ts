@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey } from './utils';
 
 interface Options {
   apikey: string;
@@ -14,7 +14,7 @@ interface Options {
 const newIconPath = "assets/icon.png"
 export const addApp = async (appid: string, options: Options) => {
   let { name, icon } = options;
-  const { apikey } = options;
+  const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appid = appid || config?.app?.appId
   name = name || config?.app?.appName || 'Unknown'

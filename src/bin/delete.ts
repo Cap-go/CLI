@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -8,7 +8,8 @@ interface Options {
 }
 
 export const deleteApp = async (appid: string, options: Options) => {
-  const { apikey, version } = options;
+  const { version } = options;
+  const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appid = appid || config?.app?.appId
   if (!apikey) {

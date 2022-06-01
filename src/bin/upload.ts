@@ -2,7 +2,10 @@ import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
-import { host, hostWeb, getConfig, createSupabaseClient, updateOrCreateChannel, updateOrCreateVersion, formatError } from './utils';
+import {
+  host, hostWeb, getConfig, createSupabaseClient,
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey
+} from './utils';
 
 interface Options {
   version: string
@@ -17,7 +20,8 @@ const alertMb = 25;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
-  const { apikey, external } = options;
+  const { external } = options;
+  const apikey = options.apikey || findSavedKey()
   channel = channel || 'dev';
   const config = await getConfig();
   appid = appid || config?.app?.appId

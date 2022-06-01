@@ -2,6 +2,8 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import prettyjson from 'prettyjson';
+import fs from 'fs'
+import os from 'os'
 import { definitions } from './types_supabase';
 
 export const host = 'https://capgo.app';
@@ -22,6 +24,22 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
         capgkey: apikey,
     }
 })
+
+export const findSavedKey = () => {
+    // search for key in home dir
+    const userHomeDir = os.homedir();
+    let keyPath = `${userHomeDir}/.capgo`;
+    if (fs.existsSync(keyPath)) {
+        const key = fs.readFileSync(keyPath, 'utf8');
+        return key.trim();
+    }
+    keyPath = `.capgo`;
+    if (fs.existsSync(keyPath)) {
+        const key = fs.readFileSync(keyPath, 'utf8');
+        return key.trim();
+    }
+    return null
+}
 
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
 

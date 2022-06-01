@@ -4,6 +4,7 @@ import { deleteApp } from './delete';
 import { setChannel } from './set';
 import { uploadVersion } from './upload';
 import pack from '../../package.json'
+import { login } from './login';
 
 program
   .version(pack.version)
@@ -12,6 +13,13 @@ program
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+program
+  .version(pack.version)
+  .command('login [apikey]').alias('l')
+  .action(login)
+  .option('--local', 'Only save in local folder');
+
 
 program
   .command('upload [appid]').alias('u')
@@ -32,7 +40,7 @@ program
 
 program
   .description('Manage package and version in capgo Cloud')
-  .command('delete [appid]').alias('a')
+  .command('delete [appid]').alias('d')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-v, --version <version>', 'version number of the app to delete');

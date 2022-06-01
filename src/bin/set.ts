@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError } from './utils';
+import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError, findSavedKey } from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
@@ -11,7 +11,8 @@ interface Options {
 
 export const setChannel = async (appid: string, options: Options) => {
   let { version } = options;
-  const { apikey, state, channel = 'dev' } = options;
+  const { state, channel = 'dev' } = options;
+  const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
