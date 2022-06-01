@@ -76,6 +76,12 @@ export const uploadVersion = async (appid: string, options: Options) => {
     multibar.stop()
     program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
+  const { data: isTrial, error: isTrialsError } = await supabase
+    .rpc<number>('is_trial', { userid: userId })
+    .single()
+  if (isTrial && isTrial > 0 || isTrialsError) {
+    multibar.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
+  }
   b1.increment();
 
   const { data: app, error: dbError0 } = await supabase

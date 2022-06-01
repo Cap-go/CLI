@@ -65,7 +65,12 @@ export const addApp = async (appid: string, options: Options) => {
   if (!userId || userIdError) {
     program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
-
+  const { data: isTrial, error: isTrialsError } = await supabase
+    .rpc<number>('is_trial', { userid: userId })
+    .single()
+  if (isTrial && isTrial > 0 || isTrialsError) {
+    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
+  }
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
     .rpc<string>('exist_app', { appid, apikey })

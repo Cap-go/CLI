@@ -47,7 +47,13 @@ export const setChannel = async (appid: string, options: Options) => {
     const userId = dataUser ? dataUser.toString() : '';
 
     if (!userId || userIdError) {
-      program.error('Cannot verify user')
+      program.error(`Cannot verify user ${formatError(userIdError)}`)
+    }
+    const { data: isTrial, error: isTrialsError } = await supabase
+      .rpc<number>('is_trial', { userid: userId })
+      .single()
+    if (isTrial && isTrial > 0 || isTrialsError) {
+      console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
     }
     const channelPayload: Partial<definitions['channels']> = {
       created_by: userId,
