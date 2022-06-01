@@ -58,6 +58,16 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
 
+  // checking if user has access rights before uploading
+  const { data: versionExist, error: versionExistError } = await supabase
+    .rpc('exist_app_versions', { apikey, version_name: version, appid })
+
+  if (versionExist || versionExistError) {
+    multibar.stop()
+    program.error(`This app version already exist ${formatError(versionExistError)}`);
+  }
+  b1.increment();
+
   const { data, error: userIdError } = await supabase
     .rpc<string>('get_user_id', { apikey })
 
