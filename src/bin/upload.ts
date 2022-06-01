@@ -80,7 +80,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     .rpc<number>('is_trial', { userid: userId })
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
-    multibar.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
+    multibar.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
   }
   b1.increment();
 

@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError, findSavedKey } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb } from './utils';
 
 interface Options {
   apikey: string;
@@ -69,7 +69,7 @@ export const addApp = async (appid: string, options: Options) => {
     .rpc<number>('is_trial', { userid: userId })
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
-    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
+    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
   }
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase

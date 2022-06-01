@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError, findSavedKey } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -43,7 +43,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .rpc<number>('is_trial', { userid: userId })
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
-    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: https://web.capgo.app/app/usage\n`);
+    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
   }
 
   const { data: app, error: dbError0 } = await supabase
