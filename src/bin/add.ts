@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
-import prettyjson from 'prettyjson';
 import { definitions } from './types_supabase'
 import { getConfig, createSupabaseClient, formatError } from './utils';
 

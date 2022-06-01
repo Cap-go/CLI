@@ -1,5 +1,4 @@
 import { program } from 'commander';
-import prettyjson from 'prettyjson';
 import { getConfig, createSupabaseClient, formatError } from './utils';
 import { definitions } from './types_supabase'
 

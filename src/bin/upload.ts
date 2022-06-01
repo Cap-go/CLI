@@ -1,7 +1,6 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
-import prettyjson from 'prettyjson';
 import cliProgress from 'cli-progress';
 import { host, hostWeb, getConfig, createSupabaseClient, updateOrCreateChannel, updateOrCreateVersion, formatError } from './utils';
 
