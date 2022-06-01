@@ -1,3 +1,19 @@
+## 0.10.0 (2022-06-01)
+
+### Fix
+
+- remove useless import
+- types
+- error message system
+- remove old deps
+- add back limit in upload
+- right issue in cli
+- upload issue
+- upload
+- add method
+- replace all console.error by program exit
+- lint + do set
+
 ## 0.9.0 (2022-05-24)
 
 ### Fix
