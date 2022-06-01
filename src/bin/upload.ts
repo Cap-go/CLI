@@ -60,7 +60,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
 
   // checking if user has access rights before uploading
   const { data: versionExist, error: versionExistError } = await supabase
-    .rpc('exist_app_versions', { apikey, version_name: version, appid })
+    .rpc('exist_app_versions', { apikey, name_version: version, appid })
 
   if (versionExist || versionExistError) {
     multibar.stop()
@@ -142,7 +142,6 @@ export const uploadVersion = async (appid: string, options: Options) => {
   } else {
     multibar.log('Cannot set version with upload key, use key with more rights for that\n');
   }
-  b1.increment();
   multibar.stop()
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
