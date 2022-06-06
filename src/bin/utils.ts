@@ -8,15 +8,15 @@ import { definitions } from './types_supabase';
 
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
-export const hostSupa = 'https://xvwzpoazmxkqosrdewyv.supabase.co';
-// export const hostSupa = 'https://aucsybvnhavogdmzwtcw.supabase.co';
+// export const hostSupa = 'https://xvwzpoazmxkqosrdewyv.supabase.co';
+export const hostSupa = 'https://aucsybvnhavogdmzwtcw.supabase.co';
 
 // For local test purposes
 // export const host = 'http://localhost:3334';
 
 /* eslint-disable */
-export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
-// export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTM1ODcxNjgsImV4cCI6MTk2OTE2MzE2OH0.8FKKJqiGgoVA3p9GH5wvnbWkWywIxVLqQyZFhupZ7C4'
+// export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
+export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTM1ODcxNjgsImV4cCI6MTk2OTE2MzE2OH0.8FKKJqiGgoVA3p9GH5wvnbWkWywIxVLqQyZFhupZ7C4'
 /* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient(hostSupa, supaAnon, {
@@ -24,6 +24,40 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
         capgkey: apikey,
     }
 })
+
+export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .rpc<boolean>('is_good_plan', { userid: userId })
+        .single()
+    if (error) {
+        throw error
+    }
+    return data || false
+}
+
+export const isTrial = async (supabase: SupabaseClient, userId: string): Promise<number> => {
+    const { data, error } = await supabase
+        .rpc<number>('is_trial', { userid: userId })
+        .single()
+    if (error) {
+        throw error
+    }
+    return data || 0
+}
+
+export const checkPlan = async (supabase: SupabaseClient, userId: string) => {
+    let validPlan = await isGoodPlan(supabase, userId)
+    const trialDays = await isTrial(supabase, userId)
+    if (trialDays > 0) {
+        validPlan = true
+    }
+    if (!validPlan) {
+        program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/app/usage\n`);
+    }
+    if (trialDays > 0) {
+        console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
+    }
+}
 
 export const findSavedKey = () => {
     // search for key in home dir

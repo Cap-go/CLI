@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb, checkPlan } from './utils';
 
 interface Options {
   apikey: string;
@@ -65,12 +65,7 @@ export const addApp = async (appid: string, options: Options) => {
   if (!userId || userIdError) {
     program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
-  const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc<number>('is_trial', { userid: userId })
-    .single()
-  if (isTrial && isTrial > 0 || isTrialsError) {
-    console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
-  }
+  await checkPlan(supabase, userId)
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
     .rpc<string>('exist_app', { appid, apikey })

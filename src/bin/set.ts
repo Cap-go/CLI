@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError, findSavedKey, hostWeb } from './utils';
+import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError, findSavedKey, hostWeb, checkPlan } from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
@@ -49,12 +49,7 @@ export const setChannel = async (appid: string, options: Options) => {
     if (!userId || userIdError) {
       program.error(`Cannot verify user ${formatError(userIdError)}`)
     }
-    const { data: isTrial, error: isTrialsError } = await supabase
-      .rpc<number>('is_trial', { userid: userId })
-      .single()
-    if (isTrial && isTrial > 0 || isTrialsError) {
-      console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
-    }
+    await checkPlan(supabase, userId)
     const channelPayload: Partial<definitions['channels']> = {
       created_by: userId,
       app_id: appid,

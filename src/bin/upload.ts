@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan
 } from './utils';
 
 interface Options {
@@ -76,6 +76,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     multibar.stop()
     program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
+  await checkPlan(supabase, userId)
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc<number>('is_trial', { userid: userId })
     .single()
