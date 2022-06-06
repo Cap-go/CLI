@@ -1,3 +1,9 @@
+## 0.13.0 (2022-06-06)
+
+### Feat
+
+- add front lock if not paying
+
 ## 0.12.1 (2022-06-01)
 
 ### Fix
