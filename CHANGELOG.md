@@ -1,3 +1,9 @@
+## 0.12.1 (2022-06-01)
+
+### Fix
+
+- use hostWeb instead of hardcoded
+
 ## 0.12.0 (2022-06-01)
 
 ### Feat
