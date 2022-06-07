@@ -42,7 +42,7 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
     return data || 0
 }
 
-export const checkPlan = async (supabase: SupabaseClient, userId: string) => {
+export const checkPlan = async (supabase: SupabaseClient, userId: string, warning = true) => {
     let validPlan = await isGoodPlan(supabase, userId)
     const trialDays = await isTrial(supabase, userId)
     if (trialDays > 0) {
@@ -51,8 +51,8 @@ export const checkPlan = async (supabase: SupabaseClient, userId: string) => {
     if (!validPlan) {
         program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/app/usage\n`);
     }
-    if (trialDays > 0) {
-        console.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/app/usage\n`);
+    if (trialDays > 0 && warning) {
+        console.log(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/app/usage\n`);
     }
 }
 

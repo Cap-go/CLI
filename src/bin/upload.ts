@@ -76,7 +76,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     multibar.stop()
     program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
-  await checkPlan(supabase, userId)
+  await checkPlan(supabase, userId, false)
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc<number>('is_trial', { userid: userId })
     .single()
