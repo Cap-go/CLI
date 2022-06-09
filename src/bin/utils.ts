@@ -102,7 +102,7 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Pa
         update.deleted = false
         return supabase
             .from<definitions['app_versions']>('app_versions')
-            .update(update, { returning: "minimal" })
+            .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
     }
@@ -110,7 +110,7 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Pa
 
     return supabase
         .from<definitions['app_versions']>('app_versions')
-        .insert(update, { returning: "minimal" })
+        .insert(update)
 
 }
 
