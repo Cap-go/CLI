@@ -1,3 +1,9 @@
+## 0.13.4 (2022-06-09)
+
+### Fix
+
+- issue upload and set channel
+
 ## 0.13.3 (2022-06-07)
 
 ### Fix
