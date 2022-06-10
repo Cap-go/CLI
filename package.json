@@ -25,9 +25,10 @@
     "capgo-cli"
   ],
   "scripts": {
-    "dev": "set NODE_ENV=development&& npx webpack --config webpack.config.js",
+    "dev": "set NODE_ENV=development && npx webpack --config webpack.config.js",
     "no-debug": "node dist/index.js",
-    "build": "set NODE_ENV=production&& npx webpack --config webpack.config.js",
+    "build": "npx webpack --config webpack.config.js",
+    "dev-build": "SUPA_DB=development npx webpack --config webpack.config.js",
     "pack": "pkg",
     "test_rls": "ts-node ./test/test_headers_rls.ts",
     "lint": "eslint . --ext .ts --fix"

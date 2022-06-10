@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, checkKey } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -22,14 +22,7 @@ export const deleteApp = async (appid: string, options: Options) => {
 
   const supabase = createSupabaseClient(apikey)
 
-  // checking if user has access rights before deleting
-  const { data: apiAccess, error: apiAccessError } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode: ['all'], app_id: appid })
-
-  if (!apiAccess || apiAccessError) {
-    console.log('Invalid API key or insufisant rights');
-    return
-  }
+  await checkKey(supabase, apikey, ['all']);
 
   const { data: dataUser, error: userIdError } = await supabase
     .rpc<string>('get_user_id', { apikey })
@@ -109,7 +102,7 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   if (data && data.length) {
-    const filesToRemove = data.map(x => `${userId} /${appid}/versions / ${x.bucket_id} `)
+    const filesToRemove = data.map(x => `${userId}/${appid}/versions/${x.bucket_id} `)
     const { error: delError } = await supabase
       .storage
       .from('apps')

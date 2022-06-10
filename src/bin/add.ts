@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError, findSavedKey, hostWeb, checkPlan } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlan, checkKey } from './utils';
 
 interface Options {
   apikey: string;
@@ -29,14 +29,14 @@ export const addApp = async (appid: string, options: Options) => {
 
   const supabase = createSupabaseClient(apikey)
 
-  // checking if user has access before uploading image
-  const { data: apiAccess, error: apiAccessError } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
-
-  if (!apiAccess || apiAccessError) {
-    console.log('Invalid API key or insufisant rights');
-    return
+  await checkKey(supabase, apikey, ['write', 'all']);
+  const { data: dataUser, error: userIdError } = await supabase
+    .rpc<string>('get_user_id', { apikey })
+  const userId = dataUser ? dataUser.toString() : '';
+  if (!userId || userIdError) {
+    program.error(`Cannot verify user ${formatError(userIdError)}`);
   }
+  await checkPlan(supabase, userId)
 
   console.log('Adding...');
   let iconBuff;
@@ -57,15 +57,6 @@ export const addApp = async (appid: string, options: Options) => {
     console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
   }
 
-  const { data: dataUser, error: userIdError } = await supabase
-    .rpc<string>('get_user_id', { apikey })
-
-  const userId = dataUser ? dataUser.toString() : '';
-
-  if (!userId || userIdError) {
-    program.error(`Cannot verify user ${formatError(userIdError)}`);
-  }
-  await checkPlan(supabase, userId)
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
     .rpc<string>('exist_app', { appid, apikey })
@@ -92,7 +83,6 @@ export const addApp = async (appid: string, options: Options) => {
       .getPublicUrl(fileName)
     signedURL = signedURLData?.publicURL || signedURL
   }
-
   // add app to db
   const { error: dbError } = await supabase
     .from<definitions['apps']>('apps')

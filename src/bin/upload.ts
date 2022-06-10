@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey
 } from './utils';
 
 interface Options {
@@ -36,6 +36,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
+  await checkKey(supabase, apikey, ['write', 'all']);
   const multibar = new cliProgress.MultiBar({
     clearOnComplete: false,
     hideCursor: true
@@ -48,14 +49,6 @@ export const uploadVersion = async (appid: string, options: Options) => {
   b1.start(7, 0, {
     speed: "N/A"
   });
-  // checking if user has access rights before uploading
-  const { data: apiAccess, error: apiAccessError } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode: ['upload', 'write', 'all'], app_id: appid })
-
-  if (!apiAccess || apiAccessError) {
-    multibar.stop()
-    program.error(`Invalid API key or insufisant rights ${formatError(apiAccessError)}`);
-  }
   b1.increment();
 
   // checking if user has access rights before uploading
@@ -148,8 +141,10 @@ export const uploadVersion = async (appid: string, options: Options) => {
     multibar.log('Cannot set version with upload key, use key with more rights for that\n');
   }
   multibar.stop()
+  const appidWeb = appid.replace(/\./g, '--')
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
-  console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appid}`)
+  console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
   console.log("To use with live update in your own app")
+  console.log(`You can link specific device to this version to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
 }

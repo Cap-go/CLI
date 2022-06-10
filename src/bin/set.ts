@@ -1,5 +1,8 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, updateOrCreateChannel, host, formatError, findSavedKey, hostWeb, checkPlan } from './utils';
+import {
+  getConfig, createSupabaseClient, updateOrCreateChannel,
+  host, formatError, findSavedKey, checkPlan, checkKey
+} from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
@@ -35,12 +38,7 @@ export const setChannel = async (appid: string, options: Options) => {
   }
   try {
     const supabase = createSupabaseClient(apikey)
-    const { data: apiAccess, error: apiAccessError } = await supabase
-      .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'], app_id: appid })
-
-    if (!apiAccess || apiAccessError) {
-      program.error("Invalid API key or insufisant rights");
-    }
+    await checkKey(supabase, apikey, ['write', 'all']);
     const { data: dataUser, error: userIdError } = await supabase
       .rpc<string>('get_user_id', { apikey })
 

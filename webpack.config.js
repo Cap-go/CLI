@@ -18,7 +18,12 @@ module.exports = {
   },
   devtool: process.env.NODE_ENV === 'development' ? 'eval-source-map' : undefined,
   watch: process.env.NODE_ENV === 'development',
-  plugins: [new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true })],
+  plugins: [
+    new webpack.BannerPlugin({ banner: '#!/usr/bin/env node', raw: true }),
+    new webpack.EnvironmentPlugin({
+      SUPA_DB: 'production',
+      }),
+  ],
   resolve: {
     extensions: ['.ts', '.js'],
   },

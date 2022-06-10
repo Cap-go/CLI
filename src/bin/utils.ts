@@ -8,12 +8,16 @@ import { definitions } from './types_supabase';
 
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
-export const hostSupa = 'https://xvwzpoazmxkqosrdewyv.supabase.co';
-// export const hostSupa = 'https://aucsybvnhavogdmzwtcw.supabase.co';
+export const hostSupa = process.env.SUPA_DB === 'production'
+    ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : 'https://aucsybvnhavogdmzwtcw.supabase.co';
 
+if (process.env.SUPA_DB !== 'production') {
+    console.log('hostSupa', hostSupa);
+}
 /* eslint-disable */
-export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
-// export const supaAnon = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTM1ODcxNjgsImV4cCI6MTk2OTE2MzE2OH0.8FKKJqiGgoVA3p9GH5wvnbWkWywIxVLqQyZFhupZ7C4'
+export const supaAnon = process.env.SUPA_DB === 'production'
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
+    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
 /* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient(hostSupa, supaAnon, {
@@ -21,6 +25,15 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
         capgkey: apikey,
     }
 })
+
+export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode: string[]) => {
+    const { data: apiAccess, error: apiAccessError } = await supabase
+        .rpc('is_allowed_capgkey', { apikey, keymode })
+
+    if (!apiAccess || apiAccessError) {
+        program.error(`Invalid API key or insufficient rights ${formatError(apiAccessError)}`);
+    }
+}
 
 export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
