@@ -34,7 +34,7 @@ export const addApp = async (appid: string, options: Options) => {
     .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
 
   if (!apiAccess || apiAccessError) {
-    console.log('Invalid API key or insufisant rights');
+    console.log('Invalid API key or insufficient permissions');
     return
   }
 
