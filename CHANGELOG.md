@@ -1,3 +1,9 @@
+## 0.13.5 (2022-06-10)
+
+### Fix
+
+- issue with add and typo in text
+
 ## 0.13.4 (2022-06-09)
 
 ### Fix
