@@ -31,7 +31,7 @@ export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode
         .rpc('is_allowed_capgkey', { apikey, keymode })
 
     if (!apiAccess || apiAccessError) {
-        program.error(`Invalid API key or insufficient rights ${formatError(apiAccessError)}`);
+        program.error(`Invalid API key or insufficient permissions ${formatError(apiAccessError)}`);
     }
 }
 
