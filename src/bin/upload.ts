@@ -49,7 +49,6 @@ export const uploadVersion = async (appid: string, options: Options) => {
   b1.start(7, 0, {
     speed: "N/A"
   });
-  b1.increment();
 
   // checking if user has access rights before uploading
   const { data: versionExist, error: versionExistError } = await supabase
@@ -78,11 +77,18 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
 
-  const { data: app, error: dbError0 } = await supabase
+  const { data: app, error: appError } = await supabase
     .rpc<string>('exist_app', { appid, apikey })
-  if (!app || dbError0) {
+  if (!app || appError) {
     multibar.stop()
-    program.error(`Cannot find app ${appid} in your account \n${formatError(dbError0)}`)
+    program.error(`Cannot find app ${appid} in your account \n${formatError(appError)}`)
+  }
+  b1.increment();
+  // check if app already exist
+  const { data: appVersion, error: appVersionError } = await supabase
+    .rpc<string>('exist_app_versions', { appid, apikey, name_version: version })
+  if (appVersion || appVersionError) {
+    program.error(`Version already exists ${formatError(appVersionError)}`)
   }
   b1.increment();
   const fileName = randomUUID()
