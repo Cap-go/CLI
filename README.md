@@ -9,10 +9,14 @@ A CLI to upload and download files from the Capacitor go Cloud.
 
 Before use the CLI you should register here : https://capgo.app/
 
-Then go in you account in apikey section and click in the read/write key to copy it.
+Then go in you account in apikey section and click in the `all` key to copy it.
+
+## Login to Cloud
+`npx @capgo/cli login API_KEY`
+`API_KEY` your  apikey copied in the previous step
 
 ## Add new app to Cloud
-`npx @capgo/cli add [appId] --apikey=********`
+`npx @capgo/cli add [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 
 Optionally you can give:
@@ -21,7 +25,7 @@ Optionally you can give:
 
 
 ### Send version to Cloud
-`npx @capgo/cli upload [appId] --apikey=********`
+`npx @capgo/cli upload [appId]`
 `[appId]` is your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
 
 Optionally you can give:
@@ -29,13 +33,13 @@ Optionally you can give:
 - name with `--name test` to have a custom name in the list
 - channel with `--channel prod` to link this version to channel
 ### Send version to Cloud channel
-`npx @capgo/cli set [appId] [version] [channel] --apikey=********`
+`npx @capgo/cli set [appId] [version] [channel]`
 `[appId]` your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
 `[version]` your app version already sended to the cloud
 `[channel]` the channel you want to link the version
 
 ### Delete package to Cloud
-`npx @capgo/cli delete [appId] --apikey=********`
+`npx @capgo/cli delete [appId]`
 `[appId]` your app ID present in the Cloud
 
 
