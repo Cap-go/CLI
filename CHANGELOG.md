@@ -1,3 +1,9 @@
+## 0.13.7 (2022-06-11)
+
+### Fix
+
+- addcheck  exist_app_versions in upload
+
 ## 0.13.6 (2022-06-10)
 
 ### Fix
