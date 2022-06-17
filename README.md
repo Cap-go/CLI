@@ -4,7 +4,7 @@ A CLI to upload and download files from the Capacitor go Cloud.
 
 ## Install 
 
-`npm i -g capgo`
+`npm i -g @capgo/cli`
 ## Usage
 
 Before use the CLI you should register here : https://capgo.app/
