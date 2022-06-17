@@ -2,6 +2,7 @@ import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
+import semver from 'semver'
 import {
   host, hostWeb, getConfig, createSupabaseClient,
   updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey
@@ -26,6 +27,10 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const config = await getConfig();
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
+  // check if version is valid 
+  if (!semver.valid(version)) {
+    program.error(`Your version name ${version}, is not valid it should follow semver convention : https://semver.org/`);
+  }
   path = path || config?.app?.webDir
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
