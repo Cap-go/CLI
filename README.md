@@ -12,7 +12,7 @@ Before use the CLI you should register here : https://capgo.app/
 Then go in you account in apikey section and click in the read/write key to copy it.
 
 ## Add new app to Cloud
-`capgo add [appId] --apikey=********`
+`npx @capgo/cli add [appId] --apikey=********`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 
 Optionally you can give:
@@ -21,7 +21,7 @@ Optionally you can give:
 
 
 ### Send version to Cloud
-`capgo upload [appId] --apikey=********`
+`npx @capgo/cli upload [appId] --apikey=********`
 `[appId]` is your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
 
 Optionally you can give:
@@ -29,13 +29,13 @@ Optionally you can give:
 - name with `--name test` to have a custom name in the list
 - channel with `--channel prod` to link this version to channel
 ### Send version to Cloud channel
-`capgo set [appId] [version] [channel] --apikey=********`
+`npx @capgo/cli set [appId] [version] [channel] --apikey=********`
 `[appId]` your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
 `[version]` your app version already sended to the cloud
 `[channel]` the channel you want to link the version
 
 ### Delete package to Cloud
-`capgo delete [appId] --apikey=********`
+`npx @capgo/cli delete [appId] --apikey=********`
 `[appId]` your app ID present in the Cloud
 
 
