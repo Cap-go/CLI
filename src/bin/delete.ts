@@ -40,14 +40,15 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   if (version) {
-    const { data: versions, error: versionIdError } = await supabase
+    const { data: versionData, error: versionIdError } = await supabase
       .from<definitions['app_versions']>('app_versions')
       .select()
       .eq('app_id', appid)
       .eq('user_id', userId)
       .eq('name', version)
       .eq('deleted', false)
-    if (!versions || !versions.length || versionIdError) {
+      .single()
+    if (!versionData || versionIdError) {
       program.error(`Version ${appid}@${version} don't exist ${formatError(versionIdError)}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
@@ -55,7 +56,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .select()
       .eq('app_id', appid)
       .eq('created_by', userId)
-      .eq('version', versions[0].id)
+      .eq('version', versionData.id)
     if ((channelFound && channelFound.length) || errorChannel) {
       program.error(`Version ${appid}@${version} is used in a channel, unlink it first ${formatError(errorChannel)}`)
     }
@@ -63,7 +64,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .from<definitions['devices_override']>('devices_override')
       .select()
       .eq('app_id', appid)
-      .eq('version', versions[0].id)
+      .eq('version', versionData.id)
     if ((deviceFound && deviceFound.length) || errorDevice) {
       program.error(`Version ${appid} @${version} is used in a device override, unlink it first ${formatError(errorDevice)}`)
     }
@@ -71,7 +72,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     const { error: delError } = await supabase
       .storage
       .from('apps')
-      .remove([`${userId} /${appid}/versions / ${versions[0].bucket_id} `])
+      .remove([`${userId}/${appid}/versions/${versionData.bucket_id} `])
     if (delError) {
       program.error(`Something went wrong when trying to delete ${appid} @${version} ${delError} `)
     }
@@ -82,10 +83,10 @@ export const deleteApp = async (appid: string, options: Options) => {
         deleted: true,
       })
       .eq('app_id', appid)
-      .eq('name', version)
       .eq('user_id', userId)
+      .eq('name', version)
     if (delAppSpecVersionError) {
-      program.error(`App ${appid} @${version} not found in database ${delAppSpecVersionError} `)
+      program.error(`App ${appid}@${version} not found in database '${delAppSpecVersionError}'`)
     }
     console.log("App version deleted from server")
     return
