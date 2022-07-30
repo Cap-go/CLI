@@ -1,3 +1,9 @@
+## 0.13.14 (2022-07-30)
+
+### Fix
+
+- stats add automatic unknown and builtin version
+
 ## 0.13.13 (2022-07-22)
 
 ### Fix
