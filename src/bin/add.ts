@@ -95,5 +95,21 @@ export const addApp = async (appid: string, options: Options) => {
   if (dbError) {
     program.error(`Could not add app ${formatError(dbError)}`);
   }
+  const { error: dbVersionError } = await supabase
+    .from<definitions['app_versions']>('app_versions')
+    .insert([{
+      user_id: userId,
+      deleted: true,
+      name: 'unknown',
+      app_id: appid,
+    }, {
+      user_id: userId,
+      deleted: true,
+      name: 'builtin',
+      app_id: appid,
+    }], { returning: "minimal" })
+  if (dbVersionError) {
+    program.error(`Could not add app ${formatError(dbVersionError)}`);
+  }
   console.log("App added to server, you can upload a version now")
 }
