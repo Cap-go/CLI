@@ -1,4 +1,5 @@
 {
   "editor.formatOnSave": true,
-  "javascript.format.enable": false
+  "javascript.format.enable": false,
+  "nuxt.isNuxtApp": false
 }

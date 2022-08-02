@@ -3,6 +3,7 @@ import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import semver from 'semver'
+import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
   updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey
@@ -97,10 +98,12 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
   const fileName = randomUUID()
+  let checksum = ''
   if (!external) {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
+    checksum = await getChecksum(zipped, 'crc32');
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
     b1.increment();
@@ -132,6 +135,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     name: version,
     app_id: appid,
     external_url: external,
+    checksum,
   }, apikey)
   if (dbError) {
     multibar.stop()

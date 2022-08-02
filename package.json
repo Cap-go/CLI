@@ -38,6 +38,7 @@
   "dependencies": {
     "@capacitor/cli": "3.5.1",
     "@supabase/supabase-js": "^1.35.3",
+    "@tomasklaen/checksum": "^1.1.0",
     "adm-zip": "^0.5.9",
     "cli-progress": "3.11.0",
     "commander": "9.2.0",

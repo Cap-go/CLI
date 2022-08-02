@@ -3,6 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@capacitor/cli': 3.5.1
   '@supabase/supabase-js': ^1.35.3
+  '@tomasklaen/checksum': ^1.1.0
   '@types/adm-zip': 0.5.0
   '@types/cli-progress': ^3.11.0
   '@types/fs-extra': ^9.0.13
@@ -44,6 +45,7 @@ specifiers:
 dependencies:
   '@capacitor/cli': 3.5.1
   '@supabase/supabase-js': 1.35.3
+  '@tomasklaen/checksum': 1.1.0
   adm-zip: 0.5.9
   cli-progress: 3.11.0
   commander: 9.2.0
@@ -365,6 +367,13 @@ packages:
     dependencies:
       defer-to-connect: 1.1.3
     dev: true
+
+  /@tomasklaen/checksum/1.1.0:
+    resolution: {integrity: sha512-jAGjpszbwjDLZIYN435TX5Db/HFFfnQ5MotcCEUdzqiL9nBwwh1gGEpZtsmGvj5AS1dq03fzwqmxbnTWfgSL3Q==}
+    engines: {node: '>=12'}
+    dependencies:
+      crc32-stream: 4.0.2
+    dev: false
 
   /@tsconfig/node10/1.0.8:
     resolution: {integrity: sha512-6XFfSQmMgq0CFLY1MslA/CPUfhIL919M1rMsa5lP2P097N2Wd1sSX0tx1u4olM16fLNhtHZpRhedZJphNJqmZg==}
@@ -1158,6 +1167,20 @@ packages:
   /core-util-is/1.0.3:
     resolution: {integrity: sha512-ZQBvi1DcpJ4GDqanjucZ2Hj3wEO5pZDS89BWbkcrvdxksJorwUDDZamX9ldFkp9aw2lmBDLgkObEA4DWNJ9FYQ==}
     dev: true
+
+  /crc-32/1.2.2:
+    resolution: {integrity: sha512-ROmzCKrTnOwybPcJApAA6WBWij23HVfGVNKqqrZpuyZOHqK2CwHSvpGuyt/UNNvaIjEd8X5IFGp4Mh+Ie1IHJQ==}
+    engines: {node: '>=0.8'}
+    hasBin: true
+    dev: false
+
+  /crc32-stream/4.0.2:
+    resolution: {integrity: sha512-DxFZ/Hk473b/muq1VJ///PMNLj0ZMnzye9thBpmjpJKCc5eMgB95aK8zCGrGfQ90cWo561Te6HK9D+j4KPdM6w==}
+    engines: {node: '>= 10'}
+    dependencies:
+      crc-32: 1.2.2
+      readable-stream: 3.6.0
+    dev: false
 
   /create-require/1.1.1:
     resolution: {integrity: sha512-dcKFX3jn0MpIaXjisoRvexIJVEKzaq7z2rZKxf+MSr9TkdmHmsU4m2lcLojrj/FHl8mk5VxMmYA+ftRkP/3oKQ==}
@@ -3776,7 +3799,7 @@ packages:
     dev: false
 
   /util-deprecate/1.0.2:
-    resolution: {integrity: sha1-RQ1Nyfpw3nMnYvvS1KKJgUGaDM8=}
+    resolution: {integrity: sha512-EPD5q1uXyFxJpCrLnCc1nHnq3gOa6DZBocAIiI2TaSCA7VCJ1UJDMagCzIkXNsUYfD1daK//LTEQ8xiIbrHtcw==}
 
   /v8-compile-cache-lib/3.0.0:
     resolution: {integrity: sha512-mpSYqfsFvASnSn5qMiwrr4VKfumbPyONLCOPmsR3A6pTY/r0+tSaVbgPWSAIuzbk3lCTa+FForeTiO+wBQGkjA==}
