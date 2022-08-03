@@ -4,7 +4,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import prettyjson from 'prettyjson';
 import fs from 'fs'
 import os from 'os'
+import { LogSnag } from 'logsnag'
 import { definitions } from './types_supabase';
+
 
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
@@ -148,4 +150,12 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Pa
     return supabase
         .from<definitions['channels']>('channels')
         .insert(update, { returning: "minimal" })
+}
+
+export const useLogSnag = (): LogSnag => {
+    const logsnag = new LogSnag({
+        token: 'c124f5e9d0ce5bdd14bbb48f815d5583',
+        project: 'capgo',
+    })
+    return logsnag
 }

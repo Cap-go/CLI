@@ -6,7 +6,7 @@ import semver from 'semver'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey, useLogSnag
 } from './utils';
 
 interface Options {
@@ -24,6 +24,8 @@ export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
   const { external } = options;
   const apikey = options.apikey || findSavedKey()
+  const snag = useLogSnag()
+
   channel = channel || 'dev';
   const config = await getConfig();
   appid = appid || config?.app?.appId
@@ -162,4 +164,14 @@ export const uploadVersion = async (appid: string, options: Options) => {
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
   console.log("To use with live update in your own app")
   console.log(`You can link specific device to this version to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
+  snag.publish({
+    channel: 'app',
+    event: 'App Uploaded',
+    icon: '⏫',
+    tags: {
+      userId,
+      appId: appid,
+    },
+    notify: false,
+  })
 }

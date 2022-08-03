@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlan, checkKey } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlan, checkKey, useLogSnag } from './utils';
 
 interface Options {
   apikey: string;
@@ -16,6 +16,8 @@ export const addApp = async (appid: string, options: Options) => {
   let { name, icon } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
+  const snag = useLogSnag()
+
   appid = appid || config?.app?.appId
   name = name || config?.app?.appName || 'Unknown'
   icon = icon || "resources/icon.png" // default path for capacitor app
@@ -111,5 +113,15 @@ export const addApp = async (appid: string, options: Options) => {
   if (dbVersionError) {
     program.error(`Could not add app ${formatError(dbVersionError)}`);
   }
+  snag.publish({
+    channel: 'app',
+    event: 'App Added',
+    icon: '🎉',
+    tags: {
+      userId,
+      appId: appid,
+    },
+    notify: false,
+  })
   console.log("App added to server, you can upload a version now")
 }

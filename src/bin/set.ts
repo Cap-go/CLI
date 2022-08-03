@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
-  host, formatError, findSavedKey, checkPlan, checkKey
+  host, formatError, findSavedKey, checkPlan, checkKey, useLogSnag
 } from './utils';
 import { definitions } from './types_supabase';
 
@@ -17,6 +17,8 @@ export const setChannel = async (appid: string, options: Options) => {
   const { state, channel = 'dev' } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
+  const snag = useLogSnag()
+
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
   let parsedState
@@ -75,6 +77,16 @@ export const setChannel = async (appid: string, options: Options) => {
     catch (e) {
       program.error(`Cannot set channel ${formatError(e)}`);
     }
+    snag.publish({
+      channel: 'app',
+      event: 'Set app',
+      icon: '✅',
+      tags: {
+        userId,
+        appId: appid,
+      },
+      notify: false,
+    })
   } catch (err) {
     program.error(`Unknow error ${formatError(err)}`);
   }

@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkKey } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, checkKey, useLogSnag } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -11,6 +11,8 @@ export const deleteApp = async (appid: string, options: Options) => {
   const { version } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
+  const snag = useLogSnag()
+
   appid = appid || config?.app?.appId
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
@@ -132,6 +134,15 @@ export const deleteApp = async (appid: string, options: Options) => {
   if (dbAppError) {
     program.error(`Cannot delete from database ${dbAppError} `)
   }
-
+  snag.publish({
+    channel: 'app',
+    event: 'App Deleted',
+    icon: '😱',
+    tags: {
+      userId,
+      appId: appid,
+    },
+    notify: false,
+  })
   console.log("App deleted from server")
 }
