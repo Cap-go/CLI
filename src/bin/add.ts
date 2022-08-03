@@ -118,10 +118,10 @@ export const addApp = async (appid: string, options: Options) => {
     event: 'App Added',
     icon: '🎉',
     tags: {
-      userId,
-      appId: appid,
+      'user-id': userId,
+      'app-id': appid,
     },
     notify: false,
-  })
+  }).catch()
   console.log("App added to server, you can upload a version now")
 }

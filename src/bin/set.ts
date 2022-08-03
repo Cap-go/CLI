@@ -82,11 +82,11 @@ export const setChannel = async (appid: string, options: Options) => {
       event: 'Set app',
       icon: '✅',
       tags: {
-        userId,
-        appId: appid,
+        'user-id': userId,
+        'app-id': appid,
       },
       notify: false,
-    })
+    }).catch()
   } catch (err) {
     program.error(`Unknow error ${formatError(err)}`);
   }

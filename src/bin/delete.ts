@@ -139,10 +139,10 @@ export const deleteApp = async (appid: string, options: Options) => {
     event: 'App Deleted',
     icon: '😱',
     tags: {
-      userId,
-      appId: appid,
+      'user-id': userId,
+      'app-id': appid,
     },
     notify: false,
-  })
+  }).catch()
   console.log("App deleted from server")
 }

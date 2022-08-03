@@ -169,9 +169,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
     event: 'App Uploaded',
     icon: '⏫',
     tags: {
-      userId,
-      appId: appid,
+      'user-id': userId,
+      'app-id': appid,
     },
     notify: false,
-  })
+  }).catch()
 }

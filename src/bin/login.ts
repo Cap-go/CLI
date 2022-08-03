@@ -33,9 +33,9 @@ export const login = async (apikey: string, options: Options) => {
     event: 'User CLI login',
     icon: '✅',
     tags: {
-      userId,
+      'user-id': userId,
     },
     notify: false,
-  })
+  }).catch()
   console.log(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);
 }
