@@ -17,8 +17,7 @@ interface Options {
   external?: string
 }
 
-const maxMb = 30;
-const alertMb = 25;
+const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { version, path, channel } = options;
@@ -109,12 +108,18 @@ export const uploadVersion = async (appid: string, options: Options) => {
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
     b1.increment();
-    if (mbSize > maxMb) {
-      multibar.stop()
-      program.error(`The app is too big, the limit is ${maxMb} Mb, your is ${mbSize} Mb`);
-    }
     if (mbSize > alertMb) {
-      multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, the limit is ${maxMb} Mb\n`);
+      multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
+      snag.publish({
+        channel: 'app-error',
+        event: 'App Too Large',
+        icon: '🚛',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+        },
+        notify: false,
+      }).catch()
     }
 
     const { error: upError } = await supabase.storage
