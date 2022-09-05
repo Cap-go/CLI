@@ -5,6 +5,7 @@ import { setChannel } from './set';
 import { uploadVersion } from './upload';
 import pack from '../../package.json'
 import { login } from './login';
+import { listApp } from './list';
 
 program
   .version(pack.version)
@@ -44,5 +45,11 @@ program
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-v, --version <version>', 'version number of the app to delete');
+
+program
+  .description('List versions in capgo Cloud')
+  .command('list [appid]').alias('ls')
+  .action(listApp)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program.parse(process.argv);

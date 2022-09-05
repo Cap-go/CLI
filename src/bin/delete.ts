@@ -20,7 +20,7 @@ export const deleteApp = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  console.log(`Delete ${appid} to Capgo`);
+  console.log(`Delete ${appid} - ${version} from Capgo`);
 
   const supabase = createSupabaseClient(apikey)
 
@@ -51,7 +51,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('deleted', false)
       .single()
     if (!versionData || versionIdError) {
-      program.error(`Version ${appid}@${version} don't exist ${formatError(versionIdError)}`)
+      program.error(`Version ${appid}@${version} doesn't exist ${formatError(versionIdError)}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
       .from<definitions['channels']>('channels')
