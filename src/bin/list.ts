@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkKey, useLogSnag } from './utils';
+import { getConfig, createSupabaseClient, findSavedKey, verifyUser } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -10,7 +10,6 @@ interface Options {
 export const listApp = async (appid: string, options: Options) => {
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
-  const snag = useLogSnag()
 
   appid = appid || config?.app?.appId
   if (!apikey) {
@@ -23,21 +22,12 @@ export const listApp = async (appid: string, options: Options) => {
 
   const supabase = createSupabaseClient(apikey)
 
-  await checkKey(supabase, apikey, ['all']);
-
-  const { data: dataUser, error: userIdError } = await supabase
-    .rpc<string>('get_user_id', { apikey })
-
-  const userId = dataUser ? dataUser.toString() : '';
-
-  if (!userId || userIdError) {
-    program.error(`Cannot verify user ${formatError(userIdError)}`);
-  }
+  const userId = await verifyUser(supabase, apikey);
 
   const { data: app, error: dbError0 } = await supabase
     .rpc<string>('exist_app', { appid, apikey })
   if (!app || dbError0) {
-    program.error('No permission to delete')
+    program.error('No permission for this app')
   }
 
   const { data, error: vError } = await supabase

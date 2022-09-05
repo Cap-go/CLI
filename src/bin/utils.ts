@@ -159,3 +159,17 @@ export const useLogSnag = (): LogSnag => {
     })
     return logsnag
 }
+
+export const verifyUser = async (supabase: SupabaseClient, apikey: string) => {
+    await checkKey(supabase, apikey, ['all']);
+
+    const { data: dataUser, error: userIdError } = await supabase
+      .rpc<string>('get_user_id', { apikey });
+
+    const userId = dataUser ? dataUser.toString() : '';
+
+    if (!userId || userIdError) {
+        program.error(`Cannot verify user ${formatError(userIdError)}`);
+    }
+    return userId;
+}
