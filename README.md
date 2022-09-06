@@ -1,4 +1,9 @@
 # Capgo CLI
+  <a href="https://capgo.app/"><img src='https://raw.githubusercontent.com/Cap-go/capgo/main/assets/capgo_banner.png' alt='Capgo - Instant updates for capacitor'/></a>
+
+<div align="center">
+<h2><a href="https://capgo.app/">Check out: Capgo — Instant updates for capacitor</a></h2>
+</div>
 
 A CLI to upload and download files from the Capacitor go Cloud.
 
