@@ -20,7 +20,6 @@ export const deleteApp = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  console.log(`Delete ${appid} - ${version} from Capgo`);
 
   const supabase = createSupabaseClient(apikey)
 
@@ -33,6 +32,8 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   if (version) {
+    console.log(`Delete ${appid}@${version} from Capgo`);
+
     const { data: versionData, error: versionIdError } = await supabase
       .from<definitions['app_versions']>('app_versions')
       .select()
@@ -81,10 +82,11 @@ export const deleteApp = async (appid: string, options: Options) => {
     if (delAppSpecVersionError) {
       program.error(`App ${appid}@${version} not found in database '${delAppSpecVersionError}'`)
     }
-    console.log("App version deleted from server")
+    console.log(`${appid}@${version} deleted from server`)
     return
   }
 
+  console.log(`Delete ${appid} from Capgo`);
   const { data, error: vError } = await supabase
     .from<definitions['app_versions']>('app_versions')
     .select()
@@ -135,5 +137,5 @@ export const deleteApp = async (appid: string, options: Options) => {
     },
     notify: false,
   }).catch()
-  console.log("App deleted from server")
+  console.log(`${appid} deleted from server`)
 }
