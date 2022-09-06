@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkKey, useLogSnag } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, useLogSnag, verifyUser } from './utils';
 import { definitions } from './types_supabase'
 
 interface Options {
@@ -20,20 +20,11 @@ export const deleteApp = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  console.log(`Delete ${appid} to Capgo`);
+  console.log(`Delete ${appid} - ${version} from Capgo`);
 
   const supabase = createSupabaseClient(apikey)
 
-  await checkKey(supabase, apikey, ['all']);
-
-  const { data: dataUser, error: userIdError } = await supabase
-    .rpc<string>('get_user_id', { apikey })
-
-  const userId = dataUser ? dataUser.toString() : '';
-
-  if (!userId || userIdError) {
-    program.error(`Cannot verify user ${formatError(userIdError)}`);
-  }
+  const userId = await verifyUser(supabase, apikey);
 
   const { data: app, error: dbError0 } = await supabase
     .rpc<string>('exist_app', { appid, apikey })
@@ -51,7 +42,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('deleted', false)
       .single()
     if (!versionData || versionIdError) {
-      program.error(`Version ${appid}@${version} don't exist ${formatError(versionIdError)}`)
+      program.error(`Version ${appid}@${version} doesn't exist ${formatError(versionIdError)}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
       .from<definitions['channels']>('channels')
