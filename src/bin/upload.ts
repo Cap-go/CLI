@@ -29,8 +29,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const config = await getConfig();
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
+  const versionClean = semver.clean(version)
   // check if version is valid 
-  if (!semver.valid(version)) {
+  if (!semver.valid(version) || versionClean !== version) {
     program.error(`Your version name ${version}, is not valid it should follow semver convention : https://semver.org/`);
   }
   path = path || config?.app?.webDir
