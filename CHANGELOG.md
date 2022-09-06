@@ -1,3 +1,9 @@
+## 0.16.4 (2022-09-06)
+
+### Fix
+
+- remove dup code + fix list display
+
 ## 0.16.3 (2022-09-06)
 
 ### Fix
