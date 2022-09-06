@@ -6,7 +6,7 @@ import semver from 'semver'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey, useLogSnag
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey, useLogSnag, verifyUser
 } from './utils';
 
 interface Options {
@@ -44,7 +44,8 @@ export const uploadVersion = async (appid: string, options: Options) => {
   console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
-  await checkKey(supabase, apikey, ['write', 'all']);
+  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
+  await checkPlan(supabase, userId, false)
   const multibar = new cliProgress.MultiBar({
     clearOnComplete: false,
     hideCursor: true
@@ -67,16 +68,6 @@ export const uploadVersion = async (appid: string, options: Options) => {
     program.error(`This app version already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
   }
   b1.increment();
-
-  const { data, error: userIdError } = await supabase
-    .rpc<string>('get_user_id', { apikey })
-
-  const userId = data ? data.toString() : '';
-  if (!userId || userIdError) {
-    multibar.stop()
-    program.error(`Cannot verify user ${formatError(userIdError)}`);
-  }
-  await checkPlan(supabase, userId, false)
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc<number>('is_trial', { userid: userId })
     .single()

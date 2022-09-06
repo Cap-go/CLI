@@ -160,11 +160,11 @@ export const useLogSnag = (): LogSnag => {
     return logsnag
 }
 
-export const verifyUser = async (supabase: SupabaseClient, apikey: string) => {
-    await checkKey(supabase, apikey, ['all']);
+export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymod: string[] = ['all']) => {
+    await checkKey(supabase, apikey, keymod);
 
     const { data: dataUser, error: userIdError } = await supabase
-      .rpc<string>('get_user_id', { apikey });
+        .rpc<string>('get_user_id', { apikey });
 
     const userId = dataUser ? dataUser.toString() : '';
 

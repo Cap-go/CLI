@@ -37,10 +37,13 @@ export const listApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
     .eq('deleted', false)
 
-  console.log(`Active versions in Capgo: ${  data?.length}`);
+  console.log(`Active versions in Capgo: ${data?.length}`);
 
   data?.forEach(row => {
-    console.log(`Version : ${row.name}  created on ${row.created_at}`);
+    // convert created_at to human time
+    const date = new Date(row.created_at || '');
+    const humanDate = date.toLocaleString();
+    console.log(`${row.name} created on ${humanDate}`);
   });
 
   if (vError) {

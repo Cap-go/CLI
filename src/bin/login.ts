@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import fs from 'fs'
 import os from 'os'
-import { createSupabaseClient, formatError, useLogSnag } from './utils';
+import { createSupabaseClient, formatError, useLogSnag, verifyUser } from './utils';
 
 interface Options {
   local: boolean;
@@ -22,12 +22,7 @@ export const login = async (apikey: string, options: Options) => {
     fs.writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`);
   }
   const supabase = createSupabaseClient(apikey)
-  const { data: dataUser, error: userIdError } = await supabase
-    .rpc<string>('get_user_id', { apikey })
-  const userId = dataUser ? dataUser.toString() : '';
-  if (!userId || userIdError) {
-    program.error(`Cannot verify user ${formatError(userIdError)}`);
-  }
+  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   snag.publish({
     channel: 'user-login',
     event: 'User CLI login',
