@@ -1,3 +1,9 @@
+## 0.16.5 (2022-10-02)
+
+### Fix
+
+- semver issue use official regex
+
 ## 0.16.4 (2022-09-06)
 
 ### Fix
