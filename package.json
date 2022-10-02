@@ -48,7 +48,6 @@
     "mime": "^3.0.0",
     "node-stream-zip": "^1.15.0",
     "prettyjson": "^1.2.5",
-    "semver": "^7.3.7",
     "upath": "^2.0.1"
   },
   "devDependencies": {

@@ -2,11 +2,10 @@ import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
-import semver from 'semver'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, checkKey, useLogSnag, verifyUser
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, useLogSnag, verifyUser, regexSemver
 } from './utils';
 
 interface Options {
@@ -29,9 +28,8 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const config = await getConfig();
   appid = appid || config?.app?.appId
   version = version || config?.app?.package?.version
-  const versionClean = semver.clean(version)
   // check if version is valid 
-  if (!semver.valid(version) || versionClean !== version) {
+  if (!regexSemver.test(version)) {
     program.error(`Your version name ${version}, is not valid it should follow semver convention : https://semver.org/`);
   }
   path = path || config?.app?.webDir

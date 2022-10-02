@@ -27,6 +27,9 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
         capgkey: apikey,
     }
 })
+// eslint-disable-next-line max-len
+export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+
 
 export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode: string[]) => {
     const { data: apiAccess, error: apiAccessError } = await supabase
