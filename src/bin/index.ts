@@ -30,12 +30,12 @@ program
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
   .option('-f, --format <base64|hex|binary|utf8>', 'choose the upload format default base64')
-  .option('-v, --version <version>', 'version number of the file to upload');
+  .option('-b, --bundle <bundle>', 'bundle number of the app to upload');
 program
   .command('set [appid]').alias('s')
   .action(setChannel)
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-v, --version <version>', 'version number of the file to upload')
+  .option('-b, --bundle <bundle>', 'bundle number of the app to set')
   .option('-s, --state <state>', 'set the state of the channel, public or private')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
@@ -44,7 +44,7 @@ program
   .command('delete [appid]').alias('d')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-v, --version <version>', 'version number of the app to delete');
+  .option('-b, --bundle <bundle>', 'bundle number of the app to delete');
 
 program
   .description('List versions in capgo Cloud')
