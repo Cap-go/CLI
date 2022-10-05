@@ -1,3 +1,9 @@
+## 1.0.0 (2022-10-05)
+
+### Feat
+
+- rename version in bundle to remove arg conflict
+
 ## 0.16.5 (2022-10-02)
 
 ### Fix
