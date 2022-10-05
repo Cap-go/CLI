@@ -1,3 +1,9 @@
+## 1.0.2 (2022-10-05)
+
+### Fix
+
+- ensure bundle option recognized
+
 ## 1.0.1 (2022-10-05)
 
 ### Fix
