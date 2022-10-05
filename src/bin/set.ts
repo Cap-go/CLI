@@ -1,26 +1,26 @@
 import { program } from 'commander';
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
-  host, formatError, findSavedKey, checkPlan, checkKey, useLogSnag, verifyUser
+  host, formatError, findSavedKey, checkPlan, useLogSnag, verifyUser
 } from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
   apikey: string;
-  version: string;
+  bundle: string;
   state: string;
   channel?: string;
 }
 
 export const setChannel = async (appid: string, options: Options) => {
-  let { version } = options;
+  let { bundle } = options;
   const { state, channel = 'dev' } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   const snag = useLogSnag()
 
   appid = appid || config?.app?.appId
-  version = version || config?.app?.package?.version
+  bundle = bundle || config?.app?.package?.version
   let parsedState
   if (state === 'public' || state === 'private')
     parsedState = state === 'public'
@@ -30,11 +30,11 @@ export const setChannel = async (appid: string, options: Options) => {
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
-  if (!version && !parsedState) {
+  if (!bundle && !parsedState) {
     program.error("Missing argument, you need to provide a state or a version");
   }
-  if (version) {
-    console.log(`Set ${channel} to @${version} in ${appid}`);
+  if (bundle) {
+    console.log(`Set ${channel} to @${bundle} in ${appid}`);
   } else {
     console.log(`Set${channel} to @${state} in ${appid}`);
   }
@@ -47,16 +47,16 @@ export const setChannel = async (appid: string, options: Options) => {
       app_id: appid,
       name: channel,
     }
-    if (version) {
+    if (bundle) {
       const { data, error: vError } = await supabase
         .from<definitions['app_versions']>('app_versions')
         .select()
         .eq('app_id', appid)
-        .eq('name', version)
+        .eq('name', bundle)
         .eq('user_id', userId)
         .eq('deleted', false)
       if (vError || !data || !data.length)
-        program.error(`Cannot find version ${version}`);
+        program.error(`Cannot find version ${bundle}`);
       channelPayload.version = data[0].id
     }
     if (parsedState !== undefined)
@@ -82,7 +82,7 @@ export const setChannel = async (appid: string, options: Options) => {
   } catch (err) {
     program.error(`Unknow error ${formatError(err)}`);
   }
-  if (version) {
+  if (bundle) {
     console.log(`Done ✅`);
   } else {
     console.log(`You can use now is channel in your app with the url: ${host}/api/latest?appid=${appid}&channel=${channel}`);

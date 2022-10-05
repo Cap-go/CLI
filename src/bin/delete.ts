@@ -4,11 +4,11 @@ import { definitions } from './types_supabase'
 
 interface Options {
   apikey: string;
-  version: string;
+  bundle: string;
 }
 
 export const deleteApp = async (appid: string, options: Options) => {
-  const { version } = options;
+  const { bundle } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   const snag = useLogSnag()
@@ -31,19 +31,19 @@ export const deleteApp = async (appid: string, options: Options) => {
     program.error('No permission to delete')
   }
 
-  if (version) {
-    console.log(`Delete ${appid}@${version} from Capgo`);
+  if (bundle) {
+    console.log(`Delete ${appid}@${bundle} from Capgo`);
 
     const { data: versionData, error: versionIdError } = await supabase
       .from<definitions['app_versions']>('app_versions')
       .select()
       .eq('app_id', appid)
       .eq('user_id', userId)
-      .eq('name', version)
+      .eq('name', bundle)
       .eq('deleted', false)
       .single()
     if (!versionData || versionIdError) {
-      program.error(`Version ${appid}@${version} doesn't exist ${formatError(versionIdError)}`)
+      program.error(`Version ${appid}@${bundle} doesn't exist ${formatError(versionIdError)}`)
     }
     const { data: channelFound, error: errorChannel } = await supabase
       .from<definitions['channels']>('channels')
@@ -52,7 +52,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('created_by', userId)
       .eq('version', versionData.id)
     if ((channelFound && channelFound.length) || errorChannel) {
-      program.error(`Version ${appid}@${version} is used in a channel, unlink it first ${formatError(errorChannel)}`)
+      program.error(`Version ${appid}@${bundle} is used in a channel, unlink it first ${formatError(errorChannel)}`)
     }
     const { data: deviceFound, error: errorDevice } = await supabase
       .from<definitions['devices_override']>('devices_override')
@@ -60,7 +60,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .eq('app_id', appid)
       .eq('version', versionData.id)
     if ((deviceFound && deviceFound.length) || errorDevice) {
-      program.error(`Version ${appid} @${version} is used in a device override, unlink it first ${formatError(errorDevice)}`)
+      program.error(`Version ${appid} @${bundle} is used in a device override, unlink it first ${formatError(errorDevice)}`)
     }
     // Delete only a specific version in storage
     const { error: delError } = await supabase
@@ -68,7 +68,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .from('apps')
       .remove([`${userId}/${appid}/versions/${versionData.bucket_id} `])
     if (delError) {
-      program.error(`Something went wrong when trying to delete ${appid} @${version} ${delError} `)
+      program.error(`Something went wrong when trying to delete ${appid} @${bundle} ${delError} `)
     }
 
     const { error: delAppSpecVersionError } = await supabase
@@ -78,11 +78,11 @@ export const deleteApp = async (appid: string, options: Options) => {
       })
       .eq('app_id', appid)
       .eq('user_id', userId)
-      .eq('name', version)
+      .eq('name', bundle)
     if (delAppSpecVersionError) {
-      program.error(`App ${appid}@${version} not found in database '${delAppSpecVersionError}'`)
+      program.error(`App ${appid}@${bundle} not found in database '${delAppSpecVersionError}'`)
     }
-    console.log(`${appid}@${version} deleted from server`)
+    console.log(`${appid}@${bundle} deleted from server`)
     return
   }
 

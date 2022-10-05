@@ -117,5 +117,5 @@ export const addApp = async (appid: string, options: Options) => {
     },
     notify: false,
   }).catch()
-  console.log("App added to server, you can upload a version now")
+  console.log("App added to server, you can upload a bundle now")
 }

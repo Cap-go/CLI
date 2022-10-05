@@ -9,7 +9,7 @@ import {
 } from './utils';
 
 interface Options {
-  version: string
+  bundle: string
   path: string
   apikey: string
   channel?: string
@@ -19,7 +19,7 @@ interface Options {
 const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
-  let { version, path, channel } = options;
+  let { bundle, path, channel } = options;
   const { external } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
@@ -27,19 +27,19 @@ export const uploadVersion = async (appid: string, options: Options) => {
   channel = channel || 'dev';
   const config = await getConfig();
   appid = appid || config?.app?.appId
-  version = version || config?.app?.package?.version
-  // check if version is valid 
-  if (!regexSemver.test(version)) {
-    program.error(`Your version name ${version}, is not valid it should follow semver convention : https://semver.org/`);
+  bundle = bundle || config?.app?.package?.version
+  // check if bundle is valid 
+  if (!regexSemver.test(bundle)) {
+    program.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
   }
   path = path || config?.app?.webDir
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
-  if (!appid || !version || !path) {
-    program.error("Missing argument, you need to provide a appid and a version and a path, or be in a capacitor project");
+  if (!appid || !bundle || !path) {
+    program.error("Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project");
   }
-  console.log(`Upload ${appid}@${version} started from path "${path}" to Capgo cloud`);
+  console.log(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
@@ -59,11 +59,11 @@ export const uploadVersion = async (appid: string, options: Options) => {
 
   // checking if user has access rights before uploading
   const { data: versionExist, error: versionExistError } = await supabase
-    .rpc('exist_app_versions', { apikey, name_version: version, appid })
+    .rpc('exist_app_versions', { apikey, name_version: bundle, appid })
 
   if (versionExist || versionExistError) {
     multibar.stop()
-    program.error(`This app version already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
+    program.error(`This app bundle already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
   }
   b1.increment();
   const { data: isTrial, error: isTrialsError } = await supabase
@@ -83,7 +83,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   b1.increment();
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc<string>('exist_app_versions', { appid, apikey, name_version: version })
+    .rpc<string>('exist_app_versions', { appid, apikey, name_version: bundle })
   if (appVersion || appVersionError) {
     program.error(`Version already exists ${formatError(appVersionError)}`)
   }
@@ -129,14 +129,14 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
-    name: version,
+    name: bundle,
     app_id: appid,
     external_url: external,
     checksum,
   }, apikey)
   if (dbError) {
     multibar.stop()
-    program.error(`Cannot add version ${formatError(dbError)}`)
+    program.error(`Cannot add bundle ${formatError(dbError)}`)
   }
   b1.increment();
   if (versionData && versionData.length) {
@@ -147,10 +147,10 @@ export const uploadVersion = async (appid: string, options: Options) => {
       version: versionData[0].id,
     }, apikey)
     if (dbError3) {
-      multibar.log('Cannot set version with upload key, use key with more rights for that\n');
+      multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
     }
   } else {
-    multibar.log('Cannot set version with upload key, use key with more rights for that\n');
+    multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
   }
   multibar.stop()
   const appidWeb = appid.replace(/\./g, '--')
@@ -158,7 +158,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
   console.log("To use with live update in your own app")
-  console.log(`You can link specific device to this version to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
+  console.log(`You can link specific device to this bundle to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
   snag.publish({
     channel: 'app',
     event: 'App Uploaded',
