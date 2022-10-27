@@ -67,10 +67,10 @@ export const checkPlan = async (supabase: SupabaseClient, userId: string, warnin
         validPlan = true
     }
     if (!validPlan) {
-        program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/app/usage\n`);
+        program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
     if (trialDays > 0 && warning) {
-        console.log(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/app/usage\n`);
+        console.log(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
 }
 
