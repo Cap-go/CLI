@@ -1,3 +1,9 @@
+## 1.1.2 (2022-11-07)
+
+### Fix
+
+- update to new is_good_plan + use is_paying
+
 ## 1.1.1 (2022-11-07)
 
 ### Fix
