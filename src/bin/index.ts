@@ -36,7 +36,17 @@ program
   .action(setChannel)
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to set')
-  .option('-s, --state <state>', 'set the state of the channel, public or private')
+  .option('-s, --state <state>', 'set the state of the channel, default or normal')
+  .option('--downgrade', 'Allow to downgrade to version under native one')
+  .option('--no-downgrade', 'Disable downgrade to version under native one')
+  .option('--upgrade', 'Allow to upgrade to version above native one')
+  .option('--no-upgrade', 'Disable upgrade to version above native one')
+  .option('--ios', 'Allow sending update to ios devices')
+  .option('--no-ios', 'Disable sending update to ios devices')
+  .option('--android', 'Allow sending update to android devices')
+  .option('--no-android', 'Disable sending update to android devices')
+  .option('--self-assign', 'Allow to device to self assign to this channel')
+  .option('--no-self-assign', 'Disable devices to self assign to this channel')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program

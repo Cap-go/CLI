@@ -1,42 +1,46 @@
 import { program } from 'commander';
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
-  host, formatError, findSavedKey, checkPlan, useLogSnag, verifyUser
+  formatError, findSavedKey, checkPlan, useLogSnag, verifyUser
 } from './utils';
 import { definitions } from './types_supabase';
 
 interface Options {
   apikey: string;
   bundle: string;
-  state: string;
+  state?: string;
+  downgrade?: boolean;
+  upgrade?: boolean;
+  ios?: boolean;
+  android?: boolean;
+  selfAssign?: boolean;
   channel?: string;
 }
 
 export const setChannel = async (appid: string, options: Options) => {
-  let { bundle } = options;
-  const { state, channel = 'dev' } = options;
+  const { bundle, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   const snag = useLogSnag()
 
   appid = appid || config?.app?.appId
-  bundle = bundle || config?.app?.package?.version
-  let parsedState
-  if (state === 'public' || state === 'private')
-    parsedState = state === 'public'
   if (!apikey) {
     program.error("Missing API key, you need to provide a API key to add your app");
   }
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
-  if (!bundle && !parsedState) {
-    program.error("Missing argument, you need to provide a state or a version");
+  if (!channel) {
+    program.error("Missing argument, you need to provide a channel");
   }
-  if (bundle) {
-    console.log(`Set ${channel} to @${bundle} in ${appid}`);
-  } else {
-    console.log(`Set${channel} to @${state} in ${appid}`);
+  if (bundle === undefined &&
+    state === undefined &&
+    downgrade === undefined &&
+    upgrade === undefined &&
+    ios === undefined &&
+    android === undefined &&
+    selfAssign === undefined) {
+    program.error("Missing argument, you need to provide a option to set");
   }
   try {
     const supabase = createSupabaseClient(apikey)
@@ -48,6 +52,7 @@ export const setChannel = async (appid: string, options: Options) => {
       name: channel,
     }
     if (bundle) {
+      console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
       const { data, error: vError } = await supabase
         .from<definitions['app_versions']>('app_versions')
         .select()
@@ -59,8 +64,33 @@ export const setChannel = async (appid: string, options: Options) => {
         program.error(`Cannot find version ${bundle}`);
       channelPayload.version = data[0].id
     }
-    if (parsedState !== undefined)
-      channelPayload.public = parsedState
+    if (state !== undefined) {
+      if (state === 'public' || state === 'private') {
+        console.log(`Set ${appid} channel: ${channel} to public or private is deprecated, use default or normal instead`);
+      }
+      console.log(`Set ${appid} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`);
+      channelPayload.public = state === 'public' || state === 'default'
+    }
+    if (downgrade !== undefined) {
+      console.log(`Set ${appid} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`);
+      channelPayload.disableAutoUpdateUnderNative = !downgrade
+    }
+    if (upgrade !== undefined) {
+      console.log(`Set ${appid} channel: ${channel} to ${upgrade ? 'allow' : 'disallow'} upgrade`);
+      channelPayload.disableAutoUpdateToMajor = !upgrade
+    }
+    if (ios !== undefined) {
+      console.log(`Set ${appid} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`);
+      channelPayload.ios = !!ios
+    }
+    if (android !== undefined) {
+      console.log(`Set ${appid} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`);
+      channelPayload.android = !!android
+    }
+    if (selfAssign !== undefined) {
+      console.log(`Set ${appid} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`);
+      channelPayload.allow_device_self_set = !!selfAssign
+    }
     try {
       const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, apikey)
       if (dbError)
@@ -82,9 +112,5 @@ export const setChannel = async (appid: string, options: Options) => {
   } catch (err) {
     program.error(`Unknow error ${formatError(err)}`);
   }
-  if (bundle) {
-    console.log(`Done ✅`);
-  } else {
-    console.log(`You can use now is channel in your app with the url: ${host}/api/latest?appid=${appid}&channel=${channel}`);
-  }
+  console.log(`Done ✅`);
 }
