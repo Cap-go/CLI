@@ -30,9 +30,6 @@ export const setChannel = async (appid: string, options: Options) => {
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
-  if (!channel) {
-    program.error("Missing argument, you need to provide a channel");
-  }
   if (bundle === undefined &&
     state === undefined &&
     downgrade === undefined &&

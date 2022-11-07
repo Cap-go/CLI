@@ -34,7 +34,7 @@ program
 program
   .command('set [appid]').alias('s')
   .action(setChannel)
-  .option('-c, --channel <channel>', 'channel to link to')
+  .requiredOption('-c, --channel <channel>', 'channel to link to')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to set')
   .option('-s, --state <state>', 'set the state of the channel, default or normal')
   .option('--downgrade', 'Allow to downgrade to version under native one')
