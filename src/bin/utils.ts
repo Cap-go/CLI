@@ -5,6 +5,7 @@ import prettyjson from 'prettyjson';
 import fs from 'fs'
 import os from 'os'
 import { LogSnag } from 'logsnag'
+import { isPaying } from './utils';
 import { definitions } from './types_supabase';
 
 
@@ -30,7 +31,6 @@ export const createSupabaseClient = (apikey: string) => createClient(hostSupa, s
 // eslint-disable-next-line max-len
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 
-
 export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode: string[]) => {
     const { data: apiAccess, error: apiAccessError } = await supabase
         .rpc('is_allowed_capgkey', { apikey, keymode })
@@ -42,7 +42,17 @@ export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode
 
 export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc<boolean>('is_good_plan', { userid: userId })
+        .rpc<boolean>('is_good_plan_v2', { userid: userId })
+        .single()
+    if (error) {
+        throw error
+    }
+    return data || false
+}
+
+export const isPaying = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .rpc<boolean>('is_paying', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -61,15 +71,13 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
 }
 
 export const checkPlan = async (supabase: SupabaseClient, userId: string, warning = true) => {
-    let validPlan = await isGoodPlan(supabase, userId)
+    const validPlan = await isGoodPlan(supabase, userId)
+    const paying = await isPaying(supabase, userId)
     const trialDays = await isTrial(supabase, userId)
-    if (trialDays > 0) {
-        validPlan = true
-    }
-    if (!validPlan) {
+    if ((!paying || !validPlan) && trialDays < 0) {
         program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
-    if (trialDays > 0 && warning) {
+    if (trialDays > 0 && warning && !paying) {
         console.log(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
 }
