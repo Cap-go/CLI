@@ -1,3 +1,9 @@
+## 1.1.0 (2022-11-07)
+
+### Feat
+
+- add all channel option in set method
+
 ## 1.0.3 (2022-10-27)
 
 ### Fix
