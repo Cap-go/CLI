@@ -36,7 +36,7 @@
   "author": "github.com/riderx",
   "license": "Apache 2.0",
   "dependencies": {
-    "@capacitor/cli": "3.5.1",
+    "@capacitor/cli": "3.8.0",
     "@supabase/supabase-js": "^1.35.3",
     "@tomasklaen/checksum": "^1.1.0",
     "adm-zip": "^0.5.9",
