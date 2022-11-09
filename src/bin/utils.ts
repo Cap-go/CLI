@@ -5,7 +5,6 @@ import prettyjson from 'prettyjson';
 import fs from 'fs'
 import os from 'os'
 import { LogSnag } from 'logsnag'
-import { isPaying } from './utils';
 import { definitions } from './types_supabase';
 
 
