@@ -2,9 +2,9 @@ import { program } from 'commander';
 import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from './utils';
-import { definitions } from './types_supabase';
-import { deleteSpecificVersion } from '../api/versions';
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
+import { AppVersion, deleteSpecificVersion, getActiveAppVersions } from '../api/versions';
+import { checkAppExistsAndHasPermission } from '../api/app';
 
 interface Options {
   apikey: string;
@@ -12,18 +12,6 @@ interface Options {
   bundle: string;
 }
 
-type AppVersion = {
-  id: number;
-  created_at?: string;
-  app_id: string;
-  name: string;
-  bucket_id?: string;
-  user_id: string;
-  updated_at?: string;
-  deleted: boolean;
-  external_url?: string;
-  checksum?: string;
-};
 
 const prompt = promptSync();
 
@@ -32,33 +20,6 @@ function removeVersions(toRemove: AppVersion[], supabase: SupabaseClient, appid:
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
   });
-}
-
-function getHumanDate(row: AppVersion) {
-  const date = new Date(row.created_at || '');
-  return date.toLocaleString();
-}
-
-async function checkAppExistsAndHasPermission(supabase: SupabaseClient, appid: string, apikey: string) {
-  const { data: app, error: dbError0 } = await supabase
-    .rpc<string>('exist_app', { appid, apikey });
-  if (!app || dbError0) {
-    program.error('No permission for this app');
-  }
-}
-
-async function getActiveAppVersions(supabase: SupabaseClient, appid: string, userId: string) {
-  const { data, error: vError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
-    .select()
-    .eq('app_id', appid)
-    .eq('user_id', userId)
-    .eq('deleted', false);
-
-  if (vError) {
-    program.error(`App ${appid} not found in database ${vError} `);
-  }
-  return data;
 }
 
 function getRemovableVersionsInSemverRange(data: AppVersion[], bundle: string, nextMajor: string) {
