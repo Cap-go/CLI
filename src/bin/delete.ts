@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils';
 import { definitions } from './types_supabase';
-import { deleteSpecificVersion } from './deleteSpecificVersion';
+import { deleteSpecificVersion } from '../api/versions';
 
 interface Options {
   apikey: string;

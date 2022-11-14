@@ -4,7 +4,7 @@ import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from './utils';
 import { definitions } from './types_supabase';
-import { deleteSpecificVersion } from './deleteSpecificVersion';
+import { deleteSpecificVersion } from '../api/versions';
 
 interface Options {
   apikey: string;
