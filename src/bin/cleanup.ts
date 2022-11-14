@@ -1,6 +1,7 @@
 import { program } from 'commander';
 import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
+import { SupabaseClient } from '@supabase/supabase-js';
 import { getConfig, createSupabaseClient, findSavedKey, verifyUser } from './utils';
 import { definitions } from './types_supabase'
 import { deleteSpecificVersion } from './deleteSpecificVersion';
@@ -13,18 +14,27 @@ interface Options {
 
 type AppVersion = {
   id: number;
-  created_at?: string | undefined;
+  created_at?: string;
   app_id: string;
   name: string;
-  bucket_id?: string | undefined;
+  bucket_id?: string;
   user_id: string;
-  updated_at?: string | undefined;
+  updated_at?: string;
   deleted: boolean;
-  external_url?: string | undefined;
-  checksum?: string | undefined;
+  external_url?: string;
+  checksum?: string;
 };
 
 const prompt = promptSync();
+
+function removeVersions(toRemove: AppVersion[], supabase: SupabaseClient, appid: string, userId: string) {
+  toRemove?.forEach(row => {
+    const date = new Date(row.created_at || '');
+    const humanDate = date.toLocaleString();
+    console.log(`Removing ${row.name} created on ${humanDate}`);
+    deleteSpecificVersion(supabase, appid, userId, row.name);
+  });
+}
 
 export const cleanupApp = async (appid: string, options: Options) => {
   const apikey = options.apikey || findSavedKey()
@@ -42,8 +52,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  const nextMajor = `${semver.inc(bundle,'major')}`;
 
+  const nextMajor = `${semver.inc(bundle,'major')}`;
   console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
   const supabase = createSupabaseClient(apikey)
@@ -71,8 +81,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
   const toRemove: AppVersion[] = [];
 
-  // Check what to remove in between the major ranges, and keep the last one by default
-  data?.forEach((row, index) => {
+  // Check what to remove in between the major ranges
+  data?.forEach(row => {
     if (semver.gte(row.name, bundle) && semver.lt(row.name, `${nextMajor}`)) {
         toRemove.push(row);
     }
@@ -93,39 +103,32 @@ export const cleanupApp = async (appid: string, options: Options) => {
     }
   }
 
-  // Always keep latest version
+  // Always keep the latest version
   removeLast(true);
 
-  // Keep last 5
+  // Keep the previous 4 as well
   removeLast(false);
   removeLast(false);
   removeLast(false);
   removeLast(false);
 
-  if (toRemove.length > 0) {
-    toRemove?.forEach(row => {
-      const date = new Date(row.created_at || '');
-      const humanDate = date.toLocaleString();
-      console.log(`${row.name} created on ${humanDate} will be removed`);
-    });
-
-    const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
-    if (result === 'yes') {
-      console.log("You have confiremd removal, removing versions now");
-
-      toRemove?.forEach(row => {
-        const date = new Date(row.created_at || '');
-        const humanDate = date.toLocaleString();
-        console.log(`Removing ${row.name} created on ${humanDate}`);
-        deleteSpecificVersion(supabase, appid, userId, row.name);
-      });
-    } else {
-      console.log("Not confirmed, aborting removal...")
-    }
-  } else {
+  if (toRemove.length === 0) {
     console.log("Nothing to be removed, aborting removal...")
+    return;
   }
 
+  toRemove?.forEach(row => {
+    const date = new Date(row.created_at || '');
+    const humanDate = date.toLocaleString();
+    console.log(`${row.name} created on ${humanDate} will be removed`);
+  });
 
+  const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
+  if (result !== "yes") {
+    console.log("Not confirmed, aborting removal...");
+    return;
+  }
 
+  console.log("You have confiremd removal, removing versions now");
+  removeVersions(toRemove, supabase, appid, userId);
 }
