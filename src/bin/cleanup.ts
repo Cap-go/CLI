@@ -2,8 +2,8 @@ import { program } from 'commander';
 import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { getConfig, createSupabaseClient, findSavedKey, verifyUser } from './utils';
-import { definitions } from './types_supabase'
+import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from './utils';
+import { definitions } from './types_supabase';
 import { deleteSpecificVersion } from './deleteSpecificVersion';
 
 interface Options {
@@ -29,11 +29,14 @@ const prompt = promptSync();
 
 function removeVersions(toRemove: AppVersion[], supabase: SupabaseClient, appid: string, userId: string) {
   toRemove?.forEach(row => {
-    const date = new Date(row.created_at || '');
-    const humanDate = date.toLocaleString();
-    console.log(`Removing ${row.name} created on ${humanDate}`);
+    console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
   });
+}
+
+function getHumanDate(row: AppVersion) {
+  const date = new Date(row.created_at || '');
+  return date.toLocaleString();
 }
 
 export const cleanupApp = async (appid: string, options: Options) => {
@@ -93,9 +96,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
   function removeLast(recent = true) {
     const last = toRemove.pop();
     if (last) {
-      const date = new Date(last.created_at || '');
-      const humanDate = date.toLocaleString();
-      if(recent) {
+      const humanDate = getHumanDate(last);
+      if (recent) {
         console.log(`${last.name} created on ${humanDate} will be kept as it's the last release`);
       } else {
         console.log(`${last.name} created on ${humanDate} will be kept due to config`);
@@ -118,9 +120,7 @@ export const cleanupApp = async (appid: string, options: Options) => {
   }
 
   toRemove?.forEach(row => {
-    const date = new Date(row.created_at || '');
-    const humanDate = date.toLocaleString();
-    console.log(`${row.name} created on ${humanDate} will be removed`);
+    console.log(`${row.name} created on ${(getHumanDate(row))} will be removed`);
   });
 
   const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
