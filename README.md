@@ -64,7 +64,8 @@ This command will show a list of what it will be removing and ask for confirmati
 `
 Optionally, you can give:
 [appId] your app ID the format is explained here
---bundle your app bundle already sent to the cloud to
+--bundle your app bundle already sent to the cloud, to link it to a channel
+--latest get the bundle version from `package.json:version`, cannot be use with --bundle
 --state set the channel state, can be normal or default. To use in your app, one channel need to be "default".
 --downgrade allow the channel to send downgrade version to devices.
 --no-downgrade disallow the channel to send downgrade version to devices.
