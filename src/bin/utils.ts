@@ -1,11 +1,12 @@
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
-import { createClient, SupabaseClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
-import fs from 'fs'
-import os from 'os'
-import { LogSnag } from 'logsnag'
+import fs from 'fs';
+import os from 'os';
+import { LogSnag } from 'logsnag';
 import { definitions } from './types_supabase';
+import { AppVersion } from '../api/versions';
 
 
 export const host = 'https://capgo.app';
@@ -182,4 +183,9 @@ export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymo
         program.error(`Cannot verify user ${formatError(userIdError)}`);
     }
     return userId;
+}
+
+export function getHumanDate(row: AppVersion) {
+    const date = new Date(row.created_at || '');
+    return date.toLocaleString();
 }
