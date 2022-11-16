@@ -1,6 +1,7 @@
 import { program } from 'commander';
-import { getConfig, createSupabaseClient, findSavedKey, verifyUser } from './utils';
-import { definitions } from './types_supabase'
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
+import { checkAppExistsAndHasPermission } from '../api/app';
+import { getActiveAppVersions } from '../api/versions';
 
 interface Options {
   apikey: string;
@@ -24,31 +25,17 @@ export const listApp = async (appid: string, options: Options) => {
 
   const userId = await verifyUser(supabase, apikey);
 
-  const { data: app, error: dbError0 } = await supabase
-    .rpc<string>('exist_app', { appid, apikey })
-  if (!app || dbError0) {
-    program.error('No permission for this app')
-  }
+  // Check we have app access to this appId
+  await checkAppExistsAndHasPermission(supabase, appid, apikey);
 
-  const { data, error: vError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
-    .select()
-    .eq('app_id', appid)
-    .eq('user_id', userId)
-    .eq('deleted', false)
+  // Get all active app versions we might possibly be able to cleanup
+  const data = await getActiveAppVersions(supabase, appid, userId);
 
   console.log(`Active versions in Capgo: ${data?.length}`);
 
   data?.forEach(row => {
     // convert created_at to human time
-    const date = new Date(row.created_at || '');
-    const humanDate = date.toLocaleString();
-    console.log(`${row.name} created on ${humanDate}`);
+    console.log(`${row.name} created on ${(getHumanDate(row))}`);
   });
-
-  if (vError) {
-    program.error(`App ${appid} not found in database ${vError} `)
-  }
-
 
 }

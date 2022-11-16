@@ -45,6 +45,19 @@ Optionally you can give:
 `npx @capgo/cli delete [appId]`
 `[appId]` your app ID present in the Cloud
 
+### Delete older packages in a semver range for a major version to Cloud
+`npx @capgo/cli cleanup [appId] --bundle=[majorVersion]`
+`[appId]` your app ID present in the Cloud
+`[majorVersion]` a version you want to remove previous packages for, it will keep the last 5
+
+For example: 
+If you have 10 versions, from 10.0.1 to 10.0.11, and you use 
+`npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
+it will remove 10.0.1 to 10.0.6. 
+10.0.7 till 10.0.11 will be kept
+
+This command will show a list of what it will be removing and ask for confirmation
+
 ### Configure channel
 `npx @capgo/cli set [appId] --channel dev
 `
