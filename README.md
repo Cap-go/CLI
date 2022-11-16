@@ -5,23 +5,23 @@
 <h2><a href="https://capgo.app/">Check out: Capgo — Instant updates for capacitor</a></h2>
 </div>
 
-A CLI to upload and download files from the Capacitor go Cloud.
+A CLI to upload and download files from the Capgo Cloud.
 
 ## Usage
 
 Before use the CLI you should register here : https://capgo.app/
 
-Then go in you account in apikey section and click in the `all` key to copy it.
+Then go to your account in `apikey` section and click in the `all` key to copy it.
 
 ## Login to Cloud
 `npx @capgo/cli login API_KEY`
-`API_KEY` your  apikey copied in the previous step
+`API_KEY` your `apikey` copied in the previous step
 
 ## Add new app to Cloud
 `npx @capgo/cli add [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 
-Optionally you can give:
+Optionally, you can give:
 - icon with `--icon /path/to/my/icon` to have a custom icon in the list
 - name with `--name test` to have a custom name in the list
 
@@ -30,7 +30,7 @@ Optionally you can give:
 `npx @capgo/cli upload [appId]`
 `[appId]` is your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
 
-Optionally you can give:
+Optionally, you can give:
 - icon with `--path /path/to/my/dist/folder` to send your code to the cloud
 - name with `--name test` to have a custom name in the list
 - channel with `--channel prod` to link this version to channel
@@ -38,23 +38,24 @@ Optionally you can give:
 ### Send version to Cloud channel
 `npx @capgo/cli set [appId] [version] [channel]`
 `[appId]` your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
-`[version]` your app version already sended to the cloud
+`[version]` your app version already sent to the cloud
 `[channel]` the channel you want to link the version
 
 ### Delete package to Cloud
 `npx @capgo/cli delete [appId]`
 `[appId]` your app ID present in the Cloud
 
-### Delete older packages in a semver range for a major version to Cloud
-`npx @capgo/cli cleanup [appId] --bundle=[majorVersion]`
+### Delete older packages in a SemVer range for a major version to Cloud
+`npx @capgo/cli cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
 `[appId]` your app ID present in the Cloud
-`[majorVersion]` a version you want to remove previous packages for, it will keep the last 5
+`[majorVersion]` a version you wish to remove previous packages for, it will keep the last one + numberToKeep
+`[numberToKeep]` the number of packages you wish to keep
 
 For example: 
 If you have 10 versions, from 10.0.1 to 10.0.11, and you use 
 `npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
 it will remove 10.0.1 to 10.0.6. 
-10.0.7 till 10.0.11 will be kept
+10.0.7 untill 10.0.11 will be kept
 
 This command will show a list of what it will be removing and ask for confirmation
 
@@ -95,7 +96,7 @@ Optionally, you can give:
 
 4. Attach debugger to the process started with `npm run dev`
 
-   > VScode:
+   > VS Code:
 
    - Run `Debug on fixtures` launch configuration
    - Edit configuration to debug on different files
