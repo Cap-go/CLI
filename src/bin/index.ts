@@ -41,6 +41,7 @@ program
   .option('-b, --bundle <bundle>', 'bundle version number of the file to set')
   .option('-s, --state <state>', 'set the state of the channel, default or normal')
   .option('--downgrade', 'Allow to downgrade to version under native one')
+  .option('--latest', 'get the latest version key in the package.json to set it to the channel')
   .option('--no-downgrade', 'Disable downgrade to version under native one')
   .option('--upgrade', 'Allow to upgrade to version above native one')
   .option('--no-upgrade', 'Disable upgrade to version above native one')

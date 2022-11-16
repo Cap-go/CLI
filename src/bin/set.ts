@@ -10,6 +10,7 @@ interface Options {
   bundle: string;
   state?: string;
   downgrade?: boolean;
+  latest?: boolean;
   upgrade?: boolean;
   ios?: boolean;
   android?: boolean;
@@ -18,9 +19,9 @@ interface Options {
 }
 
 export const setChannel = async (appid: string, options: Options) => {
-  const { bundle, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
+  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
   const apikey = options.apikey || findSavedKey()
-  const config = await getConfig();
+  const config = await getConfig()
   const snag = useLogSnag()
 
   appid = appid || config?.app?.appId
@@ -30,8 +31,12 @@ export const setChannel = async (appid: string, options: Options) => {
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
+  if (latest && bundle) {
+    program.error("Cannot set latest and bundle at the same time");
+  }
   if (bundle === undefined &&
     state === undefined &&
+    latest === undefined &&
     downgrade === undefined &&
     upgrade === undefined &&
     ios === undefined &&
@@ -48,16 +53,17 @@ export const setChannel = async (appid: string, options: Options) => {
       app_id: appid,
       name: channel,
     }
-    if (bundle) {
+    const bundleVersion = latest ? config?.app?.package?.version : bundle
+    if (bundleVersion) {
       const { data, error: vError } = await supabase
         .from<definitions['app_versions']>('app_versions')
         .select()
         .eq('app_id', appid)
-        .eq('name', bundle)
+        .eq('name', bundleVersion)
         .eq('user_id', userId)
         .eq('deleted', false)
       if (vError || !data || !data.length)
-        program.error(`Cannot find version ${bundle}`);
+        program.error(`Cannot find version ${bundleVersion}`);
       console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
       channelPayload.version = data[0].id
     }
