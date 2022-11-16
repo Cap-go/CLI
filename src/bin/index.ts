@@ -68,7 +68,8 @@ program
   .description('Cleanup versions in capgo Cloud')
   .command('cleanup [appid]').alias('c')
   .action(cleanupApp)
-  .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-k, --keep <keep>', 'number of version to keep');
 
 program.parse(process.argv);

@@ -1,10 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
-import { AppVersion } from './versions';
 import { definitions } from '../bin/types_supabase';
 import { formatError } from '../bin/utils';
 
-export async function checkVersionNotUsedInDeviceOverride(supabase: SupabaseClient, appid: string, versionData: AppVersion, bundle: string) {
+export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClient,
+  appid: string, versionData: definitions["app_versions"], bundle: string) => {
   const { data: deviceFound, error: errorDevice } = await supabase
     .from<definitions['devices_override']>('devices_override')
     .select()

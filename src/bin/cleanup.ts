@@ -3,27 +3,29 @@ import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
-import { AppVersion, deleteSpecificVersion, getActiveAppVersions } from '../api/versions';
+import { deleteSpecificVersion, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
+import { definitions } from './types_supabase';
 
 interface Options {
   apikey: string;
   version: string;
   bundle: string;
+  keep: number;
 }
 
 
 const prompt = promptSync();
 
-function removeVersions(toRemove: AppVersion[], supabase: SupabaseClient, appid: string, userId: string) {
+const removeVersions = (toRemove: definitions["app_versions"][], supabase: SupabaseClient, appid: string, userId: string) => {
   toRemove?.forEach(row => {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
   });
 }
 
-function getRemovableVersionsInSemverRange(data: AppVersion[], bundle: string, nextMajor: string) {
-  const toRemove: AppVersion[] = [];
+const getRemovableVersionsInSemverRange = (data: definitions["app_versions"][], bundle: string, nextMajor: string) => {
+  const toRemove: definitions["app_versions"][] = [];
 
   data?.forEach(row => {
     if (semver.gte(row.name, bundle) && semver.lt(row.name, `${nextMajor}`)) {
@@ -33,9 +35,13 @@ function getRemovableVersionsInSemverRange(data: AppVersion[], bundle: string, n
   return toRemove;
 }
 
+const loop = (times: number, callback: (i: number) => unknown) => {
+  [...Array(times)].forEach((item, i) => callback(i));
+};
+
 export const cleanupApp = async (appid: string, options: Options) => {
   const apikey = options.apikey || findSavedKey()
-  const { bundle } = options;
+  const { bundle, keep = 4 } = options;
 
   const config = await getConfig();
 
@@ -43,14 +49,11 @@ export const cleanupApp = async (appid: string, options: Options) => {
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
   }
-  if (!bundle) {
-    program.error('Missing bundle version, provide a major version to cleanup');
-  }
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
 
-  const nextMajor = `${semver.inc(bundle,'major')}`;
+  const nextMajor = `${semver.inc(bundle, 'major')}`;
   console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
   const supabase = createSupabaseClient(apikey)
@@ -74,7 +77,7 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
   console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${toRemove?.length}`);
 
-  function removeLast(recent = true) {
+  const removeLast = (recent = true) => {
     const last = toRemove.pop();
     if (last) {
       const humanDate = getHumanDate(last);
@@ -89,11 +92,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
   // Always keep the latest version
   removeLast(true);
 
-  // Keep the previous 4 as well
-  removeLast(false);
-  removeLast(false);
-  removeLast(false);
-  removeLast(false);
+  // loop call removeLast until we have use up the keep count
+  loop(keep, () => removeLast(false));
 
   if (toRemove.length === 0) {
     console.log("Nothing to be removed, aborting removal...")

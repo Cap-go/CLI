@@ -6,8 +6,6 @@ import fs from 'fs';
 import os from 'os';
 import { LogSnag } from 'logsnag';
 import { definitions } from './types_supabase';
-import { AppVersion } from '../api/versions';
-
 
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
@@ -185,7 +183,7 @@ export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymo
     return userId;
 }
 
-export function getHumanDate(row: AppVersion) {
+export const getHumanDate = (row: definitions["app_versions"]) => {
     const date = new Date(row.created_at || '');
     return date.toLocaleString();
 }

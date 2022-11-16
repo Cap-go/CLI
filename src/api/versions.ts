@@ -6,20 +6,7 @@ import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
 import { deleteFromStorage } from './storage';
 
-export type AppVersion = {
-  id: number;
-  created_at?: string;
-  app_id: string;
-  name: string;
-  bucket_id?: string;
-  user_id: string;
-  updated_at?: string;
-  deleted: boolean;
-  external_url?: string;
-  checksum?: string;
-};
-
-export async function deleteAppVersion(supabase: SupabaseClient, appid: string, userId: string, bundle: string) {
+export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
     .from<definitions['app_versions']>('app_versions')
     .update({
@@ -33,7 +20,7 @@ export async function deleteAppVersion(supabase: SupabaseClient, appid: string, 
   }
 }
 
-export async function deleteSpecificVersion(supabase: SupabaseClient, appid: string, userId: string, bundle: string) {
+export const deleteSpecificVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const versionData = await getVersionData(supabase, appid, userId, bundle);
   await checkVersionNotUsedInChannel(supabase, appid, userId, versionData, bundle);
   await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData, bundle);
@@ -43,7 +30,7 @@ export async function deleteSpecificVersion(supabase: SupabaseClient, appid: str
   await deleteAppVersion(supabase, appid, userId, bundle);
 }
 
-export async function getActiveAppVersions(supabase: SupabaseClient, appid: string, userId: string) {
+export const getActiveAppVersions = async (supabase: SupabaseClient, appid: string, userId: string) => {
   const { data, error: vError } = await supabase
     .from<definitions['app_versions']>('app_versions')
     .select()
@@ -57,7 +44,7 @@ export async function getActiveAppVersions(supabase: SupabaseClient, appid: stri
   return data;
 }
 
-export async function getVersionData(supabase: SupabaseClient, appid: string, userId: string, bundle: string) {
+export const getVersionData = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { data: versionData, error: versionIdError } = await supabase
     .from<definitions['app_versions']>('app_versions')
     .select()
