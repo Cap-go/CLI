@@ -49,7 +49,6 @@ export const setChannel = async (appid: string, options: Options) => {
       name: channel,
     }
     if (bundle) {
-      console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
       const { data, error: vError } = await supabase
         .from<definitions['app_versions']>('app_versions')
         .select()
@@ -59,6 +58,7 @@ export const setChannel = async (appid: string, options: Options) => {
         .eq('deleted', false)
       if (vError || !data || !data.length)
         program.error(`Cannot find version ${bundle}`);
+      console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
       channelPayload.version = data[0].id
     }
     if (state !== undefined) {

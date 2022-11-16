@@ -31,10 +31,12 @@ program
   .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
   .option('-f, --format <base64|hex|binary|utf8>', 'choose the upload format default base64')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+
 program
   .command('set [appid]').alias('s')
   .action(setChannel)
   .requiredOption('-c, --channel <channel>', 'channel to link to')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to set')
   .option('-s, --state <state>', 'set the state of the channel, default or normal')
   .option('--downgrade', 'Allow to downgrade to version under native one')
@@ -46,8 +48,7 @@ program
   .option('--android', 'Allow sending update to android devices')
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
-  .option('--no-self-assign', 'Disable devices to self assign to this channel')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
 program
   .description('Manage package and version in capgo Cloud')
