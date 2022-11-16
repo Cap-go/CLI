@@ -1,3 +1,9 @@
+## 1.2.0 (2022-11-16)
+
+### Feat
+
+- add latest option to restore the old behavior
+
 ## 1.1.13 (2022-11-16)
 
 ### Fix
