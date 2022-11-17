@@ -1,3 +1,13 @@
+## 1.3.0 (2022-11-17)
+
+### Feat
+
+- Add force option to cleanup command #26
+
+### Fix
+
+- Keep is only removing the first version, not the given option. #25
+
 ## 1.2.3 (2022-11-17)
 
 ### Fix
