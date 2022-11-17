@@ -9,22 +9,26 @@ import { listApp } from './list';
 import { cleanupApp } from './cleanup';
 
 program
+  .description('Manage package and version in capgo Cloud')
   .version(pack.version)
+
+program
   .command('add [appid]').alias('a')
+  .description('Add a new app to capgo Cloud')
   .action(addApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .version(pack.version)
   .command('login [apikey]').alias('l')
+  .description('Save apikey to your machine or folder')
   .action(login)
   .option('--local', 'Only save in local folder');
 
-
 program
   .command('upload [appid]').alias('u')
+  .description('Upload a new bundle to capgo Cloud')
   .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the file to upload')
@@ -35,6 +39,7 @@ program
 
 program
   .command('set [appid]').alias('s')
+  .description('Modify a channel configuration')
   .action(setChannel)
   .requiredOption('-c, --channel <channel>', 'channel to link to')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
@@ -53,21 +58,21 @@ program
   .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
 program
-  .description('Manage package and version in capgo Cloud')
   .command('delete [appid]').alias('d')
+  .description('Delete an app from capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete');
 
 program
-  .description('List versions in capgo Cloud')
   .command('list [appid]').alias('ls')
+  .description('List versions in capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .description('Cleanup versions in capgo Cloud')
   .command('cleanup [appid]').alias('c')
+  .description('Cleanup versions in capgo Cloud')
   .action(cleanupApp)
   .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
