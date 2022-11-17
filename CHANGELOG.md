@@ -1,3 +1,9 @@
+## 1.2.3 (2022-11-17)
+
+### Fix
+
+- CLI command descriptions
+
 ## 1.2.2 (2022-11-17)
 
 ### Fix
