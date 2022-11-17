@@ -9,19 +9,19 @@ import { listApp } from './list';
 import { cleanupApp } from './cleanup';
 
 program
-  .version(pack.version)
-  .command('add [appid]').alias('a')
+  .description('Manage packages and bundle versions in capgo Cloud')
+  .version(pack.version);
+
+program.command('add [appid]').alias('a')
   .action(addApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .version(pack.version)
   .command('login [apikey]').alias('l')
   .action(login)
   .option('--local', 'Only save in local folder');
-
 
 program
   .command('upload [appid]').alias('u')
@@ -53,20 +53,17 @@ program
   .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
 program
-  .description('Manage package and version in capgo Cloud')
   .command('delete [appid]').alias('d')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete');
 
 program
-  .description('List versions in capgo Cloud')
   .command('list [appid]').alias('ls')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .description('Cleanup versions in capgo Cloud')
   .command('cleanup [appid]').alias('c')
   .action(cleanupApp)
   .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
