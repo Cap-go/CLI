@@ -12,8 +12,8 @@ interface Options {
   version: string;
   bundle: string;
   keep: number;
+  force: boolean;
 }
-
 
 const prompt = promptSync();
 
@@ -35,13 +35,10 @@ const getRemovableVersionsInSemverRange = (data: definitions["app_versions"][], 
   return toRemove;
 }
 
-const loop = (times: number, callback: (i: number) => unknown) => {
-  [...Array(times)].forEach((item, i) => callback(i));
-};
-
 export const cleanupApp = async (appid: string, options: Options) => {
   const apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;
+  const force = options.force || false;
 
   const config = await getConfig();
 
@@ -73,27 +70,18 @@ export const cleanupApp = async (appid: string, options: Options) => {
   }
 
   // Get all app versions that are in the given range
-  const toRemove = getRemovableVersionsInSemverRange(data, bundle, nextMajor);
+  const allVersions = getRemovableVersionsInSemverRange(data, bundle, nextMajor).reverse();
 
-  console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${toRemove?.length}`);
+  console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
 
-  const removeLast = (recent = true) => {
-    const last = toRemove.pop();
-    if (last) {
-      const humanDate = getHumanDate(last);
-      if (recent) {
-        console.log(`${last.name} created on ${humanDate} will be kept as it's the last release`);
-      } else {
-        console.log(`${last.name} created on ${humanDate} will be kept due to config`);
-      }
-    }
-  }
+  // Slice to keep and remove
+  const toKeep = allVersions.slice(0,keep);
+  const toRemove = allVersions.slice(keep);
 
-  // Always keep the latest version
-  removeLast(true);
-
-  // loop call removeLast until we have use up the keep count
-  loop(keep, () => removeLast(false));
+  // Show the user what will be kept
+  toKeep.forEach(row => {
+    console.log(`${row.name} created on ${(getHumanDate(row))} will be kept`);
+  });
 
   if (toRemove.length === 0) {
     console.log("Nothing to be removed, aborting removal...")
@@ -101,18 +89,20 @@ export const cleanupApp = async (appid: string, options: Options) => {
   }
 
   // Show the user what will be removed
-  toRemove?.forEach(row => {
+  toRemove.forEach(row => {
     console.log(`${row.name} created on ${(getHumanDate(row))} will be removed`);
   });
 
   // Check user wants to clean that all up
-  const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
-  if (result !== "yes") {
-    console.log("Not confirmed, aborting removal...");
-    return;
+  if (!force) {
+    const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
+    if (result !== "yes") {
+      console.log("Not confirmed, aborting removal...");
+      return;
+    }
   }
 
   // Yes, lets clean it up
-  console.log("You have confiremd removal, removing versions now");
+  console.log("You have confirmed removal, removing versions now");
   removeVersions(toRemove, supabase, appid, userId);
 }

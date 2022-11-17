@@ -9,8 +9,8 @@ import { listApp } from './list';
 import { cleanupApp } from './cleanup';
 
 program
-  .description('Manage package and version in capgo Cloud')
-  .version(pack.version)
+  .description('Manage packages and bundle versions in capgo Cloud')
+  .version(pack.version);
 
 program
   .command('add [appid]').alias('a')
@@ -76,6 +76,7 @@ program
   .action(cleanupApp)
   .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-k, --keep <keep>', 'number of version to keep');
+  .option('-k, --keep <keep>', 'number of version to keep')
+  .option('-f, --force', 'force removal');
 
 program.parse(process.argv);
