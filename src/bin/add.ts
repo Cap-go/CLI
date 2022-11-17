@@ -4,7 +4,7 @@ import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
 import { definitions } from './types_supabase'
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlan, checkKey, useLogSnag, verifyUser } from './utils';
+import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser } from './utils';
 
 interface Options {
   apikey: string;
@@ -32,7 +32,7 @@ export const addApp = async (appid: string, options: Options) => {
   const supabase = createSupabaseClient(apikey)
 
   const userId = await verifyUser(supabase, apikey, ['write', 'all']);
-  await checkPlan(supabase, userId)
+  await checkPlanValid(supabase, userId)
 
   console.log('Adding...');
   let iconBuff;

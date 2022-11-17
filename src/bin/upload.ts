@@ -5,7 +5,7 @@ import cliProgress from 'cli-progress';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlan, useLogSnag, verifyUser, regexSemver
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver
 } from './utils';
 
 interface Options {
@@ -43,7 +43,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
 
   const supabase = createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
-  await checkPlan(supabase, userId, false)
+  await checkPlanValid(supabase, userId, false)
   const multibar = new cliProgress.MultiBar({
     clearOnComplete: false,
     hideCursor: true

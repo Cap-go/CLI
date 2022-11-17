@@ -68,7 +68,7 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
     return data || 0
 }
 
-export const checkPlan = async (supabase: SupabaseClient, userId: string, warning = true) => {
+export const checkPlanValid = async (supabase: SupabaseClient, userId: string, warning = true) => {
     const validPlan = await isGoodPlan(supabase, userId)
     const paying = await isPaying(supabase, userId)
     const trialDays = await isTrial(supabase, userId)

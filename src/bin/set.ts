@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
-  formatError, findSavedKey, checkPlan, useLogSnag, verifyUser
+  formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from './utils';
 import { definitions } from './types_supabase';
 
@@ -47,7 +47,7 @@ export const setChannel = async (appid: string, options: Options) => {
   try {
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all']);
-    await checkPlan(supabase, userId)
+    await checkPlanValid(supabase, userId)
     const channelPayload: Partial<definitions['channels']> = {
       created_by: userId,
       app_id: appid,
