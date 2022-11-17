@@ -12,8 +12,8 @@ interface Options {
   version: string;
   bundle: string;
   keep: number;
+  force: boolean;
 }
-
 
 const prompt = promptSync();
 
@@ -38,6 +38,7 @@ const getRemovableVersionsInSemverRange = (data: definitions["app_versions"][], 
 export const cleanupApp = async (appid: string, options: Options) => {
   const apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;
+  const force = options.force || false;
 
   const config = await getConfig();
 
@@ -93,13 +94,15 @@ export const cleanupApp = async (appid: string, options: Options) => {
   });
 
   // Check user wants to clean that all up
-  const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
-  if (result !== "yes") {
-    console.log("Not confirmed, aborting removal...");
-    return;
+  if (!force) {
+    const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
+    if (result !== "yes") {
+      console.log("Not confirmed, aborting removal...");
+      return;
+    }
   }
 
   // Yes, lets clean it up
-  console.log("You have confiremd removal, removing versions now");
+  console.log("You have confirmed removal, removing versions now");
   removeVersions(toRemove, supabase, appid, userId);
 }
