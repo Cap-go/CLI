@@ -75,14 +75,16 @@ export const cleanupApp = async (appid: string, options: Options) => {
   console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
 
   // Slice to keep and remove
-  const toKeep = allVersions.slice(0,keep);
+  const toKeep = allVersions.slice(0, keep);
   const toRemove = allVersions.slice(keep);
 
   // Show the user what will be kept
   toKeep.forEach(row => {
     console.log(`${row.name} created on ${(getHumanDate(row))} will be kept`);
   });
-
+  if (toKeep.length) {
+    console.log("===================================================");
+  }
   if (toRemove.length === 0) {
     console.log("Nothing to be removed, aborting removal...")
     return;
