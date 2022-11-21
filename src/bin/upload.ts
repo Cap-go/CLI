@@ -24,7 +24,7 @@ const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { bundle, path, channel } = options;
-  const { external, key = true } = options;
+  const { external, key = false } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 

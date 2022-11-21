@@ -7,8 +7,6 @@ interface Options {
   force: boolean;
 }
 
-const iosPath = 'ios/App/App'
-const androidPath = 'android/app'
 export const createKey = async (options: Options) => {
   // write in file .capgo the apikey in home directory
 
@@ -28,10 +26,10 @@ export const createKey = async (options: Options) => {
   }
   writeFileSync(baseKeyPub, publicKey);
 
-  console.log(`public key saved into .capgo_key.pub file in local directory\n`);
+  console.log(`public key saved into ${baseKeyPub} file in local directory\n`);
   console.log(`This key will be use to sign your zip archive sent to Capgo,
 than make them unreadable by Capgo and not modifiable by anyone\n`);
-  console.log(`private key saved into .capgo_key file in local directory,
+  console.log(`private key saved into ${baseKey} file in local directory,
 You need to add it's content to capacitor.config under the key privateKey, like below:
 {
 	"appId": "**.***.**",
