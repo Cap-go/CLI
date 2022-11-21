@@ -1,3 +1,13 @@
+## 1.4.0 (2022-11-21)
+
+### Feat
+
+- add key gen method and decode
+
+### Fix
+
+- path
+
 ## 1.3.2 (2022-11-21)
 
 ### Fix
