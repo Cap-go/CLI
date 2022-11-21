@@ -1,5 +1,7 @@
 import { program } from 'commander';
+import { decodeZip } from './decode';
 import { addApp } from './add';
+import { createKey } from './key';
 import { deleteApp } from './delete';
 import { setChannel } from './set';
 import { uploadVersion } from './upload';
@@ -13,7 +15,8 @@ program
   .version(pack.version);
 
 program
-  .command('add [appid]').alias('a')
+  .command('add [appid]')
+  .alias('a')
   .description('Add a new app to capgo Cloud')
   .action(addApp)
   .option('-n, --name <name>', 'app name')
@@ -21,13 +24,15 @@ program
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .command('login [apikey]').alias('l')
+  .command('login [apikey]')
+  .alias('l')
   .description('Save apikey to your machine or folder')
   .action(login)
   .option('--local', 'Only save in local folder');
 
 program
-  .command('upload [appid]').alias('u')
+  .command('upload [appid]')
+  .alias('u')
   .description('Upload a new bundle to capgo Cloud')
   .action(uploadVersion)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
@@ -35,10 +40,13 @@ program
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
   .option('-f, --format <base64|hex|binary|utf8>', 'choose the upload format default base64')
+  .option('--key <key>', 'custom path for signing key')
+  .option('--no-key', 'ignore signing key and send clear update')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
 
 program
-  .command('set [appid]').alias('s')
+  .command('set [appid]')
+  .alias('s')
   .description('Modify a channel configuration')
   .action(setChannel)
   .requiredOption('-c, --channel <channel>', 'channel to link to')
@@ -58,25 +66,42 @@ program
   .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
 program
-  .command('delete [appid]').alias('d')
+  .command('delete [appid]')
+  .alias('d')
   .description('Delete an app from capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete');
 
 program
-  .command('list [appid]').alias('ls')
+  .command('list [appid]')
+  .alias('ls')
   .description('List versions in capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .command('cleanup [appid]').alias('c')
+  .command('cleanup [appid]')
+  .alias('c')
   .description('Cleanup versions in capgo Cloud')
   .action(cleanupApp)
   .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
   .option('-f, --force', 'force removal');
+
+program
+  .command('key')
+  .alias('k')
+  .description('Generate signing key for your account or app')
+  .action(createKey)
+  .option('-f, --force', 'force genrate a new one');
+
+program
+  .command('decode [zipPath]')
+  .alias('dec')
+  .description('Decode a signed zip update')
+  .action(decodeZip)
+  .option('--key <key>', 'custom path for signing key');
 
 program.parse(process.argv);

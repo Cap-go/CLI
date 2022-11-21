@@ -2,10 +2,13 @@ import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
+import { existsSync, readFileSync } from 'fs';
+// import EncryptRsa from 'encrypt-rsa'
+import NodeRSA from 'node-rsa'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver, baseKeyPub
 } from './utils';
 
 interface Options {
@@ -14,13 +17,14 @@ interface Options {
   apikey: string
   channel?: string
   external?: string
+  key?: boolean | string
 }
 
 const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { bundle, path, channel } = options;
-  const { external } = options;
+  const { external, key = true } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -93,7 +97,18 @@ export const uploadVersion = async (appid: string, options: Options) => {
   if (!external) {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
-    const zipped = zip.toBuffer();
+    let zipped = zip.toBuffer();
+    if (key || existsSync(baseKeyPub)) {
+      const publicKey = typeof key === 'string' ? key : baseKeyPub
+      // check if publicKey exist
+      if (!existsSync(publicKey)) {
+        program.error(`Cannot find public key ${publicKey}`)
+      }
+      // open with fs publicKey path
+      const keyFile = readFileSync(publicKey)
+      const nodeRsa = new NodeRSA(keyFile.toString())
+      zipped = nodeRsa.encrypt(zipped)
+    }
     checksum = await getChecksum(zipped, 'crc32');
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
