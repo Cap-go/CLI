@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
-import { formatError } from 'bin/utils';
 import { program } from 'commander';
+import { formatError } from '../bin/utils';
 
 interface VersionData {
   id: number;
