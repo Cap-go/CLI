@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils';
+import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from './utils';
 import { definitions } from './types_supabase';
 import { deleteSpecificVersion } from '../api/versions';
 
@@ -48,7 +48,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (vError) {
-    program.error(`App ${appid} not found in database ${vError} `)
+    program.error(`App ${appid} not found in database ${formatError(vError)} `)
   }
 
   if (data && data.length) {
@@ -58,7 +58,7 @@ export const deleteApp = async (appid: string, options: Options) => {
       .from('apps')
       .remove(filesToRemove)
     if (delError) {
-      program.error(`Cannot delete stored version for app ${appid} from storage ${delError} `)
+      program.error(`Cannot delete stored version for app ${appid} from storage ${formatError(delError)} `)
     }
   }
 
@@ -69,7 +69,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (delAppVersionError) {
-    program.error(`Cannot delete version for app ${appid} from database ${delAppVersionError} `)
+    program.error(`Cannot delete version for app ${appid} from database ${formatError(delAppVersionError)} `)
   }
 
   const { error: dbAppError } = await supabase
@@ -79,7 +79,7 @@ export const deleteApp = async (appid: string, options: Options) => {
     .eq('user_id', userId)
 
   if (dbAppError) {
-    program.error(`Cannot delete from database ${dbAppError} `)
+    program.error(`Cannot delete from database ${formatError(dbAppError)} `)
   }
   snag.publish({
     channel: 'app',

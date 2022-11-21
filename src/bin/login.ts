@@ -1,7 +1,7 @@
 import { program } from 'commander';
-import fs from 'fs'
-import os from 'os'
-import { createSupabaseClient, formatError, useLogSnag, verifyUser } from './utils';
+import { existsSync, writeFileSync, appendFileSync } from 'fs'
+import { homedir } from 'os'
+import { createSupabaseClient, useLogSnag, verifyUser } from './utils';
 
 interface Options {
   local: boolean;
@@ -12,14 +12,14 @@ export const login = async (apikey: string, options: Options) => {
   const snag = useLogSnag()
 
   if (local) {
-    if (!fs.existsSync('.git')) {
+    if (!existsSync('.git')) {
       program.error('To use local you should be in a git repository');
     }
-    fs.writeFileSync('.capgo', `${apikey}\n`);
-    fs.appendFileSync('.gitignore', '.capgo\n');
+    writeFileSync('.capgo', `${apikey}\n`);
+    appendFileSync('.gitignore', '.capgo\n');
   } else {
-    const userHomeDir = os.homedir();
-    fs.writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`);
+    const userHomeDir = homedir();
+    writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`);
   }
   const supabase = createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);

@@ -2,11 +2,13 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
-import fs from 'fs';
-import os from 'os';
+import { existsSync, readFileSync } from 'fs';
+import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
 import { definitions } from './types_supabase';
 
+export const baseKey = '.capgo_key';
+export const baseKeyPub = `${baseKey}.pub`;
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
 export const hostSupa = process.env.SUPA_DB === 'production'
@@ -82,15 +84,15 @@ export const checkPlanValid = async (supabase: SupabaseClient, userId: string, w
 
 export const findSavedKey = () => {
     // search for key in home dir
-    const userHomeDir = os.homedir();
+    const userHomeDir = homedir();
     let keyPath = `${userHomeDir}/.capgo`;
-    if (fs.existsSync(keyPath)) {
-        const key = fs.readFileSync(keyPath, 'utf8');
+    if (existsSync(keyPath)) {
+        const key = readFileSync(keyPath, 'utf8');
         return key.trim();
     }
     keyPath = `.capgo`;
-    if (fs.existsSync(keyPath)) {
-        const key = fs.readFileSync(keyPath, 'utf8');
+    if (existsSync(keyPath)) {
+        const key = readFileSync(keyPath, 'utf8');
         return key.trim();
     }
     return null
