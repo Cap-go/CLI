@@ -1,3 +1,9 @@
+## 1.3.2 (2022-11-21)
+
+### Fix
+
+- error formating + better import
+
 ## 1.3.1 (2022-11-17)
 
 ### Fix
