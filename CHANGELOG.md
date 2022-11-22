@@ -1,3 +1,9 @@
+## 1.4.3 (2022-11-22)
+
+### Fix
+
+- return app versions ordered by id
+
 ## 1.4.2 (2022-11-22)
 
 ### Fix
