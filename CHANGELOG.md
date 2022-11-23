@@ -1,3 +1,9 @@
+## 1.6.0 (2022-11-23)
+
+### Feat
+
+- add encrypted bool to app_version
+
 ## 1.5.1 (2022-11-23)
 
 ### Fix
