@@ -93,6 +93,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
   const fileName = randomUUID()
+  let encrypted = false;
   let checksum = ''
   if (!external) {
     const zip = new AdmZip();
@@ -108,6 +109,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       const keyFile = readFileSync(publicKey)
       const nodeRsa = new NodeRSA(keyFile.toString())
       zipped = nodeRsa.encrypt(zipped)
+      encrypted = true;
     }
     checksum = await getChecksum(zipped, 'crc32');
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
@@ -146,6 +148,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     user_id: userId,
     name: bundle,
     app_id: appid,
+    encrypted,
     external_url: external,
     checksum,
   }, apikey)
