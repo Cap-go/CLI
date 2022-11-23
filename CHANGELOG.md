@@ -1,3 +1,9 @@
+## 1.5.1 (2022-11-23)
+
+### Fix
+
+- rename var to privateKey in decode
+
 ## 1.5.0 (2022-11-23)
 
 ### Feat
