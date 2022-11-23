@@ -36,7 +36,8 @@ export const getActiveAppVersions = async (supabase: SupabaseClient, appid: stri
     .select()
     .eq('app_id', appid)
     .eq('user_id', userId)
-    .eq('deleted', false);
+    .eq('deleted', false)
+    .order('id');
 
   if (vError) {
     program.error(`App ${appid} not found in database ${formatError(vError)} `);
