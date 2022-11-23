@@ -108,6 +108,8 @@ interface Config {
         package: {
             version: string;
         };
+        extConfigFilePath: string;
+        extConfig: any
     };
 }
 export const getConfig = async () => {
