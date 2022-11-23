@@ -18,18 +18,18 @@ export const decodeZip = async (zipPath: string, options: Options) => {
   const { extConfig } = config.app;
 
   if (!options.key && !existsSync(baseKey) && !extConfig.plugins.CapacitorUpdater.privateKey) {
-    program.error(`Public Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
+    program.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
   }
-  const publicKey = typeof options.key === 'string' ? options.key : baseKey
+  const privateKey = typeof options.key === 'string' ? options.key : baseKey
   // check if publicKey exist
 
   let keyString = Buffer.from(extConfig.plugins.CapacitorUpdater.privateKey || "", 'base64').toString('utf8');
 
-  if (!existsSync(publicKey) && !extConfig.plugins.CapacitorUpdater.privateKey) {
-    program.error(`Cannot find public key ${publicKey}`)
-  } else if (existsSync(publicKey)) {
+  if (!existsSync(privateKey) && !extConfig.plugins.CapacitorUpdater.privateKey) {
+    program.error(`Cannot find public key ${privateKey}`)
+  } else if (existsSync(privateKey)) {
     // open with fs publicKey path
-    const keyFile = readFileSync(publicKey)
+    const keyFile = readFileSync(privateKey)
     keyString = keyFile.toString()
   }
 
