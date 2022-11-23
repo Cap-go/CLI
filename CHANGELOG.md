@@ -1,3 +1,9 @@
+## 1.5.0 (2022-11-23)
+
+### Feat
+
+- allow decode from base64 privateKey
+
 ## 1.4.4 (2022-11-23)
 
 ### Fix
