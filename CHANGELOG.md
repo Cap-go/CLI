@@ -1,3 +1,9 @@
+## 1.4.4 (2022-11-23)
+
+### Fix
+
+- make key function use less deps + make config simpler
+
 ## 1.4.3 (2022-11-22)
 
 ### Fix
