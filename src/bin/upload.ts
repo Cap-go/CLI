@@ -1,9 +1,9 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
+import aes from 'crypto-js/aes';
 import cliProgress from 'cli-progress';
 import { existsSync, readFileSync } from 'fs';
-// import EncryptRsa from 'encrypt-rsa'
 import NodeRSA from 'node-rsa'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import {
@@ -93,7 +93,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
   const fileName = randomUUID()
-  let encrypted = false;
+  let sessionKey;
   let checksum = ''
   if (!external) {
     const zip = new AdmZip();
@@ -112,8 +112,14 @@ export const uploadVersion = async (appid: string, options: Options) => {
       if (nodeRsa.isPrivate()) {
         program.error(`Cannot use private key to encode, please use public key`)
       }
-      zipped = nodeRsa.encrypt(zipped)
-      encrypted = true;
+      // encrypt zip with key
+      const encrypted = aes.encrypt(zipped.toString(), randomUUID())
+      // encrypt session key with public key
+      sessionKey = nodeRsa.encrypt(encrypted.key.toString(), 'base64')
+      console.log('Session Key', encrypted.key.toString())
+
+      // encrypted to buffer
+      zipped = Buffer.from(encrypted.ciphertext.toString(), 'base64')
     }
     checksum = await getChecksum(zipped, 'crc32');
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
@@ -152,7 +158,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     user_id: userId,
     name: bundle,
     app_id: appid,
-    encrypted,
+    session_key: sessionKey,
     external_url: external,
     checksum,
   }, apikey)

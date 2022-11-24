@@ -99,7 +99,7 @@ program
 
 
 program
-  .command('decode [zipPath]')
+  .command('decode [zipPath] [sessionKey]')
   .alias('dec')
   .description('Decode a signed zip update')
   .action(decodeZip)
