@@ -46,7 +46,11 @@ const createKey = async (options: Options) => {
   const privateKey = pair.exportKey('pkcs8-private-pem');
 
   // remove header and footer of privateKey
-  const privateKeyClean = privateKey.replace('-----BEGIN PRIVATE KEY-----\n', '').replace('\n-----END PRIVATE KEY-----', '')
+  const privateKeyClean = privateKey
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '')
+    .replace(/\n/g, '');
 
   // check if baseName already exist
   if (existsSync(baseKeyPub) && !options.force) {
