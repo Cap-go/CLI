@@ -108,6 +108,10 @@ export const uploadVersion = async (appid: string, options: Options) => {
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
       const nodeRsa = new NodeRSA(keyFile.toString())
+      // check is key is private key
+      if (nodeRsa.isPrivate()) {
+        program.error(`Cannot use private key to encode, please use public key`)
+      }
       zipped = nodeRsa.encrypt(zipped)
       encrypted = true;
     }

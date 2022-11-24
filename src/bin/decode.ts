@@ -35,6 +35,9 @@ export const decodeZip = async (zipPath: string, options: Options) => {
 
   const zipFile = readFileSync(zipPath)
   const nodeRsa = new NodeRSA(keyString)
+  if (nodeRsa.isPublic()) {
+    program.error(`Cannot use public key to decode, please use private key`)
+  }
   const decodedZip = nodeRsa.decrypt(zipFile)
   // write decodedZip in a file
   writeFileSync(`${zipPath}decoded.zip`, decodedZip)

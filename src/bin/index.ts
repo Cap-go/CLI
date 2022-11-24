@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import { decodeZip } from './decode';
 import { addApp } from './add';
-import { createKey } from './key';
+import { manageKey } from './key';
 import { deleteApp } from './delete';
 import { setChannel } from './set';
 import { uploadVersion } from './upload';
@@ -40,7 +40,8 @@ program
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
   .option('-f, --format <base64|hex|binary|utf8>', 'choose the upload format default base64')
-  .option('--key <key>', 'custom path for signing key')
+  .option('--key <key>', 'custom path for public signing key')
+  .option('--keyData <keyData>', 'base64 public signing key')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
 
@@ -91,17 +92,18 @@ program
   .option('-f, --force', 'force removal');
 
 program
-  .command('key')
-  .alias('k')
-  .description('Generate signing key for your account or app')
-  .action(createKey)
-  .option('-f, --force', 'force genrate a new one');
+  .command('key [option]')
+  .description('Save base64 signing key in capacitor config, usefull for CI')
+  .action(manageKey)
+  .option('-f, --force', 'force generate a new one');
+
 
 program
   .command('decode [zipPath]')
   .alias('dec')
   .description('Decode a signed zip update')
   .action(decodeZip)
-  .option('--key <key>', 'custom path for signing key');
+  .option('--key <key>', 'custom path for private signing key')
+  .option('--keyData <keyData>', 'base64 private signing key');
 
 program.parse(process.argv);
