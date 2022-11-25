@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.1.0](https://github.com/Cap-go/capgo-cli/compare/v2.0.1...v2.1.0) (2022-11-25)
+
+
+### Features
+
+* add encrypt method ([349154e](https://github.com/Cap-go/capgo-cli/commit/349154efd05b76415f191cdeff5689e54b8f2ac3))
+
 ### [2.0.1](https://github.com/Cap-go/capgo-cli/compare/v2.0.0...v2.0.1) (2022-11-24)
 
 
