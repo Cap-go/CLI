@@ -1,11 +1,10 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
-import aes from 'crypto-js/aes';
 import cliProgress from 'cli-progress';
 import { existsSync, readFileSync } from 'fs';
-import NodeRSA from 'node-rsa'
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import { encryptSource } from '../api/crypto';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
   updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver, baseKeyPub
@@ -99,6 +98,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     let zipped = zip.toBuffer();
+    checksum = await getChecksum(zipped, 'crc32');
     if (key || existsSync(baseKeyPub)) {
       const publicKey = typeof key === 'string' ? key : baseKeyPub
       // check if publicKey exist
@@ -107,21 +107,11 @@ export const uploadVersion = async (appid: string, options: Options) => {
       }
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
-      const nodeRsa = new NodeRSA(keyFile.toString())
-      // check is key is private key
-      if (nodeRsa.isPrivate()) {
-        program.error(`Cannot use private key to encode, please use public key`)
-      }
-      // encrypt zip with key
-      const encrypted = aes.encrypt(zipped.toString(), randomUUID())
-      // encrypt session key with public key
-      sessionKey = nodeRsa.encrypt(encrypted.key.toString(), 'base64')
-      console.log('Session Key', encrypted.key.toString())
-
-      // encrypted to buffer
-      zipped = Buffer.from(encrypted.ciphertext.toString(), 'base64')
+      // encrypt
+      const res = encryptSource(zipped.toString(), keyFile.toString())
+      sessionKey = res.sessionKey
+      zipped = Buffer.from(res.encodedSource, 'base64')
     }
-    checksum = await getChecksum(zipped, 'crc32');
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
     b1.increment();

@@ -1,7 +1,7 @@
 import { program } from 'commander'
 import { existsSync, writeFileSync } from 'fs'
-import NodeRSA from 'node-rsa'
 import { writeConfig } from '@capacitor/cli/dist/config';
+import { createRSA } from '../api/crypto';
 import { baseKeyPub, getConfig } from './utils';
 
 interface Options {
@@ -40,17 +40,7 @@ const createKey = async (options: Options) => {
   if (!existsSync('.git')) {
     program.error('To use local you should be in a git repository');
   }
-  const key = new NodeRSA({ b: 512 });
-  const pair = key.generateKeyPair();
-  const publicKey = pair.exportKey('pkcs8-public-pem');
-  const privateKey = pair.exportKey('pkcs8-private-pem');
-
-  // remove header and footer of privateKey
-  const privateKeyClean = privateKey
-    .replace('-----BEGIN PRIVATE KEY-----', '')
-    .replace('-----END PRIVATE KEY-----', '')
-    .replace(/\s/g, '')
-    .replace(/\n/g, '');
+  const { publicKey, privateKey } = createRSA()
 
   // check if baseName already exist
   if (existsSync(baseKeyPub) && !options.force) {
@@ -67,7 +57,7 @@ const createKey = async (options: Options) => {
     if (!extConfig.plugins.CapacitorUpdater) {
       extConfig.plugins.CapacitorUpdater = {};
     }
-    extConfig.plugins.CapacitorUpdater.privateKey = privateKeyClean;
+    extConfig.plugins.CapacitorUpdater.privateKey = privateKey;
     // console.log('extConfig', extConfig)
     writeConfig(extConfig, config.app.extConfigFilePath)
   }

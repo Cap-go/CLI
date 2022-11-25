@@ -1,5 +1,6 @@
 import { program } from 'commander';
-import { decodeZip } from './decode';
+import { decryptZip } from './decrypt';
+import { encryptZip } from './encrypt';
 import { addApp } from './add';
 import { manageKey } from './key';
 import { deleteApp } from './delete';
@@ -99,10 +100,16 @@ program
 
 
 program
-  .command('decode [zipPath] [sessionKey]')
-  .alias('dec')
-  .description('Decode a signed zip update')
-  .action(decodeZip)
+  .command('decrypt [zipPath] [sessionKey]')
+  .description('Decrypt a signed zip update')
+  .action(decryptZip)
+  .option('--key <key>', 'custom path for private signing key')
+  .option('--keyData <keyData>', 'base64 private signing key');
+
+program
+  .command('encrypt [zipPath]')
+  .description('Encrypt a zip update')
+  .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
   .option('--keyData <keyData>', 'base64 private signing key');
 
