@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
-import { definitions } from '../bin/types_supabase';
+import { definitions } from '../types/types_supabase';
 import { formatError } from '../bin/utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';

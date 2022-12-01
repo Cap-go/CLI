@@ -3,7 +3,7 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
-import { definitions } from './types_supabase'
+import { definitions } from '../types/types_supabase'
 import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser } from './utils';
 
 interface Options {

@@ -5,7 +5,7 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { deleteSpecificVersion, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
-import { definitions } from './types_supabase';
+import { definitions } from '../types/types_supabase';
 
 interface Options {
   apikey: string;

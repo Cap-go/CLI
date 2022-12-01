@@ -108,9 +108,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
       // encrypt
-      const res = encryptSource(zipped.toString(), keyFile.toString())
-      sessionKey = res.sessionKey
-      zipped = Buffer.from(res.encodedSource, 'base64')
+      const res = encryptSource(zipped, keyFile.toString())
+      sessionKey = res.ivSessionKey
+      zipped = res.encryptedData
     }
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`

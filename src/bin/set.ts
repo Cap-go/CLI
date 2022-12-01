@@ -3,7 +3,7 @@ import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from './utils';
-import { definitions } from './types_supabase';
+import { definitions } from '../types/types_supabase';
 
 interface Options {
   apikey: string;

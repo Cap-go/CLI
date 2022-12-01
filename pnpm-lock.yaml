@@ -6,11 +6,9 @@ specifiers:
   '@tomasklaen/checksum': ^1.1.0
   '@types/adm-zip': 0.5.0
   '@types/cli-progress': ^3.11.0
-  '@types/crypto-js': ^4.1.1
   '@types/fs-extra': ^9.0.13
   '@types/mime': ^3.0.1
   '@types/node': ^18.11.9
-  '@types/node-rsa': ^1.1.1
   '@types/prettyjson': ^0.0.30
   '@types/prompt-sync': ^4.2.0
   '@types/semver': ^7.3.13
@@ -19,7 +17,6 @@ specifiers:
   adm-zip: ^0.5.9
   cli-progress: 3.11.2
   commander: 9.4.1
-  crypto-js: ^4.1.1
   eslint: 8.28.0
   eslint-config-airbnb-base: ^15.0.0
   eslint-config-prettier: ^8.5.0
@@ -31,7 +28,6 @@ specifiers:
   husky: ^8.0.2
   logsnag: ^0.1.5
   mime: ^3.0.0
-  node-rsa: ^1.1.1
   nodemon: 2.0.20
   pkg: 5.8.0
   prettier: 2.8.0
@@ -53,11 +49,9 @@ dependencies:
   adm-zip: 0.5.9
   cli-progress: 3.11.2
   commander: 9.4.1
-  crypto-js: 4.1.1
   fs-extra: 11.1.0
   logsnag: 0.1.5
   mime: 3.0.0
-  node-rsa: 1.1.1
   prettyjson: 1.2.5
   prompt-sync: 4.2.0
   semver: 7.3.8
@@ -65,11 +59,9 @@ dependencies:
 devDependencies:
   '@types/adm-zip': 0.5.0
   '@types/cli-progress': 3.11.0
-  '@types/crypto-js': 4.1.1
   '@types/fs-extra': 9.0.13
   '@types/mime': 3.0.1
   '@types/node': 18.11.9
-  '@types/node-rsa': 1.1.1
   '@types/prettyjson': 0.0.30
   '@types/prompt-sync': 4.2.0
   '@types/semver': 7.3.13
@@ -460,10 +452,6 @@ packages:
       '@types/node': 18.11.9
     dev: true
 
-  /@types/crypto-js/4.1.1:
-    resolution: {integrity: sha512-BG7fQKZ689HIoc5h+6D2Dgq1fABRa0RbBWKBd9SP/MVRVXROflpm5fhwyATX5duFmbStzyzyycPB8qUYKDH3NA==}
-    dev: true
-
   /@types/eslint-scope/3.7.3:
     resolution: {integrity: sha512-PB3ldyrcnAicT35TWPs5IcwKD8S333HMaa2VVv4+wdvebJkjWuW/xESoB8IwRcog8HYVYamb1g/R31Qv5Bx03g==}
     dependencies:
@@ -504,12 +492,6 @@ packages:
 
   /@types/mime/3.0.1:
     resolution: {integrity: sha512-Y4XFY5VJAuw0FgAqPNd6NNoV44jbq9Bz2L7Rh/J6jLTiHBSBJa9fxqQIvkIld4GsoDOcCbvzOUAbLPsSKKg+uA==}
-    dev: true
-
-  /@types/node-rsa/1.1.1:
-    resolution: {integrity: sha512-itzxtaBgk4OMbrCawVCvas934waMZWjW17v7EYgFVlfYS/cl0/P7KZdojWCq9SDJMI5cnLQLUP8ayhVCTY8TEg==}
-    dependencies:
-      '@types/node': 18.11.9
     dev: true
 
   /@types/node/18.11.9:
@@ -949,12 +931,6 @@ packages:
       es-abstract: 1.19.1
     dev: true
 
-  /asn1/0.2.6:
-    resolution: {integrity: sha512-ix/FxPn0MDjeyJ7i/yoHGFt/EX6LyNbxSEhPPXODPL+KB0VPk86UYfL0lMdy+KCnv+fmvIzySwaK5COwqVbWTQ==}
-    dependencies:
-      safer-buffer: 2.1.2
-    dev: false
-
   /astral-regex/2.0.0:
     resolution: {integrity: sha512-Z7tMw1ytTXt5jqMcOP+OQteU1VuNK9Y02uuJtKQ1Sv69jXQKKg5cibLwGJow8yzZP+eAc18EmLGPal0bp36rvQ==}
     engines: {node: '>=8'}
@@ -1199,10 +1175,6 @@ packages:
       path-key: 3.1.1
       shebang-command: 2.0.0
       which: 2.0.2
-
-  /crypto-js/4.1.1:
-    resolution: {integrity: sha512-o2JlM7ydqd3Qk9CA0L4NL6mTzU2sdx96a+oOfPu8Mkl/PK51vSyoi8/rQ8NknZtk44vq15lmhAj9CIAGwgeWKw==}
-    dev: false
 
   /d/1.0.1:
     resolution: {integrity: sha512-m62ShEObQ39CfralilEQRjH6oAMtNCV1xJyEx5LpRYUVN+EviphDgUc/F3hnYbADmkiNs67Y+3ylmlG7Lnu+FA==}
@@ -2550,12 +2522,6 @@ packages:
     resolution: {integrity: sha512-XxYDdcQ6eKqp/YjI+tb2C5WM2LgjnZrfYg4vgQt49EK268b6gYCHsBLrK2qvJo4FmCtqmKezb0WZFK4fkrZNsg==}
     dev: true
 
-  /node-rsa/1.1.1:
-    resolution: {integrity: sha512-Jd4cvbJMryN21r5HgxQOpMEqv+ooke/korixNNK3mGqfGJmy0M77WDDzo/05969+OkMy3XW1UuZsSmW9KQm7Fw==}
-    dependencies:
-      asn1: 0.2.6
-    dev: false
-
   /nodemon/2.0.20:
     resolution: {integrity: sha512-Km2mWHKKY5GzRg6i1j5OxOHQtuvVsgskLfigG25yTtbyfRGn/GNvIbRyOf1PSCKJ2aT/58TiuUsuOU5UToVViw==}
     engines: {node: '>=8.10.0'}
@@ -3028,10 +2994,6 @@ packages:
 
   /safe-buffer/5.2.1:
     resolution: {integrity: sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==}
-
-  /safer-buffer/2.1.2:
-    resolution: {integrity: sha512-YZo3K82SD7Riyi0E1EQPojLz7kpepnSQI9IyPbHHg1XXXevb5dJI7tpyN2ADxGcQbHG7vcyRHk0cbwqcQriUtg==}
-    dev: false
 
   /sax/1.1.4:
     resolution: {integrity: sha512-5f3k2PbGGp+YtKJjOItpg3P99IMD84E4HOvcfleTb5joCHNXYLsR9yWFPOYGgaeMPDubQILTCMdsFb2OMeOjtg==}

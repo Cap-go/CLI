@@ -34,7 +34,7 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   }
 
   const zipFile = readFileSync(zipPath)
-  const decodedZip = decryptSource(zipFile.toString('base64'), ivsessionKey, privateKey)
+  const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
 }

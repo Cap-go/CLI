@@ -5,7 +5,7 @@ import prettyjson from 'prettyjson';
 import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
-import { definitions } from './types_supabase';
+import { definitions } from '../types/types_supabase';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;

@@ -1,6 +1,6 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
-import { definitions } from '../bin/types_supabase';
+import { definitions } from '../types/types_supabase';
 import { formatError } from '../bin/utils';
 
 export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient,

@@ -18,7 +18,8 @@ export const encryptZip = async (zipPath: string) => {
   const keyString = keyFile.toString()
 
   const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSource(zipFile.toString('base64'), keyString)
+  const encodedZip = encryptSource(zipFile, keyString)
+  console.log('ivSessionKey', encodedZip.ivSessionKey)
   // write decodedZip in a file
-  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encodedSource)
+  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
 }
