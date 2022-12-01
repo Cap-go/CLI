@@ -1,4 +1,4 @@
 dist
 test
 webpack.config.js
-src/bin/types_supabase.ts
+src/types/types_supabase.ts
