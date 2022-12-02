@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.6](https://github.com/Cap-go/capgo-cli/compare/v2.1.5...v2.1.6) (2022-12-02)
+
+
+### Bug Fixes
+
+* checksum do after encryption ([8ca3f5b](https://github.com/Cap-go/capgo-cli/commit/8ca3f5b4bbb21f2ecb372d4e44493ff90dcfd3bd))
+
 ### [2.1.5](https://github.com/Cap-go/capgo-cli/compare/v2.1.4...v2.1.5) (2022-12-01)
 
 ### [2.1.4](https://github.com/Cap-go/capgo-cli/compare/v2.1.3...v2.1.4) (2022-12-01)
