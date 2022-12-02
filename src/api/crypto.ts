@@ -6,7 +6,7 @@ import {
     randomBytes, createCipheriv, createDecipheriv
 } from 'crypto';
 
-const algorithm = "aes-256-cbc";
+const algorithm = "aes-128-cbc";
 const oaepHash = 'sha256';
 const formatB64 = 'base64';
 const padding = constants.RSA_PKCS1_OAEP_PADDING;
@@ -26,8 +26,8 @@ export const decryptSource = (source: Buffer, ivSessionKey: string, privateKey: 
     )
     // ivB64 to uft-8
     const initVector = Buffer.from(ivB64, formatB64);
-    // const sessionB64 = sessionKey.toString(formatB64);
-    // console.log('\nsessionB64', sessionB64)
+    const sessionB64 = sessionKey.toString(formatB64);
+    console.log('\nsessionB64', sessionB64)
 
     const decipher = createDecipheriv(algorithm, sessionKey, initVector);
 
