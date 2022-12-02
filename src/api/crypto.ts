@@ -42,7 +42,7 @@ export interface Encoded {
 export const encryptSource = (source: Buffer, publicKey: string): Encoded => {
     // encrypt zip with key
     const initVector = randomBytes(16);
-    const sessionKey = randomBytes(32);
+    const sessionKey = randomBytes(16);
     // encrypt session key with public key
     // console.log('\nencrypted.key', encrypted.key.toString(CryptoJS.enc.Base64))
     const cipher = createCipheriv(algorithm, sessionKey, initVector);
