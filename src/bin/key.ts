@@ -2,7 +2,7 @@ import { program } from 'commander'
 import { existsSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import { createRSA } from '../api/crypto';
-import { baseKeyPub, getConfig } from './utils';
+import { baseKey, baseKeyPub, getConfig } from './utils';
 
 interface Options {
   force?: boolean;
@@ -47,6 +47,10 @@ const createKey = async (options: Options) => {
     program.error(`Public Key already exists, use --force to overwrite`);
   }
   writeFileSync(baseKeyPub, publicKey);
+  if (existsSync(baseKey) && !options.force) {
+    program.error(`Private Key already exists, use --force to overwrite`);
+  }
+  writeFileSync(baseKey, publicKey);
 
   const config = await getConfig();
   const { extConfig } = config.app;

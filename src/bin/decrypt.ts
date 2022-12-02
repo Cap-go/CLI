@@ -17,7 +17,7 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   const config = await getConfig();
   const { extConfig } = config.app;
 
-  if (!options.key && !existsSync(baseKey) && !extConfig.plugins.CapacitorUpdater.privateKey) {
+  if (!options.key && !existsSync(baseKey) && !extConfig.plugins?.CapacitorUpdater?.privateKey) {
     program.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
   }
   const keyString = typeof options.key === 'string' ? options.key : baseKey
