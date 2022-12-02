@@ -30,7 +30,7 @@ export const decryptSource = (source: Buffer, ivSessionKey: string, privateKey: 
     console.log('\nsessionB64', sessionB64)
 
     const decipher = createDecipheriv(algorithm, sessionKey, initVector);
-
+    decipher.setAutoPadding(true);
     const decryptedData = Buffer.concat([decipher.update(source), decipher.final()]);
 
     return decryptedData
@@ -46,6 +46,7 @@ export const encryptSource = (source: Buffer, publicKey: string): Encoded => {
     // encrypt session key with public key
     // console.log('\nencrypted.key', encrypted.key.toString(CryptoJS.enc.Base64))
     const cipher = createCipheriv(algorithm, sessionKey, initVector);
+    cipher.setAutoPadding(true);
     // console.log('\nsessionKey', sessionKey.toString())
     // const sessionB64 = sessionKey.toString(formatB64)
     // console.log('\nsessionB64', sessionB64)
@@ -63,6 +64,7 @@ export const encryptSource = (source: Buffer, publicKey: string): Encoded => {
     const ivSessionKey = `${ivB64}:${sessionb64Encrypted}`
     // console.log('\nivSessionKey', sessionKey)
     // encrypted to buffer
+
     const encryptedData = Buffer.concat([cipher.update(source), cipher.final()]);
 
     return {
