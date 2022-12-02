@@ -32,6 +32,7 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
     const keyFile = readFileSync(keyString)
     privateKey = keyFile.toString()
   }
+  // console.log('privateKey', privateKey)
 
   const zipFile = readFileSync(zipPath)
   const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)

@@ -50,7 +50,7 @@ const createKey = async (options: Options) => {
   if (existsSync(baseKey) && !options.force) {
     program.error(`Private Key already exists, use --force to overwrite`);
   }
-  writeFileSync(baseKey, publicKey);
+  writeFileSync(baseKey, privateKey);
 
   const config = await getConfig();
   const { extConfig } = config.app;
