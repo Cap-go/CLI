@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.7](https://github.com/Cap-go/capgo-cli/compare/v2.1.6...v2.1.7) (2022-12-02)
+
+
+### Bug Fixes
+
+* AES use size allowed on android ([42bc076](https://github.com/Cap-go/capgo-cli/commit/42bc076d9fa65188a5175bcdff89d21736c7f214))
+
 ### [2.1.6](https://github.com/Cap-go/capgo-cli/compare/v2.1.5...v2.1.6) (2022-12-02)
 
 
