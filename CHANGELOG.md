@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.9](https://github.com/Cap-go/capgo-cli/compare/v2.1.8...v2.1.9) (2022-12-02)
+
+
+### Bug Fixes
+
+* decrypt function ([ebecbba](https://github.com/Cap-go/capgo-cli/commit/ebecbba3225db64a98811c1b5624b213008df3a2))
+
 ### [2.1.8](https://github.com/Cap-go/capgo-cli/compare/v2.1.7...v2.1.8) (2022-12-02)
 
 
