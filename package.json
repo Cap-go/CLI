@@ -38,7 +38,7 @@
   "license": "Apache 2.0",
   "dependencies": {
     "@capacitor/cli": "4.6.0",
-    "@supabase/supabase-js": "^1.35.7",
+    "@supabase/supabase-js": "^2.0.0",
     "@tomasklaen/checksum": "^1.1.0",
     "adm-zip": "^0.5.9",
     "cli-progress": "3.11.2",
