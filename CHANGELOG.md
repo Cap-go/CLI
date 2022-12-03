@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.2.0](https://github.com/Cap-go/capgo-cli/compare/v2.1.12...v2.2.0) (2022-12-03)
+
+
+### Features
+
+* add key save command for CLI and document ([7fc5fd2](https://github.com/Cap-go/capgo-cli/commit/7fc5fd2c578aa658691b9d27bc1cd34da2792d36))
+
 ### [2.1.12](https://github.com/Cap-go/capgo-cli/compare/v2.1.11...v2.1.12) (2022-12-02)
 
 
