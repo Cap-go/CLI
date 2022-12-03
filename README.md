@@ -52,11 +52,11 @@ Optionally, you can give:
 - `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 - `--iv-session-key [key]` to send a custom session key to the cloud.
 
-> ⭐️ External option help to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 30 MB. With this setting, Capgo store only the link to the zip and send the link to all app
+> ⭐️ External option help to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 30 MB. With this setting, Capgo store only the link to the zip and send the link to all app.
 
 > 👀 Capgo cloud never look of what is in the link (for external option), or in the code when stored.
 
-> 🔑 You can add a second layer of security by using encryption, then Capgo will not be able to look or modify anything, it become zero-trust.
+> 🔑 You can add a second layer of security by using encryption, then Capgo will not be able to look or modify anything, it becomes zero-trust.
 
 Example of `package.json` for version
 ```json
@@ -66,10 +66,10 @@ Example of `package.json` for version
 ```
 > ⛔ Version should be greater than “0.0.0”.
 
->💡 Don't forget to update the version number each time you send one, or device will don't see the update.
+>💡 Don't forget to update the version number each time you send one, or the device will don't see the update.
 ### Configure channel
 `npx @capgo/cli set [appId] --channel dev`
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 Optionally, you can give:
 `--bundle [1.2.3]` your app bundle already sent to the cloud, to link it to a channel.
@@ -87,27 +87,24 @@ Optionally, you can give:
 `--no-self-assign` disallow devices to self assign to this channel.
 - `--apikey [key]` API key to link to your account.
 
-Optionally, you can give:
-- `--apikey [key]` API key to link to your account.
-
 ### List versions
 `npx @capgo/cli list [appId] `
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 ### Delete package to Cloud
 `npx @capgo/cli delete [appId]`
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
 - `--bundle [bundleVersion]` with the version number will only delete this version
-### Delete older packages in a SemVer range for a major version to Cloud
+### Cleanup older packages in a SemVer range for a major version to Cloud
 `npx @capgo/cli cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
-- `--bundle [majorVersion]` a version you wish to remove previous packages for, it will keep the last one + numberToKeep.
+- `--bundle [majorVersion]` a version you wish to remove previous packages for, it will keep the last one + `numberToKeep`.
 - `--keep [numberToKeep]` the number of packages you wish to keep (default 4).
 
 For example: 
@@ -171,7 +168,7 @@ This command is mainly used for test purpose, it will decrypt the zip and print 
      npm i
    ```
 
-2. Set `"sourceMap": true,` in tsconfig.json
+2. Set `"sourceMap": true,` in `tsconfig.json`
 
 3. Run webpack development server
 
@@ -188,11 +185,11 @@ This command is mainly used for test purpose, it will decrypt the zip and print 
 
    > Other IDEs:
 
-   - Attach debugger of your choice to the running process, use .vscode/launch.json `Debug on fixtures` configuration as the example
+   - Attach debugger of your choice to the running process, use `.vscode/launch.json` `Debug on fixtures` configuration as the example
 
 ## Production build
 
-1. Set `"sourceMap": false,` in tsconfig.json
+1. Set `"sourceMap": false,` in `tsconfig.json`
 
    > TODO: add separate build config
 
