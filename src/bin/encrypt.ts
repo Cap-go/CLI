@@ -3,22 +3,33 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { encryptSource } from '../api/crypto';
 import { baseKeyPub } from './utils';
 
-export const encryptZip = async (zipPath: string) => {
+interface Options {
+  key?: string
+  keyData?: string
+}
+
+export const encryptZip = async (zipPath: string, options: Options) => {
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
     program.error(`Zip not found at the path ${zipPath}`);
   }
 
-  if (!existsSync(baseKeyPub)) {
-    program.error(`Public Key not found at the path ${baseKeyPub}`);
+  const keyPath = options.key || baseKeyPub
+  // check if publicKey exist
+
+  let publicKey = options.keyData || "";
+
+  if (!existsSync(keyPath) && !publicKey) {
+    program.error(`Cannot find public key ${keyPath} or as keyData option`)
+  } else if (existsSync(keyPath)) {
+    // open with fs publicKey path
+    const keyFile = readFileSync(keyPath)
+    publicKey = keyFile.toString()
   }
-  // open with fs publicKey path
-  const keyFile = readFileSync(baseKeyPub)
-  const keyString = keyFile.toString()
 
   const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSource(zipFile, keyString)
+  const encodedZip = encryptSource(zipFile, publicKey)
   console.log('ivSessionKey', encodedZip.ivSessionKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)

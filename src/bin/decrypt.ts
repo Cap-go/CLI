@@ -4,7 +4,8 @@ import { decryptSource } from '../api/crypto';
 import { baseKey, getConfig } from './utils';
 
 interface Options {
-  key?: boolean | string
+  key?: string
+  keyData?: string
 }
 
 export const decryptZip = async (zipPath: string, ivsessionKey: string, options: Options) => {
@@ -20,16 +21,16 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   if (!options.key && !existsSync(baseKey) && !extConfig.plugins?.CapacitorUpdater?.privateKey) {
     program.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
   }
-  const keyString = typeof options.key === 'string' ? options.key : baseKey
+  const keyPath = options.key || baseKey
   // check if publicKey exist
 
-  let { privateKey } = extConfig?.plugins?.CapacitorUpdater || "";
+  let { privateKey } = options.keyData || extConfig?.plugins?.CapacitorUpdater || "";
 
-  if (!existsSync(keyString) && !privateKey) {
-    program.error(`Cannot find public key ${keyString}`)
-  } else if (existsSync(keyString)) {
+  if (!existsSync(keyPath) && !privateKey) {
+    program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+  } else if (existsSync(keyPath)) {
     // open with fs publicKey path
-    const keyFile = readFileSync(keyString)
+    const keyFile = readFileSync(keyPath)
     privateKey = keyFile.toString()
   }
   // console.log('privateKey', privateKey)

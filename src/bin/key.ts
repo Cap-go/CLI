@@ -1,38 +1,52 @@
 import { program } from 'commander'
-import { existsSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import { createRSA } from '../api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
 
 interface Options {
   force?: boolean;
-  private?: string;
-  public?: string;
+  key?: string
+  keyData?: string
 }
 
-// const saveKey = async (privateKeyBase64: string) => {
-//   if (!existsSync('.git')) {
-//     program.error('To use local you should be in a git repository');
-//   }
+const saveKey = async (privateKeyPath: string | undefined, privateKeyBase64: string | undefined) => {
+  if (!existsSync('.git')) {
+    program.error('To use local you should be in a git repository');
+  }
 
-//   const config = await getConfig();
-//   const { extConfig } = config.app;
-//   if (extConfig) {
-//     if (!extConfig.plugins) {
-//       extConfig.plugins = {};
-//     }
-//     if (!extConfig.plugins.CapacitorUpdater) {
-//       extConfig.plugins.CapacitorUpdater = {};
-//     }
-//     extConfig.plugins.CapacitorUpdater.privateKey = privateKeyBase64;
-//     // console.log('extConfig', extConfig)
-//     writeConfig(extConfig, config.app.extConfigFilePath)
-//   }
+  const config = await getConfig();
+  const { extConfig } = config.app;
 
-//   console.log(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
-//   console.log(`your app will decode the zip archive with this key\n`);
+  const keyPath = privateKeyPath || baseKey
+  // check if publicKey exist
 
-// }
+  let { privateKey } = privateKeyBase64 || extConfig?.plugins?.CapacitorUpdater || "";
+
+  if (!existsSync(keyPath) && !privateKey) {
+    program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+  } else if (existsSync(keyPath)) {
+    // open with fs publicKey path
+    const keyFile = readFileSync(keyPath)
+    privateKey = keyFile.toString()
+  }
+
+  if (extConfig) {
+    if (!extConfig.plugins) {
+      extConfig.plugins = {};
+    }
+    if (!extConfig.plugins.CapacitorUpdater) {
+      extConfig.plugins.CapacitorUpdater = {};
+    }
+    extConfig.plugins.CapacitorUpdater.privateKey = privateKeyBase64;
+    // console.log('extConfig', extConfig)
+    writeConfig(extConfig, config.app.extConfigFilePath)
+  }
+
+  console.log(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
+  console.log(`your app will decode the zip archive with this key\n`);
+
+}
 
 const createKey = async (options: Options) => {
   // write in file .capgo the apikey in home directory
@@ -80,15 +94,12 @@ than make them unreadable by Capgo and unmodifiable by anyone\n`);
 
 export const manageKey = async (option: string, options: Options) => {
 
-  // if (option === 'save') {
-  //   if (!options.private) {
-  //     program.error('You should provide a private key to save');
-  //   }
-  //   saveKey(options.private);
-  // } else 
-  if (option === 'create') {
-    createKey(options);
-  } else {
-    program.error('You should provide a valid option (create or save)');
-  }
+  if (option === 'save') {
+    saveKey(options.key, options.keyData);
+  } else
+    if (option === 'create') {
+      createKey(options);
+    } else {
+      program.error('You should provide a valid option (create or save)');
+    }
 }
