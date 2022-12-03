@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.1.12](https://github.com/Cap-go/capgo-cli/compare/v2.1.11...v2.1.12) (2022-12-02)
+
+
+### Bug Fixes
+
+* issue with padding ([57d8430](https://github.com/Cap-go/capgo-cli/commit/57d8430e692ca22ea7a2c82aeacc1d78e112eb6e))
+
 ### [2.1.11](https://github.com/Cap-go/capgo-cli/compare/v2.1.10...v2.1.11) (2022-12-02)
 
 
