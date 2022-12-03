@@ -23,61 +23,53 @@ Optionally, you can give:
 ## Add new app to Cloud
 `npx @capgo/cli add [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+> 💡 All option will be guessed in your config if not provided.
 
 Optionally, you can give:
 - `--icon [/path/to/my/icon]` to have a custom icon in the list.
 - `--name [test]` to have a custom name in the list.
 - `--apikey [key]` API key to link to your account.
 
+Example of capacitor.config.json for appId and AppName, the icon is guess in the resources folder
+```json
+{
+  "appId": "ee.forgr.capacitor_go",
+  "appName": "Capgo",
+  "webDir": "dist",
+}
+```
 ### Send version to Cloud
 `npx @capgo/cli upload [appId]`
-`[appId]` is your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
 - `--path [/path/to/my/app]` to upload a specific folder.
 - `--channel [test]` to upload to a specific channel.
-- `--external [https://mydomain.com/myapp.zip]` to link to an external URL instead of upload to Capgo cloud.
+- `--external [https://mydomain.com/myapp.zip]` to link to an external URL instead of upload to Capgo cloud, it should be a zip URL in HTTPS.
 - `--key [/path/to/my/private_key]` the path of your private key.
 - `--key-data [privateKey]` the private key data, if you want to use inline.
 - `--no-key` to ignore signing key and send clear update.
 - `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 - `--iv-session-key [key]` to send a custom session key to the cloud.
 
-### Send version to Cloud channel
-`npx @capgo/cli set [appId] [version] [channel]`
-`[appId]` your app ID the format is explained [here](https://capacitorjs.com/docs/cli/init)
-`[version]` your app version already sent to the cloud
-`[channel]` the channel you want to link the version
+> ⭐️ External option help to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 30 MB. With this setting, Capgo store only the link to the zip and send the link to all app
 
-Optionally, you can give:
-- `--apikey [key]` API key to link to your account.
-### Delete package to Cloud
-`npx @capgo/cli delete [appId]`
-`[appId]` your app ID present in the Cloud
+> 👀 Capgo cloud never look of what is in the link (for external option), or in the code when stored.
 
-Optionally, you can give:
-- `--apikey [key]` API key to link to your account.
-### Delete older packages in a SemVer range for a major version to Cloud
-`npx @capgo/cli cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
-`[appId]` your app ID present in the Cloud.
-`[majorVersion]` a version you wish to remove previous packages for, it will keep the last one + numberToKeep.
-`[numberToKeep]` the number of packages you wish to keep (default 4).
+> 🔑 You can add a second layer of security by using encryption, then Capgo will not be able to look or modify anything, it become zero-trust.
 
-Optionally, you can give:
-- `--apikey [key]` API key to link to your account.
+Example of `package.json` for version
+```json
+{
+ "version": "1.0.2"
+}
+```
+> ⛔ Version should be greater than “0.0.0”.
 
-
-For example: 
-If you have 10 versions, from 10.0.1 to 10.0.11, and you use 
-`npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
-it will remove 10.0.1 to 10.0.6. 
-10.0.7 until 10.0.11 will be kept
-
-This command will show a list of what it will be removing and ask for confirmation.
-
+>💡 Don't forget to update the version number each time you send one, or device will don't see the update.
 ### Configure channel
 `npx @capgo/cli set [appId] --channel dev`
-`[appId]` your app ID the format is explained here.
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 
 Optionally, you can give:
 `--bundle [1.2.3]` your app bundle already sent to the cloud, to link it to a channel.
@@ -94,6 +86,37 @@ Optionally, you can give:
 `--self-assign` allow devices to self assign to this channel.
 `--no-self-assign` disallow devices to self assign to this channel.
 - `--apikey [key]` API key to link to your account.
+
+Optionally, you can give:
+- `--apikey [key]` API key to link to your account.
+
+### List versions
+`npx @capgo/cli list [appId] `
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+
+### Delete package to Cloud
+`npx @capgo/cli delete [appId]`
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+
+Optionally, you can give:
+- `--apikey [key]` API key to link to your account.
+- `--bundle [bundleVersion]` with the version number will only delete this version
+### Delete older packages in a SemVer range for a major version to Cloud
+`npx @capgo/cli cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
+
+Optionally, you can give:
+- `--apikey [key]` API key to link to your account.
+- `--bundle [majorVersion]` a version you wish to remove previous packages for, it will keep the last one + numberToKeep.
+- `--keep [numberToKeep]` the number of packages you wish to keep (default 4).
+
+For example: 
+If you have 10 versions, from 10.0.1 to 10.0.11, and you use 
+`npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
+it will remove 10.0.1 to 10.0.6. 
+10.0.7 until 10.0.11 will be kept.
+
+This command will show a list of what it will be removing and ask for confirmation.
 
 ## End-to-End encryption (Zero trust)
 
