@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.2.9](https://github.com/Cap-go/capgo-cli/compare/v2.2.8...v2.2.9) (2022-12-06)
+
+
+### Bug Fixes
+
+* use isAllowedAction ([0bf7090](https://github.com/Cap-go/capgo-cli/commit/0bf709058106bc7eca9127f6e48914cabc7c3b12))
+
 ### [2.2.8](https://github.com/Cap-go/capgo-cli/compare/v2.2.7...v2.2.8) (2022-12-03)
 
 
