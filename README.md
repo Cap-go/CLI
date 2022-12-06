@@ -108,12 +108,16 @@ Optionally, you can give:
 - `--keep [numberToKeep]` the number of packages you wish to keep (default 4).
 
 For example: 
-If you have 10 versions, from 10.0.1 to 10.0.11, and you use 
+If you have 10 versions from 10.0.1 to 10.0.11, and you use 
 `npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
 it will remove 10.0.1 to 10.0.6. 
 10.0.7 until 10.0.11 will be kept.
 
-This command will show a list of what it will be removing and ask for confirmation.
+If you have 20 versions in total, and you don't provide a bundle number like this:
+`npx @capgo/cli cleanup [appId] --keep=2`
+It will remove 18 versions, and keep the last 2.
+
+> This command will ask for confirmation, it show a list of what it will be removing to confirm
 
 ## End-to-End encryption (Zero trust)
 

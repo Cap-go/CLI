@@ -96,11 +96,13 @@ export const findSavedKey = () => {
     const userHomeDir = homedir();
     let keyPath = `${userHomeDir}/.capgo`;
     if (existsSync(keyPath)) {
+        console.log(`Use global apy key ${keyPath}`)
         const key = readFileSync(keyPath, 'utf8');
         return key.trim();
     }
     keyPath = `.capgo`;
     if (existsSync(keyPath)) {
+        console.log(`Use local apy key ${keyPath}`)
         const key = readFileSync(keyPath, 'utf8');
         return key.trim();
     }

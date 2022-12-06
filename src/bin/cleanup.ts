@@ -3,7 +3,7 @@ import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
-import { deleteSpecificVersion, getActiveAppVersions } from '../api/versions';
+import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
 import { definitions } from '../types/types_supabase';
 
@@ -41,7 +41,6 @@ export const cleanupApp = async (appid: string, options: Options) => {
   const force = options.force || false;
 
   const config = await getConfig();
-
   appid = appid || config?.app?.appId
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
@@ -49,51 +48,50 @@ export const cleanupApp = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-
-  const nextMajor = `${semver.inc(bundle, 'major')}`;
-  console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
-
   const supabase = createSupabaseClient(apikey)
 
   const userId = await verifyUser(supabase, apikey);
 
   // Check we have app access to this appId
   await checkAppExistsAndHasPermission(supabase, appid, apikey);
+  console.log(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  const data = await getActiveAppVersions(supabase, appid, userId);
+  let allVersions = await getActiveAppVersions(supabase, appid, userId) as (definitions["app_versions"] & { keep: string })[];
 
-  console.log(`Total active versions in Capgo: ${data?.length}`);
-
-  if (data?.length === 0) {
+  console.log(`Total active versions in Capgo: ${allVersions?.length}`);
+  if (allVersions?.length === 0) {
+    console.log('No versions found, aborting cleanup');
     return;
   }
+  if (bundle) {
+    const nextMajor = `${semver.inc(bundle, 'major')}`;
+    console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
-  // Get all app versions that are in the given range
-  const allVersions = getRemovableVersionsInSemverRange(data, bundle, nextMajor).reverse();
+    // Get all app versions that are in the given range
+    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor).reverse() as (definitions["app_versions"] & { keep: string })[];
 
-  console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
+    console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
+  }
 
   // Slice to keep and remove
-  const toKeep = allVersions.slice(0, keep);
-  const toRemove = allVersions.slice(keep);
 
-  // Show the user what will be kept
-  toKeep.forEach(row => {
-    console.log(`${row.name} created on ${(getHumanDate(row))} will be kept`);
-  });
-  if (toKeep.length) {
-    console.log("===================================================");
-  }
+  const toRemove: (definitions["app_versions"] & { keep: string })[] = []
+  // Slice to keep and remove
+  allVersions.forEach((v, i) => {
+    if (i < keep) {
+      v.keep = '✅';
+    } else {
+      v.keep = '❌';
+      toRemove.push(v);
+    }
+  })
+
   if (toRemove.length === 0) {
     console.log("Nothing to be removed, aborting removal...")
     return;
   }
-
-  // Show the user what will be removed
-  toRemove.forEach(row => {
-    console.log(`${row.name} created on ${(getHumanDate(row))} will be removed`);
-  });
+  displayBundles(allVersions);
 
   // Check user wants to clean that all up
   if (!force) {

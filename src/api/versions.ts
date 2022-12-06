@@ -1,10 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { definitions } from '../types/types_supabase';
-import { formatError } from '../bin/utils';
+import { formatError, getHumanDate } from '../bin/utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
 import { deleteFromStorage } from './storage';
+import { Table } from 'console-table-printer';
 
 export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
@@ -28,6 +29,24 @@ export const deleteSpecificVersion = async (supabase: SupabaseClient, appid: str
   await deleteFromStorage(supabase, userId, appid, versionData, bundle);
 
   await deleteAppVersion(supabase, appid, userId, bundle);
+}
+
+export const displayBundles = (data: (definitions["app_versions"] & { keep?: string })[]) => {
+  const p = new Table({
+    title: "Bundles",
+    charLength: { "❌": 2, "✅": 2 },
+  });
+
+  //add rows with color
+  data.reverse().forEach(row => {
+    p.addRow({
+      Version: row.name,
+      Created: getHumanDate(row),
+      ...(row.keep !== undefined ? { Keep: row.keep } : {})
+    });
+  });
+
+  p.printTable();
 }
 
 export const getActiveAppVersions = async (supabase: SupabaseClient, appid: string, userId: string) => {

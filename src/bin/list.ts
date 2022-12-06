@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { checkAppExistsAndHasPermission } from '../api/app';
-import { getActiveAppVersions } from '../api/versions';
+import { displayBundles, getActiveAppVersions } from '../api/versions';
 
 interface Options {
   apikey: string;
@@ -29,13 +29,10 @@ export const listApp = async (appid: string, options: Options) => {
   await checkAppExistsAndHasPermission(supabase, appid, apikey);
 
   // Get all active app versions we might possibly be able to cleanup
-  const data = await getActiveAppVersions(supabase, appid, userId);
+  const allVersions = await getActiveAppVersions(supabase, appid, userId);
 
-  console.log(`Active versions in Capgo: ${data?.length}`);
+  console.log(`Active versions in Capgo: ${allVersions?.length}`);
 
-  data?.forEach(row => {
-    // convert created_at to human time
-    console.log(`${row.name} created on ${(getHumanDate(row))}`);
-  });
+  displayBundles(allVersions);
 
 }

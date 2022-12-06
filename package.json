@@ -43,6 +43,7 @@
     "adm-zip": "^0.5.9",
     "cli-progress": "3.11.2",
     "commander": "9.4.1",
+    "console-table-printer": "^2.11.1",
     "fs-extra": "11.1.0",
     "logsnag": "^0.1.5",
     "mime": "^3.0.0",

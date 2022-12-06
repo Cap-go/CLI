@@ -86,7 +86,7 @@ program
   .alias('c')
   .description('Cleanup versions in capgo Cloud')
   .action(cleanupApp)
-  .requiredOption('-b, --bundle <bundle>', 'bundle version number of the app to delete')
+  .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
   .option('-f, --force', 'force removal');
