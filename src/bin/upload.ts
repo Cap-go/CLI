@@ -115,6 +115,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
       // encrypt
+      console.log('Encrypting your bundle')
       const res = encryptSource(zipped, keyFile.toString())
       sessionKey = res.ivSessionKey
       zipped = res.encryptedData
