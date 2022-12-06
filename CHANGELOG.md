@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.7](https://github.com/Cap-go/capgo-cli/compare/v2.3.6...v2.3.7) (2022-12-06)
+
+
+### Bug Fixes
+
+* use right log method with multibar ([40df752](https://github.com/Cap-go/capgo-cli/commit/40df7526c7a057eefbf140b862b1e48d9002f4f6))
+
 ### [2.3.6](https://github.com/Cap-go/capgo-cli/compare/v2.3.5...v2.3.6) (2022-12-06)
 
 
