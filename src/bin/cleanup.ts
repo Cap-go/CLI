@@ -81,7 +81,7 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
   // Slice to keep and remove
 
-  const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[] = []
+  const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
   // Slice to keep and remove
   allVersions.forEach((v, i) => {
     if (i < keep) {
