@@ -69,7 +69,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
     console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
     // Get all app versions that are in the given range
-    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor).reverse() as (definitions["app_versions"] & { keep: string })[];
+    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor)
+      .reverse() as (definitions["app_versions"] & { keep: string })[];
 
     console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
   }

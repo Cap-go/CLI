@@ -1,11 +1,11 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
+import { Table } from 'console-table-printer';
 import { definitions } from '../types/types_supabase';
 import { formatError, getHumanDate } from '../bin/utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
 import { deleteFromStorage } from './storage';
-import { Table } from 'console-table-printer';
 
 export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
@@ -37,7 +37,7 @@ export const displayBundles = (data: (definitions["app_versions"] & { keep?: str
     charLength: { "❌": 2, "✅": 2 },
   });
 
-  //add rows with color
+  // add rows with color
   data.reverse().forEach(row => {
     p.addRow({
       Version: row.name,

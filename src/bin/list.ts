@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
+import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from './utils';
 import { checkAppExistsAndHasPermission } from '../api/app';
 import { displayBundles, getActiveAppVersions } from '../api/versions';
 
