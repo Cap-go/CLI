@@ -7,7 +7,9 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import { encryptSource } from '../api/crypto';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
+  updateOrCreateChannel, updateOrCreateVersion,
+  formatError, findSavedKey, checkPlanValid,
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
 } from './utils';
 
 interface Options {

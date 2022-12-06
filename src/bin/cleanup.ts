@@ -2,10 +2,10 @@ import { program } from 'commander';
 import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from 'types/supabase.types';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
-import { Database } from 'types/supabase.types';
 // import { definitions } from '../types/types_supabase';
 
 interface Options {
@@ -18,14 +18,16 @@ interface Options {
 
 const prompt = promptSync();
 
-const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient, appid: string, userId: string) => {
+const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][],
+  supabase: SupabaseClient, appid: string, userId: string) => {
   toRemove?.forEach(row => {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
   });
 }
 
-const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['app_versions']['Row'][], bundle: string, nextMajor: string) => {
+const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['app_versions']['Row'][],
+  bundle: string, nextMajor: string) => {
   const toRemove: Database['public']['Tables']['app_versions']['Row'][] = [];
 
   data?.forEach(row => {
@@ -58,7 +60,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
   console.log(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  let allVersions = await getActiveAppVersions(supabase, appid, userId) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
+  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await
+    getActiveAppVersions(supabase, appid, userId);
 
   console.log(`Total active versions in Capgo: ${allVersions?.length}`);
   if (allVersions?.length === 0) {

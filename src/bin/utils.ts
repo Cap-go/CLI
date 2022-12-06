@@ -136,7 +136,8 @@ export const getConfig = async () => {
     return config;
 }
 
-export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<Database['public']['Tables']['app_versions']['Row']>, apikey: string) => {
+export const updateOrCreateVersion = async (supabase: SupabaseClient,
+    update: Partial<Database['public']['Tables']['app_versions']['Row']>, apikey: string) => {
     // console.log('updateOrCreateVersion', update, apikey)
     const { data, error } = await supabase
         .rpc('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
@@ -160,7 +161,8 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Pa
         .single()
 }
 
-export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<Database['public']['Tables']['channels']['Row']>, apikey: string) => {
+export const updateOrCreateChannel = async (supabase: SupabaseClient,
+    update: Partial<Database['public']['Tables']['channels']['Row']>, apikey: string) => {
     // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
         console.error('missing app_id, name, or created_by')
@@ -197,9 +199,7 @@ export const useLogSnag = (): LogSnag => {
     return logsnag
 }
 
-export const convertAppName = (appName: string) => {
-    return appName.replace(/\./g, '--')
-}
+export const convertAppName = (appName: string) => appName.replace(/\./g, '--')
 export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymod: string[] = ['all']) => {
     await checkKey(supabase, apikey, keymod);
 
