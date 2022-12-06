@@ -5,8 +5,10 @@ const apikey = '***'
 const anonKey = '***'
 const init = async () => {
     const supabase = createClient(supaUrl, anonKey, {
-        headers: {
-            capgkey: '***',
+        global: {
+            headers: {
+                capgkey: '***',
+            }
         }
     })
     const { data: userId } = await supabase

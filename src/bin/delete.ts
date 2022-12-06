@@ -1,6 +1,6 @@
 import { program } from 'commander';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from './utils';
-import { definitions } from '../types/types_supabase';
+// import { definitions } from '../types/types_supabase';
 import { deleteSpecificVersion } from '../api/versions';
 
 interface Options {
@@ -27,7 +27,8 @@ export const deleteApp = async (appid: string, options: Options) => {
   const userId = await verifyUser(supabase, apikey);
 
   const { data: app, error: dbError0 } = await supabase
-    .rpc<string>('exist_app', { appid, apikey })
+    .rpc('exist_app', { appid, apikey })
+    .single()
   if (!app || dbError0) {
     program.error('No permission to delete')
   }
@@ -42,7 +43,7 @@ export const deleteApp = async (appid: string, options: Options) => {
 
   console.log(`Delete ${appid} from Capgo`);
   const { data, error: vError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .select()
     .eq('app_id', appid)
     .eq('user_id', userId)
@@ -63,7 +64,7 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   const { error: delAppVersionError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .delete()
     .eq('app_id', appid)
     .eq('user_id', userId)
@@ -73,7 +74,7 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   const { error: dbAppError } = await supabase
-    .from<definitions['apps']>('apps')
+    .from('apps')
     .delete()
     .eq('app_id', appid)
     .eq('user_id', userId)

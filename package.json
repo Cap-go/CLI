@@ -27,10 +27,11 @@
   "scripts": {
     "dev": "set NODE_ENV=development && npx webpack --config webpack.config.js",
     "no-debug": "node dist/index.js",
-    "test": "npx ts-node -T src/bin/index.ts",
-    "build": "npx webpack --config webpack.config.js",
+    "test": "npx --yes ts-node -T src/bin/index.ts",
+    "build": "npx --yes webpack --config webpack.config.js",
     "dev-build": "SUPA_DB=development npx webpack --config webpack.config.js",
     "pack": "pkg",
+    "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
     "test_rls": "ts-node ./test/test_headers_rls.ts",
     "lint": "eslint . --ext .ts --fix"
   },
@@ -38,7 +39,7 @@
   "license": "Apache 2.0",
   "dependencies": {
     "@capacitor/cli": "4.6.0",
-    "@supabase/supabase-js": "^1.35.7",
+    "@supabase/supabase-js": "^2.1.2",
     "@tomasklaen/checksum": "^1.1.0",
     "adm-zip": "^0.5.9",
     "cli-progress": "3.11.2",

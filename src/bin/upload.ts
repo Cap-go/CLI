@@ -7,7 +7,7 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import { encryptSource } from '../api/crypto';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
-  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver, baseKeyPub
+  updateOrCreateChannel, updateOrCreateVersion, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
 } from './utils';
 
 interface Options {
@@ -63,6 +63,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   // checking if user has access rights before uploading
   const { data: versionExist, error: versionExistError } = await supabase
     .rpc('exist_app_versions', { apikey, name_version: bundle, appid })
+    .single()
 
   if (versionExist || versionExistError) {
     multibar.stop()
@@ -70,7 +71,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   b1.increment();
   const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc<number>('is_trial', { userid: userId })
+    .rpc('is_trial', { userid: userId })
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
     multibar.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
@@ -78,7 +79,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
   b1.increment();
 
   const { data: app, error: appError } = await supabase
-    .rpc<string>('exist_app', { appid, apikey })
+    .rpc('exist_app', { appid, apikey })
+    .single()
+
   if (!app || appError) {
     multibar.stop()
     program.error(`Cannot find app ${appid} in your account \n${formatError(appError)}`)
@@ -86,7 +89,9 @@ export const uploadVersion = async (appid: string, options: Options) => {
   b1.increment();
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc<string>('exist_app_versions', { appid, apikey, name_version: bundle })
+    .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
+    .single()
+
   if (appVersion || appVersionError) {
     program.error(`Version already exists ${formatError(appVersionError)}`)
   }
@@ -171,7 +176,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
     multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
   }
   multibar.stop()
-  const appidWeb = appid.replace(/\./g, '--')
+  const appidWeb = convertAppName(appid)
   console.log("App uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)

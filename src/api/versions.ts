@@ -1,7 +1,8 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { Table } from 'console-table-printer';
-import { definitions } from '../types/types_supabase';
+import { Database } from 'types/supabase.types';
+// import { definitions } from '../types/types_supabase';
 import { formatError, getHumanDate } from '../bin/utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
@@ -9,7 +10,7 @@ import { deleteFromStorage } from './storage';
 
 export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .update({
       deleted: true
     })
@@ -31,7 +32,7 @@ export const deleteSpecificVersion = async (supabase: SupabaseClient, appid: str
   await deleteAppVersion(supabase, appid, userId, bundle);
 }
 
-export const displayBundles = (data: (definitions["app_versions"] & { keep?: string })[]) => {
+export const displayBundles = (data: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[]) => {
   const p = new Table({
     title: "Bundles",
     charLength: { "❌": 2, "✅": 2 },
@@ -51,7 +52,7 @@ export const displayBundles = (data: (definitions["app_versions"] & { keep?: str
 
 export const getActiveAppVersions = async (supabase: SupabaseClient, appid: string, userId: string) => {
   const { data, error: vError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .select()
     .eq('app_id', appid)
     .eq('user_id', userId)
@@ -66,7 +67,7 @@ export const getActiveAppVersions = async (supabase: SupabaseClient, appid: stri
 
 export const getVersionData = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
   const { data: versionData, error: versionIdError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .select()
     .eq('app_id', appid)
     .eq('user_id', userId)

@@ -3,7 +3,6 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
-import { definitions } from '../types/types_supabase'
 import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser } from './utils';
 
 interface Options {
@@ -55,7 +54,8 @@ export const addApp = async (appid: string, options: Options) => {
 
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
-    .rpc<string>('exist_app', { appid, apikey })
+    .rpc('exist_app', { appid, apikey })
+    .single()
   if (app || dbError0) {
     program.error(`App already exists ${formatError(dbError0)}`)
   }
@@ -77,22 +77,22 @@ export const addApp = async (appid: string, options: Options) => {
       .storage
       .from(`images/${userId}/${appid}`)
       .getPublicUrl(fileName)
-    signedURL = signedURLData?.publicURL || signedURL
+    signedURL = signedURLData?.publicUrl || signedURL
   }
   // add app to db
   const { error: dbError } = await supabase
-    .from<definitions['apps']>('apps')
+    .from('apps')
     .insert({
       icon_url: signedURL,
       user_id: userId,
       name,
       app_id: appid,
-    }, { returning: "minimal" })
+    })
   if (dbError) {
     program.error(`Could not add app ${formatError(dbError)}`);
   }
   const { error: dbVersionError } = await supabase
-    .from<definitions['app_versions']>('app_versions')
+    .from('app_versions')
     .insert([{
       user_id: userId,
       deleted: true,
@@ -103,7 +103,7 @@ export const addApp = async (appid: string, options: Options) => {
       deleted: true,
       name: 'builtin',
       app_id: appid,
-    }], { returning: "minimal" })
+    }])
   if (dbVersionError) {
     program.error(`Could not add app ${formatError(dbVersionError)}`);
   }

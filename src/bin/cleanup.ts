@@ -5,7 +5,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
-import { definitions } from '../types/types_supabase';
+import { Database } from 'types/supabase.types';
+// import { definitions } from '../types/types_supabase';
 
 interface Options {
   apikey: string;
@@ -17,15 +18,15 @@ interface Options {
 
 const prompt = promptSync();
 
-const removeVersions = (toRemove: definitions["app_versions"][], supabase: SupabaseClient, appid: string, userId: string) => {
+const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient, appid: string, userId: string) => {
   toRemove?.forEach(row => {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
   });
 }
 
-const getRemovableVersionsInSemverRange = (data: definitions["app_versions"][], bundle: string, nextMajor: string) => {
-  const toRemove: definitions["app_versions"][] = [];
+const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['app_versions']['Row'][], bundle: string, nextMajor: string) => {
+  const toRemove: Database['public']['Tables']['app_versions']['Row'][] = [];
 
   data?.forEach(row => {
     if (semver.gte(row.name, bundle) && semver.lt(row.name, `${nextMajor}`)) {
@@ -57,7 +58,7 @@ export const cleanupApp = async (appid: string, options: Options) => {
   console.log(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  let allVersions = await getActiveAppVersions(supabase, appid, userId) as (definitions["app_versions"] & { keep: string })[];
+  let allVersions = await getActiveAppVersions(supabase, appid, userId) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
 
   console.log(`Total active versions in Capgo: ${allVersions?.length}`);
   if (allVersions?.length === 0) {
@@ -70,14 +71,14 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
     // Get all app versions that are in the given range
     allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor)
-      .reverse() as (definitions["app_versions"] & { keep: string })[];
+      .reverse() as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
 
     console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
   }
 
   // Slice to keep and remove
 
-  const toRemove: (definitions["app_versions"] & { keep: string })[] = []
+  const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[] = []
   // Slice to keep and remove
   allVersions.forEach((v, i) => {
     if (i < keep) {

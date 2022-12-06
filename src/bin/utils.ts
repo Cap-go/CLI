@@ -5,7 +5,7 @@ import prettyjson from 'prettyjson';
 import { existsSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
-import { definitions } from '../types/types_supabase';
+import { Database } from 'types/supabase.types';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
@@ -23,9 +23,11 @@ export const supaAnon = process.env.SUPA_DB === 'production'
     : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
 /* eslint-enable */
 
-export const createSupabaseClient = (apikey: string) => createClient(hostSupa, supaAnon, {
-    headers: {
-        capgkey: apikey,
+export const createSupabaseClient = (apikey: string) => createClient<Database>(hostSupa, supaAnon, {
+    global: {
+        headers: {
+            capgkey: apikey,
+        }
     }
 })
 // eslint-disable-next-line max-len
@@ -34,6 +36,7 @@ export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[
 export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode: string[]) => {
     const { data: apiAccess, error: apiAccessError } = await supabase
         .rpc('is_allowed_capgkey', { apikey, keymode })
+        .single()
 
     if (!apiAccess || apiAccessError) {
         program.error(`Invalid API key or insufficient permissions ${formatError(apiAccessError)}`);
@@ -42,7 +45,7 @@ export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode
 
 export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc<boolean>('is_good_plan_v2', { userid: userId })
+        .rpc('is_good_plan_v2', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -52,7 +55,7 @@ export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Prom
 
 export const isPaying = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc<boolean>('is_paying', { userid: userId })
+        .rpc('is_paying', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -62,7 +65,7 @@ export const isPaying = async (supabase: SupabaseClient, userId: string): Promis
 
 export const isTrial = async (supabase: SupabaseClient, userId: string): Promise<number> => {
     const { data, error } = await supabase
-        .rpc<number>('is_trial', { userid: userId })
+        .rpc('is_trial', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -72,7 +75,7 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
 
 export const isAllowedAction = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc<boolean>('is_allowed_action_user', { userid: userId })
+        .rpc('is_allowed_action_user', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -133,47 +136,57 @@ export const getConfig = async () => {
     return config;
 }
 
-export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<definitions['app_versions']>, apikey: string) => {
+export const updateOrCreateVersion = async (supabase: SupabaseClient, update: Partial<Database['public']['Tables']['app_versions']['Row']>, apikey: string) => {
     // console.log('updateOrCreateVersion', update, apikey)
     const { data, error } = await supabase
-        .rpc<string>('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
+        .rpc('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
+        .single()
+
     if (data && !error) {
         update.deleted = false
         return supabase
-            .from<definitions['app_versions']>('app_versions')
+            .from('app_versions')
             .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
+            .single()
     }
     // console.log('create Version', data, error)
 
     return supabase
-        .from<definitions['app_versions']>('app_versions')
+        .from('app_versions')
         .insert(update)
-
+        .select()
+        .single()
 }
 
-export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<definitions['channels']>, apikey: string) => {
+export const updateOrCreateChannel = async (supabase: SupabaseClient, update: Partial<Database['public']['Tables']['channels']['Row']>, apikey: string) => {
     // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
         console.error('missing app_id, name, or created_by')
         return Promise.reject(new Error('missing app_id, name, or created_by'))
     }
     const { data, error } = await supabase
-        .rpc<string>('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
+        .rpc('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
+        .single()
+
     if (data && !error) {
         return supabase
-            .from<definitions['channels']>('channels')
-            .update(update, { returning: "minimal" })
+            .from('channels')
+            .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
             .eq('created_by', update.created_by)
+            .single()
+
     }
     // console.log('create Channel', data, error)
 
     return supabase
-        .from<definitions['channels']>('channels')
-        .insert(update, { returning: "minimal" })
+        .from('channels')
+        .insert(update)
+        .select()
+        .single()
 }
 
 export const useLogSnag = (): LogSnag => {
@@ -184,11 +197,15 @@ export const useLogSnag = (): LogSnag => {
     return logsnag
 }
 
+export const convertAppName = (appName: string) => {
+    return appName.replace(/\./g, '--')
+}
 export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymod: string[] = ['all']) => {
     await checkKey(supabase, apikey, keymod);
 
     const { data: dataUser, error: userIdError } = await supabase
-        .rpc<string>('get_user_id', { apikey });
+        .rpc('get_user_id', { apikey })
+        .single();
 
     const userId = dataUser ? dataUser.toString() : '';
 
@@ -198,7 +215,7 @@ export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymo
     return userId;
 }
 
-export const getHumanDate = (row: definitions["app_versions"]) => {
+export const getHumanDate = (row: Database['public']['Tables']['app_versions']['Row']) => {
     const date = new Date(row.created_at || '');
     return date.toLocaleString();
 }

@@ -1,9 +1,10 @@
 import { program } from 'commander';
+import { Database } from 'types/supabase.types';
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from './utils';
-import { definitions } from '../types/types_supabase';
+// import { definitions } from '../types/types_supabase';
 
 interface Options {
   apikey: string;
@@ -48,7 +49,7 @@ export const setChannel = async (appid: string, options: Options) => {
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all']);
     await checkPlanValid(supabase, userId)
-    const channelPayload: Partial<definitions['channels']> = {
+    const channelPayload: Partial<Database['public']['Tables']['channels']['Row']> = {
       created_by: userId,
       app_id: appid,
       name: channel,
@@ -56,7 +57,7 @@ export const setChannel = async (appid: string, options: Options) => {
     const bundleVersion = latest ? config?.app?.package?.version : bundle
     if (bundleVersion) {
       const { data, error: vError } = await supabase
-        .from<definitions['app_versions']>('app_versions')
+        .from('app_versions')
         .select()
         .eq('app_id', appid)
         .eq('name', bundleVersion)
