@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.3.0](https://github.com/Cap-go/capgo-cli/compare/v2.2.10...v2.3.0) (2022-12-06)
+
+
+### Features
+
+* better list display and allow cleanup without bundle ([a01cc4a](https://github.com/Cap-go/capgo-cli/commit/a01cc4a468ceb139da441b5b311c5d7845e4e484))
+
 ### [2.2.10](https://github.com/Cap-go/capgo-cli/compare/v2.2.9...v2.2.10) (2022-12-06)
 
 
