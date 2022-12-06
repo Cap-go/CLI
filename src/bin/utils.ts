@@ -72,7 +72,7 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
 
 export const isAllowedAction = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc<boolean>('is_allowed_action', { userid: userId })
+        .rpc<boolean>('is_allowed_action_user', { userid: userId })
         .single()
     if (error) {
         throw error
