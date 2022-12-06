@@ -117,7 +117,7 @@ If you have 20 versions in total, and you don't provide a bundle number like thi
 `npx @capgo/cli cleanup [appId] --keep=2`
 It will remove 18 versions, and keep the last 2.
 
-> This command will ask for confirmation, it show a list of what it will be removing to confirm
+> This command will ask for confirmation, it shows a table of what it will be keeping and removing.
 
 ## End-to-End encryption (Zero trust)
 
