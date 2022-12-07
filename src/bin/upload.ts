@@ -165,12 +165,12 @@ export const uploadVersion = async (appid: string, options: Options) => {
     program.error(`Cannot add bundle ${formatError(dbError)}`)
   }
   b1.increment();
-  if (versionData && versionData.length) {
+  if (versionData) {
     const { error: dbError3 } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
       created_by: userId,
-      version: versionData[0].id,
+      version: versionData.id,
     }, apikey)
     if (dbError3) {
       multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');

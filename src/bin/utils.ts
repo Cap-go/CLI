@@ -33,7 +33,8 @@ export const createSupabaseClient = (apikey: string) => createClient<Database>(h
 // eslint-disable-next-line max-len
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 
-export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode: string[]) => {
+export const checkKey = async (supabase: SupabaseClient<Database>, apikey: string,
+    keymode: Database['public']['Enums']['key_mode'][]) => {
     const { data: apiAccess, error: apiAccessError } = await supabase
         .rpc('is_allowed_capgkey', { apikey, keymode })
         .single()
@@ -43,7 +44,7 @@ export const checkKey = async (supabase: SupabaseClient, apikey: string, keymode
     }
 }
 
-export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
+export const isGoodPlan = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
         .rpc('is_good_plan_v2', { userid: userId })
         .single()
@@ -53,7 +54,7 @@ export const isGoodPlan = async (supabase: SupabaseClient, userId: string): Prom
     return data || false
 }
 
-export const isPaying = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
+export const isPaying = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
         .rpc('is_paying', { userid: userId })
         .single()
@@ -63,7 +64,7 @@ export const isPaying = async (supabase: SupabaseClient, userId: string): Promis
     return data || false
 }
 
-export const isTrial = async (supabase: SupabaseClient, userId: string): Promise<number> => {
+export const isTrial = async (supabase: SupabaseClient<Database>, userId: string): Promise<number> => {
     const { data, error } = await supabase
         .rpc('is_trial', { userid: userId })
         .single()
@@ -73,7 +74,7 @@ export const isTrial = async (supabase: SupabaseClient, userId: string): Promise
     return data || 0
 }
 
-export const isAllowedAction = async (supabase: SupabaseClient, userId: string): Promise<boolean> => {
+export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
         .rpc('is_allowed_action_user', { userid: userId })
         .single()
@@ -83,7 +84,7 @@ export const isAllowedAction = async (supabase: SupabaseClient, userId: string):
     return data
 }
 
-export const checkPlanValid = async (supabase: SupabaseClient, userId: string, warning = true) => {
+export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
     const validPlan = await isAllowedAction(supabase, userId)
     if (!validPlan) {
         program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
@@ -136,8 +137,8 @@ export const getConfig = async () => {
     return config;
 }
 
-export const updateOrCreateVersion = async (supabase: SupabaseClient,
-    update: Partial<Database['public']['Tables']['app_versions']['Row']>, apikey: string) => {
+export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
+    update: Database['public']['Tables']['app_versions']['Insert'], apikey: string) => {
     // console.log('updateOrCreateVersion', update, apikey)
     const { data, error } = await supabase
         .rpc('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
@@ -161,8 +162,8 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient,
         .single()
 }
 
-export const updateOrCreateChannel = async (supabase: SupabaseClient,
-    update: Partial<Database['public']['Tables']['channels']['Row']>, apikey: string) => {
+export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
+    update: Database['public']['Tables']['channels']['Insert'], apikey: string) => {
     // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
         console.error('missing app_id, name, or created_by')
@@ -200,7 +201,8 @@ export const useLogSnag = (): LogSnag => {
 }
 
 export const convertAppName = (appName: string) => appName.replace(/\./g, '--')
-export const verifyUser = async (supabase: SupabaseClient, apikey: string, keymod: string[] = ['all']) => {
+export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: string,
+    keymod: Database['public']['Enums']['key_mode'][] = ['all']) => {
     await checkKey(supabase, apikey, keymod);
 
     const { data: dataUser, error: userIdError } = await supabase

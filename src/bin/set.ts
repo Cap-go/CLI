@@ -32,6 +32,9 @@ export const setChannel = async (appid: string, options: Options) => {
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
+  if (!channel) {
+    program.error("Missing argument, you need to provide a channel");
+  }
   if (latest && bundle) {
     program.error("Cannot set latest and bundle at the same time");
   }
@@ -49,10 +52,11 @@ export const setChannel = async (appid: string, options: Options) => {
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all']);
     await checkPlanValid(supabase, userId)
-    const channelPayload: Partial<Database['public']['Tables']['channels']['Row']> = {
+    const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appid,
       name: channel,
+      version: -1,
     }
     const bundleVersion = latest ? config?.app?.package?.version : bundle
     if (bundleVersion) {
@@ -63,10 +67,11 @@ export const setChannel = async (appid: string, options: Options) => {
         .eq('name', bundleVersion)
         .eq('user_id', userId)
         .eq('deleted', false)
-      if (vError || !data || !data.length)
+        .single()
+      if (vError || !data)
         program.error(`Cannot find version ${bundleVersion}`);
       console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
-      channelPayload.version = data[0].id
+      channelPayload.version = data.id
     }
     if (state !== undefined) {
       if (state === 'public' || state === 'private') {

@@ -19,7 +19,7 @@ interface Options {
 const prompt = promptSync();
 
 const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][],
-  supabase: SupabaseClient, appid: string, userId: string) => {
+  supabase: SupabaseClient<Database>, appid: string, userId: string) => {
   toRemove?.forEach(row => {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);

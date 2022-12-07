@@ -3,7 +3,7 @@ import { program } from 'commander';
 import { Database } from 'types/supabase.types';
 import { convertAppName, formatError } from '../bin/utils';
 
-export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClient,
+export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClient<Database>,
   appid: string, versionData: Database['public']['Tables']['app_versions']['Row'], bundle: string) => {
   const { data: deviceFound, error: errorDevice } = await supabase
     .from('devices_override')
@@ -11,7 +11,9 @@ export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClie
     .eq('app_id', appid)
     .eq('version', versionData.id)
     .single();
-  if (deviceFound || errorDevice) {
+  if (errorDevice)
+    program.error(`Cannot check Device override ${appid}@${bundle} ${formatError(errorDevice)}`);
+  if (deviceFound) {
     const appidWeb = convertAppName(appid)
     program.error(`Version ${appid} @${bundle} is used in a device override, unlink it first
 https://web.capgo.app/app/p/${appidWeb}/d/${deviceFound.device_id}

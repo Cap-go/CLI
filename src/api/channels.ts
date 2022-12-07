@@ -4,7 +4,7 @@ import { Database } from 'types/supabase.types';
 // import { definitions } from '../types/types_supabase';
 import { convertAppName, formatError } from '../bin/utils';
 
-export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient,
+export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Database>,
   appid: string, userId: string, versionData: Database['public']['Tables']['app_versions']['Row'], bundle: string) => {
   const { data: channelFound, error: errorChannel } = await supabase
     .from('channels')
@@ -13,7 +13,9 @@ export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient,
     .eq('created_by', userId)
     .eq('version', versionData.id)
     .single();
-  if ((channelFound && channelFound.length) || errorChannel) {
+  if (errorChannel)
+    program.error(`Cannot check Version ${appid}@${bundle} ${formatError(errorChannel)}`);
+  if (channelFound) {
     const appidWeb = convertAppName(appid)
     program.error(`Version ${appid}@${bundle} is used in a channel, unlink it first
 https://web.capgo.app/app/p/${appidWeb}/channel/${channelFound.id}

@@ -8,7 +8,7 @@ import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
 import { deleteFromStorage } from './storage';
 
-export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
+export const deleteAppVersion = async (supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
     .from('app_versions')
     .update({
@@ -22,7 +22,7 @@ export const deleteAppVersion = async (supabase: SupabaseClient, appid: string, 
   }
 }
 
-export const deleteSpecificVersion = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
+export const deleteSpecificVersion = async (supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) => {
   const versionData = await getVersionData(supabase, appid, userId, bundle);
   await checkVersionNotUsedInChannel(supabase, appid, userId, versionData, bundle);
   await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData, bundle);
@@ -50,7 +50,7 @@ export const displayBundles = (data: (Database['public']['Tables']['app_versions
   p.printTable();
 }
 
-export const getActiveAppVersions = async (supabase: SupabaseClient, appid: string, userId: string) => {
+export const getActiveAppVersions = async (supabase: SupabaseClient<Database>, appid: string, userId: string) => {
   const { data, error: vError } = await supabase
     .from('app_versions')
     .select()
@@ -65,7 +65,7 @@ export const getActiveAppVersions = async (supabase: SupabaseClient, appid: stri
   return data;
 }
 
-export const getVersionData = async (supabase: SupabaseClient, appid: string, userId: string, bundle: string) => {
+export const getVersionData = async (supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) => {
   const { data: versionData, error: versionIdError } = await supabase
     .from('app_versions')
     .select()

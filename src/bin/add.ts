@@ -3,7 +3,10 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
-import { getConfig, createSupabaseClient, formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser } from './utils';
+import {
+  getConfig, createSupabaseClient,
+  formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
+} from './utils';
 
 interface Options {
   apikey: string;

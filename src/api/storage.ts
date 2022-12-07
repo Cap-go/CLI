@@ -1,22 +1,10 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
+import { Database } from 'types/supabase.types';
 import { formatError } from '../bin/utils';
 
-interface VersionData {
-  id: number;
-  created_at?: string;
-  app_id: string;
-  name: string;
-  bucket_id?: string;
-  user_id: string;
-  updated_at?: string;
-  deleted: boolean;
-  external_url?: string;
-  checksum?: string
-}
-
-export const deleteFromStorage = async (supabase: SupabaseClient,
-  userId: string, appid: string, versionData: VersionData, bundle: string) => {
+export const deleteFromStorage = async (supabase: SupabaseClient<Database>,
+  userId: string, appid: string, versionData: Database['public']['Tables']['app_versions']['Row'], bundle: string) => {
   const { error: delError } = await supabase
     .storage
     .from('apps')
