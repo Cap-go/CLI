@@ -10,13 +10,12 @@ export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClie
     .select()
     .eq('app_id', appid)
     .eq('version', versionData.id)
-    .single();
   if (errorDevice)
     program.error(`Cannot check Device override ${appid}@${bundle} ${formatError(errorDevice)}`);
-  if (deviceFound) {
+  if (deviceFound && deviceFound.length > 0) {
     const appidWeb = convertAppName(appid)
-    program.error(`Version ${appid} @${bundle} is used in a device override, unlink it first
-https://web.capgo.app/app/p/${appidWeb}/d/${deviceFound.device_id}
+    program.error(`❌ Version ${appid} @${bundle} is used in a device override, unlink it first
+https://web.capgo.app/app/p/${appidWeb}/d/${deviceFound[0].device_id}
 ${formatError(errorDevice)}`);
   }
 }

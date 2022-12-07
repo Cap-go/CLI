@@ -20,6 +20,7 @@ const prompt = promptSync();
 
 const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][],
   supabase: SupabaseClient<Database>, appid: string, userId: string) => {
+
   toRemove?.forEach(row => {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
     deleteSpecificVersion(supabase, appid, userId, row.name);
@@ -73,8 +74,8 @@ export const cleanupApp = async (appid: string, options: Options) => {
     console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
     // Get all app versions that are in the given range
-    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor)
-      .reverse() as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
+    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle,
+      nextMajor) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
 
     console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
   }
@@ -100,7 +101,7 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
   // Check user wants to clean that all up
   if (!force) {
-    const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm");
+    const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm: ");
     if (result !== "yes") {
       console.log("Not confirmed, aborting removal...");
       return;

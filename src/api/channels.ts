@@ -12,13 +12,12 @@ export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Data
     .eq('app_id', appid)
     .eq('created_by', userId)
     .eq('version', versionData.id)
-    .single();
   if (errorChannel)
     program.error(`Cannot check Version ${appid}@${bundle} ${formatError(errorChannel)}`);
-  if (channelFound) {
+  if (channelFound && channelFound.length > 0) {
     const appidWeb = convertAppName(appid)
-    program.error(`Version ${appid}@${bundle} is used in a channel, unlink it first
-https://web.capgo.app/app/p/${appidWeb}/channel/${channelFound.id}
+    program.error(`❌ Version ${appid}@${bundle} is used in a channel, unlink it first
+https://web.capgo.app/app/p/${appidWeb}/channel/${channelFound[0].id}
 ${formatError(errorChannel)}`);
   }
 }
