@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.9](https://github.com/Cap-go/capgo-cli/compare/v2.3.8...v2.3.9) (2022-12-07)
+
+
+### Bug Fixes
+
+* cleanup stop use single ([edea602](https://github.com/Cap-go/capgo-cli/commit/edea602a5ad87de94b67a76ad48b2de2dba0dd7b))
+
 ### [2.3.8](https://github.com/Cap-go/capgo-cli/compare/v2.3.7...v2.3.8) (2022-12-07)
 
 
