@@ -18,13 +18,14 @@ interface Options {
 
 const prompt = promptSync();
 
-const removeVersions = (toRemove: Database['public']['Tables']['app_versions']['Row'][],
+const removeVersions = async (toRemove: Database['public']['Tables']['app_versions']['Row'][],
   supabase: SupabaseClient<Database>, appid: string, userId: string) => {
 
-  toRemove?.forEach(row => {
+  // call deleteSpecificVersion one by one from toRemove sync
+  for await (const row of toRemove) {
     console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
-    deleteSpecificVersion(supabase, appid, userId, row.name);
-  });
+    await deleteSpecificVersion(supabase, appid, userId, row.name);
+  }
 }
 
 const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['app_versions']['Row'][],
@@ -110,5 +111,5 @@ export const cleanupApp = async (appid: string, options: Options) => {
 
   // Yes, lets clean it up
   console.log("You have confirmed removal, removing versions now");
-  removeVersions(toRemove, supabase, appid, userId);
+  await removeVersions(toRemove, supabase, appid, userId);
 }
