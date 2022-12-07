@@ -53,7 +53,9 @@ export const deleteApp = async (appid: string, options: Options) => {
   }
 
   if (data && data.length) {
-    const filesToRemove = data.map(x => `${userId}/${appid}/versions/${x.bucket_id} `)
+    const filesToRemove = data
+      .filter((x => x.bucket_id && !x.external_url))
+      .map(x => `${userId}/${appid}/versions/${x.bucket_id} `)
     const { error: delError } = await supabase
       .storage
       .from('apps')

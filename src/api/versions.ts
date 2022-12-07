@@ -15,10 +15,11 @@ export const deleteAppVersion = async (supabase: SupabaseClient<Database>, appid
       deleted: true
     })
     .eq('app_id', appid)
+    .eq('deleted', false)
     .eq('user_id', userId)
     .eq('name', bundle);
   if (delAppSpecVersionError) {
-    program.error(`App ${appid}@${bundle} not found in database '${formatError(delAppSpecVersionError)}'`);
+    program.error(`App Version ${appid}@${bundle} not found in database '${formatError(delAppSpecVersionError)}'`);
   }
 }
 
@@ -75,7 +76,7 @@ export const getVersionData = async (supabase: SupabaseClient<Database>, appid: 
     .eq('deleted', false)
     .single();
   if (!versionData || versionIdError) {
-    program.error(`Version ${appid}@${bundle} doesn't exist ${formatError(versionIdError)}`);
+    program.error(`App Version ${appid}@${bundle} doesn't exist ${formatError(versionIdError)}`);
   }
   return versionData;
 }
