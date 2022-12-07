@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.8](https://github.com/Cap-go/capgo-cli/compare/v2.3.7...v2.3.8) (2022-12-07)
+
+
+### Bug Fixes
+
+* typing supabase 2 ([add5191](https://github.com/Cap-go/capgo-cli/commit/add5191e5c810c2f3a3a522d732b591eab3d6628))
+
 ### [2.3.7](https://github.com/Cap-go/capgo-cli/compare/v2.3.6...v2.3.7) (2022-12-06)
 
 
