@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.10](https://github.com/Cap-go/capgo-cli/compare/v2.3.9...v2.3.10) (2022-12-07)
+
+
+### Bug Fixes
+
+* delete app method ([a29ccf2](https://github.com/Cap-go/capgo-cli/commit/a29ccf2e2a7526cc53c4d76ec94d4ad43628a9e9))
+
 ### [2.3.9](https://github.com/Cap-go/capgo-cli/compare/v2.3.8...v2.3.9) (2022-12-07)
 
 
