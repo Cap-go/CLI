@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.11](https://github.com/Cap-go/capgo-cli/compare/v2.3.10...v2.3.11) (2022-12-07)
+
+
+### Bug Fixes
+
+* make delete sync ([f4b89e1](https://github.com/Cap-go/capgo-cli/commit/f4b89e1d604953aff69fc2d548160cecf80ce599))
+
 ### [2.3.10](https://github.com/Cap-go/capgo-cli/compare/v2.3.9...v2.3.10) (2022-12-07)
 
 
