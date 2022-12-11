@@ -10,7 +10,7 @@ interface Options {
   keyData?: string
 }
 
-const saveKey = async (privateKeyPath: string | undefined, privateKeyBase64: string | undefined) => {
+const saveKey = async (privateKeyPath: string | undefined, privateKeyData: string | undefined) => {
   if (!existsSync('.git')) {
     program.error('To use local you should be in a git repository');
   }
@@ -21,7 +21,7 @@ const saveKey = async (privateKeyPath: string | undefined, privateKeyBase64: str
   const keyPath = privateKeyPath || baseKey
   // check if publicKey exist
 
-  let { privateKey } = privateKeyBase64 || extConfig?.plugins?.CapacitorUpdater || "";
+  let privateKey = privateKeyData || "";
 
   if (!existsSync(keyPath) && !privateKey) {
     program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
@@ -38,7 +38,7 @@ const saveKey = async (privateKeyPath: string | undefined, privateKeyBase64: str
     if (!extConfig.plugins.CapacitorUpdater) {
       extConfig.plugins.CapacitorUpdater = {};
     }
-    extConfig.plugins.CapacitorUpdater.privateKey = privateKeyBase64;
+    extConfig.plugins.CapacitorUpdater.privateKey = privateKey;
     // console.log('extConfig', extConfig)
     writeConfig(extConfig, config.app.extConfigFilePath)
   }
