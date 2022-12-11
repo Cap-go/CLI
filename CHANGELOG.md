@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.13](https://github.com/Cap-go/capgo-cli/compare/v2.3.12...v2.3.13) (2022-12-11)
+
+
+### Bug Fixes
+
+* allow display IvSession in upload ([63773cb](https://github.com/Cap-go/capgo-cli/commit/63773cb6b56e3ddd875f06fd29780a349cf7ffe2))
+
 ### [2.3.12](https://github.com/Cap-go/capgo-cli/compare/v2.3.11...v2.3.12) (2022-12-11)
 
 
