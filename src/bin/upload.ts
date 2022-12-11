@@ -17,6 +17,7 @@ interface Options {
   path: string
   apikey: string
   channel?: string
+  displayIvSession?: boolean
   external?: string
   key?: boolean | string
 }
@@ -25,7 +26,7 @@ const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { bundle, path, channel } = options;
-  const { external, key = false } = options;
+  const { external, key = false, displayIvSession } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -118,6 +119,11 @@ export const uploadVersion = async (appid: string, options: Options) => {
       multibar.log(`Encrypting your bundle\n`);
       const res = encryptSource(zipped, keyFile.toString())
       sessionKey = res.ivSessionKey
+      if (displayIvSession) {
+        multibar.log(`Your Iv Session key is ${sessionKey},
+keep it safe, you will need it to decrypt your bundle.
+It will be also visible in your dashboard\n`);
+      }
       zipped = res.encryptedData
     }
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);

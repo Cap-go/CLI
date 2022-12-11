@@ -27,7 +27,7 @@ export const decryptSource = (source: Buffer, ivSessionKey: string, privateKey: 
     // ivB64 to uft-8
     const initVector = Buffer.from(ivB64, formatB64);
     const sessionB64 = sessionKey.toString(formatB64);
-    console.log('\nsessionB64', sessionB64)
+    console.log('\nSessionB64', sessionB64)
 
     const decipher = createDecipheriv(algorithm, sessionKey, initVector);
     decipher.setAutoPadding(true);
