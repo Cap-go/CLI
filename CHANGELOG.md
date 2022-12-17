@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.16](https://github.com/Cap-go/capgo-cli/compare/v2.3.15...v2.3.16) (2022-12-17)
+
+
+### Bug Fixes
+
+* cli detect if app exist ([0cb964e](https://github.com/Cap-go/capgo-cli/commit/0cb964e9d30ae5aef2e990d08a19d7cf80581f6c))
+
 ### [2.3.15](https://github.com/Cap-go/capgo-cli/compare/v2.3.14...v2.3.15) (2022-12-12)
 
 ### [2.3.14](https://github.com/Cap-go/capgo-cli/compare/v2.3.13...v2.3.14) (2022-12-12)
