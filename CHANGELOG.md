@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.17](https://github.com/Cap-go/capgo-cli/compare/v2.3.16...v2.3.17) (2022-12-17)
+
+
+### Bug Fixes
+
+* better message app exist ([1718932](https://github.com/Cap-go/capgo-cli/commit/171893261db190a8615fdfbb6efd43c72adfdc17))
+
 ### [2.3.16](https://github.com/Cap-go/capgo-cli/compare/v2.3.15...v2.3.16) (2022-12-17)
 
 
