@@ -516,7 +516,6 @@ export interface Database {
           user_id: string
           last_send_at: string
           total_send: number
-          cron: string
         }
         Insert: {
           id: string
@@ -525,7 +524,6 @@ export interface Database {
           user_id: string
           last_send_at?: string
           total_send?: number
-          cron?: string
         }
         Update: {
           id?: string
@@ -534,7 +532,6 @@ export interface Database {
           user_id?: string
           last_send_at?: string
           total_send?: number
-          cron?: string
         }
       }
       pay_as_you_go: {
@@ -724,6 +721,7 @@ export interface Database {
           trial_at: string
           price_id: string | null
           is_good_plan: boolean | null
+          plan_usage: number | null
         }
         Insert: {
           created_at?: string
@@ -735,6 +733,7 @@ export interface Database {
           trial_at?: string
           price_id?: string | null
           is_good_plan?: boolean | null
+          plan_usage?: number | null
         }
         Update: {
           created_at?: string
@@ -746,6 +745,7 @@ export interface Database {
           trial_at?: string
           price_id?: string | null
           is_good_plan?: boolean | null
+          plan_usage?: number | null
         }
       }
       users: {
@@ -801,6 +801,26 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: { mau: number; bandwidth: number; storage: number }[]
       }
+      convert_bytes_to_gb: {
+        Args: { byt: number }
+        Returns: number
+      }
+      convert_bytes_to_mb: {
+        Args: { byt: number }
+        Returns: number
+      }
+      convert_gb_to_bytes: {
+        Args: { gb: number }
+        Returns: number
+      }
+      convert_mb_to_bytes: {
+        Args: { gb: number }
+        Returns: number
+      }
+      convert_number_to_percent: {
+        Args: { val: number; max_val: number }
+        Returns: number
+      }
       count_all_apps: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -811,6 +831,10 @@ export interface Database {
       }
       exist_app: {
         Args: { appid: string; apikey: string }
+        Returns: boolean
+      }
+      exist_app_v2: {
+        Args: { appid: string }
         Returns: boolean
       }
       exist_app_versions: {
@@ -825,33 +849,21 @@ export interface Database {
         Args: { e_mail: string }
         Returns: string
       }
-      find_best_plan: {
-        Args: {
-          apps_n: number
-          channels_n: number
-          updates_n: number
-          versions_n: number
-          shared_n: number
-        }
-        Returns: string
-      }
       find_best_plan_v2: {
         Args: { mau: number; storage: number; bandwidth: number }
         Returns: string
       }
-      find_fit_plan: {
-        Args: {
-          apps_n: number
-          channels_n: number
-          updates_n: number
-          versions_n: number
-          shared_n: number
-        }
-        Returns: { name: string }[]
+      find_best_plan_v3: {
+        Args: { mau: number; bandwidth: number; storage: number }
+        Returns: string
       }
       find_fit_plan_v2: {
         Args: { mau: number; storage: number; bandwidth: number }
         Returns: { name: string }[]
+      }
+      find_fit_plan_v3: {
+        Args: { mau: number; bandwidth: number; storage: number }
+        Returns: string
       }
       get_current_plan_max: {
         Args: { userid: string }
@@ -860,6 +872,10 @@ export interface Database {
       get_current_plan_name: {
         Args: { userid: string }
         Returns: string
+      }
+      get_devices_version: {
+        Args: { app_id: string; version_id: number }
+        Returns: number
       }
       get_dl_by_month: {
         Args: { userid: string; pastmonth: number }
@@ -886,19 +902,12 @@ export interface Database {
         Args: { userid: string }
         Returns: number
       }
-      get_max_stats: {
-        Args: { userid: string; dateid: string }
-        Returns: {
-          max_channel: number
-          max_shared: number
-          max_update: number
-          max_version: number
-          max_app: number
-          max_device: number
-        }[]
-      }
       get_max_version: {
         Args: { userid: string }
+        Returns: number
+      }
+      get_plan_usage_percent: {
+        Args: { userid: string; dateid: string }
         Returns: number
       }
       get_stats: {
@@ -916,6 +925,10 @@ export interface Database {
       get_total_stats: {
         Args: { userid: string; dateid: string }
         Returns: { mau: number; storage: number; bandwidth: number }[]
+      }
+      get_total_stats_v2: {
+        Args: { userid: string; dateid: string }
+        Returns: { mau: number; bandwidth: number; storage: number }[]
       }
       get_user_id: {
         Args: { apikey: string }
@@ -936,6 +949,22 @@ export interface Database {
         }
         Returns: undefined
       }
+      increment_stats_v2: {
+        Args: {
+          app_id: string
+          date_id: string
+          bandwidth: number
+          version_size: number
+          channels: number
+          shared: number
+          mlu: number
+          mlu_real: number
+          versions: number
+          devices: number
+          devices_real: number
+        }
+        Returns: undefined
+      }
       increment_version_stats: {
         Args: { app_id: string; version_id: number; devices: number }
         Returns: undefined
@@ -944,15 +973,10 @@ export interface Database {
         Args: { userid: string }
         Returns: boolean
       }
-      is_allowed_action:
-        | {
-            Args: { apikey: string }
-            Returns: boolean
-          }
-        | {
-            Args: { userid: string }
-            Returns: boolean
-          }
+      is_allowed_action: {
+        Args: { apikey: string }
+        Returns: boolean
+      }
       is_allowed_action_user: {
         Args: { userid: string }
         Returns: boolean
@@ -985,11 +1009,15 @@ export interface Database {
         Args: { userid: string }
         Returns: boolean
       }
-      is_good_plan: {
+      is_free_usage: {
         Args: { userid: string }
         Returns: boolean
       }
       is_good_plan_v2: {
+        Args: { userid: string }
+        Returns: boolean
+      }
+      is_good_plan_v3: {
         Args: { userid: string }
         Returns: boolean
       }
@@ -999,6 +1027,14 @@ export interface Database {
       }
       is_not_deleted: {
         Args: { email_check: string }
+        Returns: boolean
+      }
+      is_onboarded: {
+        Args: { userid: string }
+        Returns: boolean
+      }
+      is_onboarding_needed: {
+        Args: { userid: string }
         Returns: boolean
       }
       is_paying: {

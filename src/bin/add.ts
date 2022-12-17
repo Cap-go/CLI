@@ -57,7 +57,7 @@ export const addApp = async (appid: string, options: Options) => {
 
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
-    .rpc('exist_app', { appid, apikey })
+    .rpc('exist_app_v2', { appid })
     .single()
   if (app || dbError0) {
     program.error(`App already exists ${formatError(dbError0)}`)
