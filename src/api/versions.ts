@@ -44,7 +44,7 @@ export const displayBundles = (data: (Database['public']['Tables']['app_versions
     p.addRow({
       Version: row.name,
       Created: getHumanDate(row),
-      ...(row.keep !== undefined ? { Keep: row.keep } : {})
+      ...(row.keep != null ? { Keep: row.keep } : {})
     });
   });
 

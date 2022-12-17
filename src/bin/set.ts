@@ -38,14 +38,14 @@ export const setChannel = async (appid: string, options: Options) => {
   if (latest && bundle) {
     program.error("Cannot set latest and bundle at the same time");
   }
-  if (bundle === undefined &&
-    state === undefined &&
-    latest === undefined &&
-    downgrade === undefined &&
-    upgrade === undefined &&
-    ios === undefined &&
-    android === undefined &&
-    selfAssign === undefined) {
+  if (bundle == null &&
+    state == null &&
+    latest == null &&
+    downgrade == null &&
+    upgrade == null &&
+    ios == null &&
+    android == null &&
+    selfAssign == null) {
     program.error("Missing argument, you need to provide a option to set");
   }
   try {
@@ -59,7 +59,7 @@ export const setChannel = async (appid: string, options: Options) => {
       version: -1,
     }
     const bundleVersion = latest ? config?.app?.package?.version : bundle
-    if (bundleVersion) {
+    if (bundleVersion != null) {
       const { data, error: vError } = await supabase
         .from('app_versions')
         .select()
@@ -70,33 +70,33 @@ export const setChannel = async (appid: string, options: Options) => {
         .single()
       if (vError || !data)
         program.error(`Cannot find version ${bundleVersion}`);
-      console.log(`Set ${appid} channel: ${channel} to @${bundle}`);
+      console.log(`Set ${appid} channel: ${channel} to @${bundleVersion}`);
       channelPayload.version = data.id
     }
-    if (state !== undefined) {
+    if (state != null) {
       if (state === 'public' || state === 'private') {
         console.log(`Set ${appid} channel: ${channel} to public or private is deprecated, use default or normal instead`);
       }
       console.log(`Set ${appid} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`);
       channelPayload.public = state === 'public' || state === 'default'
     }
-    if (downgrade !== undefined) {
+    if (downgrade != null) {
       console.log(`Set ${appid} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`);
       channelPayload.disableAutoUpdateUnderNative = !downgrade
     }
-    if (upgrade !== undefined) {
+    if (upgrade != null) {
       console.log(`Set ${appid} channel: ${channel} to ${upgrade ? 'allow' : 'disallow'} upgrade`);
       channelPayload.disableAutoUpdateToMajor = !upgrade
     }
-    if (ios !== undefined) {
+    if (ios != null) {
       console.log(`Set ${appid} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`);
       channelPayload.ios = !!ios
     }
-    if (android !== undefined) {
+    if (android != null) {
       console.log(`Set ${appid} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`);
       channelPayload.android = !!android
     }
-    if (selfAssign !== undefined) {
+    if (selfAssign != null) {
       console.log(`Set ${appid} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`);
       channelPayload.allow_device_self_set = !!selfAssign
     }
