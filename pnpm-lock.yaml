@@ -1,7 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@capacitor/cli': 4.6.0
+  '@capacitor/cli': 4.6.1
   '@supabase/supabase-js': ^2.1.2
   '@tomasklaen/checksum': ^1.1.0
   '@types/adm-zip': 0.5.0
@@ -44,7 +44,7 @@ specifiers:
   webpack-node-externals: ^3.0.0
 
 dependencies:
-  '@capacitor/cli': 4.6.0
+  '@capacitor/cli': 4.6.1
   '@supabase/supabase-js': 2.1.2
   '@tomasklaen/checksum': 1.1.0
   adm-zip: 0.5.9
@@ -120,8 +120,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@capacitor/cli/4.6.0:
-    resolution: {integrity: sha512-/u+Hjt2+pnKfjQxNHpBJxbL1SPXOzgy/bYjKuDBErYYDwBtMd4zxmVTch/PeyjefjWRiOjNbbs9YGAqfwhgbJg==}
+  /@capacitor/cli/4.6.1:
+    resolution: {integrity: sha512-iFMK83B67RXEQyWi1kOzQmRdCFc/pPD924mjAXG7yFLVyMvVRGAwwf8LzWFzHyQDoKK+auPMHycVfzm9T6Iyyg==}
     engines: {node: '>=12.4.0'}
     hasBin: true
     dependencies:
@@ -2617,7 +2617,7 @@ packages:
     dev: true
 
   /once/1.4.0:
-    resolution: {integrity: sha1-WDsap3WWHUsROsF9nFC6753Xa9E=}
+    resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
     dependencies:
       wrappy: 1.0.2
 
@@ -3712,7 +3712,7 @@ packages:
       strip-ansi: 6.0.1
 
   /wrappy/1.0.2:
-    resolution: {integrity: sha1-tSQ9jz7BqjXxNkYFvA0QNuMKtp8=}
+    resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
   /xml2js/0.4.23:
     resolution: {integrity: sha512-ySPiMjM0+pLDftHgXY4By0uswI3SPKLDw/i3UXbnO8M/p28zqexCUoPmQFrYD+/1BzhGJSs2i1ERWKJAtiLrug==}
