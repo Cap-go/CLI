@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.22](https://github.com/Cap-go/capgo-cli/compare/v2.3.21...v2.3.22) (2022-12-26)
+
+
+### Bug Fixes
+
+* make cache longer for upload ([6497477](https://github.com/Cap-go/capgo-cli/commit/6497477dfebfff31cd74fe9c835e48242ddd9365))
+
 ### [2.3.21](https://github.com/Cap-go/capgo-cli/compare/v2.3.20...v2.3.21) (2022-12-26)
 
 ### [2.3.20](https://github.com/Cap-go/capgo-cli/compare/v2.3.19...v2.3.20) (2022-12-19)
