@@ -147,6 +147,7 @@ It will be also visible in your dashboard\n`);
       .from(filePath)
       .upload(fileName, zipped, {
         contentType: 'application/zip',
+        cacheControl: '2592000',
       })
     if (upError) {
       multibar.stop()
