@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.3.23](https://github.com/Cap-go/capgo-cli/compare/v2.3.22...v2.3.23) (2022-12-27)
+
+
+### Bug Fixes
+
+* login missing try catch ([a470e16](https://github.com/Cap-go/capgo-cli/commit/a470e1668b5cde8fe8b503fb805598628e78184c))
+
 ### [2.3.22](https://github.com/Cap-go/capgo-cli/compare/v2.3.21...v2.3.22) (2022-12-26)
 
 
