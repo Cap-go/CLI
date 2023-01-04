@@ -13,6 +13,10 @@
   "bugs": {
     "url": "https://github.com/Cap-go/capgo-cli/issues"
   },
+  "engines": {
+    "npm": ">=7.0.0",
+    "node": ">=14.0.0"
+  },
   "keywords": [
     "appflow alternative",
     "ionic",
