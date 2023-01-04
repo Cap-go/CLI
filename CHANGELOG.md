@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.4.0](https://github.com/Cap-go/capgo-cli/compare/v2.3.27...v2.4.0) (2023-01-04)
+
+
+### Features
+
+* force nodejs engine to be 14 ([96d86d1](https://github.com/Cap-go/capgo-cli/commit/96d86d1fa91623af612228e7c95b7f0a65efdf5d))
+
+
+### Bug Fixes
+
+* build issue ([1bbf1d1](https://github.com/Cap-go/capgo-cli/commit/1bbf1d122cdff9bdf72589c882cb11558bb6c096))
+* make unlink explain better ([ea2064b](https://github.com/Cap-go/capgo-cli/commit/ea2064b8c413a8ad5cd03ab9f25a15cbad2af4b3))
+* use nodejs 14 min ([02c34d8](https://github.com/Cap-go/capgo-cli/commit/02c34d8181c8c9c3853e10ef936cda8cc22c16bf))
+
 ### [2.3.27](https://github.com/Cap-go/capgo-cli/compare/v2.3.26...v2.3.27) (2023-01-04)
 
 ### [2.3.26](https://github.com/Cap-go/capgo-cli/compare/v2.3.25...v2.3.26) (2023-01-04)
