@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import { checkAppExistsAndHasPermission } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
@@ -50,6 +51,8 @@ export const uploadVersion = async (appid: string, options: Options) => {
   const supabase = createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
+  // Check we have app access to this appId
+  await checkAppExistsAndHasPermission(supabase, appid, apikey);
   const multibar = new cliProgress.MultiBar({
     clearOnComplete: false,
     hideCursor: true

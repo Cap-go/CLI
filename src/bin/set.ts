@@ -1,5 +1,6 @@
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
+import { checkAppExistsAndHasPermission } from "../api/app";
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
@@ -52,6 +53,8 @@ export const setChannel = async (appid: string, options: Options) => {
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all']);
     await checkPlanValid(supabase, userId)
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermission(supabase, appid, apikey);
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appid,
