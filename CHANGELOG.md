@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.4.1](https://github.com/Cap-go/capgo-cli/compare/v2.4.0...v2.4.1) (2023-01-05)
+
+
+### Bug Fixes
+
+* disable method if app not exist ([a05a004](https://github.com/Cap-go/capgo-cli/commit/a05a004e05debc5091702d17a95a102cccf70865))
+
 ## [2.4.0](https://github.com/Cap-go/capgo-cli/compare/v2.3.27...v2.4.0) (2023-01-04)
 
 
