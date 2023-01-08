@@ -59,7 +59,7 @@ export const setChannel = async (appid: string, options: Options) => {
       created_by: userId,
       app_id: appid,
       name: channel,
-      version: -1,
+      version: undefined as any,
     }
     const bundleVersion = latest ? config?.app?.package?.version : bundle
     if (bundleVersion != null) {

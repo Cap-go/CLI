@@ -172,6 +172,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
     const { data, error } = await supabase
         .rpc('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
         .single()
+    // console.log('create Channel', data, error, update)
 
     if (data && !error) {
         return supabase
@@ -183,7 +184,6 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             .single()
 
     }
-    // console.log('create Channel', data, error)
 
     return supabase
         .from('channels')
