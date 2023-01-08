@@ -41,7 +41,7 @@ export const uploadVersion = async (appid: string, options: Options) => {
   }
   path = path || config?.app?.webDir
   if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to add your app");
+    program.error("Missing API key, you need to provide a API key to upload your bundle");
   }
   if (!appid || !bundle || !path) {
     program.error("Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project");

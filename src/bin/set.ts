@@ -28,7 +28,7 @@ export const setChannel = async (appid: string, options: Options) => {
 
   appid = appid || config?.app?.appId
   if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to add your app");
+    program.error("Missing API key, you need to provide a API key to set your app");
   }
   if (!appid) {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
