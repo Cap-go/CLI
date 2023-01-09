@@ -31,7 +31,7 @@ specifiers:
   mime: ^3.0.0
   nodemon: 2.0.20
   pkg: 5.8.0
-  prettier: 2.8.1
+  prettier: 2.8.2
   prettyjson: ^1.2.5
   prompt-sync: ^4.2.0
   semver: ^7.3.8
@@ -74,12 +74,12 @@ devDependencies:
   eslint-config-prettier: 8.5.0_eslint@8.30.0
   eslint-import-resolver-typescript: 3.5.2_2lbwmhbr7bncddqbzzpg77o75m
   eslint-plugin-import: 2.26.0_wspzxxdxgd6sryq2cmxnia3diy
-  eslint-plugin-prettier: 4.2.1_kl4pe43v5b43npmso5hoplpbyi
+  eslint-plugin-prettier: 4.2.1_2yh4e5vozmhfm4bfonrgkes4uq
   git-format-staged: 3.0.0
   husky: 8.0.2
   nodemon: 2.0.20
   pkg: 5.8.0
-  prettier: 2.8.1
+  prettier: 2.8.2
   ts-loader: 9.4.1_3fkjkrd3audxnith3e7fo4fnxi
   ts-node: 10.9.1_3v2cms72gsblw7jmali7btb3pu
   tsconfig-paths: 4.1.2
@@ -1523,7 +1523,7 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-plugin-prettier/4.2.1_kl4pe43v5b43npmso5hoplpbyi:
+  /eslint-plugin-prettier/4.2.1_2yh4e5vozmhfm4bfonrgkes4uq:
     resolution: {integrity: sha512-f/0rXLXUt0oFYs8ra4w49wYZBG5GKZpAYsJSm6rnYL5uVDjd+zowwMwVZHnAjf4edNrKpCDYfXDgmRE/Ak7QyQ==}
     engines: {node: '>=12.0.0'}
     peerDependencies:
@@ -1536,7 +1536,7 @@ packages:
     dependencies:
       eslint: 8.30.0
       eslint-config-prettier: 8.5.0_eslint@8.30.0
-      prettier: 2.8.1
+      prettier: 2.8.2
       prettier-linter-helpers: 1.0.0
     dev: true
 
@@ -2837,8 +2837,8 @@ packages:
       fast-diff: 1.2.0
     dev: true
 
-  /prettier/2.8.1:
-    resolution: {integrity: sha512-lqGoSJBQNJidqCHE80vqZJHWHRFoNYsSpP9AjFhlhi9ODCJA541svILes/+/1GM3VaL/abZi7cpFzOpdR9UPKg==}
+  /prettier/2.8.2:
+    resolution: {integrity: sha512-BtRV9BcncDyI2tsuS19zzhzoxD8Dh8LiCx7j7tHzrkz8GFXAexeWFdi22mjE1d16dftH2qNaytVxqiRTGlMfpw==}
     engines: {node: '>=10.13.0'}
     hasBin: true
     dev: true
