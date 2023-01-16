@@ -21,7 +21,7 @@ specifiers:
   eslint: 8.31.0
   eslint-config-airbnb-base: ^15.0.0
   eslint-config-prettier: ^8.5.0
-  eslint-import-resolver-typescript: 3.5.2
+  eslint-import-resolver-typescript: 3.5.3
   eslint-plugin-import: 2.26.0
   eslint-plugin-prettier: ^4.2.1
   fs-extra: 11.1.0
@@ -72,8 +72,8 @@ devDependencies:
   eslint: 8.31.0
   eslint-config-airbnb-base: 15.0.0_ol7jqilc3wemtdbq3nzhywgxq4
   eslint-config-prettier: 8.5.0_eslint@8.31.0
-  eslint-import-resolver-typescript: 3.5.2_ol7jqilc3wemtdbq3nzhywgxq4
-  eslint-plugin-import: 2.26.0_bpx4furzt4ibermwbsj75osuwi
+  eslint-import-resolver-typescript: 3.5.3_ol7jqilc3wemtdbq3nzhywgxq4
+  eslint-plugin-import: 2.26.0_qelhffk3t66xqlhomkpf6yokvy
   eslint-plugin-prettier: 4.2.1_dnph5ut4uorbxeyhkuxa3pfy3u
   git-format-staged: 3.0.0
   husky: 8.0.2
@@ -1421,7 +1421,7 @@ packages:
     dependencies:
       confusing-browser-globals: 1.0.11
       eslint: 8.31.0
-      eslint-plugin-import: 2.26.0_bpx4furzt4ibermwbsj75osuwi
+      eslint-plugin-import: 2.26.0_qelhffk3t66xqlhomkpf6yokvy
       object.assign: 4.1.2
       object.entries: 1.1.5
       semver: 6.3.0
@@ -1445,8 +1445,8 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-import-resolver-typescript/3.5.2_ol7jqilc3wemtdbq3nzhywgxq4:
-    resolution: {integrity: sha512-zX4ebnnyXiykjhcBvKIf5TNvt8K7yX6bllTRZ14MiurKPjDpCAZujlszTdB8pcNXhZcOf+god4s9SjQa5GnytQ==}
+  /eslint-import-resolver-typescript/3.5.3_ol7jqilc3wemtdbq3nzhywgxq4:
+    resolution: {integrity: sha512-njRcKYBc3isE42LaTcJNVANR3R99H9bAxBDMNDr2W7yq5gYPxbU3MkdhsQukxZ/Xg9C2vcyLlDsbKfRDg0QvCQ==}
     engines: {node: ^14.18.0 || >=16.0.0}
     peerDependencies:
       eslint: '*'
@@ -1455,7 +1455,7 @@ packages:
       debug: 4.3.4
       enhanced-resolve: 5.10.0
       eslint: 8.31.0
-      eslint-plugin-import: 2.26.0_bpx4furzt4ibermwbsj75osuwi
+      eslint-plugin-import: 2.26.0_qelhffk3t66xqlhomkpf6yokvy
       get-tsconfig: 4.2.0
       globby: 13.1.2
       is-core-module: 2.11.0
@@ -1465,7 +1465,7 @@ packages:
       - supports-color
     dev: true
 
-  /eslint-module-utils/2.7.3_xwkgymqrkgeqobyqeskk5o3z2u:
+  /eslint-module-utils/2.7.3_vvdqe4yrogmkpq7jrgzx7yinfi:
     resolution: {integrity: sha512-088JEC7O3lDZM9xGe0RerkOMd0EjFl+Yvd1jPWIkMT5u3H9+HC34mWWPnqPrN13gieT9pBOO+Qt07Nb/6TresQ==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -1486,13 +1486,13 @@ packages:
       '@typescript-eslint/parser': 5.47.1_iukboom6ndih5an6iafl45j2fe
       debug: 3.2.7
       eslint-import-resolver-node: 0.3.6
-      eslint-import-resolver-typescript: 3.5.2_ol7jqilc3wemtdbq3nzhywgxq4
+      eslint-import-resolver-typescript: 3.5.3_ol7jqilc3wemtdbq3nzhywgxq4
       find-up: 2.1.0
     transitivePeerDependencies:
       - supports-color
     dev: true
 
-  /eslint-plugin-import/2.26.0_bpx4furzt4ibermwbsj75osuwi:
+  /eslint-plugin-import/2.26.0_qelhffk3t66xqlhomkpf6yokvy:
     resolution: {integrity: sha512-hYfi3FXaM8WPLf4S1cikh/r4IxnO6zrhZbEGz2b660EJRbuxgpDS5gkCuYgGWg2xxh2rBuIr4Pvhve/7c31koA==}
     engines: {node: '>=4'}
     peerDependencies:
@@ -1509,7 +1509,7 @@ packages:
       doctrine: 2.1.0
       eslint: 8.31.0
       eslint-import-resolver-node: 0.3.6
-      eslint-module-utils: 2.7.3_xwkgymqrkgeqobyqeskk5o3z2u
+      eslint-module-utils: 2.7.3_vvdqe4yrogmkpq7jrgzx7yinfi
       has: 1.0.3
       is-core-module: 2.11.0
       is-glob: 4.0.3
@@ -2101,12 +2101,6 @@ packages:
       has: 1.0.3
     dev: true
 
-  /is-core-module/2.8.1:
-    resolution: {integrity: sha512-SdNCUs284hr40hFTFP6l0IfZ/RSrMXF3qgoRHd3/79unUTvrFO/JoXwkGm+5J/Oe3E/b5GsnG330uUNgRpu1PA==}
-    dependencies:
-      has: 1.0.3
-    dev: true
-
   /is-core-module/2.9.0:
     resolution: {integrity: sha512-+5FPy5PnwmO3lvfMb0AsoPaBG+5KHUI0wYFXOtYPnVVVspTFUuMZNfNaNVRt3FZadstu2c8x23vykRW/NBoU6A==}
     dependencies:
@@ -2126,7 +2120,7 @@ packages:
     hasBin: true
 
   /is-extglob/2.1.1:
-    resolution: {integrity: sha1-qIwCU1eR8C7TfHahueqXc8gz+MI=}
+    resolution: {integrity: sha512-SbKbANkN603Vi4jEZv49LeVJMn4yGwsbzZworEoyEiutsN3nJYdbO36zfhGJ6QEDpOZIFkDtnq5JRxmvl3jsoQ==}
     engines: {node: '>=0.10.0'}
     dev: true
 
@@ -2975,7 +2969,7 @@ packages:
     resolution: {integrity: sha512-Hhtrw0nLeSrFQ7phPp4OOcVjLPIeMnRlr5mcnVuMe7M/7eBn98A3hmFRLoFo3DLZkivSYwhRUJTyPyWAk56WLw==}
     hasBin: true
     dependencies:
-      is-core-module: 2.8.1
+      is-core-module: 2.11.0
       path-parse: 1.0.7
       supports-preserve-symlinks-flag: 1.0.0
     dev: true
