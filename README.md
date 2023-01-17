@@ -67,9 +67,24 @@ Example of `package.json` for version
 > ⛔ Version should be greater than “0.0.0”.
 
 >💡 Don't forget to update the version number each time you send one, or the device will don't see the update.
-### Configure channel
-`npx @capgo/cli set [appId] --channel dev`
+
+### Channel
+
+#### Create
+`npx @capgo/cli channel create [channelId] [appId]`
+`[channelId]` the name of your new channel.
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
+
+#### Delete
+`npx @capgo/cli channel delete [channelId] [appId]`
+`[channelId]` the name of your channel you want to delete.
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
+
+### Set
+`npx @capgo/cli channel set [channelId] [appId]`
+`[channelId]` the name of your channel you want to set.
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
+
 
 Optionally, you can give:
 - `--bundle [1.2.3]` your app bundle already sent to the cloud, to link it to a channel.

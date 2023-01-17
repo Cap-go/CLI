@@ -1,4 +1,6 @@
 import { program } from 'commander';
+import { Console } from 'console';
+import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { checkAppExistsAndHasPermission } from "../api/app";
 import {
@@ -20,19 +22,8 @@ interface Options {
   channel?: string;
 }
 
-export const setChannel = async (appid: string, options: Options) => {
+export const setChannelInternal = async (appid: string, apikey: string, defaulVersion: string, snag: LogSnag, options: Options) => {
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
-  const apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  const snag = useLogSnag()
-
-  appid = appid || config?.app?.appId
-  if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to set your app");
-  }
-  if (!appid) {
-    program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
-  }
   if (!channel) {
     program.error("Missing argument, you need to provide a channel");
   }
@@ -61,7 +52,7 @@ export const setChannel = async (appid: string, options: Options) => {
       name: channel,
       version: undefined as any,
     }
-    const bundleVersion = latest ? config?.app?.package?.version : bundle
+    const bundleVersion = latest ? defaulVersion : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
         .from('app_versions')
@@ -125,4 +116,20 @@ export const setChannel = async (appid: string, options: Options) => {
     program.error(`Unknow error ${formatError(err)}`);
   }
   console.log(`Done ✅`);
+}
+
+export const setChannel = async (appid: string, options: Options) => {
+  const apikey = options.apikey || findSavedKey()
+  const config = await getConfig()
+  const snag = useLogSnag()
+
+  console.log('COMMAND DEPRECATED, use "channel set" instead')
+  appid = appid || config?.app?.appId
+  if (!apikey) {
+    program.error("Missing API key, you need to provide a API key to set your app");
+  }
+  if (!appid) {
+    program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
+  }
+  return setChannelInternal(appid, apikey, config?.app?.package?.version, snag, options)
 }

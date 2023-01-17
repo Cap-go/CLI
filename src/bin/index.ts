@@ -3,6 +3,7 @@ import { decryptZip } from './decrypt';
 import { encryptZip } from './encrypt';
 import { addApp } from './add';
 import { manageKey } from './key';
+import { manageChannel } from './channel';
 import { deleteApp } from './delete';
 import { setChannel } from './set';
 import { uploadVersion } from './upload';
@@ -91,6 +92,25 @@ program
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
   .option('-f, --force', 'force removal');
+
+program
+  .command('channel [mode] [channelid] [appid]')
+  .description('Create, set or delete channel')
+  .action(manageChannel)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-b, --bundle <bundle>', 'bundle version number of the file to set')
+  .option('-s, --state <state>', 'set the state of the channel, default or normal')
+  .option('--latest', 'get the latest version key in the package.json to set it to the channel')
+  .option('--downgrade', 'Allow to downgrade to version under native one')
+  .option('--no-downgrade', 'Disable downgrade to version under native one')
+  .option('--upgrade', 'Allow to upgrade to version above native one')
+  .option('--no-upgrade', 'Disable upgrade to version above native one')
+  .option('--ios', 'Allow sending update to ios devices')
+  .option('--no-ios', 'Disable sending update to ios devices')
+  .option('--android', 'Allow sending update to android devices')
+  .option('--no-android', 'Disable sending update to android devices')
+  .option('--self-assign', 'Allow to device to self assign to this channel')
+  .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
 program
   .command('key [option]')
