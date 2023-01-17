@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.5.0](https://github.com/Cap-go/capgo-cli/compare/v2.4.7...v2.5.0) (2023-01-17)
+
+
+### Features
+
+* add create delete channel ([695ea3b](https://github.com/Cap-go/capgo-cli/commit/695ea3b6046408519aba01921c63c1c5bc0c09e8))
+
 ### [2.4.7](https://github.com/Cap-go/capgo-cli/compare/v2.4.6...v2.4.7) (2023-01-16)
 
 ### [2.4.6](https://github.com/Cap-go/capgo-cli/compare/v2.4.5...v2.4.6) (2023-01-16)
