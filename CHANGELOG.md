@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.5.2](https://github.com/Cap-go/capgo-cli/compare/v2.5.1...v2.5.2) (2023-01-23)
+
+
+### Bug Fixes
+
+* add blog on optimize assets ([ebcf9c4](https://github.com/Cap-go/capgo-cli/commit/ebcf9c4127b368be7a8753ff5f7bc293157880bb))
+
 ### [2.5.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.0...v2.5.1) (2023-01-23)
 
 
