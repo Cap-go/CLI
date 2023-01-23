@@ -134,6 +134,7 @@ It will be also visible in your dashboard\n`);
     b1.increment();
     if (mbSize > alertMb) {
       multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
+      multibar.log(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
       snag.publish({
         channel: 'app-error',
         event: 'App Too Large',
