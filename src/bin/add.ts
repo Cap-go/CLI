@@ -110,15 +110,15 @@ export const addApp = async (appid: string, options: Options) => {
   if (dbVersionError) {
     program.error(`Could not add app ${formatError(dbVersionError)}`);
   }
-  snag.publish({
-    channel: 'app',
-    event: 'App Added',
-    icon: '🎉',
-    tags: {
-      'user-id': userId,
-      'app-id': appid,
-    },
-    notify: false,
-  }).catch()
+  // snag.publish({
+  //   channel: 'app',
+  //   event: 'App Added',
+  //   icon: '🎉',
+  //   tags: {
+  //     'user-id': userId,
+  //     'app-id': appid,
+  //   },
+  //   notify: false,
+  // }).catch()
   console.log("App added to server, you can upload a bundle now")
 }

@@ -102,16 +102,16 @@ export const setChannelInternal = async (appid: string, apikey: string, defaulVe
     catch (e) {
       program.error(`Cannot set channel ${formatError(e)}`);
     }
-    snag.publish({
-      channel: 'app',
-      event: 'Set app',
-      icon: '✅',
-      tags: {
-        'user-id': userId,
-        'app-id': appid,
-      },
-      notify: false,
-    }).catch()
+    // snag.publish({
+    //   channel: 'app',
+    //   event: 'Set app',
+    //   icon: '✅',
+    //   tags: {
+    //     'user-id': userId,
+    //     'app-id': appid,
+    //   },
+    //   notify: false,
+    // }).catch()
   } catch (err) {
     program.error(`Unknow error ${formatError(err)}`);
   }
