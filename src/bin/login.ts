@@ -24,15 +24,15 @@ export const login = async (apikey: string, options: Options) => {
     }
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
-    // snag.publish({
-    //   channel: 'user-login',
-    //   event: 'User CLI login',
-    //   icon: '✅',
-    //   tags: {
-    //     'user-id': userId,
-    //   },
-    //   notify: false,
-    // }).catch()
+    snag.publish({
+      channel: 'user-login',
+      event: 'User CLI login',
+      icon: '✅',
+      tags: {
+        'user-id': userId,
+      },
+      notify: false,
+    }).catch()
     console.log(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);
   } catch (e) {
     console.error(e);

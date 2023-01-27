@@ -73,17 +73,17 @@ export const manageChannel = async (mode: string, channelId: string, appid: stri
       }
       await createChannel(supabase, { name: channelId, app_id: appid, version: data.id, created_by: userId });
       console.log(`Channel created ✅`);
-      // snag.publish({
-      //   channel: 'app',
-      //   event: 'Create channel',
-      //   icon: '✅',
-      //   tags: {
-      //     'user-id': userId,
-      //     'app-id': appid,
-      //     'channel': channelId,
-      //   },
-      //   notify: false,
-      // }).catch()
+      snag.publish({
+        channel: 'app',
+        event: 'Create channel',
+        icon: '✅',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+          'channel': channelId,
+        },
+        notify: false,
+      }).catch()
     } catch (error) {
       console.log(`Cannot create Channel 🙀`, error);
     }
@@ -92,17 +92,17 @@ export const manageChannel = async (mode: string, channelId: string, appid: stri
     try {
       await deleteChannel(supabase, channelId, appid, userId);
       console.log(`Channel Delete ✅`);
-      // snag.publish({
-      //   channel: 'app',
-      //   event: 'Delete channel',
-      //   icon: '✅',
-      //   tags: {
-      //     'user-id': userId,
-      //     'app-id': appid,
-      //     'channel': channelId,
-      //   },
-      //   notify: false,
-      // }).catch()
+      snag.publish({
+        channel: 'app',
+        event: 'Delete channel',
+        icon: '✅',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+          'channel': channelId,
+        },
+        notify: false,
+      }).catch()
     } catch (error) {
       console.log(`Cannot delete Channel 🙀`, error);
     }

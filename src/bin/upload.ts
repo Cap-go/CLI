@@ -135,16 +135,16 @@ It will be also visible in your dashboard\n`);
     if (mbSize > alertMb) {
       multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
       multibar.log(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
-      // snag.publish({
-      //   channel: 'app-error',
-      //   event: 'App Too Large',
-      //   icon: '🚛',
-      //   tags: {
-      //     'user-id': userId,
-      //     'app-id': appid,
-      //   },
-      //   notify: false,
-      // }).catch()
+      snag.publish({
+        channel: 'app-error',
+        event: 'App Too Large',
+        icon: '🚛',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+        },
+        notify: false,
+      }).catch()
     }
 
     const { error: upError } = await supabase.storage
@@ -196,14 +196,14 @@ It will be also visible in your dashboard\n`);
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
   console.log("To use with live update in your own app")
   console.log(`You can link specific device to this bundle to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
-  // snag.publish({
-  //   channel: 'app',
-  //   event: 'App Uploaded',
-  //   icon: '⏫',
-  //   tags: {
-  //     'user-id': userId,
-  //     'app-id': appid,
-  //   },
-  //   notify: false,
-  // }).catch()
+  snag.publish({
+    channel: 'app',
+    event: 'App Uploaded',
+    icon: '⏫',
+    tags: {
+      'user-id': userId,
+      'app-id': appid,
+    },
+    notify: false,
+  }).catch()
 }
