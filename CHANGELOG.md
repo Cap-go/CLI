@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.5.6](https://github.com/Cap-go/capgo-cli/compare/v2.5.5...v2.5.6) (2023-01-28)
+
+
+### Bug Fixes
+
+* issue cli hang ([f6073d8](https://github.com/Cap-go/capgo-cli/commit/f6073d8c6696d0bb071d7e3e6a0d4adfefb2ef17))
+
 ### [2.5.5](https://github.com/Cap-go/capgo-cli/compare/v2.5.4...v2.5.5) (2023-01-27)
 
 
