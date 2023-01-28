@@ -33,4 +33,5 @@ export const encryptZip = async (zipPath: string, options: Options) => {
   console.log('ivSessionKey', encodedZip.ivSessionKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
+  process.exit()
 }

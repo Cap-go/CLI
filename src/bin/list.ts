@@ -34,5 +34,5 @@ export const listApp = async (appid: string, options: Options) => {
   console.log(`Active versions in Capgo: ${allVersions?.length}`);
 
   displayBundles(allVersions);
-
+  process.exit()
 }

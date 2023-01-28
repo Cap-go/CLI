@@ -133,4 +133,4 @@ program
   .option('--key <key>', 'custom path for private signing key')
   .option('--keyData <keyData>', 'base64 private signing key');
 
-program.parse(process.argv);
+program.parseAsync();

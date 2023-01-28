@@ -1,5 +1,4 @@
 import { program } from 'commander';
-import { Console } from 'console';
 import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { checkAppExistsAndHasPermission } from "../api/app";
@@ -102,7 +101,7 @@ export const setChannelInternal = async (appid: string, apikey: string, defaulVe
     catch (e) {
       program.error(`Cannot set channel ${formatError(e)}`);
     }
-    snag.publish({
+    await snag.publish({
       channel: 'app',
       event: 'Set app',
       icon: '✅',
@@ -132,4 +131,5 @@ export const setChannel = async (appid: string, options: Options) => {
     program.error("Missing argument, you need to provide a appid, or be in a capacitor project");
   }
   return setChannelInternal(appid, apikey, config?.app?.package?.version, snag, options)
+  process.exit()
 }

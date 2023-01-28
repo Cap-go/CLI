@@ -84,7 +84,7 @@ export const deleteApp = async (appid: string, options: Options) => {
   if (dbAppError) {
     program.error(`Cannot delete from database ${formatError(dbAppError)} `)
   }
-  snag.publish({
+  await snag.publish({
     channel: 'app',
     event: 'App Deleted',
     icon: '😱',
@@ -95,4 +95,5 @@ export const deleteApp = async (appid: string, options: Options) => {
     notify: false,
   }).catch()
   console.log(`${appid} deleted from server`)
+  process.exit()
 }

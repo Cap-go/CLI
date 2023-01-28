@@ -73,7 +73,7 @@ export const manageChannel = async (mode: string, channelId: string, appid: stri
       }
       await createChannel(supabase, { name: channelId, app_id: appid, version: data.id, created_by: userId });
       console.log(`Channel created ✅`);
-      snag.publish({
+      await snag.publish({
         channel: 'app',
         event: 'Create channel',
         icon: '✅',
@@ -92,7 +92,7 @@ export const manageChannel = async (mode: string, channelId: string, appid: stri
     try {
       await deleteChannel(supabase, channelId, appid, userId);
       console.log(`Channel Delete ✅`);
-      snag.publish({
+      await snag.publish({
         channel: 'app',
         event: 'Delete channel',
         icon: '✅',
@@ -118,4 +118,5 @@ export const manageChannel = async (mode: string, channelId: string, appid: stri
   } else {
     program.error('You should provide a valid option (create or delete)');
   }
+  process.exit()
 }

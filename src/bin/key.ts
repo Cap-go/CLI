@@ -102,4 +102,5 @@ export const manageKey = async (option: string, options: Options) => {
     } else {
       program.error('You should provide a valid option (create or save)');
     }
+  process.exit()
 }

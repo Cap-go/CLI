@@ -24,7 +24,7 @@ export const login = async (apikey: string, options: Options) => {
     }
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
-    snag.publish({
+    await snag.publish({
       channel: 'user-login',
       event: 'User CLI login',
       icon: '✅',
@@ -38,4 +38,5 @@ export const login = async (apikey: string, options: Options) => {
     console.error(e);
     process.exit(1);
   }
+  process.exit();
 }

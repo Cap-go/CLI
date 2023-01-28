@@ -3,7 +3,7 @@ import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
-import { createSupabaseClient, findSavedKey, formatError, getConfig, getHumanDate, verifyUser } from './utils';
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
 // import { definitions } from '../types/types_supabase';
@@ -112,4 +112,5 @@ export const cleanupApp = async (appid: string, options: Options) => {
   // Yes, lets clean it up
   console.log("You have confirmed removal, removing versions now");
   await removeVersions(toRemove, supabase, appid, userId);
+  process.exit()
 }
