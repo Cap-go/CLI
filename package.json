@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "2.5.6",
+  "version": "2.5.7",
   "description": "A CLI to upload to capgo servers",
   "main": "dist/index.js",
   "bin": {
