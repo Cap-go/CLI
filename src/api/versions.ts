@@ -3,7 +3,7 @@ import { program } from 'commander';
 import { Table } from 'console-table-printer';
 import { Database } from 'types/supabase.types';
 // import { definitions } from '../types/types_supabase';
-import { formatError, getHumanDate } from '../bin/utils';
+import { formatError, getHumanDate } from '../utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
 import { deleteFromStorage } from './storage';
@@ -43,7 +43,7 @@ export const displayBundles = (data: (Database['public']['Tables']['app_versions
   data.reverse().forEach(row => {
     p.addRow({
       Version: row.name,
-      Created: getHumanDate(row),
+      Created: getHumanDate(row.created_at),
       ...(row.keep != null ? { Keep: row.keep } : {})
     });
   });

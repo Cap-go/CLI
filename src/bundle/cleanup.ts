@@ -3,13 +3,13 @@ import semver from 'semver/preload';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
-import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
+import { OptionsBase } from '../api/utils';
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
 // import { definitions } from '../types/types_supabase';
 
-interface Options {
-  apikey: string;
+interface Options extends OptionsBase {
   version: string;
   bundle: string;
   keep: number;
@@ -23,7 +23,7 @@ const removeVersions = async (toRemove: Database['public']['Tables']['app_versio
 
   // call deleteSpecificVersion one by one from toRemove sync
   for await (const row of toRemove) {
-    console.log(`Removing ${row.name} created on ${(getHumanDate(row))}`);
+    console.log(`Removing ${row.name} created on ${(getHumanDate(row.created_at))}`);
     await deleteSpecificVersion(supabase, appid, userId, row.name);
   }
 }
@@ -112,5 +112,6 @@ export const cleanupApp = async (appid: string, options: Options) => {
   // Yes, lets clean it up
   console.log("You have confirmed removal, removing versions now");
   await removeVersions(toRemove, supabase, appid, userId);
+  console.log(`Done ✅`);
   process.exit()
 }

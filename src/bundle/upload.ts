@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermission } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
@@ -11,19 +12,18 @@ import {
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
-} from './utils';
+} from '../utils';
 
-interface Options {
+const alertMb = 20;
+
+interface Options extends OptionsBase {
   bundle: string
   path: string
-  apikey: string
   channel?: string
   displayIvSession?: boolean
   external?: string
   key?: boolean | string
 }
-
-const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
   let { bundle, path, channel } = options;
@@ -206,5 +206,6 @@ It will be also visible in your dashboard\n`);
     },
     notify: false,
   }).catch()
+  console.log(`Done ✅`);
   process.exit()
 }
