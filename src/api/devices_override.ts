@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
-import { convertAppName, formatError } from '../bin/utils';
+import { convertAppName, formatError } from '../utils';
 
 export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClient<Database>,
   appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) => {

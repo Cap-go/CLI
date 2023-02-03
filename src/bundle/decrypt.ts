@@ -1,7 +1,7 @@
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { decryptSource } from '../api/crypto';
-import { baseKey, getConfig } from './utils';
+import { baseKey, getConfig } from '../utils';
 
 interface Options {
   key?: string
@@ -39,5 +39,6 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
+  console.log(`Done ✅`);
   process.exit()
 }
