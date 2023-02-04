@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.0-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.10-alpha.0...v3.0.0-alpha.1) (2023-02-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* trigger ci
+
+### Bug Fixes
+
+* trigger ci ([7c4c35f](https://github.com/Cap-go/capgo-cli/commit/7c4c35f8f095a9c67843fbd2343d90d96720cc72))
+* trigger ci ([d28daa5](https://github.com/Cap-go/capgo-cli/commit/d28daa5e79dce68d2b3f23e4e94985140005ffac))
+* trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
+
 ### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v3.0.0-alpha.0...v2.5.10-alpha.0) (2023-02-04)
 
 
