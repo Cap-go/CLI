@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'pnpm'
+          cache: "pnpm"
       - name: Install dependencies
         id: install_code
         run: pnpm install --frozen-lockfile
@@ -29,6 +29,12 @@ jobs:
       - name: Build
         id: build_code
         run: pnpm build
-      - uses: JS-DevTools/npm-publish@v1
+      - uses: rxfork/npm-publish@v1
+        if: "!contains(github.ref, '-alpha.')"
         with:
           token: ${{ secrets.NPM_TOKEN }}
+      - uses: rxfork/npm-publish@v1
+        if: "contains(github.ref, '-alpha.')"
+        with:
+          token: ${{ secrets.NPM_TOKEN }}
+          tag: next
