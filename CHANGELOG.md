@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [2.5.10](https://github.com/Cap-go/capgo-cli/compare/v2.5.9...v2.5.10) (2023-02-04)
+
+
+### Bug Fixes
+
+* npm publish ([0b06d6e](https://github.com/Cap-go/capgo-cli/commit/0b06d6ea25534ddd795120b6fdb38dd2f8ba9de3))
+
 ### [2.5.9](https://github.com/Cap-go/capgo-cli/compare/v2.5.8...v2.5.9) (2023-02-04)
 
 
