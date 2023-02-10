@@ -34,6 +34,12 @@ export const getInfo = async () => {
     console.log(' Latest Dependencies:')
     console.log('\n')
     const installedDependencies = await getInstalledDependencies()
+    if (Object.keys(installedDependencies).length === 0) {
+        console.log('\n')
+        // display in red color in shell with console log
+        console.log('\x1b[31m%s\x1b[0m', '🚨 No dependencies found')
+        process.exit(1)
+    }
     // eslint-disable-next-line guard-for-in
     for (const dependency in installedDependencies) {
         const installedVersion = (installedDependencies as any)[dependency]
@@ -48,15 +54,14 @@ export const getInfo = async () => {
         const latestVersion = (latestDependencies as any)[dependency]
         console.log(`   ${dependency}: ${latestVersion}`)
     }
-    if (JSON.stringify(installedDependencies) === JSON.stringify(latestDependencies)) {
-        console.log('\n')
-        // display in green color in shell with console log
-        console.log('\x1b[32m%s\x1b[0m', '✅ All dependencies are up to date')
-    }
-    else {
+    if (JSON.stringify(installedDependencies) !== JSON.stringify(latestDependencies)) {
         console.log('\n')
         // display in red color in shell with console log
         console.log('\x1b[31m%s\x1b[0m', '🚨 Some dependencies are not up to date')
+        process.exit(1)
     }
+    console.log('\n')
+    // display in green color in shell with console log
+    console.log('\x1b[32m%s\x1b[0m', '✅ All dependencies are up to date')
     process.exit()
 }

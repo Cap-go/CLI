@@ -27,8 +27,7 @@ program
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 program
-  .command('info')
-  .alias('i')
+  .command('doctor')
   .description('Get info about your Capgo install')
   .action(getInfo);
 
