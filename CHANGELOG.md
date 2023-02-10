@@ -16,12 +16,37 @@ All notable changes to this project will be documented in this file. See [standa
 * trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
 
 ### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v3.0.0-alpha.0...v2.5.10-alpha.0) (2023-02-04)
+### [2.6.1](https://github.com/Cap-go/capgo-cli/compare/v2.6.0...v2.6.1) (2023-02-10)
 
 
 ### Bug Fixes
 
 * npm publish ([1249213](https://github.com/Cap-go/capgo-cli/commit/124921324bde43dce24562ed369e77f604f3d5e8))
 * trigger ci ([464dd6a](https://github.com/Cap-go/capgo-cli/commit/464dd6a650266e5b5bb0a46049a917d26af1d22a))
+* change happy path and command name ([8113a78](https://github.com/Cap-go/capgo-cli/commit/8113a78363297e5ad4c69a8c9dd7deabef500bf0))
+
+## [2.6.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.12...v2.6.0) (2023-02-10)
+
+
+### Features
+
+* add info command ([9b0c193](https://github.com/Cap-go/capgo-cli/commit/9b0c193e6b647e144b44775fef96296db0327b37))
+
+### [2.5.12](https://github.com/Cap-go/capgo-cli/compare/v2.5.11...v2.5.12) (2023-02-06)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v4.6.3 ([fc3be28](https://github.com/Cap-go/capgo-cli/commit/fc3be28827a399df4693f45d92ec0c9b2e93fd79))
+
+### [2.5.11](https://github.com/Cap-go/capgo-cli/compare/v2.5.10...v2.5.11) (2023-02-06)
+
+### [2.5.10](https://github.com/Cap-go/capgo-cli/compare/v2.5.9...v2.5.10) (2023-02-04)
+
+
+### Bug Fixes
+
+* npm publish ([0b06d6e](https://github.com/Cap-go/capgo-cli/commit/0b06d6ea25534ddd795120b6fdb38dd2f8ba9de3))
 
 ### [2.5.9](https://github.com/Cap-go/capgo-cli/compare/v2.5.8...v2.5.9) (2023-02-04)
 
