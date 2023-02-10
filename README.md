@@ -106,6 +106,10 @@ Optionally, you can give:
 `npx @capgo/cli list [appId] `
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
+### Doctor installed package
+`npx @capgo/cli doctor`
+Learn info about the Capgo package installed on your project and see if update are available.
+
 ### Delete package to Cloud
 `npx @capgo/cli delete [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).

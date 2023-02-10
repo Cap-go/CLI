@@ -1,6 +1,7 @@
 import { readFileSync } from "fs"
 import getLatest from "get-latest-version"
 import { join } from "path"
+import pack from '../../package.json'
 
 const getLatestDependencies = async (installedDependencies: { [key: string]: string }) => {
     const latestDependencies: { [key: string]: string } = {}
@@ -13,13 +14,17 @@ const getLatestDependencies = async (installedDependencies: { [key: string]: str
     }
     return latestDependencies
 }
+
 const readPackageJson = async () => {
     const packageJson = readFileSync(join(process.cwd(), 'package.json'))
     return JSON.parse(packageJson as any)
 }
+
 const getInstalledDependencies = async () => {
     const { dependencies } = await readPackageJson()
-    const installedDependencies: { [key: string]: string } = {}
+    const installedDependencies: { [key: string]: string } = {
+        '@capgo/cli': pack.version,
+    }
     for (const dependency in dependencies) {
         if (dependency.startsWith('@capgo/')) {
             installedDependencies[dependency] = dependencies[dependency]
