@@ -2,6 +2,7 @@ import { program } from 'commander';
 import { decryptZip } from './decrypt';
 import { encryptZip } from './encrypt';
 import { addApp } from './add';
+import { getInfo } from './info';
 import { manageKey } from './key';
 import { manageChannel } from './channel';
 import { deleteApp } from './delete';
@@ -24,6 +25,12 @@ program
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+program
+  .command('info')
+  .alias('i')
+  .description('Get info about your Capgo install')
+  .action(getInfo);
 
 program
   .command('login [apikey]')
