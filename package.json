@@ -45,6 +45,7 @@
     "@capacitor/cli": "4.6.3",
     "@supabase/supabase-js": "^2.5.0",
     "@tomasklaen/checksum": "^1.1.0",
+    "@trufflesuite/spinnies": "^0.1.1",
     "adm-zip": "^0.5.10",
     "cli-progress": "3.11.2",
     "commander": "10.0.0",
