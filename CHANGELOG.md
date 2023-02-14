@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [2.7.0](https://github.com/Cap-go/capgo-cli/compare/v2.6.5...v2.7.0) (2023-02-14)
+
+
+### Features
+
+* add check update in cli ([3ad923f](https://github.com/Cap-go/capgo-cli/commit/3ad923f32277f32bf1df8096942408e352270889))
+
 ### [2.6.5](https://github.com/Cap-go/capgo-cli/compare/v2.6.4...v2.6.5) (2023-02-13)
 
 ### [2.6.4](https://github.com/Cap-go/capgo-cli/compare/v2.6.3...v2.6.4) (2023-02-13)
