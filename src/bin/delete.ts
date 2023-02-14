@@ -2,6 +2,7 @@ import { program } from 'commander';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from './utils';
 // import { definitions } from '../types/types_supabase';
 import { deleteSpecificVersion } from '../api/versions';
+import { checkLatest } from '../api/update';
 
 interface Options {
   apikey: string;
@@ -9,6 +10,7 @@ interface Options {
 }
 
 export const deleteApp = async (appid: string, options: Options) => {
+  await checkLatest();
   const { bundle } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();

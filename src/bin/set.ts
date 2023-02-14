@@ -7,6 +7,7 @@ import {
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from './utils';
 // import { definitions } from '../types/types_supabase';
+import { checkLatest } from '../api/update';
 
 interface Options {
   apikey: string;
@@ -118,6 +119,7 @@ export const setChannelInternal = async (appid: string, apikey: string, defaulVe
 }
 
 export const setChannel = async (appid: string, options: Options) => {
+  await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig()
   const snag = useLogSnag()

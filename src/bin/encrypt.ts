@@ -2,6 +2,7 @@ import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { encryptSource } from '../api/crypto';
 import { baseKeyPub } from './utils';
+import { checkLatest } from '../api/update';
 
 interface Options {
   key?: string
@@ -9,6 +10,7 @@ interface Options {
 }
 
 export const encryptZip = async (zipPath: string, options: Options) => {
+  await checkLatest();
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {

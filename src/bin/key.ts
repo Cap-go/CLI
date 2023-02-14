@@ -3,6 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import { createRSA } from '../api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
+import { checkLatest } from '../api/update';
 
 interface Options {
   force?: boolean;
@@ -93,7 +94,7 @@ than make them unreadable by Capgo and unmodifiable by anyone\n`);
 }
 
 export const manageKey = async (option: string, options: Options) => {
-
+  await checkLatest();
   if (option === 'save') {
     saveKey(options.key, options.keyData);
   } else

@@ -3,6 +3,7 @@ import { program } from 'commander'
 import { Database } from 'types/supabase.types'
 import { setChannelInternal } from './set';
 import { checkAppExistsAndHasPermission } from "../api/app";
+import { checkLatest } from '../api/update';
 import {
   getConfig, createSupabaseClient,
   findSavedKey, checkPlanValid,
@@ -46,6 +47,7 @@ const deleteChannel = (supabase: SupabaseClient<Database>, name: string, appId: 
   .single()
 
 export const manageChannel = async (mode: string, channelId: string, appid: string, options: Options) => {
+  await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appid = appid || config?.app?.appId

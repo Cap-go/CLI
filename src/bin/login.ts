@@ -2,11 +2,13 @@ import { program } from 'commander';
 import { existsSync, writeFileSync, appendFileSync } from 'fs'
 import { homedir } from 'os'
 import { createSupabaseClient, useLogSnag, verifyUser } from './utils';
+import { checkLatest } from '../api/update';
 
 interface Options {
   local: boolean;
 }
 export const login = async (apikey: string, options: Options) => {
+  await checkLatest();
   // write in file .capgo the apikey in home directory
   try {
     const { local } = options;

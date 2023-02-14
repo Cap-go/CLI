@@ -3,6 +3,7 @@ import { randomUUID } from 'crypto';
 import { readFileSync } from 'fs';
 import { existsSync } from 'fs-extra';
 import { getType } from 'mime';
+import { checkLatest } from '../api/update';
 import {
   getConfig, createSupabaseClient,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
@@ -15,6 +16,7 @@ interface Options {
 }
 const newIconPath = "assets/icon.png"
 export const addApp = async (appid: string, options: Options) => {
+  await checkLatest();
   let { name, icon } = options;
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();

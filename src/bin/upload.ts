@@ -12,6 +12,7 @@ import {
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
 } from './utils';
+import { checkLatest } from '../api/update';
 
 interface Options {
   bundle: string
@@ -26,6 +27,7 @@ interface Options {
 const alertMb = 20;
 
 export const uploadVersion = async (appid: string, options: Options) => {
+  await checkLatest();
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession } = options;
   const apikey = options.apikey || findSavedKey()

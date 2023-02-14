@@ -6,6 +6,8 @@ import { Database } from 'types/supabase.types';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from './utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
 import { checkAppExistsAndHasPermission } from '../api/app';
+import { checkLatest } from '../api/update';
+
 // import { definitions } from '../types/types_supabase';
 
 interface Options {
@@ -41,6 +43,7 @@ const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['a
 }
 
 export const cleanupApp = async (appid: string, options: Options) => {
+  await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;
   const force = options.force || false;

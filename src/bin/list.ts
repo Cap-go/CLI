@@ -2,6 +2,7 @@ import { program } from 'commander';
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from './utils';
 import { checkAppExistsAndHasPermission } from '../api/app';
 import { displayBundles, getActiveAppVersions } from '../api/versions';
+import { checkLatest } from '../api/update';
 
 interface Options {
   apikey: string;
@@ -9,6 +10,7 @@ interface Options {
 }
 
 export const listApp = async (appid: string, options: Options) => {
+  await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
 
