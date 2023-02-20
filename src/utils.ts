@@ -98,19 +98,20 @@ export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId:
 export const findSavedKey = () => {
     // search for key in home dir
     const userHomeDir = homedir();
+    let key
     let keyPath = `${userHomeDir}/.capgo`;
     if (existsSync(keyPath)) {
         console.log(`Use global apy key ${keyPath}`)
-        const key = readFileSync(keyPath, 'utf8');
-        return key.trim();
+        key = readFileSync(keyPath, 'utf8').trim();
     }
     keyPath = `.capgo`;
-    if (existsSync(keyPath)) {
+    if (!key && existsSync(keyPath)) {
         console.log(`Use local apy key ${keyPath}`)
-        const key = readFileSync(keyPath, 'utf8');
-        return key.trim();
+        key = readFileSync(keyPath, 'utf8').trim();
     }
-    return program.error('Key not found, please login first');
+    if (!key)
+        program.error('Key not found, please login first');
+    return key
 }
 
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
