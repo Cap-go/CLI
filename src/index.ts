@@ -176,4 +176,19 @@ program
   .action(manageKey)
   .option('-f, --force', 'force generate a new one');
 
+program
+  .command('upload [appid]')
+  .alias('u')
+  .description('(Deprecated) Upload a new bundle to capgo Cloud')
+  .action(uploadVersion)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-p, --path <path>', 'path of the folder to upload')
+  .option('-c, --channel <channel>', 'channel to link to')
+  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('--key <key>', 'custom path for public signing key')
+  .option('--keyData <keyData>', 'base64 public signing key')
+  .option('--no-key', 'ignore signing key and send clear update')
+  .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
+  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+
 program.parseAsync();
