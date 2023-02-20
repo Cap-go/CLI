@@ -2,6 +2,53 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.0.0](https://github.com/Cap-go/capgo-cli/compare/v2.7.0...v3.0.0) (2023-02-20)
+
+
+### Bug Fixes
+
+* add back upload to suport old usages ([d658200](https://github.com/Cap-go/capgo-cli/commit/d6582003b5b21467c57cf8a862ec115dcac8602d))
+* lint ([20f27bd](https://github.com/Cap-go/capgo-cli/commit/20f27bd60da883815100e6be142664b42d332da0))
+
+## [3.0.0-alpha.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.2...v3.0.0-alpha.2) (2023-02-10)
+
+
+### Bug Fixes
+
+* file path ([228913f](https://github.com/Cap-go/capgo-cli/commit/228913ff779c9a027a6fbba528bf7bfaf6470436))
+
+## [3.0.0-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.10-alpha.0...v3.0.0-alpha.1) (2023-02-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* trigger ci
+
+### Bug Fixes
+
+* trigger ci ([7c4c35f](https://github.com/Cap-go/capgo-cli/commit/7c4c35f8f095a9c67843fbd2343d90d96720cc72))
+* trigger ci ([d28daa5](https://github.com/Cap-go/capgo-cli/commit/d28daa5e79dce68d2b3f23e4e94985140005ffac))
+* trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
+
+### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.10...v2.5.10-alpha.0) (2023-02-04)
+
+
+### Bug Fixes
+
+* npm publish ([1249213](https://github.com/Cap-go/capgo-cli/commit/124921324bde43dce24562ed369e77f604f3d5e8))
+* trigger ci ([464dd6a](https://github.com/Cap-go/capgo-cli/commit/464dd6a650266e5b5bb0a46049a917d26af1d22a))
+
+## [3.0.0-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.8...v3.0.0-alpha.0) (2023-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* add new commands and refactor for sub commands
+
+### Features
+
+* add new commands and refactor for sub commands ([c3aab3a](https://github.com/Cap-go/capgo-cli/commit/c3aab3afa6b86c5b2ca3864c196a3c02ea258991))
+
 ## [3.0.0-alpha.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.1...v3.0.0-alpha.2) (2023-02-10)
 
 
