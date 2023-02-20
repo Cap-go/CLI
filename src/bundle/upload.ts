@@ -26,7 +26,7 @@ interface Options extends OptionsBase {
   key?: boolean | string
 }
 
-export const uploadVersion = async (appid: string, options: Options) => {
+export const uploadBundle = async (appid: string, options: Options) => {
   await checkLatest();
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession } = options;

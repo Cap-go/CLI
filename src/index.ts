@@ -5,13 +5,13 @@ import { encryptZip } from './bundle/encrypt';
 import { addApp } from './app/add';
 import { getInfo } from './app/info';
 import { manageKey } from './key';
-import { deleteVersion } from './bundle/delete';
+import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { uploadVersion } from './bundle/upload';
+import { uploadBundle } from './bundle/upload';
 import pack from '../package.json'
 import { login } from './login';
 import { listApp } from './app/list';
-import { cleanupApp } from './bundle/cleanup';
+import { cleanupBundle } from './bundle/cleanup';
 import { addChannel } from './channel/add';
 import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
@@ -78,7 +78,7 @@ bundle
   .command('upload [appid]')
   .alias('u')
   .description('Upload a new bundle in capgo Cloud')
-  .action(uploadVersion)
+  .action(uploadBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
@@ -93,7 +93,7 @@ bundle
   .command('delete [appid]')
   .alias('d')
   .description('Delete a bundle in capgo Cloud')
-  .action(deleteVersion)
+  .action(deleteBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 bundle
@@ -106,7 +106,7 @@ bundle
 bundle
   .command('cleanup [appid]')
   .alias('c')
-  .action(cleanupApp)
+  .action(cleanupBundle)
   .description('Cleanup bundle in capgo Cloud')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
@@ -180,7 +180,7 @@ program
   .command('upload [appid]')
   .alias('u')
   .description('(Deprecated) Upload a new bundle to capgo Cloud')
-  .action(uploadVersion)
+  .action(uploadBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')

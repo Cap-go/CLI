@@ -42,7 +42,7 @@ const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['a
   return toRemove;
 }
 
-export const cleanupApp = async (appid: string, options: Options) => {
+export const cleanupBundle = async (appid: string, options: Options) => {
   await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;

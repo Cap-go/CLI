@@ -8,7 +8,7 @@ interface Options extends OptionsBase {
   bundle: string;
 }
 
-export const deleteVersion = async (appId: string, bundleId: string, options: Options) => {
+export const deleteBundle = async (appId: string, bundleId: string, options: Options) => {
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
