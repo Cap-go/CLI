@@ -6,8 +6,6 @@ import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from '../utils';
-// import { definitions } from '../types/types_supabase';
-import { checkLatest } from '../api/update';
 
 interface Options extends OptionsBase {
   bundle: string;
@@ -21,7 +19,7 @@ interface Options extends OptionsBase {
   channel?: string;
 }
 
-export const setChannel = async (appId: string, options: Options) => {
+export const setChannel = async (channel: string, appId: string, options: Options) => {
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
@@ -39,7 +37,7 @@ export const setChannel = async (appId: string, options: Options) => {
   // Check we have app access to this appId
   await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
 
-  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
+  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state } = options;
   if (!channel) {
     program.error("Missing argument, you need to provide a channel");
   }

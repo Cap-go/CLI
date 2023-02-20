@@ -3,7 +3,7 @@ import { OptionsBase } from "../api/utils";
 import { checkAppExistsAndHasPermission } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from "../utils";
 
-export const deleteApp = async (appId: string, userId: string, options: OptionsBase) => {
+export const deleteApp = async (appId: string, options: OptionsBase) => {
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
@@ -17,7 +17,7 @@ export const deleteApp = async (appId: string, userId: string, options: OptionsB
     }
     const supabase = createSupabaseClient(options.apikey)
 
-    await verifyUser(supabase, options.apikey, ['write', 'all']);
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
     await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
 
