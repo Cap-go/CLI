@@ -16,7 +16,7 @@ specifiers:
   '@typescript-eslint/eslint-plugin': 5.52.0
   '@typescript-eslint/parser': 5.52.0
   adm-zip: ^0.5.10
-  cli-progress: 3.11.2
+  cli-progress: 3.12.0
   commander: 10.0.0
   console-table-printer: ^2.11.1
   eslint: 8.34.0
@@ -51,7 +51,7 @@ dependencies:
   '@tomasklaen/checksum': 1.1.0
   '@trufflesuite/spinnies': 0.1.1
   adm-zip: 0.5.10
-  cli-progress: 3.11.2
+  cli-progress: 3.12.0
   commander: 10.0.0
   console-table-printer: 2.11.1
   fs-extra: 11.1.0
@@ -1131,8 +1131,8 @@ packages:
       restore-cursor: 3.1.0
     dev: false
 
-  /cli-progress/3.11.2:
-    resolution: {integrity: sha512-lCPoS6ncgX4+rJu5bS3F/iCz17kZ9MPZ6dpuTtI0KXKABkhyXIdYB3Inby1OpaGti3YlI3EeEkM9AuWpelJrVA==}
+  /cli-progress/3.12.0:
+    resolution: {integrity: sha512-tRkV3HJ1ASwm19THiiLIXLO7Im7wlTuKnvkYaTkyoAPefqjNg7W7DHKUlGRxy9vxDvbyCYQkQozvptuMkGCg8A==}
     engines: {node: '>=4'}
     dependencies:
       string-width: 4.2.3
