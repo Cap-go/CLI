@@ -6,7 +6,7 @@ import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
 export const setApp = async (appId: string, userId: string, options: Options) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
 

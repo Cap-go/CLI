@@ -5,7 +5,7 @@ import { OptionsBase } from "../api/utils";
 import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
 export const deleteChannel = async (channelId: string, appId: string, options: OptionsBase) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     const snag = useLogSnag()

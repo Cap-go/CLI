@@ -4,7 +4,7 @@ import { checkAppExistsAndHasPermission } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from "../utils";
 
 export const deleteApp = async (appId: string, userId: string, options: OptionsBase) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     const snag = useLogSnag()

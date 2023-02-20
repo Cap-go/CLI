@@ -7,20 +7,20 @@ import { checkLatest } from '../api/update';
 
 export const listApp = async (appId: string, options: OptionsBase) => {
   await checkLatest();
-  const apikey = options.apikey || findSavedKey()
+  options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
 
   appId = appId || config?.app?.appId
-  if (!apikey) {
+  if (!options.apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
   }
   if (!appId) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
 
-  const supabase = createSupabaseClient(apikey)
+  const supabase = createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, apikey);
+  const userId = await verifyUser(supabase, options.apikey);
 
   console.log(`Querying available versions in Capgo`);
 

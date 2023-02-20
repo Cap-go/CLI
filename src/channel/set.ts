@@ -22,7 +22,7 @@ interface Options extends OptionsBase {
 }
 
 export const setChannel = async (appId: string, options: Options) => {
-  options.apikey = options.apikey || findSavedKey() || ''
+  options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
   const snag = useLogSnag()
