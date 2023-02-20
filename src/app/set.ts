@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from "fs-extra";
 import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
-export const setApp = async (appId: string, userId: string, options: Options) => {
+export const setApp = async (appId: string, options: Options) => {
     options.apikey = options.apikey || findSavedKey() || ''
     const config = await getConfig();
     appId = appId || config?.app?.appId
@@ -18,7 +18,7 @@ export const setApp = async (appId: string, userId: string, options: Options) =>
     }
     const supabase = createSupabaseClient(options.apikey)
 
-    await verifyUser(supabase, options.apikey, ['write', 'all']);
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
     await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
 

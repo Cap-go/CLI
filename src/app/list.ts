@@ -25,7 +25,7 @@ export const listApp = async (appId: string, options: OptionsBase) => {
   console.log(`Querying available versions in Capgo`);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermission(supabase, appId, apikey);
 
   // Get all active app versions we might possibly be able to cleanup
   const allVersions = await getActiveAppVersions(supabase, appId, userId);
