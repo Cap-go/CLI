@@ -2,7 +2,7 @@ import { program } from 'commander';
 import { existsSync, writeFileSync, appendFileSync } from 'fs'
 import { homedir } from 'os'
 import { createSupabaseClient, useLogSnag, verifyUser } from './utils';
-import { checkLatest } from '../api/update';
+import { checkLatest } from './api/update';
 
 interface Options {
   local: boolean;

@@ -28,6 +28,11 @@ program
   .action(login)
   .option('--local', 'Only save in local folder');
 
+program
+  .command('doctor')
+  .description('Get info about your Capgo app install')
+  .action(getInfo);
+
 const app = program
   .command('app')
   .description('Manage app');
@@ -63,12 +68,6 @@ app
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
-
-app
-  .command('doctor')
-  .description('Get info about your Capgo app install')
-  .action(getInfo);
-
 
 const bundle = program
   .command('bundle')

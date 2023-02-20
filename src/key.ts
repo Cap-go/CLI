@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import { createRSA } from './api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
-import { checkLatest } from '../api/update';
+import { checkLatest } from './api/update';
 
 interface Options {
   force?: boolean;

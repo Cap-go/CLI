@@ -1,6 +1,6 @@
-import { checkLatest } from 'api/update';
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { checkLatest } from '../api/update';
 import { encryptSource } from '../api/crypto';
 import { baseKeyPub } from '../utils';
 

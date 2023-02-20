@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import cliProgress from 'cli-progress';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
-import { checkLatest } from 'api/update';
+import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermission } from "../api/app";
 import { encryptSource } from '../api/crypto';
