@@ -1,7 +1,7 @@
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
-import { createRSA } from '../api/crypto';
+import { createRSA } from './api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
 import { checkLatest } from '../api/update';
 

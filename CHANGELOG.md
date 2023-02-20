@@ -2,36 +2,67 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [2.7.0](https://github.com/Cap-go/capgo-cli/compare/v2.6.5...v2.7.0) (2023-02-14)
+## [3.0.0-alpha.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.1...v3.0.0-alpha.2) (2023-02-10)
 
+
+### Bug Fixes
+
+* file path ([228913f](https://github.com/Cap-go/capgo-cli/commit/228913ff779c9a027a6fbba528bf7bfaf6470436))
+* list the cli as well ([c704222](https://github.com/Cap-go/capgo-cli/commit/c704222d8f9b4568983ea6ecb776775371b10a3d))
+
+## [3.0.0-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.10-alpha.0...v3.0.0-alpha.1) (2023-02-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* trigger ci
+
+### Bug Fixes
+
+* trigger ci ([7c4c35f](https://github.com/Cap-go/capgo-cli/commit/7c4c35f8f095a9c67843fbd2343d90d96720cc72))
+* trigger ci ([d28daa5](https://github.com/Cap-go/capgo-cli/commit/d28daa5e79dce68d2b3f23e4e94985140005ffac))
+* trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
+
+### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.10...v2.5.10-alpha.0) (2023-02-04)
+
+
+### Bug Fixes
+
+* npm publish ([1249213](https://github.com/Cap-go/capgo-cli/commit/124921324bde43dce24562ed369e77f604f3d5e8))
+* trigger ci ([464dd6a](https://github.com/Cap-go/capgo-cli/commit/464dd6a650266e5b5bb0a46049a917d26af1d22a))
+
+## [3.0.0-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.8...v3.0.0-alpha.0) (2023-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* add new commands and refactor for sub commands
 
 ### Features
 
-* add check update in cli ([3ad923f](https://github.com/Cap-go/capgo-cli/commit/3ad923f32277f32bf1df8096942408e352270889))
+* add new commands and refactor for sub commands ([c3aab3a](https://github.com/Cap-go/capgo-cli/commit/c3aab3afa6b86c5b2ca3864c196a3c02ea258991))
 
-### [2.6.5](https://github.com/Cap-go/capgo-cli/compare/v2.6.4...v2.6.5) (2023-02-13)
-
-### [2.6.4](https://github.com/Cap-go/capgo-cli/compare/v2.6.3...v2.6.4) (2023-02-13)
-
-### [2.6.3](https://github.com/Cap-go/capgo-cli/compare/v2.6.2...v2.6.3) (2023-02-13)
+## [3.0.0-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.10-alpha.0...v3.0.0-alpha.1) (2023-02-04)
 
 
-### Bug Fixes
+### ⚠ BREAKING CHANGES
 
-* doctor command ([9458983](https://github.com/Cap-go/capgo-cli/commit/9458983d1d281c5c1f028d7d84e8045e02aaec74))
-
-### [2.6.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.1...v2.6.2) (2023-02-10)
-
+* trigger ci
 
 ### Bug Fixes
 
-* list the cli as well ([c704222](https://github.com/Cap-go/capgo-cli/commit/c704222d8f9b4568983ea6ecb776775371b10a3d))
+* trigger ci ([7c4c35f](https://github.com/Cap-go/capgo-cli/commit/7c4c35f8f095a9c67843fbd2343d90d96720cc72))
+* trigger ci ([d28daa5](https://github.com/Cap-go/capgo-cli/commit/d28daa5e79dce68d2b3f23e4e94985140005ffac))
+* trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
 
+### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v3.0.0-alpha.0...v2.5.10-alpha.0) (2023-02-04)
 ### [2.6.1](https://github.com/Cap-go/capgo-cli/compare/v2.6.0...v2.6.1) (2023-02-10)
 
 
 ### Bug Fixes
 
+* npm publish ([1249213](https://github.com/Cap-go/capgo-cli/commit/124921324bde43dce24562ed369e77f604f3d5e8))
+* trigger ci ([464dd6a](https://github.com/Cap-go/capgo-cli/commit/464dd6a650266e5b5bb0a46049a917d26af1d22a))
 * change happy path and command name ([8113a78](https://github.com/Cap-go/capgo-cli/commit/8113a78363297e5ad4c69a8c9dd7deabef500bf0))
 
 ## [2.6.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.12...v2.6.0) (2023-02-10)

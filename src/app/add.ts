@@ -1,44 +1,41 @@
+import { getType } from 'mime';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
-import { readFileSync } from 'fs';
-import { existsSync } from 'fs-extra';
-import { getType } from 'mime';
-import { checkLatest } from '../api/update';
+import { existsSync, readFileSync } from 'fs-extra';
+import { checkLatest } from 'api/update';
+import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
 import {
   getConfig, createSupabaseClient,
-  formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
-} from './utils';
+  findSavedKey, useLogSnag, verifyUser, formatError
+} from '../utils';
 
-interface Options {
-  apikey: string;
-  name?: string;
-  icon?: string;
-}
-const newIconPath = "assets/icon.png"
-export const addApp = async (appid: string, options: Options) => {
+export const addApp = async (appId: string, options: Options) => {
   await checkLatest();
-  let { name, icon } = options;
-  const apikey = options.apikey || findSavedKey()
+  options.apikey = options.apikey || findSavedKey() || ''
   const config = await getConfig();
+  appId = appId || config?.app?.appId
   const snag = useLogSnag()
 
-  appid = appid || config?.app?.appId
+  if (!options.apikey) {
+    program.error("Missing API key, you need to provide a API key to upload your bundle");
+  }
+  if (!appId) {
+    program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+  }
+  const supabase = createSupabaseClient(options.apikey)
+
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
+  // Check we have app access to this appId
+  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+
+  let { name, icon } = options;
+  appId = appId || config?.app?.appId
   name = name || config?.app?.appName || 'Unknown'
   icon = icon || "resources/icon.png" // default path for capacitor app
-  if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to add your app");
+  if (!icon || !name) {
+    program.error("Missing argument, you need to provide a appId and a name, or be in a capacitor project");
   }
-  if (!appid || !name) {
-    program.error("Missing argument, you need to provide a appid and a name, or be in a capacitor project");
-  }
-  console.log(`Add ${appid} to Capgo`);
-
-  const supabase = createSupabaseClient(apikey)
-
-  const userId = await verifyUser(supabase, apikey, ['write', 'all']);
-  await checkPlanValid(supabase, userId)
-
-  console.log('Adding...');
+  console.log(`Adding ${appId} to Capgo`);
   let iconBuff;
   let iconType;
 
@@ -59,10 +56,10 @@ export const addApp = async (appid: string, options: Options) => {
 
   // check if app already exist
   const { data: app, error: dbError0 } = await supabase
-    .rpc('exist_app_v2', { appid })
+    .rpc('exist_app_v2', { appid: appId })
     .single()
   if (app || dbError0) {
-    program.error(`App ${appid} already exists ${formatError(dbError0)}`)
+    program.error(`App ${appId} already exists ${formatError(dbError0)}`)
   }
 
   const fileName = `icon_${randomUUID()}`
@@ -71,7 +68,7 @@ export const addApp = async (appid: string, options: Options) => {
   // upload image if available
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/${userId}/${appid}`)
+      .from(`images/${userId}/${appId}`)
       .upload(fileName, iconBuff, {
         contentType: iconType,
       })
@@ -80,7 +77,7 @@ export const addApp = async (appid: string, options: Options) => {
     }
     const { data: signedURLData } = await supabase
       .storage
-      .from(`images/${userId}/${appid}`)
+      .from(`images/${userId}/${appId}`)
       .getPublicUrl(fileName)
     signedURL = signedURLData?.publicUrl || signedURL
   }
@@ -91,7 +88,7 @@ export const addApp = async (appid: string, options: Options) => {
       icon_url: signedURL,
       user_id: userId,
       name,
-      app_id: appid,
+      app_id: appId,
     })
   if (dbError) {
     program.error(`Could not add app ${formatError(dbError)}`);
@@ -102,12 +99,12 @@ export const addApp = async (appid: string, options: Options) => {
       user_id: userId,
       deleted: true,
       name: 'unknown',
-      app_id: appid,
+      app_id: appId,
     }, {
       user_id: userId,
       deleted: true,
       name: 'builtin',
-      app_id: appid,
+      app_id: appId,
     }])
   if (dbVersionError) {
     program.error(`Could not add app ${formatError(dbVersionError)}`);
@@ -118,10 +115,11 @@ export const addApp = async (appid: string, options: Options) => {
     icon: '🎉',
     tags: {
       'user-id': userId,
-      'app-id': appid,
+      'app-id': appId,
     },
     notify: false,
   }).catch()
   console.log("App added to server, you can upload a bundle now")
+  console.log(`Done ✅`);
   process.exit()
 }

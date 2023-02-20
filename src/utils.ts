@@ -217,7 +217,7 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
     return userId;
 }
 
-export const getHumanDate = (row: Database['public']['Tables']['app_versions']['Row']) => {
-    const date = new Date(row.created_at || '');
+export const getHumanDate = (createdA: string | null) => {
+    const date = new Date(createdA || '');
     return date.toLocaleString();
 }

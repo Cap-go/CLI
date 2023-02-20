@@ -1,8 +1,8 @@
+import { checkLatest } from 'api/update';
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { encryptSource } from '../api/crypto';
-import { baseKeyPub } from './utils';
-import { checkLatest } from '../api/update';
+import { baseKeyPub } from '../utils';
 
 interface Options {
   key?: string
@@ -35,5 +35,6 @@ export const encryptZip = async (zipPath: string, options: Options) => {
   console.log('ivSessionKey', encodedZip.ivSessionKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
+  console.log(`Done ✅`);
   process.exit()
 }
