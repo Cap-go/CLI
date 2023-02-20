@@ -24,7 +24,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
 
     console.log(`Create channel ${appId}#${channelId} to Capgo cloud`);
     try {
-        const { data } = await findUnknownVersion(supabase, appId)
+        const data = await findUnknownVersion(supabase, appId)
         if (!data) {
             program.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
         }

@@ -28,7 +28,8 @@ export const findUnknownVersion = (supabase: SupabaseClient<Database>, appId: st
   .select('id')
   .eq('app_id', appId)
   .eq('name', 'unknown')
-  .single()
+  .throwOnError()
+  .single().then(({ data }) => data)
 
 
 export const createChannel = (supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) => supabase

@@ -38,13 +38,6 @@ export const deleteVersion = async (appId: string, bundleId: string, options: Op
     program.error('Missing argument, you need to provide a appId, or be in a capacitor project');
   }
 
-  const { data: app, error: dbError0 } = await supabase
-    .rpc('exist_app', { appid: appId, apikey })
-    .single()
-  if (!app || dbError0) {
-    program.error('No permission to delete')
-  }
-
   console.log(`Delete ${appId}@${bundleId} from Capgo`);
 
   await deleteSpecificVersion(supabase, appId, userId, bundleId);
