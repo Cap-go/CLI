@@ -1,4 +1,5 @@
 import { program } from 'commander';
+import { listBundle } from './bundle/list';
 import { decryptZip } from './bundle/decrypt';
 import { encryptZip } from './bundle/encrypt';
 import { addApp } from './app/add';
@@ -99,7 +100,7 @@ bundle
   .command('list [appid]')
   .alias('l')
   .description('List bundle in capgo Cloud')
-  .action(listApp)
+  .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 bundle
