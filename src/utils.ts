@@ -110,7 +110,7 @@ export const findSavedKey = () => {
         const key = readFileSync(keyPath, 'utf8');
         return key.trim();
     }
-    return null
+    return program.error('Key not found, please login first');
 }
 
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
