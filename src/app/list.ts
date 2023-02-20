@@ -10,7 +10,6 @@ export const listApp = async (appId: string, options: OptionsBase) => {
   const apikey = options.apikey || findSavedKey()
   const config = await getConfig();
 
-  console.log('COMMAND DEPRECATED, use "app list" instead')
   appId = appId || config?.app?.appId
   if (!apikey) {
     program.error('Missing API key, you need to provide an API key to delete your app');
@@ -18,7 +17,6 @@ export const listApp = async (appId: string, options: OptionsBase) => {
   if (!appId) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  console.log(`Querying available versions in Capgo`);
 
   const supabase = createSupabaseClient(apikey)
 
