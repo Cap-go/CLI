@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.2.0](https://github.com/Cap-go/capgo-cli/compare/v3.1.0...v3.2.0) (2023-02-28)
+
+
+### Features
+
+* better init, and upload auto increment version if not found ([cec556d](https://github.com/Cap-go/capgo-cli/commit/cec556de03f27ee6272718884139db37d65c71e8))
+
 ## [3.1.0](https://github.com/Cap-go/capgo-cli/compare/v3.0.14...v3.1.0) (2023-02-28)
 
 
