@@ -4,7 +4,11 @@ import { createChannel, findUnknownVersion } from "../api/channels";
 import { OptionsBase } from "../api/utils";
 import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
-export const addChannel = async (channelId: string, appId: string, options: OptionsBase) => {
+interface Options extends OptionsBase {
+    default?: boolean;
+}
+
+export const addChannel = async (channelId: string, appId: string, options: Options, shouldExit = true) => {
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
@@ -28,7 +32,12 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
         if (!data) {
             program.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
         }
-        await createChannel(supabase, { name: channelId, app_id: appId, version: data.id, created_by: userId });
+        await createChannel(supabase, {
+            name: channelId,
+            app_id: appId,
+            version: data.id,
+            created_by: userId
+        });
         console.log(`Channel created ✅`);
         await snag.publish({
             channel: 'app',
@@ -43,7 +52,16 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
         }).catch()
     } catch (error) {
         console.log(`Cannot create Channel 🙀`, error);
+        return false
     }
-    console.log(`Done ✅`);
-    process.exit()
+    if (shouldExit) {
+        console.log(`Done ✅`);
+        process.exit()
+    }
+    return true
+}
+
+
+export const addChannelCommand = async (apikey: string, appId: string, options: Options) => {
+    addChannel(apikey, appId, options, true)
 }

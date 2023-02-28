@@ -1,6 +1,8 @@
 import { writeFileSync, readFileSync } from 'fs';
 import { findPackageManagerType } from '@capgo/find-package-manager'
 import { execSync } from 'child_process';
+import { addChannel } from './channel/add';
+import { uploadBundle } from './bundle/upload';
 import { login } from './login';
 import { addApp } from './app/add';
 import { checkLatest } from './api/update';
@@ -14,6 +16,7 @@ const importInject = "import { CapacitorUpdater } from '@capgo/capacitor-updater
 const codeInject = 'CapacitorUpdater.notifyAppReady();'
 // create regex to find line who start by 'import ' and end by ' from '
 const regexImport = /import.*from.*/g
+const defaultChannel = 'production'
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
     await checkLatest();
@@ -33,6 +36,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         process.exit()
     }
 
+    console.log(`Running: npx @capgo/cli@latest login ***`);
     const loginRes = await login(apikey, options, false);
     if (!loginRes) {
         console.log(`Login already done ✅`);
@@ -40,11 +44,24 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         console.log(`Login Done ✅`);
     }
 
+    console.log(`Running: npx @capgo/cli@latest app add ${appId}`);
     const addRes = await addApp(appId, options, false);
     if (!addRes) {
-        console.log(`Add already done ✅`);
+        console.log(`App already add ✅`);
     } else {
-        console.log(`Add Done ✅`);
+        console.log(`App add Done ✅`);
+    }
+
+    // create production channel public
+    console.log(`Running: npx @capgo/cli@latest channel add ${defaultChannel} ${appId} -d`);
+    const addChannelRes = await addChannel(defaultChannel, appId, {
+        default: true,
+        apikey,
+    }, false);
+    if (!addChannelRes) {
+        console.log(`Channel already added ✅`);
+    } else {
+        console.log(`Channel add Done ✅`);
     }
 
     // // use pm to install capgo
@@ -79,12 +96,25 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         console.log(`Code added to ${mainFilePath} ✅`);
     }
 
+    console.log(`Running: npm run build && npx cap sync`);
     const res2 = await execSync(`npm run build && npx cap sync`)
     console.log(res2.toString())
     console.log(`Build & Sync Done ✅`);
 
+    console.log(`Running: npx @capgo/cli@latest bundle upload`);
+    const uploadRes = await uploadBundle(appId, {
+        channel: defaultChannel,
+        apikey,
+    }, false);
+    if (!uploadRes) {
+        console.log(`Upload failed ❌`);
+        process.exit()
+    } else {
+        console.log(`Upload Done ✅`);
+    }
+
     console.log(`Init Done ✅`);
-    console.log(`Now run the app in your phone or emulator with npx cap run`)
+    console.log(`Now run the app in your phone or emulator with: npx cap run`)
     const appIdUrl = appId.replace(/\./g, '--')
     console.log(`Then watch logs in https://web.capgo.app/app/p/${appIdUrl}/logs`)
     process.exit()

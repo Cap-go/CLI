@@ -18,15 +18,15 @@ import {
 const alertMb = 20;
 
 interface Options extends OptionsBase {
-  bundle: string
-  path: string
+  bundle?: string
+  path?: string
   channel?: string
   displayIvSession?: boolean
   external?: string
   key?: boolean | string
 }
 
-export const uploadBundle = async (appid: string, options: Options) => {
+export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
   await checkLatest();
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession } = options;
@@ -36,7 +36,9 @@ export const uploadBundle = async (appid: string, options: Options) => {
   channel = channel || 'dev';
   const config = await getConfig();
   appid = appid || config?.app?.appId
-  bundle = bundle || config?.app?.package?.version
+  // create bundle name format : 1.0.0-beta.x where x is a uuid
+  const uuid = randomUUID().split('-')[0];
+  bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
   // check if bundle is valid 
   if (!regexSemver.test(bundle)) {
     program.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
@@ -208,6 +210,13 @@ It will be also visible in your dashboard\n`);
     },
     notify: false,
   }).catch()
-  console.log(`Done ✅`);
-  process.exit()
+  if (shouldExit) {
+    console.log(`Done ✅`);
+    process.exit()
+  }
+  return true
+}
+
+export const uploadCommand = async (apikey: string, options: Options) => {
+  uploadBundle(apikey, options, true)
 }

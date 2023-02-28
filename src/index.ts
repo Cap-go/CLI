@@ -8,12 +8,12 @@ import { getInfo } from './app/info';
 import { manageKey } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { uploadBundle } from './bundle/upload';
+import { uploadCommand } from './bundle/upload';
 import pack from '../package.json'
 import { loginCommand } from './login';
 import { listApp } from './app/list';
 import { cleanupBundle } from './bundle/cleanup';
-import { addChannel } from './channel/add';
+import { addChannelCommand } from './channel/add';
 import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
 import { setApp } from './app/set';
@@ -87,7 +87,7 @@ bundle
   .command('upload [appid]')
   .alias('u')
   .description('Upload a new bundle in capgo Cloud')
-  .action(uploadBundle)
+  .action(uploadCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
@@ -145,7 +145,8 @@ channel
   .command('add [channelid] [appid]')
   .alias('a')
   .description('Create channel')
-  .action(addChannel)
+  .action(addChannelCommand)
+  .option('-d, --default', 'set the channel as default')
 
 channel
   .command('delete [channelid] [appid]')
@@ -189,7 +190,7 @@ program
   .command('upload [appid]')
   .alias('u')
   .description('(Deprecated) Upload a new bundle to capgo Cloud')
-  .action(uploadBundle)
+  .action(uploadCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
