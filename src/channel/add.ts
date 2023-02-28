@@ -1,5 +1,5 @@
 import { program } from "commander";
-import { checkAppExistsAndHasPermission } from "../api/app";
+import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { createChannel, findUnknownVersion } from "../api/channels";
 import { OptionsBase } from "../api/utils";
 import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
@@ -20,7 +20,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
     console.log(`Create channel ${appId}#${channelId} to Capgo cloud`);
     try {

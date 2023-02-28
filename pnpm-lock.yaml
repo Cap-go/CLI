@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@capacitor/cli': 4.6.3
+  '@capgo/find-package-manager': ^0.0.7
   '@supabase/supabase-js': ^2.5.0
   '@tomasklaen/checksum': ^1.1.0
   '@trufflesuite/spinnies': ^0.1.1
@@ -47,6 +48,7 @@ specifiers:
 
 dependencies:
   '@capacitor/cli': 4.6.3
+  '@capgo/find-package-manager': 0.0.7
   '@supabase/supabase-js': 2.5.0
   '@tomasklaen/checksum': 1.1.0
   '@trufflesuite/spinnies': 0.1.1
@@ -148,6 +150,10 @@ packages:
       xml2js: 0.4.23
     transitivePeerDependencies:
       - supports-color
+    dev: false
+
+  /@capgo/find-package-manager/0.0.7:
+    resolution: {integrity: sha512-Wxrx0nhWZgksvgriMBLKoagMV0Yl67PvGnf9TRExZM73NDkiYfu23VcY6m+yJwqtapb9G9zyOH5Qs0CFuqBx+Q==}
     dev: false
 
   /@cspotcode/source-map-support/0.8.1:

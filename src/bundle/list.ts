@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { checkAppExistsAndHasPermission } from '../api/app';
+import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { OptionsBase } from '../api/utils';
 import { getActiveAppVersions, displayBundles } from '../api/versions';
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
@@ -25,7 +25,7 @@ export const listBundle = async (appId: string, options: OptionsBase) => {
     console.log(`Querying available versions in Capgo`);
 
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
     // Get all active app versions we might possibly be able to cleanup
     const allVersions = await getActiveAppVersions(supabase, appId, userId);

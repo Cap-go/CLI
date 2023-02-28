@@ -1,7 +1,7 @@
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
 import { OptionsBase } from '../api/utils';
-import { checkAppExistsAndHasPermission } from "../api/app";
+import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
@@ -35,7 +35,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state } = options;
   if (!channel) {
@@ -57,7 +57,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
   try {
     await checkPlanValid(supabase, userId)
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,

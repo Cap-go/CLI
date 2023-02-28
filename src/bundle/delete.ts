@@ -1,5 +1,5 @@
 import { program } from 'commander';
-import { checkAppExistsAndHasPermission } from '../api/app';
+import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { OptionsBase } from '../api/utils';
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
 import { deleteSpecificVersion } from '../api/versions';
@@ -23,7 +23,7 @@ export const deleteBundle = async (appId: string, bundleId: string, options: Opt
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
   const apikey = options.apikey || findSavedKey()
 

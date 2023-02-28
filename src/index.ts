@@ -1,15 +1,16 @@
 import { program } from 'commander';
+import { initApp } from './init';
 import { listBundle } from './bundle/list';
 import { decryptZip } from './bundle/decrypt';
 import { encryptZip } from './bundle/encrypt';
-import { addApp } from './app/add';
+import { addCommand } from './app/add';
 import { getInfo } from './app/info';
 import { manageKey } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
 import { uploadBundle } from './bundle/upload';
 import pack from '../package.json'
-import { login } from './login';
+import { loginCommand } from './login';
 import { listApp } from './app/list';
 import { cleanupBundle } from './bundle/cleanup';
 import { addChannel } from './channel/add';
@@ -26,13 +27,21 @@ program
   .command('login [apikey]')
   .alias('l')
   .description('Save apikey to your machine or folder')
-  .action(login)
+  .action(loginCommand)
   .option('--local', 'Only save in local folder');
 
 program
   .command('doctor')
   .description('Get info about your Capgo app install')
   .action(getInfo);
+
+program
+  .command('init [apikey] [appid]')
+  .description('Init a new app')
+  .action(initApp)
+  .option('-n, --name <name>', 'app name')
+  .option('-i, --icon <icon>', 'app icon path')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 const app = program
   .command('app')
@@ -42,7 +51,7 @@ app
   .command('add [appid]')
   .alias('a')
   .description('Add a new app in capgo Cloud')
-  .action(addApp)
+  .action(addCommand)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');

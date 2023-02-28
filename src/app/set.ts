@@ -2,7 +2,7 @@ import { getType } from 'mime';
 import { program } from "commander";
 import { randomUUID } from "crypto";
 import { existsSync, readFileSync } from "fs-extra";
-import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
+import { checkAppExistsAndHasPermissionErr, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
 export const setApp = async (appId: string, options: Options) => {
@@ -20,7 +20,7 @@ export const setApp = async (appId: string, options: Options) => {
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
     const { name, icon } = options;
 

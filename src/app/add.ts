@@ -3,13 +3,13 @@ import { program } from 'commander';
 import { randomUUID } from 'crypto';
 import { existsSync, readFileSync } from 'fs-extra';
 import { checkLatest } from '../api/update';
-import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
+import { checkAppExistsAndHasPermissionErr, checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
 import {
   getConfig, createSupabaseClient,
   findSavedKey, useLogSnag, verifyUser, formatError
 } from '../utils';
 
-export const addApp = async (appId: string, options: Options) => {
+export const addApp = async (appId: string, options: Options, shouldExit = true) => {
   await checkLatest();
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
@@ -26,7 +26,14 @@ export const addApp = async (appId: string, options: Options) => {
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey, false);
+  if (shouldExit) {
+    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey, false);
+  } else {
+    const res = await checkAppExistsAndHasPermission(supabase, appId, options.apikey, false);
+    if (res) {
+      return false
+    }
+  }
 
   let { name, icon } = options;
   appId = appId || config?.app?.appId
@@ -120,6 +127,13 @@ export const addApp = async (appId: string, options: Options) => {
     notify: false,
   }).catch()
   console.log("App added to server, you can upload a bundle now")
-  console.log(`Done ✅`);
-  process.exit()
+  if (shouldExit) {
+    console.log(`Done ✅`);
+    process.exit()
+  }
+  return true
+}
+
+export const addCommand = async (apikey: string, options: Options) => {
+  addApp(apikey, options, true)
 }

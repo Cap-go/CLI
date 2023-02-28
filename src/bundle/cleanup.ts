@@ -6,7 +6,7 @@ import { Database } from 'types/supabase.types';
 import { OptionsBase } from '../api/utils';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
-import { checkAppExistsAndHasPermission } from '../api/app';
+import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
 
 // import { definitions } from '../types/types_supabase';
@@ -61,7 +61,7 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   const userId = await verifyUser(supabase, apikey);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appid, apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
   console.log(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup

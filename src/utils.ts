@@ -2,10 +2,11 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync } from 'fs';
 import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
 import { Database } from 'types/supabase.types';
+import { resolve } from 'path';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
@@ -112,6 +113,40 @@ export const findSavedKey = () => {
     if (!key)
         program.error('Key not found, please login first');
     return key
+}
+
+async function* getFiles(dir: string): AsyncGenerator<string> {
+    const dirents = await readdirSync(dir, { withFileTypes: true });
+    for (const dirent of dirents) {
+        const res = resolve(dir, dirent.name);
+        if (dirent.isDirectory()
+            && !dirent.name.startsWith('.')
+            && !dirent.name.startsWith('node_modules')
+            && !dirent.name.startsWith('dist')) {
+            yield* getFiles(res);
+        } else {
+            yield res;
+        }
+    }
+}
+export const findMainFile = async () => {
+    const mainRegex = /(main|index)\.(ts|js)$/
+    // search for main.ts or main.js in local dir and subdirs
+    let mainFile = ''
+    const pwd = process.cwd()
+    const pwdL = pwd.split('/').length
+    for await (const f of getFiles(pwd)) {
+        // find number of folder in path after pwd
+        const folders = f.split('/').length - pwdL
+        if (folders <= 2 && mainRegex.test(f)) {
+            mainFile = f
+            console.log('Found main file here', f)
+            break
+        }
+    }
+    if (!mainFile)
+        program.error('No main.ts, main.js, index.ts or index.js file found, please run cap init first');
+    return mainFile
 }
 
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''

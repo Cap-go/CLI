@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
-import { checkAppExistsAndHasPermission } from "../api/app";
+import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
   host, hostWeb, getConfig, createSupabaseClient,
@@ -54,7 +54,7 @@ export const uploadBundle = async (appid: string, options: Options) => {
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appid, apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
   const multibar = new cliProgress.MultiBar({
     clearOnComplete: false,
     hideCursor: true

@@ -8,8 +8,14 @@ export const checkAppExistsAndHasPermission = async (supabase: SupabaseClient<Da
   const { data: app, error: dbError0 } = await supabase
     .rpc('exist_app', { appid, apikey })
     .single();
-  if (app !== shouldExist || dbError0) {
-    program.error(`No permission for this app ${appid}`);
+  return app !== shouldExist || dbError0;
+}
+
+export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient<Database>, appid: string, apikey: string,
+  shouldExist = true) => {
+  const res = await checkAppExistsAndHasPermission(supabase, appid, apikey, shouldExist);
+  if (res) {
+    program.error(`App ${appid} does not exist or you don't have permission to access it`);
   }
 }
 

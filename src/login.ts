@@ -7,7 +7,14 @@ import { checkLatest } from './api/update';
 interface Options {
   local: boolean;
 }
-export const login = async (apikey: string, options: Options) => {
+
+export const login = async (apikey: string, options: Options, shouldExit = true) => {
+  if (!apikey) {
+    if (shouldExit) {
+      program.error("Missing API key, you need to provide a API key to upload your bundle");
+    }
+    return false
+  }
   await checkLatest();
   // write in file .capgo the apikey in home directory
   try {
@@ -40,5 +47,13 @@ export const login = async (apikey: string, options: Options) => {
     console.error(e);
     process.exit(1);
   }
-  process.exit();
+  if (shouldExit) {
+    console.log(`Done ✅`);
+    process.exit()
+  }
+  return true
+}
+
+export const loginCommand = async (apikey: string, options: Options) => {
+  login(apikey, options, true)
 }

@@ -43,6 +43,7 @@
   "license": "Apache 2.0",
   "dependencies": {
     "@capacitor/cli": "4.6.3",
+    "@capgo/find-package-manager": "^0.0.7",
     "@supabase/supabase-js": "^2.5.0",
     "@tomasklaen/checksum": "^1.1.0",
     "@trufflesuite/spinnies": "^0.1.1",
