@@ -3,6 +3,7 @@ lockfileVersion: 5.4
 specifiers:
   '@capacitor/cli': 4.6.3
   '@capgo/find-package-manager': ^0.0.7
+  '@clack/prompts': ^0.6.1
   '@supabase/supabase-js': ^2.5.0
   '@tomasklaen/checksum': ^1.1.0
   '@trufflesuite/spinnies': ^0.1.1
@@ -11,6 +12,7 @@ specifiers:
   '@types/fs-extra': ^9.0.13
   '@types/mime': ^3.0.1
   '@types/node': ^18.11.18
+  '@types/open': ^6.2.1
   '@types/prettyjson': ^0.0.30
   '@types/prompt-sync': ^4.2.0
   '@types/semver': ^7.3.13
@@ -33,6 +35,7 @@ specifiers:
   logsnag: ^0.1.6
   mime: ^3.0.0
   nodemon: 2.0.20
+  open: ^8.4.2
   pkg: 5.8.0
   prettier: 2.8.4
   prettyjson: ^1.2.5
@@ -49,6 +52,7 @@ specifiers:
 dependencies:
   '@capacitor/cli': 4.6.3
   '@capgo/find-package-manager': 0.0.7
+  '@clack/prompts': 0.6.1
   '@supabase/supabase-js': 2.5.0
   '@tomasklaen/checksum': 1.1.0
   '@trufflesuite/spinnies': 0.1.1
@@ -60,6 +64,7 @@ dependencies:
   get-latest-version: 5.0.0
   logsnag: 0.1.6
   mime: 3.0.0
+  open: 8.4.2
   prettyjson: 1.2.5
   prompt-sync: 4.2.0
   semver: 7.3.8
@@ -70,6 +75,7 @@ devDependencies:
   '@types/fs-extra': 9.0.13
   '@types/mime': 3.0.1
   '@types/node': 18.11.18
+  '@types/open': 6.2.1
   '@types/prettyjson': 0.0.30
   '@types/prompt-sync': 4.2.0
   '@types/semver': 7.3.13
@@ -140,7 +146,7 @@ packages:
       env-paths: 2.2.1
       kleur: 4.1.5
       native-run: 1.7.1
-      open: 8.4.0
+      open: 8.4.2
       plist: 3.0.6
       prompts: 2.4.2
       rimraf: 3.0.2
@@ -155,6 +161,23 @@ packages:
   /@capgo/find-package-manager/0.0.7:
     resolution: {integrity: sha512-Wxrx0nhWZgksvgriMBLKoagMV0Yl67PvGnf9TRExZM73NDkiYfu23VcY6m+yJwqtapb9G9zyOH5Qs0CFuqBx+Q==}
     dev: false
+
+  /@clack/core/0.3.0:
+    resolution: {integrity: sha512-ujw1888RciTArxUvwLOf24XSygRX7F4qiCPI7WLH3zCTZJuqKPMcTS7Wqjz0x/AuMpwGPlzhKln4+sCuQqYxzA==}
+    dependencies:
+      picocolors: 1.0.0
+      sisteransi: 1.0.5
+    dev: false
+
+  /@clack/prompts/0.6.1:
+    resolution: {integrity: sha512-7KuMST/5zB7KpvfR00kcnbOaXmfN6tkJmkLpAyV2Iv2SJ7oxFbhNFvR5OQJynSKDhU8oOp/eFMK6Q0k/DXsq8A==}
+    dependencies:
+      '@clack/core': 0.3.0
+      picocolors: 1.0.0
+      sisteransi: 1.0.5
+    dev: false
+    bundledDependencies:
+      - is-unicode-supported
 
   /@cspotcode/source-map-support/0.8.1:
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -381,7 +404,7 @@ packages:
     dependencies:
       cross-spawn: 7.0.3
       is-glob: 4.0.3
-      open: 8.4.0
+      open: 8.4.2
       picocolors: 1.0.0
       tiny-glob: 0.2.9
       tslib: 2.5.0
@@ -544,6 +567,13 @@ packages:
 
   /@types/node/18.11.18:
     resolution: {integrity: sha512-DHQpWGjyQKSHj3ebjFI/wRKcqQcdR+MoFBygntYOZytCqNfkd2ZC4ARDJ2DQqhjH5p85Nnd3jhUJIXrszFX/JA==}
+
+  /@types/open/6.2.1:
+    resolution: {integrity: sha512-CzV16LToFaKwm1FfplVTF08E3pznw4fQNCQ87N+A1RU00zu/se7npvb6IC9db3/emnSThQ6R8qFKgrei2M4EYQ==}
+    deprecated: This is a stub types definition. open provides its own type definitions, so you do not need this installed.
+    dependencies:
+      open: 8.4.2
+    dev: true
 
   /@types/phoenix/1.5.4:
     resolution: {integrity: sha512-L5eZmzw89eXBKkiqVBcJfU1QGx9y+wurRIEgt0cuLH0hwNtVUxtx+6cu0R2STwWj468sjXyBYPYDtGclUd1kjQ==}
@@ -2871,8 +2901,8 @@ packages:
       mimic-fn: 2.1.0
     dev: false
 
-  /open/8.4.0:
-    resolution: {integrity: sha512-XgFPPM+B28FtCCgSb9I+s9szOC1vZRSwgWsRUA5ylIxRTgKozqjOCrVOqGsYABPYK5qnfqClxZTFBa8PKt2v6Q==}
+  /open/8.4.2:
+    resolution: {integrity: sha512-7x81NCL719oNbsq/3mh+hVrAWmFuEYUqrq/Iw3kUzH8ReypT9QQ0BLoJS7/G9k6N81XjW4qHWtjWwe/9eLy1EQ==}
     engines: {node: '>=12'}
     dependencies:
       define-lazy-prop: 2.0.0
@@ -2967,7 +2997,6 @@ packages:
 
   /picocolors/1.0.0:
     resolution: {integrity: sha512-1fygroTLlHu66zi26VoTDv8yRgm0Fccecssto+MhsZ0D/DGW2sm8E8AjW7NU5VVTRt5GxbeZ5qBuJr+HyLYkjQ==}
-    dev: true
 
   /picomatch/2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}

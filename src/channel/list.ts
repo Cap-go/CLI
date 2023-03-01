@@ -2,12 +2,13 @@ import { program } from 'commander';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { getActiveChannels, displayChannels } from '../api/channels';
 import { OptionsBase } from '../api/utils';
-import { findSavedKey, getConfig, createSupabaseClient, verifyUser } from '../utils';
+import { findSavedKey, getConfig, createSupabaseClient, verifyUser, useLogSnag } from '../utils';
 
 export const listChannels = async (appId: string, options: OptionsBase) => {
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
+  const snag = useLogSnag()
 
   if (!options.apikey) {
     program.error("Missing API key, you need to provide a API key to upload your bundle");
@@ -32,6 +33,16 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
   console.log(`Active channels in Capgo: ${allVersions?.length}`);
 
   displayChannels(allVersions);
+  await snag.publish({
+    channel: 'channel',
+    event: 'List channel',
+    icon: '✅',
+    tags: {
+      'user-id': userId,
+      'app-id': appId,
+    },
+    notify: false,
+  }).catch()
   console.log(`Done ✅`);
   process.exit()
 }

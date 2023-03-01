@@ -20,7 +20,7 @@ import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
 
 program
-  .description('Manage packages and bundle versions in capgo Cloud')
+  .description('Manage packages and bundle versions in Capgo Cloud')
   .version(pack.version);
 
 program
@@ -50,7 +50,7 @@ const app = program
 app
   .command('add [appid]')
   .alias('a')
-  .description('Add a new app in capgo Cloud')
+  .description('Add a new app in Capgo Cloud')
   .action(addCommand)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
@@ -59,21 +59,21 @@ app
 app
   .command('delete [appid]')
   .alias('d')
-  .description('Delete an app in capgo Cloud')
+  .description('Delete an app in Capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
   .command('list [appid]')
   .alias('l')
-  .description('list apps in capgo Cloud')
+  .description('list apps in Capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
   .command('set [appid]')
   .alias('s')
-  .description('Set an app in capgo Cloud')
+  .description('Set an app in Capgo Cloud')
   .action(setApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
@@ -86,37 +86,45 @@ const bundle = program
 bundle
   .command('upload [appid]')
   .alias('u')
-  .description('Upload a new bundle in capgo Cloud')
+  .description('Upload a new bundle in Capgo Cloud')
   .action(uploadCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
   .option('--keyData <keyData>', 'base64 public signing key')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
 
 bundle
   .command('delete [appid]')
   .alias('d')
-  .description('Delete a bundle in capgo Cloud')
+  .description('Delete a bundle in Capgo Cloud')
   .action(deleteBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 bundle
   .command('list [appid]')
   .alias('l')
-  .description('List bundle in capgo Cloud')
+  .description('List bundle in Capgo Cloud')
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+bundle
+  .command('unlink [appid]')
+  .alias('u')
+  .description('Unlink a bundle in Capgo Cloud')
+  .action(listBundle)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink');
 
 bundle
   .command('cleanup [appid]')
   .alias('c')
   .action(cleanupBundle)
-  .description('Cleanup bundle in capgo Cloud')
+  .description('Cleanup bundle in Capgo Cloud')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
@@ -189,12 +197,12 @@ program
 program
   .command('upload [appid]')
   .alias('u')
-  .description('(Deprecated) Upload a new bundle to capgo Cloud')
+  .description('(Deprecated) Upload a new bundle to Capgo Cloud')
   .action(uploadCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
   .option('--keyData <keyData>', 'base64 public signing key')
   .option('--no-key', 'ignore signing key and send clear update')

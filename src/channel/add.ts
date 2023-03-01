@@ -40,7 +40,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
         });
         console.log(`Channel created ✅`);
         await snag.publish({
-            channel: 'app',
+            channel: 'channel',
             event: 'Create channel',
             icon: '✅',
             tags: {

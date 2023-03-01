@@ -1,10 +1,12 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
-import { convertAppName, formatError } from '../utils';
+import * as p from '@clack/prompts';
+import { formatError } from '../utils';
 
 export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClient<Database>,
   appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) => {
+
   const { data: deviceFound, error: errorDevice } = await supabase
     .from('devices_override')
     .select()
@@ -13,9 +15,25 @@ export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClie
   if (errorDevice)
     program.error(`Cannot check Device override ${appid}@${versionData.name} ${formatError(errorDevice)}`);
   if (deviceFound && deviceFound.length > 0) {
-    const appidWeb = convertAppName(appid)
-    program.error(`❌ Version ${appid} @${versionData.name} is used in a device override, unlink it first:
-https://web.capgo.app/app/p/${appidWeb}/d/${deviceFound[0].device_id}
-${formatError(errorDevice)}`);
+    p.intro(`❌ Version ${appid}@${versionData.name} is used in ${deviceFound.length} device override`)
+    if (await p.confirm({ message: 'unlink it?' })) {
+      // loop on all devices and set version to unknown
+      for (const device of deviceFound) {
+        const s = p.spinner();
+        s.start(`Unlinking device ${device.device_id}`)
+        const { error: errorDeviceDel } = await supabase
+          .from('devices_override')
+          .delete()
+          .eq('device_id', device.device_id)
+        if (errorDeviceDel) {
+          s.stop(`Cannot unlink device ${device.device_id} ${formatError(errorDeviceDel)}`)
+          process.exit(1)
+        }
+        s.stop(`✅ Device ${device.device_id} unlinked`)
+      }
+    }
+    else {
+      program.error(`unlink it first`);
+    }
   }
 }

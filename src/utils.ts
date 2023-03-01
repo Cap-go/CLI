@@ -7,6 +7,7 @@ import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { resolve } from 'path';
+import open from 'open';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
@@ -88,7 +89,11 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
 export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
     const validPlan = await isAllowedAction(supabase, userId)
     if (!validPlan) {
-        program.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
+        console.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
+        setTimeout(() => {
+            open(`${hostWeb}/dashboard/settings/plans`)
+            program.error('')
+        }, 1000)
     }
     const trialDays = await isTrial(supabase, userId)
     if (trialDays > 0 && warning) {
@@ -144,8 +149,6 @@ export const findMainFile = async () => {
             break
         }
     }
-    if (!mainFile)
-        program.error('No main.ts, main.js, index.ts or index.js file found, please run cap init first');
     return mainFile
 }
 

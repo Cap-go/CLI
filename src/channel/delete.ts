@@ -27,7 +27,7 @@ export const deleteChannel = async (channelId: string, appId: string, options: O
         await delChannel(supabase, channelId, appId, userId);
         console.log(`Channel Delete ✅`);
         await snag.publish({
-            channel: 'app',
+            channel: 'channel',
             event: 'Delete channel',
             icon: '✅',
             tags: {

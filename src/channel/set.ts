@@ -115,8 +115,8 @@ export const setChannel = async (channel: string, appId: string, options: Option
       program.error(`Cannot set channel ${formatError(e)}`);
     }
     await snag.publish({
-      channel: 'app',
-      event: 'Set app',
+      channel: 'channel',
+      event: 'Set channel',
       icon: '✅',
       tags: {
         'user-id': userId,

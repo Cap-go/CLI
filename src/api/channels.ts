@@ -2,7 +2,8 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { Table } from 'console-table-printer';
 import { Database } from 'types/supabase.types';
-import { convertAppName, formatError, getHumanDate } from '../utils';
+import * as p from '@clack/prompts';
+import { formatError, getHumanDate } from '../utils';
 
 export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Database>,
   appid: string, userId: string, versionData: Database['public']['Tables']['app_versions']['Row']) => {
@@ -15,11 +16,29 @@ export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Data
   if (errorChannel)
     program.error(`Cannot check Version ${appid}@${versionData.name} ${formatError(errorChannel)}`);
   if (channelFound && channelFound.length > 0) {
-    const appidWeb = convertAppName(appid)
-    program.error(`❌ Version ${appid}@${versionData.name} is used in channel ${channelFound[0].name}, unlink it first:
-https://web.capgo.app/app/p/${appidWeb}/channel/${channelFound[0].id}
-Click on top right button and unlink.
-${formatError(errorChannel)}`);
+    p.intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
+    if (await p.confirm({ message: 'unlink it?' })) {
+      // loop on all channels and set version to unknown
+      for (const channel of channelFound) {
+        const s = p.spinner();
+        s.start(`Unlinking channel ${channel.name}`)
+        const { error: errorChannelUpdate } = await supabase
+          .from('channels')
+          .update({
+            version: (await findUnknownVersion(supabase, appid))?.id
+          })
+          .eq('id', channel.id)
+        if (errorChannelUpdate) {
+          s.stop(`Cannot update channel ${channel.name} ${formatError(errorChannelUpdate)}`)
+          process.exit(1)
+        }
+        s.stop(`✅ Channel ${channel.name} unlinked`)
+      }
+    }
+    else {
+      program.error(`unlink it first`);
+    }
+    p.outro(`Version unlinked from ${channelFound.length} channel`)
   }
 }
 
@@ -48,21 +67,21 @@ export const delChannel = (supabase: SupabaseClient<Database>, name: string, app
 
 
 export const displayChannels = (data: (Database['public']['Tables']['channels']['Row'] & { keep?: string })[]) => {
-  const p = new Table({
+  const t = new Table({
     title: "Channels",
     charLength: { "❌": 2, "✅": 2 },
   });
 
   // add rows with color
   data.reverse().forEach(row => {
-    p.addRow({
+    t.addRow({
       Name: row.name,
       Created: getHumanDate(row.created_at),
       Public: row.public ? '✅' : '❌'
     });
   });
 
-  p.printTable();
+  t.printTable();
 }
 
 export const getActiveChannels = async (supabase: SupabaseClient<Database>, appid: string, userId: string) => {
