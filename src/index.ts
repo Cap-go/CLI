@@ -99,7 +99,7 @@ bundle
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
 
 bundle
-  .command('delete [bundleId] [appid]')
+  .command('delete <bundleId> [appid]')
   .alias('d')
   .description('Delete a bundle in Capgo Cloud')
   .action(deleteBundle)
