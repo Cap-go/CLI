@@ -14,8 +14,8 @@ import { findMainFile, getConfig } from './utils';
 interface SuperOptions extends Options {
     local: boolean;
 }
-const importInject = "import { CapacitorUpdater } from '@capgo/capacitor-updater';";
-const codeInject = 'CapacitorUpdater.notifyAppReady();'
+const importInject = "import { CapacitorUpdater } from '@capgo/capacitor-updater'";
+const codeInject = 'CapacitorUpdater.notifyAppReady()'
 // create regex to find line who start by 'import ' and end by ' from '
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
@@ -123,7 +123,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         if (mainFileContent.includes(codeInject)) {
             s.stop(`Code already added to ${mainFilePath} ✅`)
         } else {
-            const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject}\n\n${codeInject}\n`)
+            const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
             writeFileSync(mainFilePath, newMainFileContent);
             s.stop(`Code added to ${mainFilePath} ✅`);
         }
