@@ -116,7 +116,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         const matches = mainFileContent.match(regexImport);
         const last = matches?.pop();
         if (!last) {
-            s.stop(`Cannot find import line in main file, use manual installation: https://docs.capgo.app/installation`)
+            s.stop(`Cannot find import line in main file, use manual installation: https://docs.capgo.app/plugin/installation`)
             process.exit()
         }
 
