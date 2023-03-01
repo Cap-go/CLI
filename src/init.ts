@@ -97,7 +97,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    const doAddCode = await p.confirm({ message: `Build the project?` });
+    const doAddCode = await p.confirm({ message: `Add the code to your project?` });
     if (p.isCancel(doAddCode)) {
         process.exit()
     }
