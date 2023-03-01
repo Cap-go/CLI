@@ -1,6 +1,6 @@
 import { writeFileSync, readFileSync } from 'fs';
 import { findPackageManagerType } from '@capgo/find-package-manager'
-import { execSync } from 'child_process';
+import { execSync, ExecSyncOptions } from 'child_process';
 import * as p from '@clack/prompts';
 import { createKey } from './key';
 import { addChannel } from './channel/add';
@@ -19,6 +19,7 @@ const codeInject = 'CapacitorUpdater.notifyAppReady();'
 // create regex to find line who start by 'import ' and end by ' from '
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
+const execOption = { stdio: 'pipe' }
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
     await checkLatest();
@@ -79,7 +80,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             s.stop(`Capgo already installed ✅`)
         }
         else {
-            await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@latest`)
+            await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@latest`, execOption as ExecSyncOptions)
             s.stop(`Install Done ✅`);
         }
     }
@@ -133,7 +134,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             s.stop(`Cannot find build script in package.json, please add it and run \`capgo init\` again`)
             process.exit()
         }
-        await execSync(`npm run build && npx cap sync`)
+        execSync(`npm run build && npx cap sync`, execOption as ExecSyncOptions)
         s.stop(`Build & Sync Done ✅`);
     }
 
