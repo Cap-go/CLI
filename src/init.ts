@@ -37,7 +37,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         log.stop('Login Done ✅');
     }
 
-    if (await p.confirm({ message: `Add ${appId} in Capgo?` })) {
+    const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
+    if (p.isCancel(doAdd)) {
+        process.exit()
+    }
+    if (doAdd) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest app add ${appId}`);
         const addRes = await addApp(appId, options, false);
@@ -48,7 +52,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    if (await p.confirm({ message: `Create channel ${defaultChannel} in Capgo?` })) {
+    const doChannel = await p.confirm({ message: `Create channel ${defaultChannel} in Capgo?` });
+    if (p.isCancel(doChannel)) {
+        process.exit()
+    }
+    if (doChannel) {
         const s = p.spinner();
         // create production channel public
         s.start(`Running: npx @capgo/cli@latest channel add ${defaultChannel} ${appId} -d`);
@@ -63,7 +71,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    if (await p.confirm({ message: 'Install @capgo/capacitor-updater ?' })) {
+    const doInstall = await p.confirm({ message: `Create key for ${appId} in Capgo?` });
+    if (p.isCancel(doInstall)) {
+        process.exit()
+    }
+    if (doInstall) {
         const s = p.spinner();
         s.start(`Checking if capgo is installed`);
         const pack = JSON.parse(readFileSync('package.json').toString());
@@ -85,7 +97,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    if (await p.confirm({ message: 'Add @capacitor-updater to your main file?' })) {
+    const doAddCode = await p.confirm({ message: `Build the project?` });
+    if (p.isCancel(doAddCode)) {
+        process.exit()
+    }
+    if (doAddCode) {
         const s = p.spinner();
         s.start(`Adding @capacitor-updater to your main file`);
         const mainFilePath = await findMainFile();
@@ -113,8 +129,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-
-    if (await p.confirm({ message: 'Use end-to-end encryption?' })) {
+    const doEncrypt = await p.confirm({ message: 'Use end-to-end encryption?' });
+    if (p.isCancel(doEncrypt)) {
+        process.exit()
+    }
+    if (doEncrypt) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest key create`);
         const keyRes = await createKey({}, false);
@@ -125,7 +144,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             s.stop(`key created 🔑`);
         }
     }
-    if (await p.confirm({ message: 'Build the project?' })) {
+    const doBuild = await p.confirm({ message: 'Build the project?' });
+    if (p.isCancel(doBuild)) {
+        process.exit()
+    }
+    if (doBuild) {
         const s = p.spinner();
         s.start(`Running: npm run build && npx cap sync`);
         const pack = JSON.parse(readFileSync('package.json').toString());
@@ -138,7 +161,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         s.stop(`Build & Sync Done ✅`);
     }
 
-    if (await p.confirm({ message: 'Upload the bundle?' })) {
+    const doBundle = await p.confirm({ message: 'Upload the bundle?' });
+    if (p.isCancel(doBundle)) {
+        process.exit()
+    }
+    if (doBundle) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest bundle upload`);
         const uploadRes = await uploadBundle(appId, {

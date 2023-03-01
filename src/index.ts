@@ -1,4 +1,5 @@
 import { program } from 'commander';
+import { zipBundle } from './bundle/zip';
 import { initApp } from './init';
 import { listBundle } from './bundle/list';
 import { decryptZip } from './bundle/decrypt';
@@ -144,6 +145,13 @@ bundle
   .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
   .option('--keyData <keyData>', 'base64 private signing key');
+
+bundle
+  .command('zip [appid]')
+  .description('Zip a bundle')
+  .action(zipBundle)
+  .option('-p, --path <path>', 'path of the folder to upload')
+  .option('-b, --bundle <bundle>', 'bundle version number to name the zip file');
 
 const channel = program
   .command('channel')

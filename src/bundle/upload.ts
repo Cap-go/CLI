@@ -195,7 +195,7 @@ It will be also visible in your dashboard\n`);
   }
   multibar.stop()
   const appidWeb = convertAppName(appid)
-  console.log("App uploaded to server")
+  console.log("Bundle uploaded to server")
   console.log(`Try it in mobile app: ${host}/app_mobile`)
   console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
   console.log("To use with live update in your own app")
