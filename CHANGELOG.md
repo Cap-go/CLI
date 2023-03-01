@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.3.0](https://github.com/Cap-go/capgo-cli/compare/v3.2.0...v3.3.0) (2023-03-01)
+
+
+### Features
+
+* add unlink command and prompts ([a178363](https://github.com/Cap-go/capgo-cli/commit/a178363e8f651e024346b857e9d4693791c5738f))
+
 ## [3.2.0](https://github.com/Cap-go/capgo-cli/compare/v3.1.0...v3.2.0) (2023-02-28)
 
 
