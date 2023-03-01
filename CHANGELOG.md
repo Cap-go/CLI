@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.5.0](https://github.com/Cap-go/capgo-cli/compare/v3.4.1...v3.5.0) (2023-03-01)
+
+
+### Features
+
+* add zip command ([df46a67](https://github.com/Cap-go/capgo-cli/commit/df46a67133693b08bc65e5aba9468a13d0737aa0))
+
 ### [3.4.1](https://github.com/Cap-go/capgo-cli/compare/v3.4.0...v3.4.1) (2023-03-01)
 
 
