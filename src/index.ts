@@ -5,7 +5,7 @@ import { decryptZip } from './bundle/decrypt';
 import { encryptZip } from './bundle/encrypt';
 import { addCommand } from './app/add';
 import { getInfo } from './app/info';
-import { manageKey } from './key';
+import { saveKeyCommand, createKeyCommand } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
 import { uploadCommand } from './bundle/upload';
@@ -188,10 +188,20 @@ channel
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel');
 
-program
-  .command('key [option]')
+const key = program
+  .command('key')
+  .description('Manage key');
+
+key
+  .command('save')
   .description('Save base64 signing key in capacitor config, usefull for CI')
-  .action(manageKey)
+  .action(saveKeyCommand)
+  .option('-f, --force', 'force generate a new one');
+
+key
+  .command('create')
+  .description('Create a new signing key')
+  .action(createKeyCommand)
   .option('-f, --force', 'force generate a new one');
 
 program

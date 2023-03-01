@@ -2,6 +2,7 @@ import { writeFileSync, readFileSync } from 'fs';
 import { findPackageManagerType } from '@capgo/find-package-manager'
 import { execSync } from 'child_process';
 import * as p from '@clack/prompts';
+import { createKey } from './key';
 import { addChannel } from './channel/add';
 import { uploadBundle } from './bundle/upload';
 import { login } from './login';
@@ -112,6 +113,17 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     }
 
 
+    if (await p.confirm({ message: 'Use end-to-end encryption?' })) {
+        const s = p.spinner();
+        s.start(`Running: npx @capgo/cli@latest key create`);
+        const keyRes = await createKey({}, false);
+        if (!keyRes) {
+            s.stop(`Cannot create key ❌`);
+            process.exit(1)
+        } else {
+            s.stop(`key created 🔑`);
+        }
+    }
     if (await p.confirm({ message: 'Build the project?' })) {
         const s = p.spinner();
         s.start(`Running: npm run build && npx cap sync`);
