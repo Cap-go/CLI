@@ -48,7 +48,7 @@ export const checkKey = async (supabase: SupabaseClient<Database>, apikey: strin
 
 export const isGoodPlan = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
-        .rpc('is_good_plan_v2', { userid: userId })
+        .rpc('is_good_plan_v3', { userid: userId })
         .single()
     if (error) {
         throw error
@@ -190,14 +190,12 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
             .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
-            .single()
     }
     // console.log('create Version', data, error)
 
     return supabase
         .from('app_versions')
         .insert(update)
-        .select()
         .single()
 }
 

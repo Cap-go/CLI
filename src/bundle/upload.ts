@@ -166,7 +166,7 @@ It will be also visible in your dashboard\n`);
     program.error(`External link should should start with "https://" current is "${external}"`)
   }
   b1.increment();
-  const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
+  const { error: dbError } = await updateOrCreateVersion(supabase, {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
     name: bundle,
@@ -180,12 +180,15 @@ It will be also visible in your dashboard\n`);
     program.error(`Cannot add bundle ${formatError(dbError)}`)
   }
   b1.increment();
-  if (versionData) {
+  const { data: versionId } = await supabase
+    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
+    .single()
+  if (versionId) {
     const { error: dbError3 } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
       created_by: userId,
-      version: versionData.id,
+      version: versionId,
     }, apikey)
     if (dbError3) {
       multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
