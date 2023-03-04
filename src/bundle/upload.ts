@@ -50,6 +50,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   if (!appid || !bundle || !path) {
     program.error("Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project");
   }
+  // check if path exist
+  if (!existsSync(path)) {
+    program.error(`Path ${path} does not exist, build your app first, or provide a valid path`);
+  }
   console.log(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
