@@ -9,7 +9,7 @@ import { getInfo } from './app/info';
 import { saveKeyCommand, createKeyCommand } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { uploadCommand } from './bundle/upload';
+import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
 import pack from '../package.json'
 import { loginCommand } from './login';
 import { listApp } from './app/list';
@@ -216,7 +216,7 @@ program
   .command('upload [appid]')
   .alias('u')
   .description('(Deprecated) Upload a new bundle to Capgo Cloud')
-  .action(uploadCommand)
+  .action(uploadDeprecatedCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')

@@ -227,3 +227,8 @@ It will be also visible in your dashboard\n`);
 export const uploadCommand = async (apikey: string, options: Options) => {
   uploadBundle(apikey, options, true)
 }
+
+export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
+  console.log('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
+  uploadBundle(apikey, options, true)
+}
