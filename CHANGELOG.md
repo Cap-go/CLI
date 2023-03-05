@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.6.0](https://github.com/Cap-go/capgo-cli/compare/v3.5.6...v3.6.0) (2023-03-05)
+
+
+### Features
+
+* add os check in doctor ([fd31e68](https://github.com/Cap-go/capgo-cli/commit/fd31e6825a34aaedeca2c57152632a5b675f79bd))
+
 ### [3.5.6](https://github.com/Cap-go/capgo-cli/compare/v3.5.5...v3.5.6) (2023-03-05)
 
 
