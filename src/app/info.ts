@@ -2,7 +2,7 @@ import { readFileSync } from "fs"
 import getLatest from "get-latest-version"
 import { join } from "path"
 import Spinnies from '@trufflesuite/spinnies';
-import osName from 'os-name';
+import os from 'os';
 import pack from '../../package.json'
 
 const getLatestDependencies = async (installedDependencies: { [key: string]: string }) => {
@@ -47,7 +47,7 @@ const getInstalledDependencies = async () => {
 
 export const getInfo = async () => {
     console.log('     💊   Capgo Doctor  💊\n')
-    console.log(` OS: ${osName()}\n`)
+    console.log(` OS: ${os.version()}\n`)
     console.log(' Installed Dependencies:\n')
     const installedDependencies = await getInstalledDependencies()
     if (Object.keys(installedDependencies).length === 0) {
