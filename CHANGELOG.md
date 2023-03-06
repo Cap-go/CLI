@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.6.2](https://github.com/Cap-go/capgo-cli/compare/v3.6.1...v3.6.2) (2023-03-06)
+
+
+### Bug Fixes
+
+* issue get-latest-version with multi npmrc ([0d83df0](https://github.com/Cap-go/capgo-cli/commit/0d83df09792ab666f741095bfd4366c43184d728))
+
 ### [3.6.1](https://github.com/Cap-go/capgo-cli/compare/v3.6.0...v3.6.1) (2023-03-05)
 
 
