@@ -4,6 +4,7 @@ import { execSync, ExecSyncOptions } from 'child_process';
 import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
+import LogSnag from 'logsnag';
 import { createKey } from './key';
 import { addChannel } from './channel/add';
 import { uploadBundle } from './bundle/upload';
@@ -11,7 +12,7 @@ import { login } from './login';
 import { addApp } from './app/add';
 import { checkLatest } from './api/update';
 import { Options } from './api/app';
-import { convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig } from './utils';
+import { convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils';
 
 interface SuperOptions extends Options {
     local: boolean;
@@ -22,6 +23,33 @@ const codeInject = 'CapacitorUpdater.notifyAppReady()'
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
+
+const cancelCommand = async (command: boolean | symbol, userId: string, snag: LogSnag) => {
+    if (p.isCancel(command)) {
+        await snag.publish({
+            channel: 'onboarding-v2',
+            event: 'canceled',
+            icon: '🤷',
+            tags: {
+                'user-id': userId,
+            },
+            notify: false,
+        }).catch()
+        process.exit()
+    }
+}
+
+const markStep = async (userId: string, snag: LogSnag, step: number) => {
+    await snag.publish({
+        channel: 'onboarding-v2',
+        event: step ? `step-${step}` : 'done',
+        icon: '✅',
+        tags: {
+            'user-id': userId,
+        },
+        notify: false,
+    }).catch()
+}
 
 const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
     new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
@@ -47,6 +75,7 @@ const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
     await checkLatest();
+    const snag = useLogSnag()
     const config = await getConfig();
     appId = appId || config?.app?.appId
 
@@ -61,11 +90,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         log.stop('Login Done ✅');
     }
     const supabase = createSupabaseClient(apikey || findSavedKey())
+    const userId = await verifyUser(supabase, apikey, ['upload']);
+    await markStep(userId, snag, 1)
 
     const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
-    if (p.isCancel(doAdd)) {
-        process.exit()
-    }
+    await cancelCommand(doAdd, userId, snag);
     if (doAdd) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest app add ${appId}`);
@@ -75,12 +104,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         } else {
             s.stop(`App add Done ✅`);
         }
+        await markStep(userId, snag, 2)
     }
 
     const doChannel = await p.confirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` });
-    if (p.isCancel(doChannel)) {
-        process.exit()
-    }
+    await cancelCommand(doChannel, userId, snag);
     if (doChannel) {
         const s = p.spinner();
         // create production channel public
@@ -94,12 +122,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         } else {
             s.stop(`Channel add Done ✅`);
         }
+        await markStep(userId, snag, 3)
     }
 
     const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" in ${appId}?` });
-    if (p.isCancel(doInstall)) {
-        process.exit()
-    }
+    await cancelCommand(doInstall, userId, snag);
     if (doInstall) {
         const s = p.spinner();
         s.start(`Checking if @capgo/capacitor-updater is installed`);
@@ -120,12 +147,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@latest`, execOption as ExecSyncOptions)
             s.stop(`Install Done ✅`);
         }
+        await markStep(userId, snag, 4)
     }
 
     const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` });
-    if (p.isCancel(doAddCode)) {
-        process.exit()
-    }
+    await cancelCommand(doAddCode, userId, snag);
     if (doAddCode) {
         const s = p.spinner();
         s.start(`Adding @capacitor-updater to your main file`);
@@ -152,12 +178,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             writeFileSync(mainFilePath, newMainFileContent);
             s.stop(`Code added to ${mainFilePath} ✅`);
         }
+        await markStep(userId, snag, 5)
     }
 
     const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` });
-    if (p.isCancel(doEncrypt)) {
-        process.exit()
-    }
+    await cancelCommand(doEncrypt, userId, snag);
     if (doEncrypt) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest key create`);
@@ -168,11 +193,10 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         } else {
             s.stop(`key created 🔑`);
         }
+        await markStep(userId, snag, 6)
     }
     const doBuild = await p.confirm({ message: `Automatic build ${appId} with "npm run build" ?` });
-    if (p.isCancel(doBuild)) {
-        process.exit()
-    }
+    await cancelCommand(doBuild, userId, snag);
     if (doBuild) {
         const s = p.spinner();
         s.start(`Running: npm run build && npx cap sync`);
@@ -184,12 +208,11 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
         execSync(`npm run build && npx cap sync`, execOption as ExecSyncOptions)
         s.stop(`Build & Sync Done ✅`);
+        await markStep(userId, snag, 7)
     }
 
     const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` });
-    if (p.isCancel(doBundle)) {
-        process.exit()
-    }
+    await cancelCommand(doBundle, userId, snag);
     if (doBundle) {
         const s = p.spinner();
         s.start(`Running: npx @capgo/cli@latest bundle upload`);
@@ -203,11 +226,10 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         } else {
             s.stop(`Upload Done ✅`);
         }
+        await markStep(userId, snag, 8)
     }
     const doRun = await p.confirm({ message: `Verify update work in device now ?` });
-    if (p.isCancel(doRun)) {
-        process.exit()
-    }
+    await cancelCommand(doRun, userId, snag);
     if (doRun) {
         const plaformType = await p.select({
             message: 'Pick a platform to run your app',
@@ -237,7 +259,9 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         //         console.log('received ', res.action)
         //     }
         // }
+        await markStep(userId, snag, 9)
     }
+    await markStep(userId, snag, 0)
     p.outro(`Welcome onboard ✈️!`);
     const appIdUrl = convertAppName(appId)
     console.log(`Your Capgo update system is setup, check logs in https://web.capgo.app/app/p/${appIdUrl}/logs`)
