@@ -2,6 +2,8 @@ import { writeFileSync, readFileSync } from 'fs';
 import { findPackageManagerType } from '@capgo/find-package-manager'
 import { execSync, ExecSyncOptions } from 'child_process';
 import * as p from '@clack/prompts';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from 'types/supabase.types';
 import { createKey } from './key';
 import { addChannel } from './channel/add';
 import { uploadBundle } from './bundle/upload';
@@ -9,7 +11,7 @@ import { login } from './login';
 import { addApp } from './app/add';
 import { checkLatest } from './api/update';
 import { Options } from './api/app';
-import { findMainFile, getConfig } from './utils';
+import { convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig } from './utils';
 
 interface SuperOptions extends Options {
     local: boolean;
@@ -20,6 +22,28 @@ const codeInject = 'CapacitorUpdater.notifyAppReady()'
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
+
+const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
+    new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
+        console.log('wait log', appId)
+        const listener = supabase
+            .channel('table-db-changes')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'stats',
+                    filter: `app_id=eq.${appId}`,
+                },
+                (payload) => {
+                    console.log('payload', payload)
+                    listener.unsubscribe()
+                    resolve(payload.new as Database['public']['Tables']['stats']['Row'])
+                },
+            )
+            .subscribe()
+    })
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
     await checkLatest();
@@ -36,6 +60,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     } else {
         log.stop('Login Done ✅');
     }
+    const supabase = createSupabaseClient(apikey || findSavedKey())
 
     const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
     if (p.isCancel(doAdd)) {
@@ -52,7 +77,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    const doChannel = await p.confirm({ message: `Create channel ${defaultChannel} in Capgo?` });
+    const doChannel = await p.confirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` });
     if (p.isCancel(doChannel)) {
         process.exit()
     }
@@ -71,13 +96,13 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    const doInstall = await p.confirm({ message: `Create key for ${appId} in Capgo?` });
+    const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" in ${appId}?` });
     if (p.isCancel(doInstall)) {
         process.exit()
     }
     if (doInstall) {
         const s = p.spinner();
-        s.start(`Checking if capgo is installed`);
+        s.start(`Checking if @capgo/capacitor-updater is installed`);
         const pack = JSON.parse(readFileSync('package.json').toString());
         const pm = findPackageManagerType();
         if (pm === 'unknown') {
@@ -97,7 +122,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    const doAddCode = await p.confirm({ message: `Add the code to your project?` });
+    const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` });
     if (p.isCancel(doAddCode)) {
         process.exit()
     }
@@ -129,7 +154,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         }
     }
 
-    const doEncrypt = await p.confirm({ message: 'Use end-to-end encryption?' });
+    const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` });
     if (p.isCancel(doEncrypt)) {
         process.exit()
     }
@@ -144,7 +169,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             s.stop(`key created 🔑`);
         }
     }
-    const doBuild = await p.confirm({ message: 'Build the project?' });
+    const doBuild = await p.confirm({ message: `Automatic build ${appId} with "npm run build" ?` });
     if (p.isCancel(doBuild)) {
         process.exit()
     }
@@ -161,7 +186,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
         s.stop(`Build & Sync Done ✅`);
     }
 
-    const doBundle = await p.confirm({ message: 'Upload the bundle?' });
+    const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` });
     if (p.isCancel(doBundle)) {
         process.exit()
     }
@@ -179,9 +204,42 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
             s.stop(`Upload Done ✅`);
         }
     }
-    p.outro(`You're all set ✅!`);
-    console.log(`Now run the app in your phone or emulator with: npx cap run`)
-    const appIdUrl = appId.replace(/\./g, '--')
-    console.log(`Then watch logs in https://web.capgo.app/app/p/${appIdUrl}/logs`)
+    const doRun = await p.confirm({ message: `Verify update work in device now ?` });
+    if (p.isCancel(doRun)) {
+        process.exit()
+    }
+    if (doRun) {
+        const plaformType = await p.select({
+            message: 'Pick a platform to run your app',
+            options: [
+                { value: 'ios', label: 'IOS' },
+                { value: 'android', label: 'Android' },
+            ],
+        });
+        if (p.isCancel(plaformType)) {
+            process.exit()
+        }
+        const platform = plaformType as 'ios' | 'android'
+        const s = p.spinner();
+        s.start(`Running: npx cap open ${platform}`);
+        await execSync(`npx cap open ${platform}`)
+        s.stop(`Started Done ✅\nOpen your device and wait for update`);
+        // const s2 = p.spinner();
+        // s2.start(`Wait logs send to Capgo from ${appId}`);
+        // let loop = true;
+        // while (loop) {
+        //     console.log('waiting for logs')
+        //     const res = await waitLog(supabase, appId);
+        //     if (res.action === 'get') {
+        //         s2.stop(`Logs received your device received his update ✅`);
+        //         loop = false;
+        //     } else {
+        //         console.log('received ', res.action)
+        //     }
+        // }
+    }
+    p.outro(`Welcome onboard ✈️!`);
+    const appIdUrl = convertAppName(appId)
+    console.log(`Your Capgo update system is setup, check logs in https://web.capgo.app/app/p/${appIdUrl}/logs`)
     process.exit()
 }

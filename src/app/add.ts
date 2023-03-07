@@ -42,7 +42,9 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
   if (!icon || !name) {
     program.error("Missing argument, you need to provide a appId and a name, or be in a capacitor project");
   }
-  console.log(`Adding ${appId} to Capgo`);
+  if (shouldExit) {
+    console.log(`Adding ${appId} to Capgo`);
+  }
   let iconBuff;
   let iconType;
 
