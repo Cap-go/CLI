@@ -78,6 +78,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     const snag = useLogSnag()
     const config = await getConfig();
     appId = appId || config?.app?.appId
+    apikey = apikey || findSavedKey()
 
     p.intro(`Capgo init`);
 
@@ -89,8 +90,8 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     } else {
         log.stop('Login Done ✅');
     }
-    const supabase = createSupabaseClient(apikey || findSavedKey())
-    const userId = await verifyUser(supabase, apikey, ['upload']);
+    const supabase = createSupabaseClient(apikey)
+    const userId = await verifyUser(supabase, apikey, ['upload', 'all', 'read', 'write']);
     await markStep(userId, snag, 1)
 
     const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
