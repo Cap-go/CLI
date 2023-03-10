@@ -42,7 +42,7 @@ const cancelCommand = async (command: boolean | symbol, userId: string, snag: Lo
 const markStep = async (userId: string, snag: LogSnag, step: number) => {
     await snag.publish({
         channel: 'onboarding-v2',
-        event: step ? `step-${step}` : 'done',
+        event: step ? `onboarding-step-${step}` : 'onboarding-done',
         icon: '✅',
         tags: {
             'user-id': userId,
