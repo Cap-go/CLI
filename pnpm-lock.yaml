@@ -1,7 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
-  '@capacitor/cli': 4.7.0
+  '@capacitor/cli': 4.7.1
   '@capgo/find-package-manager': ^0.0.7
   '@clack/prompts': ^0.6.3
   '@supabase/supabase-js': ^2.10.0
@@ -50,7 +50,7 @@ specifiers:
   webpack-node-externals: ^3.0.0
 
 dependencies:
-  '@capacitor/cli': 4.7.0
+  '@capacitor/cli': 4.7.1
   '@capgo/find-package-manager': 0.0.7
   '@clack/prompts': 0.6.3
   '@supabase/supabase-js': 2.10.0
@@ -132,8 +132,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@capacitor/cli/4.7.0:
-    resolution: {integrity: sha512-yMbHpm3CegWcNoXp743W2raaUBm0EVnl61y14O8LO/IfUMSXGWOwrWMhUY4cXkkqzLbb6vv2ZIvO8ZzvUGml3w==}
+  /@capacitor/cli/4.7.1:
+    resolution: {integrity: sha512-cUEMci4KBb8gwIDXaO9F2Woz1wnugB/vVq2sRVy8+fzOfhmHlxweuH+h9RktDkpceVi+COfxYw/VPjg1wjC1tA==}
     engines: {node: '>=12.4.0'}
     hasBin: true
     dependencies:
