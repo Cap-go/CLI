@@ -71,54 +71,83 @@ const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
         if (data && !error) {
             p.log.info(`Device: ${data.device_id}`)
             if (data.action === 'get') {
+                p.log.info('Update Sent your your device, wait until event download complete')
+            }
+            else if (data.action === 'NoChannelOrOverride') {
+                p.log.error('No default channel or override (channel/device) found, please create one')
+            }
+            else if (data.action === 'needPlanUpgrade') {
+                p.log.error('Your are out of quota, please upgrade your plan')
+            }
+            else if (data.action === 'missingBundle') {
+                p.log.error('Your bundle is missing, please check how you build your app')
+            }
+            else if (data.action === 'noNew') {
+                p.log.error(`our version in  ${data.platform} is the same as your version uploaded, change it to see the update`)
+            }
+            else if (data.action === 'disablePlatformIos') {
+                p.log.error('iOS is disabled  in the default channel and your device is an iOS device')
+            }
+            else if (data.action === 'disablePlatformAndroid') {
+                p.log.error('Android is disabled  in the default channel and your device is an Android device')
+            }
+            else if (data.action === 'disableAutoUpdateToMajor') {
+                p.log.error('Auto update to major version is disabled in the default channel.')
+                p.log.error('Set your app to the same major version as the default channel')
+            }
+            else if (data.action === 'disableAutoUpdateUnderNative') {
+                p.log.error('Auto update under native version is disabled in the default channel.')
+                p.log.error('Set your app to the same native version as the default channel.')
+            }
+            else if (data.action === 'disableDevBuild') {
+                p.log.error('Dev build is disabled in the default channel.')
+                p.log.error('Set your channel to allow it if you wanna test your app')
+            }
+            else if (data.action === 'disableEmulator') {
+                p.log.error('Emulator is disabled in the default channel.')
+                p.log.error('Set your channel to allow it if you wanna test your app')
+            }
+            else if (data.action === 'cannotGetBundle') {
+                p.log.error('We cannot get your bundle from the default channel.')
+                p.log.error('Are you sure your default channel has a bundle set?')
+            }
+            else if (data.action === 'set') {
+                p.log.info('Your bundle has been set on your device ❤️')
                 loop = false
                 return Promise.resolve(data)
             }
-            if (data.action === 'NoChannelOrOverride') {
-                p.log.error('No default channel or override (channel/device) found, please create one')
+            else if (data.action === 'set_fail') {
+                p.log.error('Your bundle seems to be corrupted, please check your code and send it again to Capgo')
             }
-            if (data.action === 'needPlanUpgrade') {
-                p.log.error('Your are out of quota, please upgrade your plan')
+            else if (data.action === 'reset') {
+                p.log.error('Your device has been reset to the builtin bundle')
             }
-            if (data.action === 'missingBundle') {
-                p.log.error('Your bundle is missing, please check how you build your app')
+            else if (data.action.startsWith('download_')) {
+                const action = data.action.split('_')[1]
+                if (action === 'complete') {
+                    p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
+                }
+                else if (action === 'fail') {
+                    p.log.error('Your bundle has failed to download on your device.')
+                    p.log.error('Please check if you have network connection and try again')
+                }
+                else {
+                    p.log.info(`Your bundle is downloading ${action}% ...`)
+                }
             }
-            if (data.action === 'noNew') {
-                p.log.error(`our version in  ${data.platform} is the same as your version uploaded, change it to see the update`)
+            else if (data.action === 'update_fail') {
+                p.log.error('Your bundle has been installed but failed to call notifyAppReady')
+                p.log.error('Please check if you have network connection and try again')
             }
-            if (data.action === 'disablePlatformIos') {
-                p.log.error(`iOS is disabled  in the default channel and your device is an iOS device`)
+            else if (data.action === 'checksum_fail') {
+                p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
             }
-            if (data.action === 'disablePlatformAndroid') {
-                p.log.error(`Android is disabled  in the default channel and your device is an Android device`)
-            }
-            if (data.action === 'disableAutoUpdateToMajor') {
-                p.log.error(`Auto update to major version is disabled in the default channel.`)
-                p.log.error(`set your app to the same major version as the default channel`)
-            }
-            if (data.action === 'disableAutoUpdateUnderNative') {
-                p.log.error(`Auto update under native version is disabled in the default channel.`)
-                p.log.error(`set your app to the same native version as the default channel`)
-            }
-            if (data.action === 'disableDevBuild') {
-                p.log.error(`Dev build is disabled in the default channel.`)
-                p.log.error(`set your channel to allow it if you wanna test your app`)
-            }
-            if (data.action === 'disableEmulator') {
-                p.log.error(`Emulator is disabled in the default channel.`)
-                p.log.error(`set your channel to allow it if you wanna test your app`)
-            }
-            if (data.action === 'cannotGetBundle') {
-                p.log.error(`We cannot get your bundle from the default channel.`)
-                p.log.error(`Are you sure your default channel has a bundle set?`)
-            }
+            now = new Date().toISOString()
+            await wait(1000)
         }
-        now = new Date().toISOString()
-        await wait(1000)
     }
     return Promise.resolve()
 }
-
 // const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
 //     new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
 //         console.log('wait log', appId)
