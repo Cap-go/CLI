@@ -53,30 +53,96 @@ const markSnag = async (userId: string, snag: LogSnag, event: string, icon = '�
 
 const markStep = async (userId: string, snag: LogSnag, step: number | string) => markSnag(userId, snag, `onboarding-step-${step}`)
 
-const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
-    new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
-        console.log('wait log', appId)
-        const listener = supabase
-            .channel('table-db-changes')
-            .on(
-                'postgres_changes',
-                {
-                    event: 'INSERT',
-                    schema: 'public',
-                    table: 'stats',
-                    filter: `app_id=eq.${appId}`,
-                },
-                (payload) => {
-                    console.log('payload', payload)
-                    if (payload.new.action === 'get') {
-                        console.log('stop listen')
-                        listener.unsubscribe()
-                        resolve(payload.new as Database['public']['Tables']['stats']['Row'])
-                    }
-                },
-            )
-            .subscribe()
-    })
+
+const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
+
+const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
+    let loop = true
+    let now = new Date().toISOString()
+    while (loop) {
+        const { data, error } = await supabase
+            .from('stats')
+            .select('*')
+            .eq('app_id', appId)
+            .order('id', { ascending: false })
+            .gte('created_at', now)
+            .limit(1)
+            .single()
+        if (data && !error) {
+            p.log.info(`Device: ${data.device_id}`)
+            if (data.action === 'get') {
+                loop = false
+                return Promise.resolve(data)
+            }
+            if (data.action === 'NoChannelOrOverride') {
+                p.log.error('No default channel or override (channel/device) found, please create one')
+            }
+            if (data.action === 'needPlanUpgrade') {
+                p.log.error('Your are out of quota, please upgrade your plan')
+            }
+            if (data.action === 'missingBundle') {
+                p.log.error('Your bundle is missing, please check how you build your app')
+            }
+            if (data.action === 'noNew') {
+                p.log.error(`our version in  ${data.platform} is the same as your version uploaded, change it to see the update`)
+            }
+            if (data.action === 'disablePlatformIos') {
+                p.log.error(`iOS is disabled  in the default channel and your device is an iOS device`)
+            }
+            if (data.action === 'disablePlatformAndroid') {
+                p.log.error(`Android is disabled  in the default channel and your device is an Android device`)
+            }
+            if (data.action === 'disableAutoUpdateToMajor') {
+                p.log.error(`Auto update to major version is disabled in the default channel.`)
+                p.log.error(`set your app to the same major version as the default channel`)
+            }
+            if (data.action === 'disableAutoUpdateUnderNative') {
+                p.log.error(`Auto update under native version is disabled in the default channel.`)
+                p.log.error(`set your app to the same native version as the default channel`)
+            }
+            if (data.action === 'disableDevBuild') {
+                p.log.error(`Dev build is disabled in the default channel.`)
+                p.log.error(`set your channel to allow it if you wanna test your app`)
+            }
+            if (data.action === 'disableEmulator') {
+                p.log.error(`Emulator is disabled in the default channel.`)
+                p.log.error(`set your channel to allow it if you wanna test your app`)
+            }
+            if (data.action === 'cannotGetBundle') {
+                p.log.error(`We cannot get your bundle from the default channel.`)
+                p.log.error(`Are you sure your default channel has a bundle set?`)
+            }
+        }
+        now = new Date().toISOString()
+        await wait(1000)
+    }
+    return Promise.resolve()
+}
+
+// const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
+//     new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
+//         console.log('wait log', appId)
+//         const listener = supabase
+//             .channel('table-db-changes')
+//             .on(
+//                 'postgres_changes',
+//                 {
+//                     event: 'INSERT',
+//                     schema: 'public',
+//                     table: 'stats',
+//                     filter: `app_id=eq.${appId}`,
+//                 },
+//                 (payload) => {
+//                     console.log('payload', payload)
+//                     if (payload.new.action === 'get') {
+//                         console.log('stop listen')
+//                         listener.unsubscribe()
+//                         resolve(payload.new as Database['public']['Tables']['stats']['Row'])
+//                     }
+//                 },
+//             )
+//             .subscribe()
+//     })
 
 const step2 = async (userId: string, snag: LogSnag, appId: string, options: SuperOptions) => {
     const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
@@ -282,13 +348,12 @@ const step10 = async (userId: string, snag: LogSnag,
     const doRun = await p.confirm({ message: `Automatic check if update working in device ?` });
     await cancelCommand(doRun, userId, snag);
     if (doRun) {
-        const s1 = p.spinner();
-        s1.start(`Put the app in background and open it again, We wait logs send to Capgo from ${appId} device`);
-        const res = await waitLog(supabase, appId);
-        console.log('res', res)
-        s1.stop(`Logs received your device received his update ✅`);
+        p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
+        p.log.info('Waiting...');
+        await waitLog(supabase, appId);
     } else {
-        p.log.info(`Open your device and wait for update`)
+        const appIdUrl = convertAppName(appId)
+        p.log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
     }
     await markStep(userId, snag, 9)
 }
@@ -321,11 +386,9 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     await step7(userId, snag, apikey, appId)
     await step8(userId, snag, apikey, appId)
     await step9(userId, snag)
-    // await step10(userId, snag, supabase, appId)
+    await step10(userId, snag, supabase, appId)
 
     await markStep(userId, snag, 0)
-    p.outro(`Welcome onboard ✈️!`);
-    const appIdUrl = convertAppName(appId)
-    console.log(`Your Capgo update system is setup, check logs in https://web.capgo.app/app/p/${appIdUrl}/logs`)
+    p.outro(`Welcome onboard ✈️!\nYour Capgo update system is setup`);
     process.exit()
 }
