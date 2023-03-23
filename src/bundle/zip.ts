@@ -1,7 +1,7 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
-import cliProgress from 'cli-progress';
+import * as p from '@clack/prompts';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import { writeFileSync } from 'fs';
 import { checkLatest } from '../api/update';
@@ -29,40 +29,30 @@ export const zipBundle = async (appId: string, options: Options) => {
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0];
     bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
+    p.intro(`Zipping ${appId}@${bundle}`);
     // check if bundle is valid 
     if (!regexSemver.test(bundle)) {
-        program.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
+        p.log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
+        program.error('');
     }
     path = path || config?.app?.webDir
     if (!appId || !bundle || !path) {
-        program.error("Missing argument, you need to provide a appId and a bundle and a path, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId and a bundle and a path, or be in a capacitor project");
+        program.error('');
     }
-    console.log(`Zip ${appId}@${bundle} started from path "${path}"`);
-
-    const multibar = new cliProgress.MultiBar({
-        clearOnComplete: false,
-        hideCursor: true
-    }, cliProgress.Presets.shades_grey);
-
-    // add bars
-    const b1 = multibar.create(4, 0, {
-        format: 'Uploading: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} Part'
-    }, cliProgress.Presets.shades_grey);
-    b1.start(4, 0, {
-        speed: "N/A"
-    });
-
-    b1.increment();
+    p.log.info(`Started from path "${path}"`);
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
-    b1.increment();
+    p.log.info(`Zipped ${zipped.byteLength} bytes`);
+    const s = p.spinner()
+    s.start(`Calculating checksum`);
     const checksum = await getChecksum(zipped, 'crc32');
+    s.stop(`Checksum: ${checksum}`);
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
-    b1.increment();
     if (mbSize > alertMb) {
-        multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
-        multibar.log(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
+        p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
+        p.log.warn(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
         await snag.publish({
             channel: 'app-error',
             event: 'App Too Large',
@@ -73,10 +63,10 @@ export const zipBundle = async (appId: string, options: Options) => {
             notify: false,
         }).catch()
     }
-    b1.increment();
+    const s2 = p.spinner()
+    s2.start(`Saving to ${appId}_${bundle}.zip`);
     writeFileSync(`${appId}_${bundle}.zip`, zipped);
-    multibar.stop()
-    console.log("Bundle zipped")
+    s2.stop(`Saved to ${appId}_${bundle}.zip`);
     await snag.publish({
         channel: 'app',
         event: 'App zip',
@@ -86,7 +76,6 @@ export const zipBundle = async (appId: string, options: Options) => {
         },
         notify: false,
     }).catch()
-    console.log(`Checksum: ${checksum}`);
-    console.log(`Done ✅`);
+    p.outro(`Done ✅`);
     process.exit()
 }

@@ -218,8 +218,8 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             .eq('app_id', update.app_id)
             .eq('name', update.name)
             .eq('created_by', update.created_by)
+            .select()
             .single()
-
     }
 
     return supabase
