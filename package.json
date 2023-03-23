@@ -80,7 +80,7 @@
     "git-format-staged": "3.0.0",
     "husky": "^8.0.3",
     "nodemon": "2.0.21",
-    "pkg": "5.8.0",
+    "pkg": "5.8.1",
     "prettier": "2.8.4",
     "ts-loader": "^9.4.2",
     "ts-node": "^10.9.1",
