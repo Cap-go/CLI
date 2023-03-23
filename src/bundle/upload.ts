@@ -191,7 +191,7 @@ It will be also visible in your dashboard\n`);
       version: versionId,
     }, apikey)
     if (dbError3) {
-      p.log.warn(`Cannot set channel ${formatError(dbError3)}`)
+      p.log.warn(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
     }
     const appidWeb = convertAppName(appid)
     if (data?.public) {

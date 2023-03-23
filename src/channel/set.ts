@@ -109,10 +109,10 @@ export const setChannel = async (channel: string, appId: string, options: Option
     try {
       const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, options.apikey)
       if (dbError)
-        program.error(`Cannot set channel ${formatError(dbError)}`);
+        program.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
     }
     catch (e) {
-      program.error(`Cannot set channel ${formatError(e)}`);
+      program.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
     }
     await snag.publish({
       channel: 'channel',
