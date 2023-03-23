@@ -56,9 +56,10 @@ const markStep = async (userId: string, snag: LogSnag, step: number | string) =>
 
 const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
 
-const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
+const waitLog = async (supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, userId: string) => {
     let loop = true
     let now = new Date().toISOString()
+    await markSnag(userId, snag, 'Use waitlog')
     while (loop) {
         const { data, error } = await supabase
             .from('stats')
@@ -72,6 +73,27 @@ const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
             p.log.info(`Device: ${data.device_id}`)
             if (data.action === 'get') {
                 p.log.info('Update Sent your your device, wait until event download complete')
+                await markStep(userId, snag, 11)
+            }
+            else if (data.action.startsWith('download_')) {
+                const action = data.action.split('_')[1]
+                if (action === 'complete') {
+                    p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
+                    await markStep(userId, snag, 12)
+                }
+                else if (action === 'fail') {
+                    p.log.error('Your bundle has failed to download on your device.')
+                    p.log.error('Please check if you have network connection and try again')
+                }
+                else {
+                    p.log.info(`Your bundle is downloading ${action}% ...`)
+                }
+            }
+            else if (data.action === 'set') {
+                p.log.info('Your bundle has been set on your device ❤️')
+                loop = false
+                await markStep(userId, snag, 13)
+                return Promise.resolve(data)
             }
             else if (data.action === 'NoChannelOrOverride') {
                 p.log.error('No default channel or override (channel/device) found, please create one')
@@ -83,7 +105,7 @@ const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
                 p.log.error('Your bundle is missing, please check how you build your app')
             }
             else if (data.action === 'noNew') {
-                p.log.error(`our version in  ${data.platform} is the same as your version uploaded, change it to see the update`)
+                p.log.error(`Your version in ${data.platform} is the same as your version uploaded, change it to see the update`)
             }
             else if (data.action === 'disablePlatformIos') {
                 p.log.error('iOS is disabled  in the default channel and your device is an iOS device')
@@ -111,29 +133,11 @@ const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
                 p.log.error('We cannot get your bundle from the default channel.')
                 p.log.error('Are you sure your default channel has a bundle set?')
             }
-            else if (data.action === 'set') {
-                p.log.info('Your bundle has been set on your device ❤️')
-                loop = false
-                return Promise.resolve(data)
-            }
             else if (data.action === 'set_fail') {
                 p.log.error('Your bundle seems to be corrupted, please check your code and send it again to Capgo')
             }
             else if (data.action === 'reset') {
                 p.log.error('Your device has been reset to the builtin bundle')
-            }
-            else if (data.action.startsWith('download_')) {
-                const action = data.action.split('_')[1]
-                if (action === 'complete') {
-                    p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-                }
-                else if (action === 'fail') {
-                    p.log.error('Your bundle has failed to download on your device.')
-                    p.log.error('Please check if you have network connection and try again')
-                }
-                else {
-                    p.log.info(`Your bundle is downloading ${action}% ...`)
-                }
             }
             else if (data.action === 'update_fail') {
                 p.log.error('Your bundle has been installed but failed to call notifyAppReady')
@@ -379,12 +383,12 @@ const step10 = async (userId: string, snag: LogSnag,
     if (doRun) {
         p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
         p.log.info('Waiting...');
-        await waitLog(supabase, appId);
+        await waitLog(supabase, appId, snag, userId);
     } else {
         const appIdUrl = convertAppName(appId)
         p.log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
     }
-    await markStep(userId, snag, 9)
+    await markStep(userId, snag, 10)
 }
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
