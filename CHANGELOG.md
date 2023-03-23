@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.8.0](https://github.com/Cap-go/capgo-cli/compare/v3.7.1...v3.8.0) (2023-03-23)
+
+
+### Features
+
+* allow custom supabase ([60218de](https://github.com/Cap-go/capgo-cli/commit/60218de4b1e51734e71dbc8fca7290585873a658))
+
 ### [3.7.1](https://github.com/Cap-go/capgo-cli/compare/v3.7.0...v3.7.1) (2023-03-22)
 
 
