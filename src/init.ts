@@ -143,8 +143,8 @@ const waitLog = async (supabase: SupabaseClient<Database>, appId: string) => {
                 p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
             }
             now = new Date().toISOString()
-            await wait(1000)
         }
+        await wait(1000)
     }
     return Promise.resolve()
 }

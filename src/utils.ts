@@ -14,7 +14,7 @@ export const baseKeyPub = `${baseKey}.pub`;
 export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
 export const hostSupa = process.env.SUPA_DB === 'production'
-    ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : 'https://aucsybvnhavogdmzwtcw.supabase.co';
+    ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
 
 if (process.env.SUPA_DB !== 'production') {
     console.log('hostSupa', hostSupa);
@@ -22,7 +22,7 @@ if (process.env.SUPA_DB !== 'production') {
 /* eslint-disable */
 export const supaAnon = process.env.SUPA_DB === 'production'
     ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
-    : 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
+    : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
 /* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient<Database>(hostSupa, supaAnon, {
