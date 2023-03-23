@@ -82,7 +82,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`);
-    p.log.warn(`upgrade here: ${hostWeb}/dashboard/settings/plans`);
+    p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
   }
 
   const { data: app, error: appError } = await supabase
