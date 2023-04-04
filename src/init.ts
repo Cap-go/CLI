@@ -302,7 +302,7 @@ const step6 = async (userId: string, snag: LogSnag,
         } else {
             s.stop(`key created 🔑`);
         }
-        markSnag(userId, snag, 'Use encrymption')
+        markSnag(userId, snag, 'Use encryption')
     }
     await markStep(userId, snag, 6)
 }
