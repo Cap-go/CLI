@@ -19,6 +19,7 @@ import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
 import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
+import { watchApp } from './app/watch';
 
 program
   .description('Manage packages and bundle versions in Capgo Cloud')
@@ -70,6 +71,12 @@ app
   .description('list apps in Capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+app
+  .command('watch [port]')
+  .alias('w')
+  .description('watch for changes in your app and allow capgo app or your app to see changes in live')
+  .action(watchApp);
 
 app
   .command('set [appid]')
