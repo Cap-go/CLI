@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.1](https://github.com/Cap-go/capgo-cli/compare/v3.10.0...v3.10.1) (2023-04-12)
+
+
+### Bug Fixes
+
+* table display ([d3d769f](https://github.com/Cap-go/capgo-cli/commit/d3d769f334505f56e5a01be81c7e5cdef903e6df))
+
 ## [3.10.0](https://github.com/Cap-go/capgo-cli/compare/v3.9.2...v3.10.0) (2023-04-12)
 
 
