@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.10.0](https://github.com/Cap-go/capgo-cli/compare/v3.9.2...v3.10.0) (2023-04-12)
+
+
+### Features
+
+* use clack everywhere to prompt ([8224ba4](https://github.com/Cap-go/capgo-cli/commit/8224ba4d36c8cbf2820f8293dde8d8b7617c675f))
+
 ### [3.9.2](https://github.com/Cap-go/capgo-cli/compare/v3.9.1...v3.9.2) (2023-04-12)
 
 
