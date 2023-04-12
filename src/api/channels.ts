@@ -81,7 +81,7 @@ export const displayChannels = (data: (Database['public']['Tables']['channels'][
     });
   });
 
-  t.printTable();
+  p.log.success(t.render());
 }
 
 export const getActiveChannels = async (supabase: SupabaseClient<Database>, appid: string, userId: string) => {

@@ -22,7 +22,7 @@ const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {
     });
   });
 
-  t.printTable();
+  p.log.success(t.render());
 }
 
 export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: string) => {
