@@ -35,6 +35,26 @@ export interface Database {
           user_id?: string
         }
       }
+      app_live: {
+        Row: {
+          created_at: string | null
+          id: string
+          updated_at: string | null
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          id: string
+          updated_at?: string | null
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          updated_at?: string | null
+          url?: string
+        }
+      }
       app_stats: {
         Row: {
           app_id: string
@@ -135,8 +155,11 @@ export interface Database {
           checksum: string
           created_at: string | null
           devices: number | null
+          fails: number | null
           id: number
+          installs: number | null
           size: number
+          uninstalls: number | null
           updated_at: string | null
           user_id: string
         }
@@ -145,8 +168,11 @@ export interface Database {
           checksum: string
           created_at?: string | null
           devices?: number | null
+          fails?: number | null
           id?: number
+          installs?: number | null
           size: number
+          uninstalls?: number | null
           updated_at?: string | null
           user_id: string
         }
@@ -155,8 +181,11 @@ export interface Database {
           checksum?: string
           created_at?: string | null
           devices?: number | null
+          fails?: number | null
           id?: number
+          installs?: number | null
           size?: number
+          uninstalls?: number | null
           updated_at?: string | null
           user_id?: string
         }
@@ -595,6 +624,7 @@ export interface Database {
           created_at: string | null
           developer: string
           developer_email: string
+          developer_id: string | null
           error_get_framework: string
           error_get_info: string
           error_get_similar: string
@@ -603,6 +633,7 @@ export interface Database {
           icon: string
           installs: number
           kotlin: boolean
+          lang: string | null
           native_script: boolean
           onprem: boolean
           react_native: boolean
@@ -625,6 +656,7 @@ export interface Database {
           created_at?: string | null
           developer?: string
           developer_email?: string
+          developer_id?: string | null
           error_get_framework?: string
           error_get_info?: string
           error_get_similar?: string
@@ -633,6 +665,7 @@ export interface Database {
           icon?: string
           installs?: number
           kotlin?: boolean
+          lang?: string | null
           native_script?: boolean
           onprem?: boolean
           react_native?: boolean
@@ -655,6 +688,7 @@ export interface Database {
           created_at?: string | null
           developer?: string
           developer_email?: string
+          developer_id?: string | null
           error_get_framework?: string
           error_get_info?: string
           error_get_similar?: string
@@ -663,6 +697,7 @@ export interface Database {
           icon?: string
           installs?: number
           kotlin?: boolean
+          lang?: string | null
           native_script?: boolean
           onprem?: boolean
           react_native?: boolean
@@ -808,6 +843,29 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      count_all_need_upgrade: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      count_all_onboarded: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      count_all_paying: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
+      count_all_plans: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          product_id: string
+          count: number
+        }[]
+      }
+      count_all_trial: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       count_all_updates: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -863,6 +921,14 @@ export interface Database {
         }
         Returns: {
           name: string
+        }[]
+      }
+      find_missing_app_ids: {
+        Args: {
+          app_ids: string[]
+        }
+        Returns: {
+          missing_app_id: string
         }[]
       }
       get_app_versions: {
@@ -1153,6 +1219,16 @@ export interface Database {
           versionid: number
         }
         Returns: boolean
+      }
+      update_version_stats: {
+        Args: {
+          app_id: string
+          version_id: number
+          install: number
+          uninstall: number
+          fail: number
+        }
+        Returns: undefined
       }
     }
     Enums: {

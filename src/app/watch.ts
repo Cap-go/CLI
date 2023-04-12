@@ -16,10 +16,11 @@ export const watch = async (port: string, options: Options, shouldExit = true) =
     return false
   }
   await checkLatest();
-  p.intro(`Capgo tunnel init`);
+  p.intro(`Capgo live reload`);
 
   // write in file .capgo the apikey in home directory
   try {
+
     const snag = useLogSnag()
 
     const supabase = createSupabaseClient(options.apikey)
@@ -33,19 +34,39 @@ export const watch = async (port: string, options: Options, shouldExit = true) =
       },
       notify: false,
     }).catch()
+    p.log.info(`Init tunnel`);
     const { url, connections, stop } = tunnel({ "--url": `localhost:${port}` });
 
+    p.log.info(`Get URL`);
+
     const link = await url;
+    // const link = 'https://google.com';
+    p.log.info(`Connection to tunnel`);
     await Promise.all(connections);
 
+
     p.log.info(`Tunnel ${link} connected to localhost:${port}`);
+    // add to supabase app_live
+    await supabase
+      .from('app_live')
+      .upsert({
+        id: userId,
+        url: link,
+      })
+      .throwOnError()
     const qrUrl = await QRCode.toString(link, { type: 'terminal', small: true });
     p.log.info(qrUrl);
     await p.confirm({ message: `When done say yes to close tunnel` });
     await stop();
+    // delete to supabase app_live
+    await supabase
+      .from('app_live')
+      .delete()
+      .eq('id', userId)
+      .throwOnError()
     p.log.info(`Tunnel closed`);
   } catch (e) {
-    console.error(e);
+    console.error('Error', e);
     process.exit(1);
   }
   if (shouldExit) {
