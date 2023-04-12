@@ -34,17 +34,19 @@ export const watch = async (port: string, options: Options, shouldExit = true) =
       },
       notify: false,
     }).catch()
-    p.log.info(`Init tunnel`);
+    p.log.info(`Init to tunnel`);
     const { url, connections, stop } = tunnel({ "--url": `localhost:${port}` });
+
+    p.log.info(`Connection to tunnel`);
+    await connections[0];
 
     p.log.info(`Get URL`);
 
     const link = await url;
     // const link = 'https://google.com';
-    p.log.info(`Connection to tunnel`);
-    await Promise.all(connections);
-
-
+    if (!link) {
+      throw new Error('No link found');
+    }
     p.log.info(`Tunnel ${link} connected to localhost:${port}`);
     // add to supabase app_live
     await supabase
@@ -56,6 +58,13 @@ export const watch = async (port: string, options: Options, shouldExit = true) =
       .throwOnError()
     const qrUrl = await QRCode.toString(link, { type: 'terminal', small: true });
     p.log.info(qrUrl);
+    // loop on connections and wait for all to be done
+    // for (const connection of connections) {
+    //   console.log('connection done', res);
+    // }
+    // await Promise.all(connections);
+    // Promise.all(connections).then();
+
     await p.confirm({ message: `When done say yes to close tunnel` });
     await stop();
     // delete to supabase app_live
