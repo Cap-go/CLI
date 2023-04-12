@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.9.2](https://github.com/Cap-go/capgo-cli/compare/v3.9.1...v3.9.2) (2023-04-12)
+
+
+### Bug Fixes
+
+* tunnel watch ([80084d1](https://github.com/Cap-go/capgo-cli/commit/80084d1200412870838980212a2bd4ebf74f7048))
+
 ### [3.9.1](https://github.com/Cap-go/capgo-cli/compare/v3.9.0...v3.9.1) (2023-04-12)
 
 
