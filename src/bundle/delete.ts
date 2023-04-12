@@ -1,4 +1,5 @@
 import { program } from 'commander';
+import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { OptionsBase } from '../api/utils';
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
@@ -9,15 +10,18 @@ interface Options extends OptionsBase {
 }
 
 export const deleteBundle = async (appId: string, bundleId: string, options: Options) => {
+  p.intro(`Delete bundle`);
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
 
   if (!options.apikey) {
-    program.error("Missing API key, you need to provide a API key to upload your bundle");
+    p.log.error("Missing API key, you need to provide a API key to upload your bundle");
+    program.error('');
   }
   if (!appId) {
-    program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    program.error('');
   }
   const supabase = createSupabaseClient(options.apikey)
 
@@ -29,19 +33,22 @@ export const deleteBundle = async (appId: string, bundleId: string, options: Opt
 
   appId = appId || config?.app?.appId
   if (!apikey) {
-    program.error('Missing API key, you need to provide an API key to delete your app');
+    p.log.error('Missing API key, you need to provide an API key to delete your app');
+    program.error('');
   }
   if (!bundleId) {
-    program.error('Missing argument, you need to provide a bundleId, or be in a capacitor project');
+    p.log.error('Missing argument, you need to provide a bundleId, or be in a capacitor project');
+    program.error('');
   }
   if (!appId) {
-    program.error('Missing argument, you need to provide a appId, or be in a capacitor project');
+    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project');
+    program.error('');
   }
 
-  console.log(`Delete ${appId}@${bundleId} from Capgo`);
+  p.log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`);
 
   await deleteSpecificVersion(supabase, appId, userId, bundleId);
-  console.log(`${appId}@${bundleId} deleted from server`)
-  console.log(`Done ✅`);
+  p.log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`);
+  p.outro(`Done`);
   process.exit()
 }

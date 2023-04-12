@@ -8,6 +8,7 @@ import { LogSnag } from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { resolve } from 'path';
 import open from 'open';
+import * as p from '@clack/prompts';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
@@ -15,6 +16,15 @@ export const host = 'https://capgo.app';
 export const hostWeb = 'https://web.capgo.app';
 export const hostSupa = process.env.SUPA_DB === 'production'
     ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
+
+export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
+    MIIBCgKCAQEA4pW9olT0FBXXivRCzd3xcImlWZrqkwcF2xTkX/FwXmj9eh9HkBLr
+    sQmfsC+PJisRXIOGq6a0z3bsGq6jBpp3/Jr9jiaW5VuPGaKeMaZZBRvi/N5fIMG3
+    hZXSOcy0IYg+E1Q7RkYO1xq5GLHseqG+PXvJsNe4R8R/Bmd/ngq0xh/cvcrHHpXw
+    O0Aj9tfprlb+rHaVV79EkVRWYPidOLnK1n0EFHFJ1d/MyDIp10TEGm2xHpf/Brlb
+    1an8wXEuzoC0DgYaczgTjovwR+ewSGhSHJliQdM0Qa3o1iN87DldWtydImMsPjJ3
+    DUwpsjAMRe5X8Et4+udFW2ciYnQo9H0CkwIDAQAB
+    -----END RSA PUBLIC KEY-----`
 
 if (process.env.SUPA_DB !== 'production') {
     console.log('hostSupa', hostSupa);
@@ -89,7 +99,7 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
 export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
     const validPlan = await isAllowedAction(supabase, userId)
     if (!validPlan) {
-        console.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
+        p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
         setTimeout(() => {
             open(`${hostWeb}/dashboard/settings/plans`)
             program.error('')
@@ -97,7 +107,7 @@ export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId:
     }
     const trialDays = await isTrial(supabase, userId)
     if (trialDays > 0 && warning) {
-        console.log(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
+        p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
 }
 
@@ -107,12 +117,12 @@ export const findSavedKey = () => {
     let key
     let keyPath = `${userHomeDir}/.capgo`;
     if (existsSync(keyPath)) {
-        console.log(`Use global apy key ${keyPath}`)
+        p.log.info(`Use global apy key ${keyPath}`)
         key = readFileSync(keyPath, 'utf8').trim();
     }
     keyPath = `.capgo`;
     if (!key && existsSync(keyPath)) {
-        console.log(`Use local apy key ${keyPath}`)
+        p.log.info(`Use local apy key ${keyPath}`)
         key = readFileSync(keyPath, 'utf8').trim();
     }
     if (!key)
@@ -145,7 +155,7 @@ export const findMainFile = async () => {
         const folders = f.split('/').length - pwdL
         if (folders <= 2 && mainRegex.test(f)) {
             mainFile = f
-            console.log('Found main file here', f)
+            p.log.info(`Found main file here ${f}`)
             break
         }
     }

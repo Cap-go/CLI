@@ -1,4 +1,5 @@
 import { program } from "commander";
+import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { createChannel, findUnknownVersion } from "../api/channels";
 import { OptionsBase } from "../api/utils";
@@ -9,16 +10,19 @@ interface Options extends OptionsBase {
 }
 
 export const addChannel = async (channelId: string, appId: string, options: Options, shouldExit = true) => {
+    p.intro(`Create channel`);
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     const snag = useLogSnag()
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error("Missing API key, you need to provide a API key to upload your bundle");
+        program.error('');
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        program.error('');
     }
     const supabase = createSupabaseClient(options.apikey)
 
@@ -26,11 +30,12 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
     // Check we have app access to this appId
     await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
-    console.log(`Create channel ${appId}#${channelId} to Capgo cloud`);
+    p.log.info(`Creating channel ${appId}#${channelId} to Capgo`);
     try {
         const data = await findUnknownVersion(supabase, appId)
         if (!data) {
-            program.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
+            p.log.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
+            program.error('');
         }
         await createChannel(supabase, {
             name: channelId,
@@ -38,7 +43,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
             version: data.id,
             created_by: userId
         });
-        console.log(`Channel created ✅`);
+        p.log.success(`Channel created ✅`);
         await snag.publish({
             channel: 'channel',
             event: 'Create channel',
@@ -51,11 +56,11 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
             notify: false,
         }).catch()
     } catch (error) {
-        console.log(`Cannot create Channel 🙀`, error);
+        p.log.error(`Cannot create Channel 🙀`);
         return false
     }
     if (shouldExit) {
-        console.log(`Done ✅`);
+        p.outro(`Done ✅`);
         process.exit()
     }
     return true

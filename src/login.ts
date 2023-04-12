@@ -1,6 +1,7 @@
 import { program } from 'commander';
 import { existsSync, writeFileSync, appendFileSync } from 'fs'
 import { homedir } from 'os'
+import * as p from '@clack/prompts';
 import { createSupabaseClient, useLogSnag, verifyUser } from './utils';
 import { checkLatest } from './api/update';
 
@@ -9,6 +10,10 @@ interface Options {
 }
 
 export const login = async (apikey: string, options: Options, shouldExit = true) => {
+
+  if (shouldExit) {
+    p.intro(`Login to Capgo`);
+  }
   if (!apikey) {
     if (shouldExit) {
       program.error("Missing API key, you need to provide a API key to upload your bundle");
@@ -23,7 +28,8 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
 
     if (local) {
       if (!existsSync('.git')) {
-        program.error('To use local you should be in a git repository');
+        p.log.error('To use local you should be in a git repository');
+        program.error('');
       }
       writeFileSync('.capgo', `${apikey}\n`);
       appendFileSync('.gitignore', '.capgo\n');
@@ -42,13 +48,13 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
       },
       notify: false,
     }).catch()
-    console.log(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);
+    p.log.success(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);
   } catch (e) {
-    console.error(e);
+    p.log.error(`Error while saving login`);
     process.exit(1);
   }
   if (shouldExit) {
-    console.log(`Done ✅`);
+    p.outro('Done ✅');
     process.exit()
   }
   return true

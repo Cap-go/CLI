@@ -79,7 +79,7 @@ export const watch = async (port: string, options: Options, shouldExit = true) =
     process.exit(1);
   }
   if (shouldExit) {
-    console.log(`Done ✅`);
+    p.outro(`Done ✅`);
     process.exit()
   }
   return true

@@ -1,9 +1,11 @@
 import { program } from "commander";
+import * as p from '@clack/prompts';
 import { OptionsBase } from "../api/utils";
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from "../utils";
 
 export const deleteApp = async (appId: string, options: OptionsBase) => {
+    p.intro(`Deleting`);
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
@@ -55,7 +57,7 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
         },
         notify: false,
     }).catch()
-    console.log("App deleted in Capgo")
-    console.log(`Done ✅`);
+    p.log.success(`App deleted in Capgo`);
+    p.outro('Done ✅');
     process.exit()
 }

@@ -10,6 +10,9 @@ dependencies:
   '@clack/prompts':
     specifier: ^0.6.3
     version: 0.6.3
+  '@npmcli/ci-detect':
+    specifier: ^3.0.2
+    version: 3.0.2
   '@supabase/supabase-js':
     specifier: ^2.12.1
     version: 2.12.1
@@ -72,6 +75,9 @@ devDependencies:
   '@types/node':
     specifier: ^18.15.5
     version: 18.15.5
+  '@types/npmcli__ci-detect':
+    specifier: ^2.0.0
+    version: 2.0.0
   '@types/open':
     specifier: ^6.2.1
     version: 6.2.1
@@ -467,6 +473,11 @@ packages:
       fastq: 1.15.0
     dev: true
 
+  /@npmcli/ci-detect@3.0.2:
+    resolution: {integrity: sha512-P7nZG0skRVa9lH0OQmFG62CrzOySUiuPbKopjVAj3sXP0m1om9XfIvTp46h+NvlpTyd121JekiXFZj+1pnbm9g==}
+    engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+    dev: false
+
   /@pkgr/utils@2.3.1:
     resolution: {integrity: sha512-wfzX8kc1PMyUILA+1Z/EqoE4UCXGy0iRGMhPwdfae1+f0OXlLqCk+By+aMzgJBzR9AzS4CDizioG6Ss1gvAFJw==}
     engines: {node: ^12.20.0 || ^14.18.0 || >=16.0.0}
@@ -644,6 +655,10 @@ packages:
 
   /@types/node@18.15.5:
     resolution: {integrity: sha512-Ark2WDjjZO7GmvsyFFf81MXuGTA/d6oP38anyxWOL6EREyBKAxKoFHwBhaZxCfLRLpO8JgVXwqOwSwa7jRcjew==}
+
+  /@types/npmcli__ci-detect@2.0.0:
+    resolution: {integrity: sha512-Nzom9KQvlBNk3gLWKThXZ+DhX/uZ6sDOltOgPFNONo30wi9fePwuwd6V+4+ES9vY+/SVMP4S7Z3QQHXhidAYyg==}
+    dev: true
 
   /@types/open@6.2.1:
     resolution: {integrity: sha512-CzV16LToFaKwm1FfplVTF08E3pznw4fQNCQ87N+A1RU00zu/se7npvb6IC9db3/emnSThQ6R8qFKgrei2M4EYQ==}

@@ -4,6 +4,7 @@ import { randomUUID } from 'crypto';
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import ciDetect from '@npmcli/ci-detect';
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
@@ -12,7 +13,7 @@ import {
   hostWeb, getConfig, createSupabaseClient,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
 } from '../utils';
 
 const alertMb = 20;
@@ -27,6 +28,7 @@ interface Options extends OptionsBase {
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
+  p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession } = options;
@@ -34,7 +36,6 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const snag = useLogSnag()
 
   channel = channel || 'dev';
-  p.intro(`Uploading`);
 
   const config = await getConfig();
   appid = appid || config?.app?.appId
@@ -115,16 +116,36 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     s.stop(`Checksum: ${checksum}`);
     if (key || existsSync(baseKeyPub)) {
       const publicKey = typeof key === 'string' ? key : baseKeyPub
+      let keyData = ''
       // check if publicKey exist
       if (!existsSync(publicKey)) {
         p.log.error(`Cannot find public key ${publicKey}`);
-        program.error('');
+        if (ciDetect()) {
+          program.error('');
+        }
+        const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+        if (!res) {
+          p.log.error(`Error: Missing public key`);
+          program.error('');
+        }
+        keyData = defaulPublicKey
       }
+      await snag.publish({
+        channel: 'app',
+        event: 'App encryption',
+        icon: '🔑',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+        },
+        notify: false,
+      }).catch()
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
+      keyData = keyFile.toString()
       // encrypt
       p.log.info(`Encrypting your bundle`);
-      const res = encryptSource(zipped, keyFile.toString())
+      const res = encryptSource(zipped, keyData)
       sessionKey = res.ivSessionKey
       if (displayIvSession) {
         p.log.info(`Your Iv Session key is ${sessionKey},
@@ -166,6 +187,17 @@ It will be also visible in your dashboard\n`);
   } else if (external && !external.startsWith('https://')) {
     p.log.error(`External link should should start with "https://" current is "${external}"`);
     program.error('');
+  } else {
+    await snag.publish({
+      channel: 'app',
+      event: 'App external',
+      icon: '📤',
+      tags: {
+        'user-id': userId,
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, {
     bucket_id: external ? undefined : fileName,
@@ -225,6 +257,6 @@ export const uploadCommand = async (apikey: string, options: Options) => {
 }
 
 export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
-  console.log('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
+  p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
   uploadBundle(apikey, options, true)
 }

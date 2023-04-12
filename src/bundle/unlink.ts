@@ -1,5 +1,6 @@
 import { program } from 'commander';
 import { getVersionData } from 'api/versions';
+import * as p from '@clack/prompts';
 import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override';
 import { checkVersionNotUsedInChannel } from '../api/channels';
 import { OptionsBase } from '../api/utils';
@@ -14,6 +15,7 @@ interface Options extends OptionsBase {
 }
 
 export const unlinkDevice = async (channel: string, appId: string, options: Options) => {
+    p.intro(`Unlink bundle`);
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
@@ -23,13 +25,16 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
     bundle = bundle || config?.app?.package?.version
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error("Missing API key, you need to provide a API key to upload your bundle");
+        program.error('');
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        program.error('');
     }
     if (!bundle) {
-        program.error("Missing argument, you need to provide a bundle, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a bundle, or be in a capacitor project");
+        program.error('');
     }
     const supabase = createSupabaseClient(options.apikey)
 
@@ -38,7 +43,8 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
     await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
     if (!channel) {
-        program.error("Missing argument, you need to provide a channel");
+        p.log.error("Missing argument, you need to provide a channel");
+        program.error('');
     }
     try {
         await checkPlanValid(supabase, userId)
@@ -57,8 +63,9 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
             notify: false,
         }).catch()
     } catch (err) {
-        program.error(`Unknow error ${formatError(err)}`);
+        p.log.error(`Unknow error ${formatError(err)}`);
+        program.error('');
     }
-    console.log(`Done ✅`);
+    p.outro('Done ✅');
     process.exit()
 }

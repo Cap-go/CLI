@@ -392,13 +392,13 @@ const step10 = async (userId: string, snag: LogSnag,
 }
 
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
+    p.intro(`Capgo onboarding 🛫`);
     await checkLatest();
     const snag = useLogSnag()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     apikey = apikey || findSavedKey()
 
-    p.intro(`Capgo init`);
     const log = p.spinner();
     log.start('Running: npx @capgo/cli@latest login ***');
     const loginRes = await login(apikey, options, false);
