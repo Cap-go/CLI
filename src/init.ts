@@ -422,6 +422,9 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     await step10(userId, snag, supabase, appId)
 
     await markStep(userId, snag, 0)
-    p.outro(`Welcome onboard ✈️!\nYour Capgo update system is setup`);
+    p.log.info(`Welcome onboard ✈️!`);
+    p.log.info(`Your Capgo update system is setup`);
+    p.log.info(`Next time use \`npx @capgo/cli@latest bundle upload\` to only upload your bundle`);
+    p.outro(`Bye 👋`);
     process.exit()
 }
