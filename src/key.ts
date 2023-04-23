@@ -1,6 +1,7 @@
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { writeConfig } from '@capacitor/cli/dist/config';
+import * as p from '@clack/prompts';
 import { createRSA } from './api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
 import { checkLatest } from './api/update';
@@ -15,7 +16,8 @@ interface Options {
 
 export const saveKey = async (options: saveOptions, log = true) => {
   if (!existsSync('.git')) {
-    program.error('To use local you should be in a git repository');
+    p.log.error('To use local you should be in a git repository');
+    program.error('');
   }
 
   const config = await getConfig();
@@ -28,7 +30,8 @@ export const saveKey = async (options: saveOptions, log = true) => {
 
   if (!existsSync(keyPath) && !privateKey) {
     if (log) {
-      program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+      p.log.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`);
+      program.error('');
     } else {
       return false
     }
@@ -50,28 +53,33 @@ export const saveKey = async (options: saveOptions, log = true) => {
     writeConfig(extConfig, config.app.extConfigFilePath)
   }
   if (log) {
-    console.log(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
-    console.log(`your app will decode the zip archive with this key\n`);
+    p.log.success(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
+    p.log.success(`your app will decode the zip archive with this key`);
   }
   return true
 }
 export const saveKeyCommand = async (options: saveOptions) => {
+  p.intro(`Save keys 🔑`);
   await checkLatest();
   await saveKey(options)
 }
 
 export const createKey = async (options: Options, log = true) => {
   // write in file .capgo the apikey in home directory
-
+  if (log) {
+    p.intro(`Create keys 🔑`);
+  }
   if (!existsSync('.git')) {
-    program.error('To use local you should be in a git repository');
+    p.log.error('To use local you should be in a git repository');
+    program.error('');
   }
   const { publicKey, privateKey } = createRSA()
 
   // check if baseName already exist
   if (existsSync(baseKeyPub) && !options.force) {
     if (log) {
-      program.error(`Public Key already exists, use --force to overwrite`);
+      p.log.error('Public Key already exists, use --force to overwrite');
+      program.error('');
     } else {
       return false
     }
@@ -79,7 +87,8 @@ export const createKey = async (options: Options, log = true) => {
   writeFileSync(baseKeyPub, publicKey);
   if (existsSync(baseKey) && !options.force) {
     if (log) {
-      program.error(`Private Key already exists, use --force to overwrite`);
+      p.log.error('Private Key already exists, use --force to overwrite');
+      program.error('');
     } else {
       return false
     }
@@ -101,12 +110,15 @@ export const createKey = async (options: Options, log = true) => {
   }
 
   if (log) {
-    console.log(`Your RSA key has been generated\n`);
-    console.log(`public key saved into ${baseKeyPub} file in local directory\n`);
-    console.log(`This key will be use to encode AES key used to crypt your zipped bundle before sending it to Capgo,
-  than make them unreadable by Capgo and unmodifiable by anyone\n`);
-    console.log(`Private key saved into ${config.app.extConfigFilePath} file in local directory`);
-    console.log(`Your app will decode with this RSA key the AES key and use it to decode the zipped bundle\n`);
+    p.log.success('Your RSA key has been generated')
+    p.log.success(`Public key saved in ${baseKeyPub}`)
+    p.log.success('This key will be use to crypt your bundle before sending it to Capgo')
+    p.log.success('Than make them unreadable by Capgo and unmodifiable by anyone')
+    p.log.success(`Private key saved in ${config.app.extConfigFilePath}`);
+    p.log.success('Your app will be the only one having it');
+    p.log.success('Only your users can decrypt your update');
+    p.log.success('Only you can send them an update');
+    p.outro(`Done ✅`);
   }
   return true
 }

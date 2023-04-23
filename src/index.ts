@@ -1,4 +1,5 @@
 import { program } from 'commander';
+import { zipBundle } from './bundle/zip';
 import { initApp } from './init';
 import { listBundle } from './bundle/list';
 import { decryptZip } from './bundle/decrypt';
@@ -8,7 +9,7 @@ import { getInfo } from './app/info';
 import { saveKeyCommand, createKeyCommand } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { uploadCommand } from './bundle/upload';
+import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
 import pack from '../package.json'
 import { loginCommand } from './login';
 import { listApp } from './app/list';
@@ -18,6 +19,7 @@ import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
 import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
+import { watchApp } from './app/watch';
 
 program
   .description('Manage packages and bundle versions in Capgo Cloud')
@@ -69,6 +71,12 @@ app
   .description('list apps in Capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+app
+  .command('watch [port]')
+  .alias('w')
+  .description('watch for changes in your app and allow capgo app or your app to see changes in live')
+  .action(watchApp);
 
 app
   .command('set [appid]')
@@ -145,6 +153,13 @@ bundle
   .option('--key <key>', 'custom path for private signing key')
   .option('--keyData <keyData>', 'base64 private signing key');
 
+bundle
+  .command('zip [appid]')
+  .description('Zip a bundle')
+  .action(zipBundle)
+  .option('-p, --path <path>', 'path of the folder to upload')
+  .option('-b, --bundle <bundle>', 'bundle version number to name the zip file');
+
 const channel = program
   .command('channel')
   .description('Manage channel');
@@ -208,7 +223,7 @@ program
   .command('upload [appid]')
   .alias('u')
   .description('(Deprecated) Upload a new bundle to Capgo Cloud')
-  .action(uploadCommand)
+  .action(uploadDeprecatedCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')

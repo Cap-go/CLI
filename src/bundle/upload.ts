@@ -1,18 +1,19 @@
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
-import cliProgress from 'cli-progress';
+import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import ciDetect from '@npmcli/ci-detect';
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
-  host, hostWeb, getConfig, createSupabaseClient,
+  hostWeb, getConfig, createSupabaseClient,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
 } from '../utils';
 
 const alertMb = 20;
@@ -27,6 +28,7 @@ interface Options extends OptionsBase {
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
+  p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession } = options;
@@ -34,6 +36,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const snag = useLogSnag()
 
   channel = channel || 'dev';
+
   const config = await getConfig();
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
@@ -41,34 +44,30 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
   // check if bundle is valid 
   if (!regexSemver.test(bundle)) {
-    program.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
+    p.log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
+    program.error('');
   }
   path = path || config?.app?.webDir
   if (!apikey) {
-    program.error("Missing API key, you need to provide a API key to upload your bundle");
+    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
+    program.error('');
   }
   if (!appid || !bundle || !path) {
-    program.error("Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project");
+    p.log.error("Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project");
+    program.error('');
   }
-  console.log(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
+  // check if path exist
+  if (!existsSync(path)) {
+    p.log.error(`Path ${path} does not exist, build your app first, or provide a valid path`);
+    program.error('');
+  }
+  p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
-  const multibar = new cliProgress.MultiBar({
-    clearOnComplete: false,
-    hideCursor: true
-  }, cliProgress.Presets.shades_grey);
-
-  // add bars
-  const b1 = multibar.create(7, 0, {
-    format: 'Uploading: [{bar}] {percentage}% | ETA: {eta}s | {value}/{total} Part'
-  }, cliProgress.Presets.shades_grey);
-  b1.start(7, 0, {
-    speed: "N/A"
-  });
 
   // checking if user has access rights before uploading
   const { data: versionExist, error: versionExistError } = await supabase
@@ -76,36 +75,34 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     .single()
 
   if (versionExist || versionExistError) {
-    multibar.stop()
-    program.error(`This app bundle already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
+    p.log.error(`This app bundle already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
+    program.error('');
   }
-  b1.increment();
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc('is_trial', { userid: userId })
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
-    multibar.log(`WARNING !!\nTrial expires in ${isTrial} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
+    p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`);
+    p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
   }
-  b1.increment();
 
   const { data: app, error: appError } = await supabase
     .rpc('exist_app', { appid, apikey })
     .single()
 
   if (!app || appError) {
-    multibar.stop()
-    program.error(`Cannot find app ${appid} in your account \n${formatError(appError)}`)
+    p.log.error(`Cannot find app ${appid} in your account ${formatError(appError)}`);
+    program.error('');
   }
-  b1.increment();
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
     .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
     .single()
 
   if (appVersion || appVersionError) {
-    program.error(`Version already exists ${formatError(appVersionError)}`)
+    p.log.error(`Version already exists ${formatError(appVersionError)}`);
+    program.error('');
   }
-  b1.increment();
   const fileName = randomUUID()
   let sessionKey;
   let checksum = ''
@@ -113,21 +110,45 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     let zipped = zip.toBuffer();
+    const s = p.spinner()
+    s.start(`Calculating checksum`);
     checksum = await getChecksum(zipped, 'crc32');
+    s.stop(`Checksum: ${checksum}`);
     if (key || existsSync(baseKeyPub)) {
       const publicKey = typeof key === 'string' ? key : baseKeyPub
+      let keyData = ''
       // check if publicKey exist
       if (!existsSync(publicKey)) {
-        program.error(`Cannot find public key ${publicKey}`)
+        p.log.error(`Cannot find public key ${publicKey}`);
+        if (ciDetect()) {
+          program.error('');
+        }
+        const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+        if (!res) {
+          p.log.error(`Error: Missing public key`);
+          program.error('');
+        }
+        keyData = defaulPublicKey
       }
+      await snag.publish({
+        channel: 'app',
+        event: 'App encryption',
+        icon: '🔑',
+        tags: {
+          'user-id': userId,
+          'app-id': appid,
+        },
+        notify: false,
+      }).catch()
       // open with fs publicKey path
       const keyFile = readFileSync(publicKey)
+      keyData = keyFile.toString()
       // encrypt
-      multibar.log(`Encrypting your bundle\n`);
-      const res = encryptSource(zipped, keyFile.toString())
+      p.log.info(`Encrypting your bundle`);
+      const res = encryptSource(zipped, keyData)
       sessionKey = res.ivSessionKey
       if (displayIvSession) {
-        multibar.log(`Your Iv Session key is ${sessionKey},
+        p.log.info(`Your Iv Session key is ${sessionKey},
 keep it safe, you will need it to decrypt your bundle.
 It will be also visible in your dashboard\n`);
       }
@@ -135,10 +156,9 @@ It will be also visible in your dashboard\n`);
     }
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     const filePath = `apps/${userId}/${appid}/versions`
-    b1.increment();
     if (mbSize > alertMb) {
-      multibar.log(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
-      multibar.log(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
+      p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
+      p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
       await snag.publish({
         channel: 'app-error',
         event: 'App Too Large',
@@ -151,22 +171,35 @@ It will be also visible in your dashboard\n`);
       }).catch()
     }
 
+    const spinner = p.spinner();
+    spinner.start(`Uploading Bundle`);
     const { error: upError } = await supabase.storage
       .from(filePath)
       .upload(fileName, zipped, {
         contentType: 'application/zip',
         cacheControl: '2592000',
       })
+    spinner.stop('Bundle Uploaded 💪')
     if (upError) {
-      multibar.stop()
-      program.error(`Cannot upload ${formatError(upError)}`)
+      p.log.error(`Cannot upload ${formatError(upError)}`);
+      program.error('');
     }
   } else if (external && !external.startsWith('https://')) {
-    multibar.stop()
-    program.error(`External link should should start with "https://" current is "${external}"`)
+    p.log.error(`External link should should start with "https://" current is "${external}"`);
+    program.error('');
+  } else {
+    await snag.publish({
+      channel: 'app',
+      event: 'App external',
+      icon: '📤',
+      tags: {
+        'user-id': userId,
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
   }
-  b1.increment();
-  const { data: versionData, error: dbError } = await updateOrCreateVersion(supabase, {
+  const { error: dbError } = await updateOrCreateVersion(supabase, {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
     name: bundle,
@@ -176,30 +209,32 @@ It will be also visible in your dashboard\n`);
     checksum,
   }, apikey)
   if (dbError) {
-    multibar.stop()
-    program.error(`Cannot add bundle ${formatError(dbError)}`)
+    p.log.error(`Cannot add bundle ${formatError(dbError)}`);
+    program.error('');
   }
-  b1.increment();
-  if (versionData) {
-    const { error: dbError3 } = await updateOrCreateChannel(supabase, {
+  const { data: versionId } = await supabase
+    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
+    .single()
+  if (versionId) {
+    const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
       created_by: userId,
-      version: versionData.id,
+      version: versionId,
     }, apikey)
     if (dbError3) {
-      multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
+      p.log.warn(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
+    }
+    const appidWeb = convertAppName(appid)
+    if (data?.public) {
+      p.log.info('Your update is now available in your public channel 🎉')
+    } else if (data?.id) {
+      p.log.info(`Link device to this bundle to try it: ${hostWeb}/app/p/${appidWeb}/channel/${data.id}`);
     }
   } else {
-    multibar.log('Cannot set bundle with upload key, use key with more rights for that\n');
+    p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
+    program.error('');
   }
-  multibar.stop()
-  const appidWeb = convertAppName(appid)
-  console.log("App uploaded to server")
-  console.log(`Try it in mobile app: ${host}/app_mobile`)
-  console.log(`Or set the channel ${channel} as public here: ${hostWeb}/app/package/${appidWeb}`)
-  console.log("To use with live update in your own app")
-  console.log(`You can link specific device to this bundle to make user try it first, here: ${hostWeb}/app/p/${appidWeb}/devices`)
   await snag.publish({
     channel: 'app',
     event: 'App Uploaded',
@@ -211,12 +246,17 @@ It will be also visible in your dashboard\n`);
     notify: false,
   }).catch()
   if (shouldExit) {
-    console.log(`Done ✅`);
+    p.outro('Time to share your update to the world 🌍')
     process.exit()
   }
   return true
 }
 
 export const uploadCommand = async (apikey: string, options: Options) => {
+  uploadBundle(apikey, options, true)
+}
+
+export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
+  p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
   uploadBundle(apikey, options, true)
 }

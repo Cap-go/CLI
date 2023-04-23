@@ -1,20 +1,24 @@
 import { getType } from 'mime';
 import { program } from "commander";
 import { randomUUID } from "crypto";
+import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from "fs-extra";
 import { checkAppExistsAndHasPermissionErr, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
 export const setApp = async (appId: string, options: Options) => {
+    p.intro(`Set app`);
     options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
+        program.error(``);
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        program.error(``);
     }
     const supabase = createSupabaseClient(options.apikey)
 
@@ -33,15 +37,15 @@ export const setApp = async (appId: string, options: Options) => {
         iconBuff = readFileSync(icon);
         const contentType = getType(icon);
         iconType = contentType || 'image/png';
-        console.warn(`Found app icon ${icon}`);
+        p.log.warn(`Found app icon ${icon}`);
     }
     else if (existsSync(newIconPath)) {
         iconBuff = readFileSync(newIconPath);
         const contentType = getType(newIconPath);
         iconType = contentType || 'image/png';
-        console.warn(`Found app icon ${newIconPath}`);
+        p.log.warn(`Found app icon ${newIconPath}`);
     } else {
-        console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
+        p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
     }
     if (iconBuff && iconType) {
         const { error } = await supabase.storage
@@ -50,7 +54,8 @@ export const setApp = async (appId: string, options: Options) => {
                 contentType: iconType,
             })
         if (error) {
-            program.error(`Could not add app ${formatError(error)}`);
+            p.log.error(`Could not add app ${formatError(error)}`);
+            program.error(``);
         }
         const { data: signedURLData } = await supabase
             .storage
@@ -67,8 +72,9 @@ export const setApp = async (appId: string, options: Options) => {
         .eq('app_id', appId)
         .eq('user_id', userId)
     if (dbError) {
-        program.error(`Could not add app ${formatError(dbError)}`);
+        p.log.error(`Could not add app ${formatError(dbError)}`);
+        program.error(``);
     }
-    console.log(`Done ✅`);
+    p.outro(`Done ✅`);
     process.exit()
 }

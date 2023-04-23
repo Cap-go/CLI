@@ -1,4 +1,5 @@
 import { program } from 'commander'
+import * as p from '@clack/prompts';
 import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { decryptSource } from '../api/crypto';
 import { baseKey, getConfig } from '../utils';
@@ -10,6 +11,7 @@ interface Options {
 }
 
 export const decryptZip = async (zipPath: string, ivsessionKey: string, options: Options) => {
+  p.intro(`Decrypt zip file`);
   await checkLatest();
   // write in file .capgo the apikey in home directory
 
@@ -41,6 +43,6 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
-  console.log(`Done ✅`);
+  p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`);
   process.exit()
 }

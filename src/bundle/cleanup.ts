@@ -1,5 +1,6 @@
 import { program } from 'commander';
 import semver from 'semver/preload';
+import * as p from '@clack/prompts';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
@@ -25,7 +26,7 @@ const removeVersions = async (toRemove: Database['public']['Tables']['app_versio
 
   // call deleteSpecificVersion one by one from toRemove sync
   for await (const row of toRemove) {
-    console.log(`Removing ${row.name} created on ${(getHumanDate(row.created_at))}`);
+    p.log.warn(`Removing ${row.name} created on ${(getHumanDate(row.created_at))}`);
     await deleteSpecificVersion(supabase, appid, userId, row.name);
   }
 }
@@ -43,6 +44,7 @@ const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['a
 }
 
 export const cleanupBundle = async (appid: string, options: Options) => {
+  p.intro(`Cleanup versions in Capgo`);
   await checkLatest();
   const apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;
@@ -62,26 +64,26 @@ export const cleanupBundle = async (appid: string, options: Options) => {
 
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
-  console.log(`Querying all available versions in Capgo`);
+  p.log.info(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
   let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await
     getActiveAppVersions(supabase, appid, userId);
 
-  console.log(`Total active versions in Capgo: ${allVersions?.length}`);
+  p.log.info(`Total active versions in Capgo: ${allVersions?.length}`);
   if (allVersions?.length === 0) {
-    console.log('No versions found, aborting cleanup');
+    p.log.error('No versions found, aborting cleanup');
     return;
   }
   if (bundle) {
     const nextMajor = `${semver.inc(bundle, 'major')}`;
-    console.log(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
+    p.log.info(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`);
 
     // Get all app versions that are in the given range
     allVersions = getRemovableVersionsInSemverRange(allVersions, bundle,
       nextMajor) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[];
 
-    console.log(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
+    p.log.info(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`);
   }
 
   // Slice to keep and remove
@@ -98,7 +100,7 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   })
 
   if (toRemove.length === 0) {
-    console.log("Nothing to be removed, aborting removal...")
+    p.log.warn("Nothing to be removed, aborting removal...")
     return;
   }
   displayBundles(allVersions);
@@ -107,14 +109,14 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   if (!force) {
     const result = prompt("Do you want to continue removing the versions specified? Type yes to confirm: ");
     if (result !== "yes") {
-      console.log("Not confirmed, aborting removal...");
+      p.log.warn("Not confirmed, aborting removal...");
       return;
     }
   }
 
   // Yes, lets clean it up
-  console.log("You have confirmed removal, removing versions now");
+  p.log.success("You have confirmed removal, removing versions now");
   await removeVersions(toRemove, supabase, appid, userId);
-  console.log(`Done ✅`);
+  p.outro(`Done ✅`);
   process.exit()
 }

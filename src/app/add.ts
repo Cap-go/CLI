@@ -1,6 +1,7 @@
 import { getType } from 'mime';
 import { program } from 'commander';
 import { randomUUID } from 'crypto';
+import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs-extra';
 import { checkLatest } from '../api/update';
 import { checkAppExistsAndHasPermissionErr, checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
@@ -10,6 +11,9 @@ import {
 } from '../utils';
 
 export const addApp = async (appId: string, options: Options, shouldExit = true) => {
+  if (shouldExit) {
+    p.intro(`Adding`);
+  }
   await checkLatest();
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
@@ -17,10 +21,12 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
   const snag = useLogSnag()
 
   if (!options.apikey) {
-    program.error("Missing API key, you need to provide a API key to upload your bundle");
+    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
+    program.error('');
   }
   if (!appId) {
-    program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    program.error('');
   }
   const supabase = createSupabaseClient(options.apikey)
 
@@ -40,9 +46,12 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
   name = name || config?.app?.appName || 'Unknown'
   icon = icon || "resources/icon.png" // default path for capacitor app
   if (!icon || !name) {
-    program.error("Missing argument, you need to provide a appId and a name, or be in a capacitor project");
+    p.log.error("Missing argument, you need to provide a appId and a name, or be in a capacitor project");
+    program.error('');
   }
-  console.log(`Adding ${appId} to Capgo`);
+  if (shouldExit) {
+    p.log.info(`Adding ${appId} to Capgo`);
+  }
   let iconBuff;
   let iconType;
 
@@ -50,15 +59,15 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
     iconBuff = readFileSync(icon);
     const contentType = getType(icon);
     iconType = contentType || 'image/png';
-    console.warn(`Found app icon ${icon}`);
+    p.log.warn(`Found app icon ${icon}`);
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath);
     const contentType = getType(newIconPath);
     iconType = contentType || 'image/png';
-    console.warn(`Found app icon ${newIconPath}`);
+    p.log.warn(`Found app icon ${newIconPath}`);
   } else {
-    console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
+    p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
   }
 
   // check if app already exist
@@ -66,7 +75,8 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
     .rpc('exist_app_v2', { appid: appId })
     .single()
   if (app || dbError0) {
-    program.error(`App ${appId} already exists ${formatError(dbError0)}`)
+    p.log.error(`App ${appId} already exists ${formatError(dbError0)}`);
+    program.error('');
   }
 
   const fileName = `icon_${randomUUID()}`
@@ -80,7 +90,8 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
         contentType: iconType,
       })
     if (error) {
-      program.error(`Could not add app ${formatError(error)}`);
+      p.log.error(`Could not add app ${formatError(error)}`);
+      program.error('');
     }
     const { data: signedURLData } = await supabase
       .storage
@@ -98,7 +109,8 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
       app_id: appId,
     })
   if (dbError) {
-    program.error(`Could not add app ${formatError(dbError)}`);
+    p.log.error(`Could not add app ${formatError(dbError)}`);
+    program.error('');
   }
   const { error: dbVersionError } = await supabase
     .from('app_versions')
@@ -114,7 +126,8 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
       app_id: appId,
     }])
   if (dbVersionError) {
-    program.error(`Could not add app ${formatError(dbVersionError)}`);
+    p.log.error(`Could not add app ${formatError(dbVersionError)}`);
+    program.error('');
   }
   await snag.publish({
     channel: 'app',
@@ -126,9 +139,9 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
     },
     notify: false,
   }).catch()
-  console.log("App added to server, you can upload a bundle now")
+  p.log.success(`App ${appId} added to Capgo. ${shouldExit ? 'You can upload a bundle now' : ''}`);
   if (shouldExit) {
-    console.log(`Done ✅`);
+    p.outro(`Done ✅`);
     process.exit()
   }
   return true
