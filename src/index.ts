@@ -59,7 +59,7 @@ app
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('delete [appid]')
+  .command('delete [bundleid] [appid]')
   .alias('d')
   .description('Delete an app in Capgo Cloud')
   .action(deleteApp)

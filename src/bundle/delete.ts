@@ -10,6 +10,7 @@ interface Options extends OptionsBase {
 }
 
 export const deleteBundle = async (bundleId: string, appId: string, options: Options) => {
+  p.intro(`Delete bundle`);
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
