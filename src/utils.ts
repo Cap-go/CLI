@@ -256,7 +256,7 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
         .rpc('get_user_id', { apikey })
         .single();
 
-    const userId = dataUser ? dataUser.toString() : '';
+    const userId = (dataUser || '').toString();
 
     if (!userId || userIdError) {
         program.error(`Cannot verify user ${formatError(userIdError)}`);
