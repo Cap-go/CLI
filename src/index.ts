@@ -38,7 +38,7 @@ program
   .action(getInfo);
 
 program
-  .command('init [apikey] [appid]')
+  .command('init [apikey] [appId]')
   .description('Init a new app')
   .action(initApp)
   .option('-n, --name <name>', 'app name')
@@ -50,7 +50,7 @@ const app = program
   .description('Manage app');
 
 app
-  .command('add [appid]')
+  .command('add [appId]')
   .alias('a')
   .description('Add a new app in Capgo Cloud')
   .action(addCommand)
@@ -59,14 +59,14 @@ app
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('delete [bundleid] [appid]')
+  .command('delete [appId]')
   .alias('d')
   .description('Delete an app in Capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('list [appid]')
+  .command('list [appId]')
   .alias('l')
   .description('list apps in Capgo Cloud')
   .action(listApp)
@@ -79,7 +79,7 @@ app
   .action(watchApp);
 
 app
-  .command('set [appid]')
+  .command('set [appId]')
   .alias('s')
   .description('Set an app in Capgo Cloud')
   .action(setApp)
@@ -92,7 +92,7 @@ const bundle = program
   .description('Manage bundle');
 
 bundle
-  .command('upload [appid]')
+  .command('upload [appId]')
   .alias('u')
   .description('Upload a new bundle in Capgo Cloud')
   .action(uploadCommand)
@@ -107,21 +107,21 @@ bundle
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
 
 bundle
-  .command('delete <bundleId> [appid]')
+  .command('delete [bundleId] [appId]')
   .alias('d')
   .description('Delete a bundle in Capgo Cloud')
   .action(deleteBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 bundle
-  .command('list [appid]')
+  .command('list [appId]')
   .alias('l')
   .description('List bundle in Capgo Cloud')
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 bundle
-  .command('unlink [appid]')
+  .command('unlink [appId]')
   .alias('u')
   .description('Unlink a bundle in Capgo Cloud')
   .action(listBundle)
@@ -129,7 +129,7 @@ bundle
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink');
 
 bundle
-  .command('cleanup [appid]')
+  .command('cleanup [appId]')
   .alias('c')
   .action(cleanupBundle)
   .description('Cleanup bundle in Capgo Cloud')
@@ -154,7 +154,7 @@ bundle
   .option('--keyData <keyData>', 'base64 private signing key');
 
 bundle
-  .command('zip [appid]')
+  .command('zip [appId]')
   .description('Zip a bundle')
   .action(zipBundle)
   .option('-p, --path <path>', 'path of the folder to upload')
@@ -165,26 +165,26 @@ const channel = program
   .description('Manage channel');
 
 channel
-  .command('add [channelid] [appid]')
+  .command('add [channelId] [appId]')
   .alias('a')
   .description('Create channel')
   .action(addChannelCommand)
   .option('-d, --default', 'set the channel as default')
 
 channel
-  .command('delete [channelid] [appid]')
+  .command('delete [channelId] [appId]')
   .alias('d')
   .description('Delete channel')
   .action(deleteChannel)
 
 channel
-  .command('list [appid]')
+  .command('list [appId]')
   .alias('l')
   .description('List channel')
   .action(listChannels)
 
 channel
-  .command('set [channelid] [appid]')
+  .command('set [channelId] [appId]')
   .alias('s')
   .description('Set channel')
   .action(setChannel)
@@ -220,7 +220,7 @@ key
   .option('-f, --force', 'force generate a new one');
 
 program
-  .command('upload [appid]')
+  .command('upload [appId]')
   .alias('u')
   .description('(Deprecated) Upload a new bundle to Capgo Cloud')
   .action(uploadDeprecatedCommand)
