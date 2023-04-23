@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.3](https://github.com/Cap-go/capgo-cli/compare/v3.10.2...v3.10.3) (2023-04-23)
+
+
+### Bug Fixes
+
+* delete bundle ([a2605aa](https://github.com/Cap-go/capgo-cli/commit/a2605aa63ccf6afedd31435155e530c6673d3ced))
+
 ### [3.10.2](https://github.com/Cap-go/capgo-cli/compare/v3.10.1...v3.10.2) (2023-04-15)
 
 
