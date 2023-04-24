@@ -7,7 +7,6 @@ import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { resolve } from 'path';
-import open from 'open';
 import * as p from '@clack/prompts';
 
 export const baseKey = '.capgo_key';
@@ -101,7 +100,10 @@ export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId:
     if (!validPlan) {
         p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
         setTimeout(() => {
-            open(`${hostWeb}/dashboard/settings/plans`)
+            import('open')
+                .then((module) => {
+                    module.default(`${hostWeb}/dashboard/settings/plans`);
+                });
             program.error('')
         }, 1000)
     }

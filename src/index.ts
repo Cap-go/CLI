@@ -22,6 +22,7 @@ import { deleteApp } from './app/delete';
 import { watchApp } from './app/watch';
 
 program
+  .name(pack.name)
   .description('Manage packages and bundle versions in Capgo Cloud')
   .version(pack.version);
 
