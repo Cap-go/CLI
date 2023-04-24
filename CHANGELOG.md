@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.7](https://github.com/Cap-go/capgo-cli/compare/v3.10.6...v3.10.7) (2023-04-24)
+
+
+### Bug Fixes
+
+* build issue ESM ([65c0ddb](https://github.com/Cap-go/capgo-cli/commit/65c0ddbad1dfabb5968220d3d1a7eb1aa44a2ff6))
+
 ### [3.10.6](https://github.com/Cap-go/capgo-cli/compare/v3.10.5...v3.10.6) (2023-04-23)
 
 
