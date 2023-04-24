@@ -8,7 +8,7 @@ on:
 jobs:
   web:
     runs-on: ubuntu-latest
-    name: 'Build code and test'
+    name: "Build code and test"
     steps:
       - name: Check out
         uses: actions/checkout@v3
@@ -19,7 +19,7 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: 'pnpm'
+          cache: "pnpm"
       - name: Install dependencies
         id: install_code
         run: pnpm install --frozen-lockfile
@@ -29,3 +29,6 @@ jobs:
       - name: Build
         id: build_code
         run: pnpm build
+      - name: Run
+        id: run_cli
+        run: node dist/index.js
