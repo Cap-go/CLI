@@ -31,4 +31,4 @@ jobs:
         run: pnpm build
       - name: Run
         id: run_cli
-        run: node dist/index.js
+        run: node dist/index.js --help
