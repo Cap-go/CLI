@@ -1,6 +1,6 @@
 import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
-import ciDetect from '@npmcli/ci-detect';
+import ciDetect from 'ci-info';
 import * as p from '@clack/prompts';
 import { checkLatest } from '../api/update';
 import { encryptSource } from '../api/crypto';
@@ -29,7 +29,7 @@ export const encryptZip = async (zipPath: string, options: Options) => {
 
   if (!existsSync(keyPath) && !publicKey) {
     p.log.warning(`Cannot find public key ${keyPath} or as keyData option`);
-    if (ciDetect()) {
+    if (ciDetect.isCI) {
       p.log.error(`Error: Missing public key`);
       program.error('');
     }

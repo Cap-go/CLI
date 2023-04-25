@@ -4,7 +4,7 @@ import { randomUUID } from 'crypto';
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
-import ciDetect from '@npmcli/ci-detect';
+import ciDetect from 'ci-info';
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
@@ -120,7 +120,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
       // check if publicKey exist
       if (!existsSync(publicKey)) {
         p.log.error(`Cannot find public key ${publicKey}`);
-        if (ciDetect()) {
+        if (ciDetect.isCI) {
           program.error('');
         }
         const res = await p.confirm({ message: 'Do you want to use our public key ?' })
