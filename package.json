@@ -86,7 +86,7 @@
     "husky": "^8.0.3",
     "nodemon": "2.0.22",
     "pkg": "5.8.1",
-    "prettier": "2.8.7",
+    "prettier": "2.8.8",
     "ts-loader": "^9.4.2",
     "ts-node": "^10.9.1",
     "tsconfig-paths": "4.2.0",
