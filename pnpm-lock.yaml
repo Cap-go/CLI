@@ -2,8 +2,8 @@ lockfileVersion: '6.0'
 
 dependencies:
   '@capacitor/cli':
-    specifier: 4.7.3
-    version: 4.7.3
+    specifier: 4.8.0
+    version: 4.8.0
   '@capgo/find-package-manager':
     specifier: ^0.0.7
     version: 0.0.7
@@ -192,15 +192,15 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@capacitor/cli@4.7.3:
-    resolution: {integrity: sha512-/9Vjl0A91UjRA0b8a5YCqHfHcM50vQ3Fh0typ3ScwYZhg3shkFtB03e8liAD/u0rhr/MerN8VGgN75QNEXN0Lg==}
+  /@capacitor/cli@4.8.0:
+    resolution: {integrity: sha512-Hbs1SKjvyg5wdcMGRt+CzebdgjlnVDjn92WV1p16gsrBwqWm+uDYMNpFQ7vWKALFL9AZCi/r8lXHmuX/HoD2Kw==}
     engines: {node: '>=12.4.0'}
     hasBin: true
     dependencies:
-      '@ionic/cli-framework-output': 2.2.6
-      '@ionic/utils-fs': 3.1.7
-      '@ionic/utils-subprocess': 2.1.12
-      '@ionic/utils-terminal': 2.3.4
+      '@ionic/cli-framework-output': 2.2.5
+      '@ionic/utils-fs': 3.1.6
+      '@ionic/utils-subprocess': 2.1.11
+      '@ionic/utils-terminal': 2.3.3
       commander: 9.5.0
       debug: 4.3.4
       env-paths: 2.2.1
@@ -213,7 +213,7 @@ packages:
       semver: 7.5.0
       tar: 6.1.14
       tslib: 2.5.0
-      xml2js: 0.4.23
+      xml2js: 0.5.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -308,22 +308,34 @@ packages:
     resolution: {integrity: sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==}
     dev: true
 
-  /@ionic/cli-framework-output@2.2.6:
-    resolution: {integrity: sha512-YLPRwnk5Lw0XQ9pKWG+p2KoR5HjMBigZ6yv+/XtL3TGOnCS1+oAz56ABbAORCjTWhSJQisr8APNFiELAecY6QA==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/cli-framework-output@2.2.5:
+    resolution: {integrity: sha512-YeDLTnTaE6V4IDUxT8GDIep0GuRIFaR7YZDLANMuuWJZDmnTku6DP+MmQoltBeLmVvz1BAAZgk41xzxdq6H2FQ==}
+    engines: {node: '>=10.3.0'}
     dependencies:
-      '@ionic/utils-terminal': 2.3.4
+      '@ionic/utils-terminal': 2.3.3
       debug: 4.3.4
       tslib: 2.5.0
     transitivePeerDependencies:
       - supports-color
     dev: false
 
-  /@ionic/utils-array@2.1.6:
-    resolution: {integrity: sha512-0JZ1Zkp3wURnv8oq6Qt7fMPo5MpjbLoUoa9Bu2Q4PJuSDWM8H8gwF3dQO7VTeUj3/0o1IB1wGkFWZZYgUXZMUg==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/utils-array@2.1.5:
+    resolution: {integrity: sha512-HD72a71IQVBmQckDwmA8RxNVMTbxnaLbgFOl+dO5tbvW9CkkSFCv41h6fUuNsSEVgngfkn0i98HDuZC8mk+lTA==}
+    engines: {node: '>=10.3.0'}
     dependencies:
       debug: 4.3.4
+      tslib: 2.5.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@ionic/utils-fs@3.1.6:
+    resolution: {integrity: sha512-eikrNkK89CfGPmexjTfSWl4EYqsPSBh0Ka7by4F0PLc1hJZYtJxUZV3X4r5ecA8ikjicUmcbU7zJmAjmqutG/w==}
+    engines: {node: '>=10.3.0'}
+    dependencies:
+      '@types/fs-extra': 8.1.2
+      debug: 4.3.4
+      fs-extra: 9.1.0
       tslib: 2.5.0
     transitivePeerDependencies:
       - supports-color
@@ -341,9 +353,9 @@ packages:
       - supports-color
     dev: false
 
-  /@ionic/utils-object@2.1.6:
-    resolution: {integrity: sha512-vCl7sl6JjBHFw99CuAqHljYJpcE88YaH2ZW4ELiC/Zwxl5tiwn4kbdP/gxi2OT3MQb1vOtgAmSNRtusvgxI8ww==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/utils-object@2.1.5:
+    resolution: {integrity: sha512-XnYNSwfewUqxq+yjER1hxTKggftpNjFLJH0s37jcrNDwbzmbpFTQTVAp4ikNK4rd9DOebX/jbeZb8jfD86IYxw==}
+    engines: {node: '>=10.3.0'}
     dependencies:
       debug: 4.3.4
       tslib: 2.5.0
@@ -351,12 +363,12 @@ packages:
       - supports-color
     dev: false
 
-  /@ionic/utils-process@2.1.11:
-    resolution: {integrity: sha512-Uavxn+x8j3rDlZEk1X7YnaN6wCgbCwYQOeIjv/m94i1dzslqWhqIHEqxEyeE8HsT5Negboagg7GtQiABy+BLbA==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/utils-process@2.1.10:
+    resolution: {integrity: sha512-mZ7JEowcuGQK+SKsJXi0liYTcXd2bNMR3nE0CyTROpMECUpJeAvvaBaPGZf5ERQUPeWBVuwqAqjUmIdxhz5bxw==}
+    engines: {node: '>=10.3.0'}
     dependencies:
-      '@ionic/utils-object': 2.1.6
-      '@ionic/utils-terminal': 2.3.4
+      '@ionic/utils-object': 2.1.5
+      '@ionic/utils-terminal': 2.3.3
       debug: 4.3.4
       signal-exit: 3.0.7
       tree-kill: 1.2.2
@@ -365,9 +377,9 @@ packages:
       - supports-color
     dev: false
 
-  /@ionic/utils-stream@3.1.6:
-    resolution: {integrity: sha512-4+Kitey1lTA1yGtnigeYNhV/0tggI3lWBMjC7tBs1K9GXa/q7q4CtOISppdh8QgtOhrhAXS2Igp8rbko/Cj+lA==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/utils-stream@3.1.5:
+    resolution: {integrity: sha512-hkm46uHvEC05X/8PHgdJi4l4zv9VQDELZTM+Kz69odtO9zZYfnt8DkfXHJqJ+PxmtiE5mk/ehJWLnn/XAczTUw==}
+    engines: {node: '>=10.3.0'}
     dependencies:
       debug: 4.3.4
       tslib: 2.5.0
@@ -375,18 +387,35 @@ packages:
       - supports-color
     dev: false
 
-  /@ionic/utils-subprocess@2.1.12:
-    resolution: {integrity: sha512-N05Y+dIXBHofKWJTheCMzVqmgY9wFmZcRv/LdNnfXaaA/mxLTyGxQYeig8fvQXTtDafb/siZXcrTkmQ+y6n3Yg==}
-    engines: {node: '>=16.0.0'}
+  /@ionic/utils-subprocess@2.1.11:
+    resolution: {integrity: sha512-6zCDixNmZCbMCy5np8klSxOZF85kuDyzZSTTQKQP90ZtYNCcPYmuFSzaqDwApJT4r5L3MY3JrqK1gLkc6xiUPw==}
+    engines: {node: '>=10.3.0'}
     dependencies:
-      '@ionic/utils-array': 2.1.6
-      '@ionic/utils-fs': 3.1.7
-      '@ionic/utils-process': 2.1.11
-      '@ionic/utils-stream': 3.1.6
-      '@ionic/utils-terminal': 2.3.4
+      '@ionic/utils-array': 2.1.5
+      '@ionic/utils-fs': 3.1.6
+      '@ionic/utils-process': 2.1.10
+      '@ionic/utils-stream': 3.1.5
+      '@ionic/utils-terminal': 2.3.3
       cross-spawn: 7.0.3
       debug: 4.3.4
       tslib: 2.5.0
+    transitivePeerDependencies:
+      - supports-color
+    dev: false
+
+  /@ionic/utils-terminal@2.3.3:
+    resolution: {integrity: sha512-RnuSfNZ5fLEyX3R5mtcMY97cGD1A0NVBbarsSQ6yMMfRJ5YHU7hHVyUfvZeClbqkBC/pAqI/rYJuXKCT9YeMCQ==}
+    engines: {node: '>=10.3.0'}
+    dependencies:
+      '@types/slice-ansi': 4.0.0
+      debug: 4.3.4
+      signal-exit: 3.0.7
+      slice-ansi: 4.0.0
+      string-width: 4.2.3
+      strip-ansi: 6.0.1
+      tslib: 2.5.0
+      untildify: 4.0.0
+      wrap-ansi: 7.0.0
     transitivePeerDependencies:
       - supports-color
     dev: false
@@ -4229,8 +4258,8 @@ packages:
   /wrappy@1.0.2:
     resolution: {integrity: sha512-l4Sp/DRseor9wL6EvV2+TuQn63dMkPjZ/sp9XkghTEbV9KlPS1xUsZ3u7/IQO4wxtcFB4bgpQPRcR3QCvezPcQ==}
 
-  /xml2js@0.4.23:
-    resolution: {integrity: sha512-ySPiMjM0+pLDftHgXY4By0uswI3SPKLDw/i3UXbnO8M/p28zqexCUoPmQFrYD+/1BzhGJSs2i1ERWKJAtiLrug==}
+  /xml2js@0.5.0:
+    resolution: {integrity: sha512-drPFnkQJik/O+uPKpqSgr22mpuFHqKdbS835iAQrUC73L2F5WkboIRd63ai/2Yg6I1jzifPFKH2NTK+cfglkIA==}
     engines: {node: '>=4.0.0'}
     dependencies:
       sax: 1.2.4
