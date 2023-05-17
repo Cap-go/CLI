@@ -206,6 +206,7 @@ It will be also visible in your dashboard\n`);
     app_id: appid,
     session_key: sessionKey,
     external_url: external,
+    storage_provider: external ? 'external' : 'r2',
     checksum,
   }, apikey)
   if (dbError) {
