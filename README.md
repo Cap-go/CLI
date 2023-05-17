@@ -70,8 +70,8 @@ Example of `package.json` for version
 
 ### Channel
 
-#### Create
-`npx @capgo/cli channel create [channelId] [appId]`
+#### Add
+`npx @capgo/cli channel add [channelId] [appId]`
 `[channelId]` the name of your new channel.
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
