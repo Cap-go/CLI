@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.17](https://github.com/Cap-go/capgo-cli/compare/v3.10.16...v3.10.17) (2023-05-17)
+
+
+### Bug Fixes
+
+* storage_provider as external when external ([216bd11](https://github.com/Cap-go/capgo-cli/commit/216bd11ba949f006fff9cdb0324c29b709be97de))
+
 ### [3.10.16](https://github.com/Cap-go/capgo-cli/compare/v3.10.15...v3.10.16) (2023-05-15)
 
 ### [3.10.15](https://github.com/Cap-go/capgo-cli/compare/v3.10.14...v3.10.15) (2023-05-12)
