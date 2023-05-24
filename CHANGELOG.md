@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.19](https://github.com/Cap-go/capgo-cli/compare/v3.10.18...v3.10.19) (2023-05-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency cloudflared to ^0.4.0 ([48b5d82](https://github.com/Cap-go/capgo-cli/commit/48b5d82b08b59a45e08822e4ac5c54c00ddee2fa))
+* upgrade cloudflared from 0.3.5 to 0.4.0 ([deaf8d6](https://github.com/Cap-go/capgo-cli/commit/deaf8d606737745e138f0c813df14924a85fb24e))
+
 ### [3.10.18](https://github.com/Cap-go/capgo-cli/compare/v3.10.17...v3.10.18) (2023-05-22)
 
 ### [3.10.17](https://github.com/Cap-go/capgo-cli/compare/v3.10.16...v3.10.17) (2023-05-17)
