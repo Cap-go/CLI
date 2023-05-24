@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.20](https://github.com/Cap-go/capgo-cli/compare/v3.10.19...v3.10.20) (2023-05-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v5 ([e88af39](https://github.com/Cap-go/capgo-cli/commit/e88af39e0b2bae54b8376b3c9e5154d090533869))
+
 ### [3.10.19](https://github.com/Cap-go/capgo-cli/compare/v3.10.18...v3.10.19) (2023-05-24)
 
 
