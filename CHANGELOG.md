@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.10.21](https://github.com/Cap-go/capgo-cli/compare/v3.10.20...v3.10.21) (2023-06-21)
+
+
+### Bug Fixes
+
+* warning supabase ([6424e84](https://github.com/Cap-go/capgo-cli/commit/6424e846f05593658a51ff919e2e78cc45bb1876))
+
 ### [3.10.20](https://github.com/Cap-go/capgo-cli/compare/v3.10.19...v3.10.20) (2023-05-24)
 
 
