@@ -85,9 +85,6 @@ devDependencies:
   '@types/npmcli__ci-detect':
     specifier: ^2.0.0
     version: 2.0.0
-  '@types/open':
-    specifier: ^6.2.1
-    version: 6.2.1
   '@types/prettyjson':
     specifier: ^0.0.30
     version: 0.0.30
@@ -669,13 +666,6 @@ packages:
 
   /@types/npmcli__ci-detect@2.0.0:
     resolution: {integrity: sha512-Nzom9KQvlBNk3gLWKThXZ+DhX/uZ6sDOltOgPFNONo30wi9fePwuwd6V+4+ES9vY+/SVMP4S7Z3QQHXhidAYyg==}
-    dev: true
-
-  /@types/open@6.2.1:
-    resolution: {integrity: sha512-CzV16LToFaKwm1FfplVTF08E3pznw4fQNCQ87N+A1RU00zu/se7npvb6IC9db3/emnSThQ6R8qFKgrei2M4EYQ==}
-    deprecated: This is a stub types definition. open provides its own type definitions, so you do not need this installed.
-    dependencies:
-      open: 9.1.0
     dev: true
 
   /@types/phoenix@1.6.0:
