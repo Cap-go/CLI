@@ -5,12 +5,14 @@ import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
+import axios from "axios";
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
   hostWeb, getConfig, createSupabaseClient,
+  uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
@@ -103,13 +105,15 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`);
     program.error('');
   }
-  const fileName = randomUUID()
+  const fileName = `${bundle}.zip`;
+  // const filePath = `apps/${userId}/${appid}/versions/${randomUUID()}`
   let sessionKey;
   let checksum = ''
+  let zipped: Buffer | null = null;
   if (!external) {
     const zip = new AdmZip();
     zip.addLocalFolder(path);
-    let zipped = zip.toBuffer();
+    zipped = zip.toBuffer();
     const s = p.spinner()
     s.start(`Calculating checksum`);
     checksum = await getChecksum(zipped, 'crc32');
@@ -155,7 +159,6 @@ It will be also visible in your dashboard\n`);
       zipped = res.encryptedData
     }
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
-    const filePath = `apps/${userId}/${appid}/versions`
     if (mbSize > alertMb) {
       p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
       p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
@@ -169,20 +172,6 @@ It will be also visible in your dashboard\n`);
         },
         notify: false,
       }).catch()
-    }
-
-    const spinner = p.spinner();
-    spinner.start(`Uploading Bundle`);
-    const { error: upError } = await supabase.storage
-      .from(filePath)
-      .upload(fileName, zipped, {
-        contentType: 'application/zip',
-        cacheControl: '2592000',
-      })
-    spinner.stop('Bundle Uploaded 💪')
-    if (upError) {
-      p.log.error(`Cannot upload ${formatError(upError)}`);
-      program.error('');
     }
   } else if (external && !external.startsWith('https://')) {
     p.log.error(`External link should should start with "https://" current is "${external}"`);
@@ -199,19 +188,47 @@ It will be also visible in your dashboard\n`);
       notify: false,
     }).catch()
   }
-  const { error: dbError } = await updateOrCreateVersion(supabase, {
+  const versionData = {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
     external_url: external,
-    storage_provider: external ? 'external' : 'r2',
+    storage_provider: external ? 'external' : 'r2-direct',
     checksum,
-  }, apikey)
+  }
+  const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
   if (dbError) {
     p.log.error(`Cannot add bundle ${formatError(dbError)}`);
     program.error('');
+  }
+  if (!external && zipped) {
+    const spinner = p.spinner();
+    spinner.start(`Uploading Bundle`);
+
+    const url = await uploadUrl(supabase, appid, fileName)
+    if (!url) {
+      p.log.error(`Cannot get upload url`);
+      program.error('');
+    }
+    await axios({
+      method: "put",
+      url,
+      data: zipped,
+      headers: {
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "public, max-age=456789, immutable",
+        "x-amz-meta-crc32": checksum,
+      }
+    })
+    versionData.storage_provider = 'r2'
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, apikey)
+    if (dbError2) {
+      p.log.error(`Cannot update bundle ${formatError(dbError)}`);
+      program.error('');
+    }
+    spinner.stop('Bundle Uploaded 💪')
   }
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey, name_version: bundle, appid })

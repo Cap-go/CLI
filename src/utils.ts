@@ -211,7 +211,15 @@ export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
     return supabase
         .from('app_versions')
         .insert(update)
-        .single()
+}
+
+export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, bucketId: string): Promise<string> {
+    const data = {
+        app_id: appId,
+        bucket_id: bucketId,
+    }
+    const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
+    return res.data.url
 }
 
 export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
