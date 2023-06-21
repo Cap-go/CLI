@@ -35,6 +35,9 @@ export const supaAnon = process.env.SUPA_DB === 'production'
 /* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient<Database>(hostSupa, supaAnon, {
+    auth: {
+        persistSession: false,
+    },
     global: {
         headers: {
             capgkey: apikey,
