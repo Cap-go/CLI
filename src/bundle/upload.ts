@@ -271,10 +271,20 @@ It will be also visible in your dashboard\n`);
 }
 
 export const uploadCommand = async (apikey: string, options: Options) => {
-  uploadBundle(apikey, options, true)
+  try {
+    return await uploadBundle(apikey, options, true)
+  } catch (error) {
+    p.log.error(error)
+    program.error('')
+  }
 }
 
 export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
   p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
-  uploadBundle(apikey, options, true)
+  try {
+    return await uploadBundle(apikey, options, true)
+  } catch (error) {
+    p.log.error(error)
+    program.error('')
+  }
 }
