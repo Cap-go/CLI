@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.11.0](https://github.com/Cap-go/capgo-cli/compare/v3.10.21...v3.11.0) (2023-06-21)
+
+
+### Features
+
+* use new direct upload ! ([57ab2b9](https://github.com/Cap-go/capgo-cli/commit/57ab2b9dd90692eea400c47d2f10a3d61a7f56c0))
+
+
+### Bug Fixes
+
+* CI/CD ([1a51047](https://github.com/Cap-go/capgo-cli/commit/1a510476ed6162a1865c46f4394cf7fdb1d66a6c))
+* lockfile ([1fd21fe](https://github.com/Cap-go/capgo-cli/commit/1fd21fea1a9ec86bcb81a5d7347eb6b799efa006))
+* packages ([0bdbab2](https://github.com/Cap-go/capgo-cli/commit/0bdbab2bd9d68eb5ab2b7b9d1c0bf5dcfa1b7614))
+* remove deprecated ([ab7e10d](https://github.com/Cap-go/capgo-cli/commit/ab7e10dcb481e21e65c499710a7a630949385f59))
+
 ### [3.10.21](https://github.com/Cap-go/capgo-cli/compare/v3.10.20...v3.10.21) (2023-06-21)
 
 
