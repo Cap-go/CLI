@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.11.4](https://github.com/Cap-go/capgo-cli/compare/v3.11.3...v3.11.4) (2023-06-23)
+
+
+### Bug Fixes
+
+* make error when use set channel with wrong key ([8b9380c](https://github.com/Cap-go/capgo-cli/commit/8b9380cc08225191268008dab6a5af1ab2163ee1))
+
 ### [3.11.3](https://github.com/Cap-go/capgo-cli/compare/v3.11.2...v3.11.3) (2023-06-23)
 
 
