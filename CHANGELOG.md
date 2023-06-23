@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.11.3](https://github.com/Cap-go/capgo-cli/compare/v3.11.2...v3.11.3) (2023-06-23)
+
+
+### Bug Fixes
+
+* stringify the error ([d87cb31](https://github.com/Cap-go/capgo-cli/commit/d87cb3120eac9c0867f88f03b601a69c0bf667b0))
+
 ### [3.11.2](https://github.com/Cap-go/capgo-cli/compare/v3.11.1...v3.11.2) (2023-06-23)
 
 
