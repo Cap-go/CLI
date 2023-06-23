@@ -276,6 +276,7 @@ export const uploadCommand = async (apikey: string, options: Options) => {
   } catch (error) {
     p.log.error(error)
     program.error('')
+    return false
   }
 }
 
@@ -286,5 +287,6 @@ export const uploadDeprecatedCommand = async (apikey: string, options: Options) 
   } catch (error) {
     p.log.error(error)
     program.error('')
+    return false
   }
 }
