@@ -105,8 +105,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`);
     program.error('');
   }
-  const fileName = `${bundle}.zip`;
-  // const filePath = `apps/${userId}/${appid}/versions/${randomUUID()}`
+  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
+  const fileName = `${safeBundle}.zip`;
+
   let sessionKey;
   let checksum = ''
   let zipped: Buffer | null = null;
