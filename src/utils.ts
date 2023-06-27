@@ -218,8 +218,13 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
         app_id: appId,
         bucket_id: bucketId,
     }
-    const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
-    return res.data.url
+    try {
+        const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
+        return res.data.url
+    } catch (error) {
+        p.log.error(`Cannot get upload url ${JSON.stringify(error)}`);
+    }
+    return '';
 }
 
 export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
