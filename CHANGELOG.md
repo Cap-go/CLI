@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.11.6](https://github.com/Cap-go/capgo-cli/compare/v3.11.5...v3.11.6) (2023-06-26)
+
+
+### Bug Fixes
+
+* upload name ([cbe75cd](https://github.com/Cap-go/capgo-cli/commit/cbe75cd2c46110a35e80a853373af7f1cdd42c28))
+
 ### [3.11.5](https://github.com/Cap-go/capgo-cli/compare/v3.11.4...v3.11.5) (2023-06-23)
 
 
