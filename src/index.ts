@@ -20,6 +20,7 @@ import { listChannels } from './channel/list';
 import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
 import { watchApp } from './app/watch';
+import { debugApp } from './app/debug';
 
 program
   .name(pack.name)
@@ -72,6 +73,13 @@ app
   .description('list apps in Capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
+
+  app
+  .command('debug  [appId]')
+  .alias('d')
+  .description('Listen for live updates event in Capgo Cloud to debug your app')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .action(debugApp);
 
 app
   .command('watch [port]')

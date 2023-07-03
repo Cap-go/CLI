@@ -5,6 +5,7 @@ import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
 import LogSnag from 'logsnag';
+import { markSnag , waitLog } from './app/debug';
 import { createKey } from './key';
 import { addChannel } from './channel/add';
 import { uploadBundle } from './bundle/upload';
@@ -26,156 +27,13 @@ const execOption = { stdio: 'pipe' }
 
 const cancelCommand = async (command: boolean | symbol, userId: string, snag: LogSnag) => {
     if (p.isCancel(command)) {
-        await snag.publish({
-            channel: 'onboarding-v2',
-            event: 'canceled',
-            icon: '🤷',
-            tags: {
-                'user-id': userId,
-            },
-            notify: false,
-        }).catch()
+        await markSnag('onboarding-v2', userId, snag, 'canceled', '🤷')
         process.exit()
     }
 }
 
-const markSnag = async (userId: string, snag: LogSnag, event: string, icon = '✅') => {
-    await snag.publish({
-        channel: 'onboarding-v2',
-        event,
-        icon,
-        tags: {
-            'user-id': userId,
-        },
-        notify: false,
-    }).catch()
-}
-
-const markStep = async (userId: string, snag: LogSnag, step: number | string) => markSnag(userId, snag, `onboarding-step-${step}`)
-
-
-const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
-
-const waitLog = async (supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, userId: string) => {
-    let loop = true
-    let now = new Date().toISOString()
-    await markSnag(userId, snag, 'Use waitlog')
-    while (loop) {
-        const { data, error } = await supabase
-            .from('stats')
-            .select('*')
-            .eq('app_id', appId)
-            .order('id', { ascending: false })
-            .gte('created_at', now)
-            .limit(1)
-            .single()
-        if (data && !error) {
-            p.log.info(`Device: ${data.device_id}`)
-            if (data.action === 'get') {
-                p.log.info('Update Sent your your device, wait until event download complete')
-                await markStep(userId, snag, 11)
-            }
-            else if (data.action.startsWith('download_')) {
-                const action = data.action.split('_')[1]
-                if (action === 'complete') {
-                    p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-                    await markStep(userId, snag, 12)
-                }
-                else if (action === 'fail') {
-                    p.log.error('Your bundle has failed to download on your device.')
-                    p.log.error('Please check if you have network connection and try again')
-                }
-                else {
-                    p.log.info(`Your bundle is downloading ${action}% ...`)
-                }
-            }
-            else if (data.action === 'set') {
-                p.log.info('Your bundle has been set on your device ❤️')
-                loop = false
-                await markStep(userId, snag, 13)
-                return Promise.resolve(data)
-            }
-            else if (data.action === 'NoChannelOrOverride') {
-                p.log.error('No default channel or override (channel/device) found, please create one')
-            }
-            else if (data.action === 'needPlanUpgrade') {
-                p.log.error('Your are out of quota, please upgrade your plan')
-            }
-            else if (data.action === 'missingBundle') {
-                p.log.error('Your bundle is missing, please check how you build your app')
-            }
-            else if (data.action === 'noNew') {
-                p.log.error(`Your version in ${data.platform} is the same as your version uploaded, change it to see the update`)
-            }
-            else if (data.action === 'disablePlatformIos') {
-                p.log.error('iOS is disabled  in the default channel and your device is an iOS device')
-            }
-            else if (data.action === 'disablePlatformAndroid') {
-                p.log.error('Android is disabled  in the default channel and your device is an Android device')
-            }
-            else if (data.action === 'disableAutoUpdateToMajor') {
-                p.log.error('Auto update to major version is disabled in the default channel.')
-                p.log.error('Set your app to the same major version as the default channel')
-            }
-            else if (data.action === 'disableAutoUpdateUnderNative') {
-                p.log.error('Auto update under native version is disabled in the default channel.')
-                p.log.error('Set your app to the same native version as the default channel.')
-            }
-            else if (data.action === 'disableDevBuild') {
-                p.log.error('Dev build is disabled in the default channel.')
-                p.log.error('Set your channel to allow it if you wanna test your app')
-            }
-            else if (data.action === 'disableEmulator') {
-                p.log.error('Emulator is disabled in the default channel.')
-                p.log.error('Set your channel to allow it if you wanna test your app')
-            }
-            else if (data.action === 'cannotGetBundle') {
-                p.log.error('We cannot get your bundle from the default channel.')
-                p.log.error('Are you sure your default channel has a bundle set?')
-            }
-            else if (data.action === 'set_fail') {
-                p.log.error('Your bundle seems to be corrupted, please check your code and send it again to Capgo')
-            }
-            else if (data.action === 'reset') {
-                p.log.error('Your device has been reset to the builtin bundle')
-            }
-            else if (data.action === 'update_fail') {
-                p.log.error('Your bundle has been installed but failed to call notifyAppReady')
-                p.log.error('Please check if you have network connection and try again')
-            }
-            else if (data.action === 'checksum_fail') {
-                p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
-            }
-            now = new Date().toISOString()
-        }
-        await wait(1000)
-    }
-    return Promise.resolve()
-}
-// const waitLog = (supabase: SupabaseClient<Database>, appId: string) =>
-//     new Promise<Database['public']['Tables']['stats']['Row']>((resolve) => {
-//         console.log('wait log', appId)
-//         const listener = supabase
-//             .channel('table-db-changes')
-//             .on(
-//                 'postgres_changes',
-//                 {
-//                     event: 'INSERT',
-//                     schema: 'public',
-//                     table: 'stats',
-//                     filter: `app_id=eq.${appId}`,
-//                 },
-//                 (payload) => {
-//                     console.log('payload', payload)
-//                     if (payload.new.action === 'get') {
-//                         console.log('stop listen')
-//                         listener.unsubscribe()
-//                         resolve(payload.new as Database['public']['Tables']['stats']['Row'])
-//                     }
-//                 },
-//             )
-//             .subscribe()
-//     })
+const markStep = async (userId: string, snag: LogSnag, step: number | string) => 
+    markSnag('onboarding-v2', userId, snag, `onboarding-step-${step}`)
 
 const step2 = async (userId: string, snag: LogSnag, appId: string, options: SuperOptions) => {
     const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` });
@@ -302,7 +160,7 @@ const step6 = async (userId: string, snag: LogSnag,
         } else {
             s.stop(`key created 🔑`);
         }
-        markSnag(userId, snag, 'Use encryption')
+        markSnag('onboarding-v2', userId, snag, 'Use encryption')
     }
     await markStep(userId, snag, 6)
 }
@@ -383,7 +241,7 @@ const step10 = async (userId: string, snag: LogSnag,
     if (doRun) {
         p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
         p.log.info('Waiting...');
-        await waitLog(supabase, appId, snag, userId);
+        await waitLog('onboarding-v2', supabase, appId, snag, userId);
     } else {
         const appIdUrl = convertAppName(appId)
         p.log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
