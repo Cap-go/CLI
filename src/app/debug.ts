@@ -162,7 +162,7 @@ export const debugApp = async (appId: string, options: OptionsBase) => {
   if (doRun) {
       p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
       p.log.info('Waiting...');
-      await waitLog('onboarding-v2', supabase, appId, snag, userId);
+      await waitLog('debug', supabase, appId, snag, userId);
       p.outro(`Done ✅`);
   } else {
       // const appIdUrl = convertAppName(appId)
