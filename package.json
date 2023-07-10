@@ -84,7 +84,7 @@
     "eslint-plugin-prettier": "^4.2.1",
     "git-format-staged": "3.0.0",
     "husky": "^8.0.3",
-    "nodemon": "2.0.22",
+    "nodemon": "3.0.1",
     "pkg": "5.8.1",
     "prettier": "2.8.8",
     "ts-loader": "^9.4.3",
