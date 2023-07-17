@@ -81,7 +81,7 @@
     "eslint-config-prettier": "^8.8.0",
     "eslint-import-resolver-typescript": "3.5.5",
     "eslint-plugin-import": "2.27.5",
-    "eslint-plugin-prettier": "^4.2.1",
+    "eslint-plugin-prettier": "^5.0.0",
     "git-format-staged": "3.0.0",
     "husky": "^8.0.3",
     "nodemon": "2.0.22",
