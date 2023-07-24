@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.12.2](https://github.com/Cap-go/capgo-cli/compare/v3.12.1...v3.12.2) (2023-07-24)
+
+
+### Bug Fixes
+
+* add deviceId for debug command ([99c235b](https://github.com/Cap-go/capgo-cli/commit/99c235b5bf6ca5a83d7dbeb0d8619fe6c4c2b3e3))
+
 ### [3.12.1](https://github.com/Cap-go/capgo-cli/compare/v3.12.0...v3.12.1) (2023-07-04)
 
 
