@@ -79,6 +79,7 @@ app
   .alias('d')
   .description('Listen for live updates event in Capgo Cloud to debug your app')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-d, --device <device>', 'the specific device to debug')
   .action(debugApp);
 
 app

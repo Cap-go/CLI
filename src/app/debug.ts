@@ -11,6 +11,11 @@ import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSn
 const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
 
 
+export interface OptionsBaseDebug {
+    apikey: string;
+    device?: string;
+}
+
 export const markSnag = async (channel: string, userId: string, snag: LogSnag, event: string, icon = '✅') => {
   await snag.publish({
       channel,
@@ -30,21 +35,26 @@ export const cancelCommand = async (channel: string, command: boolean | symbol, 
   }
 }
 
-export const waitLog = async (channel: string, supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, userId: string) => {
+export const waitLog = async (channel: string, supabase: SupabaseClient<Database>, 
+    appId: string, snag: LogSnag, userId: string, deviceId?: string) => {
   let loop = true
   let now = new Date().toISOString()
   const appIdUrl = convertAppName(appId)
   const baseUrl = `https://web.capgo.app/app/p/${appIdUrl}`
   await markSnag(channel, userId, snag, 'Use waitlog')
   while (loop) {
-      const { data, error } = await supabase
-          .from('stats')
-          .select('*')
-          .eq('app_id', appId)
-          .order('created_at', { ascending: false })
-          .gte('created_at', now)
-          .limit(1)
-          .single()
+    const queryStats = supabase
+        .from('stats')
+        .select('*')
+        .eq('app_id', appId)
+        .order('created_at', { ascending: false })
+        .gte('created_at', now)
+    if(deviceId) {
+        queryStats.eq('device_id', deviceId)
+    }
+    const { data, error } = await queryStats
+    .limit(1)
+    .single()
       // console.log(data, error)
       if (data && !error) {
           p.log.info(`Device: ${data.device_id}`)
@@ -130,7 +140,7 @@ export const waitLog = async (channel: string, supabase: SupabaseClient<Database
   return Promise.resolve()
 }
 
-export const debugApp = async (appId: string, options: OptionsBase) => {
+export const debugApp = async (appId: string, options: OptionsBaseDebug) => {
   p.intro(`Debug Live update in Capgo`);
 
   await checkLatest();
@@ -138,6 +148,7 @@ export const debugApp = async (appId: string, options: OptionsBase) => {
   const config = await getConfig();
 
   appId = appId || config?.app?.appId
+  const deviceId = options.device
   if (!options.apikey) {
     p.log.error(`Missing API key, you need to provide an API key to delete your app`);
     program.error('');
@@ -162,7 +173,7 @@ export const debugApp = async (appId: string, options: OptionsBase) => {
   if (doRun) {
       p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
       p.log.info('Waiting...');
-      await waitLog('debug', supabase, appId, snag, userId);
+      await waitLog('debug', supabase, appId, snag, userId, deviceId);
       p.outro(`Done ✅`);
   } else {
       // const appIdUrl = convertAppName(appId)
