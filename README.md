@@ -138,6 +138,8 @@ It will remove 18 versions, and keep the last 2.
 
 > This command will ask for confirmation, it shows a table of what it will be keeping and removing.
 
+> This command will ignore bundle who are in use in channels.
+
 ## End-to-End encryption (Zero trust)
 
 Capgo support end-to-end encryption, this mean that your code is encrypted before send to the cloud and decrypted on the device.

@@ -6,11 +6,10 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { Database } from 'types/supabase.types';
 import { OptionsBase } from '../api/utils';
 import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils';
-import { deleteSpecificVersion, displayBundles, getActiveAppVersions } from '../api/versions';
+import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
 
-// import { definitions } from '../types/types_supabase';
 
 interface Options extends OptionsBase {
   version: string;
@@ -70,6 +69,8 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await
     getActiveAppVersions(supabase, appid, userId);
 
+  const versionInUse = await getChannelsVersion(supabase, appid);
+
   p.log.info(`Total active versions in Capgo: ${allVersions?.length}`);
   if (allVersions?.length === 0) {
     p.log.error('No versions found, aborting cleanup');
@@ -90,9 +91,16 @@ export const cleanupBundle = async (appid: string, options: Options) => {
 
   const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
   // Slice to keep and remove
+  let kept = 0;
   allVersions.forEach((v, i) => {
-    if (i < keep) {
-      v.keep = '✅';
+    const isInUse = versionInUse.find((vi) => vi === v.id);
+    if (kept < keep || isInUse) {
+      if(isInUse) {
+        v.keep = '✅ (Linked to channel)';
+      } else {
+        v.keep = '✅';
+      }
+      kept += 1;
     } else {
       v.keep = '❌';
       toRemove.push(v);

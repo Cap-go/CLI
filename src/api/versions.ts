@@ -67,6 +67,19 @@ export const getActiveAppVersions = async (supabase: SupabaseClient<Database>, a
   return data;
 }
 
+export const getChannelsVersion = async (supabase: SupabaseClient<Database>, appid: string) => {
+// get all channels versionID
+  const { data: channels, error: channelsError } = await supabase
+    .from('channels')
+    .select('version')
+    .eq('app_id', appid)
+  
+  if (channelsError) {
+    program.error(`App ${appid} not found in database ${formatError(channelsError)} `);
+  }
+  return channels.map(c => c.version);
+}
+
 export const getVersionData = async (supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) => {
   const { data: versionData, error: versionIdError } = await supabase
     .from('app_versions')
