@@ -138,7 +138,7 @@ It will remove 18 versions, and keep the last 2.
 
 > This command will ask for confirmation, it shows a table of what it will be keeping and removing.
 
-> This command will ignore bundle who are in use in channels.
+> This command will ignore bundles which are currently in use in any channel
 
 ## End-to-End encryption (Zero trust)
 
