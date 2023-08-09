@@ -248,7 +248,9 @@ It will be also visible in your dashboard\n`);
     }
     const appidWeb = convertAppName(appid)
     if (data?.public) {
-      p.log.info('Your update is now available in your public channel 🎉')
+      p.log.info('Your update is now available in your public channel 🎉');
+      const bundleLink = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`;
+      p.log.info(`Direct link to your bundle: ${bundleLink}`);
     } else if (data?.id) {
       p.log.info(`Link device to this bundle to try it: ${hostWeb}/app/p/${appidWeb}/channel/${data.id}`);
     }
