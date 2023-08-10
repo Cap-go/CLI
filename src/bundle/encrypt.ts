@@ -1,5 +1,5 @@
-import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { program } from 'commander'
 import ciDetect from 'ci-info';
 import * as p from '@clack/prompts';
 import { checkLatest } from '../api/update';

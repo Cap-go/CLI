@@ -1,8 +1,8 @@
 import { readFileSync } from "fs"
-import getLatest from "get-latest-version"
 import { join } from "path"
-import Spinnies from '@trufflesuite/spinnies';
 import os from 'os';
+import getLatest from "get-latest-version"
+import Spinnies from '@trufflesuite/spinnies';
 import pack from '../../package.json'
 
 const getLatestDependencies = async (installedDependencies: { [key: string]: string }) => {

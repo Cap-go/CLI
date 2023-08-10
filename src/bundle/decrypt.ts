@@ -1,6 +1,6 @@
+import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { program } from 'commander'
 import * as p from '@clack/prompts';
-import { existsSync, readFileSync, writeFileSync } from 'fs'
 import { decryptSource } from '../api/crypto';
 import { baseKey, getConfig } from '../utils';
 import { checkLatest } from '../api/update';

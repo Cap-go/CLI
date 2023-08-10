@@ -1,6 +1,6 @@
 import { program } from 'commander';
-import { getVersionData } from 'api/versions';
 import * as p from '@clack/prompts';
+import { getVersionData } from 'api/versions';
 import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override';
 import { checkVersionNotUsedInChannel } from '../api/channels';
 import { OptionsBase } from '../api/utils';

@@ -1,10 +1,10 @@
 import { writeFileSync, readFileSync } from 'fs';
-import { findPackageManagerType } from '@capgo/find-package-manager'
 import { execSync, ExecSyncOptions, spawnSync } from 'child_process';
+import { findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from 'types/supabase.types';
 import LogSnag from 'logsnag';
+import { Database } from 'types/supabase.types';
 import { markSnag , waitLog } from './app/debug';
 import { createKey } from './key';
 import { addChannel } from './channel/add';

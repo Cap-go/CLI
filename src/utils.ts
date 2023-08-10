@@ -1,13 +1,13 @@
+import { existsSync, readdirSync, readFileSync } from 'fs';
+import { homedir } from 'os';
+import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { homedir } from 'os';
 import { LogSnag } from 'logsnag';
-import { Database } from 'types/supabase.types';
-import { resolve } from 'path';
 import * as p from '@clack/prompts';
+import { Database } from 'types/supabase.types';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;

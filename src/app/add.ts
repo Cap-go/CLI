@@ -1,6 +1,6 @@
+import { randomUUID } from 'crypto';
 import { getType } from 'mime';
 import { program } from 'commander';
-import { randomUUID } from 'crypto';
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs-extra';
 import { checkLatest } from '../api/update';

@@ -92,7 +92,7 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
   // Slice to keep and remove
   let kept = 0;
-  allVersions.forEach((v, i) => {
+  allVersions.forEach((v) => {
     const isInUse = versionInUse.find((vi) => vi === v.id);
     if (kept < keep || isInUse) {
       if(isInUse) {

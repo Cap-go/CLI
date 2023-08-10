@@ -1,5 +1,5 @@
-import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { program } from 'commander'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import * as p from '@clack/prompts';
 import { createRSA } from './api/crypto';

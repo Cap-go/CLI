@@ -5,7 +5,6 @@ import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
-import { OptionsBase } from '../api/utils';
 import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils';
 
 const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
