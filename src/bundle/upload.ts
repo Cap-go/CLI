@@ -36,6 +36,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const { external, key = false, displayIvSession } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
+  
 
   channel = channel || 'dev';
 
@@ -272,12 +273,13 @@ It will be also visible in your dashboard\n`);
     p.outro('Time to share your update to the world 🌍')
     process.exit()
   }
-  return true
+  return bundleLink;  
 }
 
 export const uploadCommand = async (apikey: string, options: Options) => {
   try {
-    await uploadBundle(apikey, options, true)
+    const bundleLink = await uploadBundle(apikey, options, true);
+    p.log.info(`Bundle URL: ${bundleLink}`);
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
@@ -287,7 +289,8 @@ export const uploadCommand = async (apikey: string, options: Options) => {
 export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
   p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
   try {
-    await uploadBundle(apikey, options, true)
+    const bundleLink = await uploadBundle(apikey, options, true);
+    p.log.info(`Bundle URL: ${bundleLink}`);
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
