@@ -128,7 +128,7 @@ const step5 = async (userId: string, snag: LogSnag,
         const matches = mainFileContent.match(regexImport);
         const last = matches?.pop();
         if (!last) {
-            s.stop(`Cannot find import line in main file, use manual installation: https://docs.capgo.app/plugin/installation`)
+            s.stop(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
             process.exit()
         }
 
