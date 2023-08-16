@@ -29,7 +29,12 @@ interface Options extends OptionsBase {
   key?: boolean | string
 }
 
-export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
+export interface UploadResult {
+  bundleLink: string;
+  bundleVersion: string;
+}
+
+export const uploadBundle = async (appid: string, options: Options, shouldExit = true): Promise<UploadResult> => {
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
@@ -256,6 +261,13 @@ It will be also visible in your dashboard\n`);
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
     program.error('');
   }
+  const bundleLink = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`;
+  if (data?.public) {
+    p.log.info('Your update is now available in your public channel 🎉');
+    p.log.info(`Direct link to your bundle: ${bundleLink}`);
+  } else if (data?.id) {
+    p.log.info(`Link device to this bundle to try it: ${bundleLink}`);
+  }
   await snag.publish({
     channel: 'app',
     event: 'App Uploaded',
@@ -270,12 +282,15 @@ It will be also visible in your dashboard\n`);
     p.outro('Time to share your update to the world 🌍')
     process.exit()
   }
-  return true
+  return { bundleLink, bundleVersion: bundle }; // Return both the bundle link and version
 }
 
 export const uploadCommand = async (apikey: string, options: Options) => {
   try {
-    await uploadBundle(apikey, options, true)
+    const result = await uploadBundle(apikey, options, true);
+    p.log.info('Upload completed successfully.');
+    p.log.info(`Bundle URL: ${result.bundleLink}`);
+    p.log.info(`Bundle Version: ${result.bundleVersion}`);
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
@@ -285,7 +300,10 @@ export const uploadCommand = async (apikey: string, options: Options) => {
 export const uploadDeprecatedCommand = async (apikey: string, options: Options) => {
   p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
   try {
-    await uploadBundle(apikey, options, true)
+    const result = await uploadBundle(apikey, options, true);
+    p.log.info('Upload completed successfully.');
+    p.log.info(`Bundle URL: ${result.bundleLink}`);
+    p.log.info(`Bundle Version: ${result.bundleVersion}`);
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
