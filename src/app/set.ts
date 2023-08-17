@@ -26,7 +26,16 @@ export const setApp = async (appId: string, options: Options) => {
     // Check we have app access to this appId
     await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
-    const { name, icon } = options;
+    const { name, icon, retention } = options;
+
+    if (retention && !isNaN(Number(retention))) {
+        p.log.error(`retention value must be a number`);
+        program.error(``);
+    }
+    else if (retention && retention < 0) {
+        p.log.error(`retention value cannot be less than 0`);
+        program.error(``)
+    }
 
     let iconBuff;
     let iconType;
@@ -68,6 +77,7 @@ export const setApp = async (appId: string, options: Options) => {
         .update({
             icon_url: signedURL,
             name,
+            retention: retention === 0 ? null : retention,
         })
         .eq('app_id', appId)
         .eq('user_id', userId)

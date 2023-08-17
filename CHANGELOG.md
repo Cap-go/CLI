@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.13.0](https://github.com/Cap-go/capgo-cli/compare/v3.12.7...v3.13.0) (2023-08-17)
+
+
+### Features
+
+* added option to set bundle retention on app ([6378bd1](https://github.com/Cap-go/capgo-cli/commit/6378bd1ad622e22bf0d848c11f8ff7c4db823622))
+
 ### [3.12.7](https://github.com/Cap-go/capgo-cli/compare/v3.12.6...v3.12.7) (2023-08-17)
 
 
