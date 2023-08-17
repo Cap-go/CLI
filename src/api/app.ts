@@ -22,6 +22,7 @@ export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient
 export interface Options extends OptionsBase {
   name?: string;
   icon?: string;
+  retention?: number;
 }
 
 export const newIconPath = "assets/icon.png"
