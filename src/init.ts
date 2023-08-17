@@ -118,7 +118,7 @@ const step5 = async (userId: string, snag: LogSnag,
         s.start(`Adding @capacitor-updater to your main file`);
         const mainFilePath = await findMainFile();
         if (!mainFilePath) {
-            s.stop('No main.ts, main.js, index.ts or index.js file found, please run cap init first');
+            s.stop('No main.ts, main.js, index.ts or index.js file found, You need to add @capgo/capacitor-updater manually');
             process.exit()
         }
         // open main file and inject codeInject
