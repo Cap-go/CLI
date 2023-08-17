@@ -198,6 +198,7 @@ export interface Database {
           id: string | null
           last_version: string | null
           name: string | null
+          retention: number
           updated_at: string | null
           user_id: string
         }
@@ -208,6 +209,7 @@ export interface Database {
           id?: string | null
           last_version?: string | null
           name?: string | null
+          retention?: number
           updated_at?: string | null
           user_id: string
         }
@@ -218,6 +220,7 @@ export interface Database {
           id?: string | null
           last_version?: string | null
           name?: string | null
+          retention?: number
           updated_at?: string | null
           user_id?: string
         }

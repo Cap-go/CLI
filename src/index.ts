@@ -95,6 +95,7 @@ app
   .action(setApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
+  .option('-r --retention <retention>', 'retention')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 const bundle = program

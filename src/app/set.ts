@@ -26,7 +26,7 @@ export const setApp = async (appId: string, options: Options) => {
     // Check we have app access to this appId
     await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
 
-    const { name, icon } = options;
+    const { name, icon, retention } = options;
 
     let iconBuff;
     let iconType;
@@ -68,6 +68,8 @@ export const setApp = async (appId: string, options: Options) => {
         .update({
             icon_url: signedURL,
             name,
+            retention
+            
         })
         .eq('app_id', appId)
         .eq('user_id', userId)
