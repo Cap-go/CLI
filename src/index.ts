@@ -222,7 +222,10 @@ key
   .command('save')
   .description('Save base64 signing key in capacitor config, usefull for CI')
   .action(saveKeyCommand)
-  .option('-f, --force', 'force generate a new one');
+  .option('-f, --force', 'force generate a new one')
+  .option('--key', 'key path to save in capacitor config')
+  .option('--key-data', 'key data to save in capacitor config');
+
 
 key
   .command('create')
