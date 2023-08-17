@@ -74,7 +74,7 @@ app
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
-  app
+app
   .command('debug  [appId]')
   .alias('d')
   .description('Listen for live updates event in Capgo Cloud to debug your app')
@@ -95,7 +95,8 @@ app
   .action(setApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-r, --retention <retention>', 'retention period of app bundle in days')
 
 const bundle = program
   .command('bundle')
