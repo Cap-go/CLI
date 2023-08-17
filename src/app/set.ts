@@ -28,7 +28,7 @@ export const setApp = async (appId: string, options: Options) => {
 
     const { name, icon, retention } = options;
 
-    if (retention && !isNaN(Number(retention))) {
+    if (retention && !Number.isNaN(Number(retention))) {
         p.log.error(`retention value must be a number`);
         program.error(``);
     }
@@ -72,12 +72,13 @@ export const setApp = async (appId: string, options: Options) => {
             .getPublicUrl(fileName)
         signedURL = signedURLData?.publicUrl || signedURL
     }
+    // retention is in seconds in the database but received as days here
     const { error: dbError } = await supabase
         .from('apps')
         .update({
             icon_url: signedURL,
             name,
-            retention: retention === 0 ? null : retention,
+            retention: !retention ? null : retention * 24 * 60 * 60,
         })
         .eq('app_id', appId)
         .eq('user_id', userId)
