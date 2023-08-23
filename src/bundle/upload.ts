@@ -114,7 +114,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   const { nativeFilesNotChanged, hashes } = await checkNativeCode(channel, appid, bundle, supabase)
   if (!nativeFilesNotChanged)
-    program.error('CHANGED');
+    program.error('');
 
   let sessionKey;
   let checksum = ''
