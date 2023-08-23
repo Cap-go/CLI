@@ -179,6 +179,11 @@ export async function findAllNativeCode(): Promise<NativeFile[]> {
     const mainRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
     const path = `${process.cwd()}/node_modules`
 
+    if (!existsSync(path)) {
+        p.log.error('Cannot find node modules, cannot find native code')
+        program.error('');
+    }
+
     await walkDir(path, async (walkPath: string) => {
         if (mainRegex.test(walkPath)) {
             const fileData = await fs.readFile(walkPath)
