@@ -321,8 +321,7 @@ async function checkNativeCode(channel: string, appId: string, bundle: string, s
     .eq('app_id', appId)
     .single()
 
-  if (errorChannel) {
-    console.log(errorChannel)
+  if (errorChannel || !dataChannel) {
     p.log.warn('Cannot get native files hashes from previous version, channel does not yet exist');
     return {
       nativeFilesNotChanged: true,
