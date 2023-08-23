@@ -115,6 +115,7 @@ export interface Database {
           external_url: string | null
           id: number
           name: string
+          native_files_sha256: string[] | null
           session_key: string | null
           storage_provider: string
           updated_at: string | null
@@ -129,6 +130,7 @@ export interface Database {
           external_url?: string | null
           id?: number
           name: string
+          native_files_sha256?: string[] | null
           session_key?: string | null
           storage_provider?: string
           updated_at?: string | null
@@ -143,6 +145,7 @@ export interface Database {
           external_url?: string | null
           id?: number
           name?: string
+          native_files_sha256?: string[] | null
           session_key?: string | null
           storage_provider?: string
           updated_at?: string | null

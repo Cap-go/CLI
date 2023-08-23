@@ -1,6 +1,8 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
+import fs from 'fs/promises'
 import { homedir } from 'os';
 import { resolve } from 'path';
+import { createHash } from 'crypto'
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
@@ -165,6 +167,44 @@ export const findMainFile = async () => {
         }
     }
     return mainFile
+}
+
+export interface NativeFile {
+    path: string,
+    hash: string
+}
+
+export async function findAllNativeCode(): Promise<NativeFile[]> {
+    const nativeCode  = [] as NativeFile[]
+    const mainRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
+    const path = `${process.cwd()}/node_modules`
+
+    await walkDir(path, async (walkPath: string) => {
+        if (mainRegex.test(walkPath)) {
+            const fileData = await fs.readFile(walkPath)
+            const hash = createHash('sha256').update(fileData).digest('hex')
+
+            nativeCode.push({
+                path: walkPath,
+                hash
+            })
+        }
+    })
+
+    return nativeCode
+}
+
+async function walkDir(dir: string, callback: (path: string) => Promise<void>) {
+    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    for (const dirent of dirents) {
+        const fullPath = `${dirent.path}/${dirent.name}`
+
+        if (dirent.isDirectory()) {
+            await walkDir(fullPath, callback)
+        } else {
+            await callback(`${dirent.path}/${dirent.name}`)
+        }
+    }
 }
 
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''

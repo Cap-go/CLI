@@ -6,6 +6,9 @@ import * as p from '@clack/prompts';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
 import axios from "axios";
+import semver from 'semver/preload';
+import { SupabaseClient } from '@supabase/supabase-js';
+import { Database } from 'types/supabase.types';
 import { checkLatest } from '../api/update';
 import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
@@ -15,7 +18,7 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, findAllNativeCode, NativeFile
 } from '../utils';
 
 const alertMb = 20;
@@ -109,6 +112,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
   const fileName = `${safeBundle}.zip`;
 
+  const { nativeFilesNotChanged, hashes } = await checkNativeCode(channel, appid, bundle, supabase)
+  if (!nativeFilesNotChanged)
+    program.error('CHANGED');
+
   let sessionKey;
   let checksum = ''
   let zipped: Buffer | null = null;
@@ -199,6 +206,7 @@ It will be also visible in your dashboard\n`);
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
     checksum,
+    native_files_sha256: hashes
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
   if (dbError) {
@@ -289,5 +297,81 @@ export const uploadDeprecatedCommand = async (apikey: string, options: Options) 
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
+  }
+}
+
+// eslint-disable-next-line max-len
+async function checkNativeCode(channel: string, appId: string, bundle: string, supabase: SupabaseClient<Database>): Promise<{nativeFilesNotChanged: boolean, hashes: string[]}> {
+  const nativeFilesSpinner = p.spinner()
+  nativeFilesSpinner.start('Calculating checksum of native files')
+  const nativeCodeLocal = await findAllNativeCode()
+  nativeFilesSpinner.stop(`Native code length: ${nativeCodeLocal.length}`);
+
+  const hashes = nativeCodeLocal.map(val => val.hash)
+
+  const {data: dataChannel, error: errorChannel } = await supabase
+    .from('channels')
+    .select(`
+      version (
+        native_files_sha256,
+        name
+      )
+    `)
+    .eq('name', channel)
+    .eq('app_id', appId)
+    .single()
+
+  if (errorChannel) {
+    console.log(errorChannel)
+    p.log.warn('Cannot get native files hashes from previous version, channel does not yet exist');
+    return {
+      nativeFilesNotChanged: true,
+      hashes
+    }
+  }
+
+  const typedChannelData = <{version: {name: string, native_files_sha256  : string[] | null}}>(dataChannel as unknown)
+
+  if (semver.major(bundle) > semver.major(typedChannelData.version.name)) {
+    p.log.warn("Uploading a new major version, skipping native check")
+    return {
+      nativeFilesNotChanged: true,
+      hashes
+    }
+  }
+
+  const nativeFilesRemoteHashes = typedChannelData.version.native_files_sha256
+
+  if (!nativeFilesRemoteHashes) {
+    p.log.warn('Cannot get native files hashes from previous version, skipping check for modified native files');
+    return {
+      nativeFilesNotChanged: true,
+      hashes
+    }
+  }
+  
+  if (nativeFilesRemoteHashes.length !== nativeCodeLocal.length) {
+    p.log.error('Native files found in node modules have different lengths than native files on the currently uploaded version');
+    return {
+      nativeFilesNotChanged: false,
+      hashes
+    }
+  }
+
+  let returnVal = true
+  for (const nativeLocalHash of nativeCodeLocal) {
+    if (nativeFilesRemoteHashes.find((item) => item === nativeLocalHash.hash) === undefined) {
+      // Here we have an error, return an error
+      p.log.error(`Native file ${nativeLocalHash.path} has changed`);
+      returnVal = false
+    }
+  }
+
+  if (!returnVal)
+    p.log.error(`Some native file have changed, cannot upload new version!`);
+
+  return {
+    nativeFilesNotChanged: returnVal,
+    hashes
   }
 }
