@@ -78,7 +78,7 @@ export const setApp = async (appId: string, options: Options) => {
         .update({
             icon_url: signedURL,
             name,
-            retention: !retention ? null : retention * 24 * 60 * 60,
+            retention: !retention ? undefined : retention * 24 * 60 * 60,
         })
         .eq('app_id', appId)
         .eq('user_id', userId)
