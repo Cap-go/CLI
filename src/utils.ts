@@ -38,7 +38,7 @@ export let hostSupa = process.env.SUPA_DB === 'production'
     ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
 /* eslint-disable */
 export let supaAnon = process.env.SUPA_DB === 'production'
-    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2d3pwb2F6bXhrcW9zcmRld3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI4MjExOTcsImV4cCI6MjAwODM5NzE5N30.wjxOlMfJoM2IuiFOmLGeP6YxdkF7Scgcfwu8TnPw_fY'
     : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
 /* eslint-enable */
 
@@ -247,11 +247,28 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         return Promise.reject(new Error('missing app_id, name, or created_by'))
     }
     const { data, error } = await supabase
-        .rpc('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
+        .from('channels')
+        .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
+        .eq('app_id', update.app_id)
+        .eq('name', update.name)
+        .eq('created_by', update.created_by)
         .single()
-    // console.log('create Channel', data, error, update)
+    console.log('create Channel', data, error, update)
 
     if (data && !error) {
+        if (data.enable_progressive_deploy) {
+            p.log.info('Progressive deploy is enabled')
+
+            if (data.secondaryVersionPercentage !== 1) 
+                p.log.warn('Latest progressive deploy has not finished')
+
+            update.secondVersion = update.version
+            update.version = data.secondVersion
+            update.secondaryVersionPercentage = 0.1
+            p.log.info('Started new progressive upload!')
+            
+            // update.version = undefined
+        }
         return supabase
             .from('channels')
             .update(update)

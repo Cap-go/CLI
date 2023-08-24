@@ -198,6 +198,7 @@ export interface Database {
           id: string | null
           last_version: string | null
           name: string | null
+          retention: number
           updated_at: string | null
           user_id: string
         }
@@ -208,6 +209,7 @@ export interface Database {
           id?: string | null
           last_version?: string | null
           name?: string | null
+          retention?: number
           updated_at?: string | null
           user_id: string
         }
@@ -218,6 +220,7 @@ export interface Database {
           id?: string | null
           last_version?: string | null
           name?: string | null
+          retention?: number
           updated_at?: string | null
           user_id?: string
         }
@@ -289,10 +292,14 @@ export interface Database {
           created_by: string
           disableAutoUpdateToMajor: boolean
           disableAutoUpdateUnderNative: boolean
+          enable_progressive_deploy: boolean
+          enableAbTesting: boolean
           id: number
           ios: boolean
           name: string
           public: boolean
+          secondaryVersionPercentage: number
+          secondVersion: number
           updated_at: string
           version: number
         }
@@ -307,12 +314,16 @@ export interface Database {
           created_by: string
           disableAutoUpdateToMajor?: boolean
           disableAutoUpdateUnderNative?: boolean
+          enable_progressive_deploy?: boolean
+          enableAbTesting?: boolean
           id?: number
           ios?: boolean
           name: string
           public?: boolean
+          secondaryVersionPercentage?: number
+          secondVersion?: number
           updated_at?: string
-          version: number
+          version?: number
         }
         Update: {
           allow_dev?: boolean
@@ -325,10 +336,14 @@ export interface Database {
           created_by?: string
           disableAutoUpdateToMajor?: boolean
           disableAutoUpdateUnderNative?: boolean
+          enable_progressive_deploy?: boolean
+          enableAbTesting?: boolean
           id?: number
           ios?: boolean
           name?: string
           public?: boolean
+          secondaryVersionPercentage?: number
+          secondVersion?: number
           updated_at?: string
           version?: number
         }
