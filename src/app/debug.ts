@@ -5,7 +5,7 @@ import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
-import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils';
+import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser, hostWeb } from '../utils';
 
 const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
 
@@ -39,7 +39,7 @@ export const waitLog = async (channel: string, supabase: SupabaseClient<Database
   let loop = true
   let now = new Date().toISOString()
   const appIdUrl = convertAppName(appId)
-  const baseUrl = `https://web.capgo.app/app/p/${appIdUrl}`
+  const baseUrl = `${hostWeb}/app/p/${appIdUrl}`
   await markSnag(channel, userId, snag, 'Use waitlog')
   while (loop) {
     const queryStats = supabase

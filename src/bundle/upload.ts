@@ -40,6 +40,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
+  const localS3: boolean = (config.app.extConfig.plugins.CapacitorUpdater.localS3 ?? 'false') === true;
+
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -214,15 +216,16 @@ It will be also visible in your dashboard\n`);
       p.log.error(`Cannot get upload url`);
       program.error('');
     }
+
     await axios({
       method: "put",
       url,
       data: zipped,
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Cache-Control": "public, max-age=456789, immutable",
-        "x-amz-meta-crc32": checksum,
-      }
+      headers: (!localS3 ? {
+       "Content-Type": "application/octet-stream",
+       "Cache-Control": "public, max-age=456789, immutable",
+       "x-amz-meta-crc32": checksum,
+      } : undefined)
     })
     versionData.storage_provider = 'r2'
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, apikey)

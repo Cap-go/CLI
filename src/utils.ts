@@ -9,12 +9,38 @@ import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 
+export const getConfig = async () => {
+    let config: Config;
+    try {
+        config = await loadConfig();
+    } catch (err) {
+        program.error("No capacitor config file found, run `cap init` first");
+    }
+    return config;
+}
+
+getConfig().then(config => {
+    host = (config.app.extConfig.plugins.CapacitorUpdater.localHost as string | undefined) ?? 'https://capgo.app'
+    hostWeb = (config.app.extConfig.plugins.CapacitorUpdater.localWebHost as string | undefined) ?? 'https://web.capgo.app'
+    hostSupa = (config.app.extConfig.plugins.CapacitorUpdater.localSupa as string | undefined) ?? hostSupa
+    supaAnon = (config.app.extConfig.plugins.CapacitorUpdater.localSupaAnon as string | undefined) ?? supaAnon
+})
+
+
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
-export const host = 'https://capgo.app';
-export const hostWeb = 'https://web.capgo.app';
-export const hostSupa = process.env.SUPA_DB === 'production'
+// eslint-disable-next-line import/no-mutable-exports
+export let host = ''
+// eslint-disable-next-line import/no-mutable-exports
+export let hostWeb = ''
+// eslint-disable-next-line import/no-mutable-exports
+export let hostSupa = process.env.SUPA_DB === 'production'
     ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
+/* eslint-disable */
+export let supaAnon = process.env.SUPA_DB === 'production'
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2d3pwb2F6bXhrcW9zcmRld3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI4MjExOTcsImV4cCI6MjAwODM5NzE5N30.wjxOlMfJoM2IuiFOmLGeP6YxdkF7Scgcfwu8TnPw_fY'
+    : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
+/* eslint-enable */
 
 export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
     MIIBCgKCAQEA4pW9olT0FBXXivRCzd3xcImlWZrqkwcF2xTkX/FwXmj9eh9HkBLr
@@ -28,11 +54,6 @@ export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
 if (process.env.SUPA_DB !== 'production') {
     console.log('hostSupa', hostSupa);
 }
-/* eslint-disable */
-export const supaAnon = process.env.SUPA_DB === 'production'
-    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2d3pwb2F6bXhrcW9zcmRld3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI4MjExOTcsImV4cCI6MjAwODM5NzE5N30.wjxOlMfJoM2IuiFOmLGeP6YxdkF7Scgcfwu8TnPw_fY'
-    : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
-/* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient<Database>(hostSupa, supaAnon, {
     auth: {
@@ -180,15 +201,6 @@ interface Config {
         extConfigFilePath: string;
         extConfig: any
     };
-}
-export const getConfig = async () => {
-    let config: Config;
-    try {
-        config = await loadConfig();
-    } catch (err) {
-        program.error("No capacitor config file found, run `cap init` first");
-    }
-    return config;
 }
 
 export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
