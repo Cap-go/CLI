@@ -40,7 +40,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
-  const localS3: boolean = (config.app.extConfig.plugins.CapacitorUpdater.localS3 ?? 'false') === true;
+  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
+    && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid

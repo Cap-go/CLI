@@ -20,8 +20,11 @@ export const getConfig = async () => {
 }
 
 getConfig().then(config => {
-    host = (config.app.extConfig.plugins.CapacitorUpdater.localHost as string | undefined) ?? 'https://capgo.app'
-    hostWeb = (config.app.extConfig.plugins.CapacitorUpdater.localWebHost as string | undefined) ?? 'https://web.capgo.app'
+    if (!config.app.extConfig.plugins || !config.app.extConfig.plugins.CapacitorUpdater) {
+        return
+    }
+    host = (config.app.extConfig.plugins.CapacitorUpdater.localHost as string | undefined) ?? host
+    hostWeb = (config.app.extConfig.plugins.CapacitorUpdater.localWebHost as string | undefined) ?? hostWeb
     hostSupa = (config.app.extConfig.plugins.CapacitorUpdater.localSupa as string | undefined) ?? hostSupa
     supaAnon = (config.app.extConfig.plugins.CapacitorUpdater.localSupaAnon as string | undefined) ?? supaAnon
 })
@@ -30,9 +33,9 @@ getConfig().then(config => {
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
 // eslint-disable-next-line import/no-mutable-exports
-export let host = ''
+export let host = 'https://capgo.app'
 // eslint-disable-next-line import/no-mutable-exports
-export let hostWeb = ''
+export let hostWeb = 'https://web.capgo.app'
 // eslint-disable-next-line import/no-mutable-exports
 export let hostSupa = process.env.SUPA_DB === 'production'
     ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
