@@ -256,7 +256,6 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         .eq('name', update.name)
         .eq('created_by', update.created_by)
         .single()
-    console.log('create Channel', data, error, update)
 
     if (data && !error) {
         if (data.enable_progressive_deploy) {
