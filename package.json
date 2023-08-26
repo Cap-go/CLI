@@ -37,7 +37,8 @@
     "pack": "pkg",
     "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
     "test_rls": "ts-node ./test/test_headers_rls.ts",
-    "lint": "eslint . --ext .ts --fix"
+    "lint": "eslint . --ext .ts --fix",
+    "typeheck": "tsc -w"
   },
   "author": "github.com/riderx",
   "license": "Apache 2.0",

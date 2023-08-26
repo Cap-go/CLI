@@ -3,7 +3,6 @@ import { execSync, ExecSyncOptions, spawnSync } from 'child_process';
 import { findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
-import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { markSnag , waitLog } from './app/debug';
 import { createKey } from './key';
@@ -13,7 +12,7 @@ import { login } from './login';
 import { addApp } from './app/add';
 import { checkLatest } from './api/update';
 import { Options } from './api/app';
-import { convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils';
+import { LogSnag, convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils';
 
 interface SuperOptions extends Options {
     local: boolean;
@@ -252,7 +251,6 @@ const step10 = async (userId: string, snag: LogSnag,
 export const initApp = async (apikey: string, appId: string, options: SuperOptions) => {
     p.intro(`Capgo onboarding 🛫`);
     await checkLatest();
-    const snag = useLogSnag()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     apikey = apikey || findSavedKey()
@@ -265,6 +263,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     } else {
         log.stop('Login Done ✅');
     }
+    const snag = useLogSnag()
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['upload', 'all', 'read', 'write']);
     await markStep(userId, snag, 1)

@@ -5,7 +5,7 @@ import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
-import { LogSnag } from 'logsnag';
+import { PublishOptions } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 
@@ -261,14 +261,14 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         if (data.enable_progressive_deploy) {
             p.log.info('Progressive deploy is enabled')
 
-            if (data.secondaryVersionPercentage !== 1) 
+            if (data.secondaryVersionPercentage !== 1)
                 p.log.warn('Latest progressive deploy has not finished')
 
             update.secondVersion = update.version
             update.version = data.secondVersion
             update.secondaryVersionPercentage = 0.1
             p.log.info('Started new progressive upload!')
-            
+
             // update.version = undefined
         }
         return supabase
@@ -288,12 +288,26 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         .single()
 }
 
-export const useLogSnag = (): LogSnag => {
-    const logsnag = new LogSnag({
-        token: 'c124f5e9d0ce5bdd14bbb48f815d5583',
-        project: 'capgo',
-    })
-    return logsnag
+export type LogSnag = { publish: (options: PublishOptions) => Promise<unknown>; }
+
+export const useLogSnag = () => {
+    const apiKey = findSavedKey()
+    const supabase = createSupabaseClient(apiKey)
+    return {
+        publish: async (options: PublishOptions) => {
+            try {
+                return await supabase.functions.invoke('track_event', {
+                    body: JSON.stringify({
+                        payload: options,
+                        apiKey: apiKey
+                    })
+                });
+
+            } catch (error) {
+                return error
+            }
+        }
+    };
 }
 
 export const convertAppName = (appName: string) => appName.replace(/\./g, '--')

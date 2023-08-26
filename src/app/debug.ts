@@ -1,11 +1,10 @@
 import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
-import LogSnag from 'logsnag';
 import { Database } from 'types/supabase.types';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
-import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser, hostWeb } from '../utils';
+import { convertAppName, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser, hostWeb, LogSnag } from '../utils';
 
 const wait = (ms: number) => new Promise(resolve => { setTimeout(resolve, ms) })
 
