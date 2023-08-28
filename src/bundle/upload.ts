@@ -348,14 +348,6 @@ async function checkNativeCode(channel: string, appId: string, bundle: string, s
       hashes
     }
   }
-  
-  if (nativeFilesRemoteHashes.length !== nativeCodeLocal.length) {
-    p.log.error('Native files found in node modules have different lengths than native files on the currently uploaded version');
-    return {
-      nativeFilesNotChanged: false,
-      hashes
-    }
-  }
 
   let returnVal = true
   for (const nativeLocalHash of nativeCodeLocal) {
