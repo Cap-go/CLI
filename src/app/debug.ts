@@ -165,7 +165,7 @@ export const debugApp = async (appId: string, options: OptionsBaseDebug) => {
   p.log.info(`Getting active bundle in Capgo`);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` });
   await cancelCommand('debug', doRun, userId, snag);

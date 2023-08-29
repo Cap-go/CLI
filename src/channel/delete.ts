@@ -24,7 +24,7 @@ export const deleteChannel = async (channelId: string, appId: string, options: O
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId);
 
     p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`);
     try {

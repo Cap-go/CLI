@@ -21,7 +21,7 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId);
 
     const { error } = await supabase
         .storage

@@ -39,7 +39,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state } = options;
   if (!channel) {
@@ -64,7 +64,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
   try {
     await checkPlanValid(supabase, userId)
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId);
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,
@@ -116,7 +116,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
       channelPayload.allow_device_self_set = !!selfAssign
     }
     try {
-      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, options.apikey)
+      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
       if (dbError) {
         p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
         program.error('');

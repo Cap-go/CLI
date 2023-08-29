@@ -228,7 +228,7 @@ It will be also visible in your dashboard\n`);
       app_id: appid,
       created_by: userId,
       version: versionId,
-    }, apikey)
+    })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
       program.error('');

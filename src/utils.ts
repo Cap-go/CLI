@@ -243,10 +243,10 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
-    update: Database['public']['Tables']['channels']['Insert'], apikey: string) => {
+    update: Database['public']['Tables']['channels']['Insert']) => {
     // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
-        console.error('missing app_id, name, or created_by')
+        p.log.error('missing app_id, name, or created_by')
         return Promise.reject(new Error('missing app_id, name, or created_by'))
     }
     const { data, error } = await supabase
@@ -265,6 +265,10 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
                 p.log.warn('Latest progressive deploy has not finished')
 
             update.secondVersion = update.version
+            if (!data.secondVersion) {
+                p.log.error('missing secondVersion')
+                return Promise.reject(new Error('missing secondVersion'))
+            }
             update.version = data.secondVersion
             update.secondaryVersionPercentage = 0.1
             p.log.info('Started new progressive upload!')
