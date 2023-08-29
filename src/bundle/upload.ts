@@ -72,17 +72,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appid);
 
-  // checking if user has access rights before uploading
-  const { data: versionExist, error: versionExistError } = await supabase
-    .rpc('exist_app_versions', { apikey, name_version: bundle, appid })
-    .single()
-
-  if (versionExist || versionExistError) {
-    p.log.error(`This app bundle already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
-    program.error('');
-  }
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc('is_trial', { userid: userId })
     .single()
@@ -91,14 +82,6 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
   }
 
-  const { data: app, error: appError } = await supabase
-    .rpc('exist_app', { appid, apikey })
-    .single()
-
-  if (!app || appError) {
-    p.log.error(`Cannot find app ${appid} in your account ${formatError(appError)}`);
-    program.error('');
-  }
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
     .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
