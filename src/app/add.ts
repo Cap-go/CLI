@@ -33,9 +33,9 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
   if (shouldExit) {
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey, false);
+    await checkAppExistsAndHasPermissionErr(supabase, appId, false);
   } else {
-    const res = await checkAppExistsAndHasPermission(supabase, appId, options.apikey, false);
+    const res = await checkAppExistsAndHasPermission(supabase, appId, false);
     if (res) {
       return false
     }
@@ -68,15 +68,6 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
     p.log.warn(`Found app icon ${newIconPath}`);
   } else {
     p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
-  }
-
-  // check if app already exist
-  const { data: app, error: dbError0 } = await supabase
-    .rpc('exist_app_v2', { appid: appId })
-    .single()
-  if (app || dbError0) {
-    p.log.error(`App ${appId} already exists ${formatError(dbError0)}`);
-    program.error('');
   }
 
   const fileName = `icon_${randomUUID()}`

@@ -62,7 +62,7 @@ export const listApp = async (appId: string, options: OptionsBase) => {
   p.log.info(`Getting active bundle in Capgo`);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   // Get all active app versions we might possibly be able to cleanup
   const allApps = await getActiveApps(supabase, userId);

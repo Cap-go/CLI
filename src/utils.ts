@@ -11,12 +11,41 @@ import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 
+export const getConfig = async () => {
+    let config: Config;
+    try {
+        config = await loadConfig();
+    } catch (err) {
+        program.error("No capacitor config file found, run `cap init` first");
+    }
+    return config;
+}
+
+getConfig().then(config => {
+    if (!config.app.extConfig.plugins || !config.app.extConfig.plugins.CapacitorUpdater) {
+        return
+    }
+    host = (config.app.extConfig.plugins.CapacitorUpdater.localHost as string | undefined) ?? host
+    hostWeb = (config.app.extConfig.plugins.CapacitorUpdater.localWebHost as string | undefined) ?? hostWeb
+    hostSupa = (config.app.extConfig.plugins.CapacitorUpdater.localSupa as string | undefined) ?? hostSupa
+    supaAnon = (config.app.extConfig.plugins.CapacitorUpdater.localSupaAnon as string | undefined) ?? supaAnon
+})
+
+
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
-export const host = 'https://capgo.app';
-export const hostWeb = 'https://web.capgo.app';
-export const hostSupa = process.env.SUPA_DB === 'production'
+// eslint-disable-next-line import/no-mutable-exports
+export let host = 'https://capgo.app'
+// eslint-disable-next-line import/no-mutable-exports
+export let hostWeb = 'https://web.capgo.app'
+// eslint-disable-next-line import/no-mutable-exports
+export let hostSupa = process.env.SUPA_DB === 'production'
     ? 'https://xvwzpoazmxkqosrdewyv.supabase.co' : process.env.SUPA_DB || 'https://aucsybvnhavogdmzwtcw.supabase.co';
+/* eslint-disable */
+export let supaAnon = process.env.SUPA_DB === 'production'
+    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2d3pwb2F6bXhrcW9zcmRld3l2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2OTI4MjExOTcsImV4cCI6MjAwODM5NzE5N30.wjxOlMfJoM2IuiFOmLGeP6YxdkF7Scgcfwu8TnPw_fY'
+    : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
+/* eslint-enable */
 
 export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
     MIIBCgKCAQEA4pW9olT0FBXXivRCzd3xcImlWZrqkwcF2xTkX/FwXmj9eh9HkBLr
@@ -30,11 +59,6 @@ export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
 if (process.env.SUPA_DB !== 'production') {
     console.log('hostSupa', hostSupa);
 }
-/* eslint-disable */
-export const supaAnon = process.env.SUPA_DB === 'production'
-    ? 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJyb2xlIjoiYW5vbiIsImlhdCI6MTYzNzgwNTAwOSwiZXhwIjoxOTUzMzgxMDA5fQ.8tgID1d4jodPwuo_fz4KHN4o1XKB9fnqyt0_GaJSj-w'
-    : process.env.SUPA_ANON || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF1Y3N5YnZuaGF2b2dkbXp3dGN3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE2NTQ1Mzk1MDYsImV4cCI6MTk3MDExNTUwNn0.HyuZmo_EjF5fgZQU3g37bdNardK1CLHgxXmYqtr59bo'
-/* eslint-enable */
 
 export const createSupabaseClient = (apikey: string) => createClient<Database>(hostSupa, supaAnon, {
     auth: {
@@ -226,15 +250,6 @@ interface Config {
         extConfig: any
     };
 }
-export const getConfig = async () => {
-    let config: Config;
-    try {
-        config = await loadConfig();
-    } catch (err) {
-        program.error("No capacitor config file found, run `cap init` first");
-    }
-    return config;
-}
 
 export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
     update: Database['public']['Tables']['app_versions']['Insert'], apikey: string) => {
@@ -273,18 +288,38 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
-    update: Database['public']['Tables']['channels']['Insert'], apikey: string) => {
+    update: Database['public']['Tables']['channels']['Insert']) => {
     // console.log('updateOrCreateChannel', update)
     if (!update.app_id || !update.name || !update.created_by) {
-        console.error('missing app_id, name, or created_by')
+        p.log.error('missing app_id, name, or created_by')
         return Promise.reject(new Error('missing app_id, name, or created_by'))
     }
     const { data, error } = await supabase
-        .rpc('exist_channel', { appid: update.app_id, name_channel: update.name, apikey })
+        .from('channels')
+        .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
+        .eq('app_id', update.app_id)
+        .eq('name', update.name)
+        .eq('created_by', update.created_by)
         .single()
-    // console.log('create Channel', data, error, update)
 
     if (data && !error) {
+        if (data.enable_progressive_deploy) {
+            p.log.info('Progressive deploy is enabled')
+
+            if (data.secondaryVersionPercentage !== 1) 
+                p.log.warn('Latest progressive deploy has not finished')
+
+            update.secondVersion = update.version
+            if (!data.secondVersion) {
+                p.log.error('missing secondVersion')
+                return Promise.reject(new Error('missing secondVersion'))
+            }
+            update.version = data.secondVersion
+            update.secondaryVersionPercentage = 0.1
+            p.log.info('Started new progressive upload!')
+            
+            // update.version = undefined
+        }
         return supabase
             .from('channels')
             .update(update)

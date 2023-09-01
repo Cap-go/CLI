@@ -23,12 +23,12 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   p.log.info(`Querying available channels in Capgo`);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   // Get all active app versions we might possibly be able to cleanup
   const allVersions = await getActiveChannels(supabase, appId, userId);

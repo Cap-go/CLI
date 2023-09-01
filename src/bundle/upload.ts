@@ -29,7 +29,8 @@ interface Options extends OptionsBase {
   channel?: string
   displayIvSession?: boolean
   external?: string
-  key?: boolean | string
+  key?: boolean | string,
+  bundleUrl?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -43,6 +44,9 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
+  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
+    && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
+
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -72,17 +76,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appid);
 
-  // checking if user has access rights before uploading
-  const { data: versionExist, error: versionExistError } = await supabase
-    .rpc('exist_app_versions', { apikey, name_version: bundle, appid })
-    .single()
-
-  if (versionExist || versionExistError) {
-    p.log.error(`This app bundle already exist or was deleted, you cannot re-upload it ${formatError(versionExistError)}`);
-    program.error('');
-  }
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc('is_trial', { userid: userId })
     .single()
@@ -91,14 +86,6 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
   }
 
-  const { data: app, error: appError } = await supabase
-    .rpc('exist_app', { appid, apikey })
-    .single()
-
-  if (!app || appError) {
-    p.log.error(`Cannot find app ${appid} in your account ${formatError(appError)}`);
-    program.error('');
-  }
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
     .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
@@ -222,15 +209,16 @@ It will be also visible in your dashboard\n`);
       p.log.error(`Cannot get upload url`);
       program.error('');
     }
+
     await axios({
       method: "put",
       url,
       data: zipped,
-      headers: {
-        "Content-Type": "application/octet-stream",
-        "Cache-Control": "public, max-age=456789, immutable",
-        "x-amz-meta-crc32": checksum,
-      }
+      headers: (!localS3 ? {
+       "Content-Type": "application/octet-stream",
+       "Cache-Control": "public, max-age=456789, immutable",
+       "x-amz-meta-crc32": checksum,
+      } : undefined)
     })
     versionData.storage_provider = 'r2'
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, apikey)
@@ -249,16 +237,21 @@ It will be also visible in your dashboard\n`);
       app_id: appid,
       created_by: userId,
       version: versionId,
-    }, apikey)
+    })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
       program.error('');
     }
     const appidWeb = convertAppName(appid)
+    const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`
     if (data?.public) {
       p.log.info('Your update is now available in your public channel 🎉')
     } else if (data?.id) {
-      p.log.info(`Link device to this bundle to try it: ${hostWeb}/app/p/${appidWeb}/channel/${data.id}`);
+      p.log.info(`Link device to this bundle to try it: ${bundleUrl}`);
+    }
+
+    if(options.bundleUrl) {
+      p.log.info(`Bundle url: ${bundleUrl}`);
     }
   } else {
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');

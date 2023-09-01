@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.13.14](https://github.com/Cap-go/capgo-cli/compare/v3.13.13...v3.13.14) (2023-08-30)
+
+### [3.13.13](https://github.com/Cap-go/capgo-cli/compare/v3.13.12...v3.13.13) (2023-08-29)
+
+
+### Bug Fixes
+
+* build issue ([a7464ac](https://github.com/Cap-go/capgo-cli/commit/a7464ac52646c20a62b05921ddcb08d9f68c3c91))
+
+### [3.13.12](https://github.com/Cap-go/capgo-cli/compare/v3.13.11...v3.13.12) (2023-08-29)
+
+
+### Bug Fixes
+
+* use only exist v2 ([e8053d8](https://github.com/Cap-go/capgo-cli/commit/e8053d81641c4620988edcf8fd74e1eddda4fb83))
+
+### [3.13.11](https://github.com/Cap-go/capgo-cli/compare/v3.13.10...v3.13.11) (2023-08-28)
+
+### [3.13.10](https://github.com/Cap-go/capgo-cli/compare/v3.13.9...v3.13.10) (2023-08-26)
+
+
+### Bug Fixes
+
+* relove old log message ([186e68e](https://github.com/Cap-go/capgo-cli/commit/186e68e3558354377fcb6c01b5134521fcdc292c))
+
+### [3.13.9](https://github.com/Cap-go/capgo-cli/compare/v3.13.8...v3.13.9) (2023-08-26)
+
+### [3.13.8](https://github.com/Cap-go/capgo-cli/compare/v3.13.7...v3.13.8) (2023-08-24)
+
+### [3.13.7](https://github.com/Cap-go/capgo-cli/compare/v3.13.6...v3.13.7) (2023-08-24)
+
+### [3.13.6](https://github.com/Cap-go/capgo-cli/compare/v3.13.5...v3.13.6) (2023-08-23)
+
+
+### Bug Fixes
+
+* upload issues ([c9618a1](https://github.com/Cap-go/capgo-cli/commit/c9618a1d631682b193821de1c41e036074ada10b))
+
 ### [3.13.5](https://github.com/Cap-go/capgo-cli/compare/v3.13.4...v3.13.5) (2023-08-21)
 
 ### [3.13.4](https://github.com/Cap-go/capgo-cli/compare/v3.13.3...v3.13.4) (2023-08-17)

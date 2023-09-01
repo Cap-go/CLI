@@ -27,7 +27,7 @@ export const deleteBundle = async (bundleId: string, appId: string, options: Opt
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   const apikey = options.apikey || findSavedKey()
 

@@ -40,7 +40,7 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId);
 
     if (!channel) {
         p.log.error("Missing argument, you need to provide a channel");

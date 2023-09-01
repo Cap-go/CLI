@@ -62,7 +62,7 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   const userId = await verifyUser(supabase, apikey);
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appid, apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, appid);
   p.log.info(`Querying all available versions in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup

@@ -28,7 +28,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, appId);
 
     p.log.info(`Creating channel ${appId}#${channelId} to Capgo`);
     try {
