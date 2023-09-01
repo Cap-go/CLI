@@ -52,6 +52,7 @@ Optionally, you can give:
 - `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 - `--iv-session-key [key]` to send a custom session key to the cloud.
 - `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132).
+- `--skip-native-files-check` skip checking native files for changes
 
 > ⭐️ External option help to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 30 MB. With this setting, Capgo store only the link to the zip and send the link to all app.
 

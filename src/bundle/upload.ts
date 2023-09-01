@@ -30,7 +30,8 @@ interface Options extends OptionsBase {
   displayIvSession?: boolean
   external?: string
   key?: boolean | string,
-  bundleUrl?: boolean
+  bundleUrl?: boolean,
+  skipNativeFilesCheck?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -99,7 +100,14 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
   const fileName = `${safeBundle}.zip`;
 
-  const { nativeFilesNotChanged, hashes } = await checkNativeCode(channel, appid, bundle, supabase)
+  if (options.skipNativeFilesCheck) {
+    p.log.warn(`Skipping native files check`);
+  }
+
+  const { nativeFilesNotChanged, hashes } = !options.skipNativeFilesCheck 
+    ? await checkNativeCode(channel, appid, bundle, supabase) 
+    : { nativeFilesNotChanged: true, hashes: null }
+
   if (!nativeFilesNotChanged)
     program.error('');
 
@@ -303,18 +311,16 @@ async function checkNativeCode(channel: string, appId: string, bundle: string, s
   const hashes = nativeCodeLocal.map(val => val.hash)
 
   const {data: dataChannel, error: errorChannel } = await supabase
-    .from('channels')
+    .from('app_versions')
     .select(`
-      version (
-        native_files_sha256,
-        name
-      )
+      native_files_sha256,
+      name
     `)
-    .eq('name', channel)
     .eq('app_id', appId)
-    .single()
+    .order('created_at', { ascending: false })
+    .limit(1)
 
-  if (errorChannel || !dataChannel) {
+  if (errorChannel || !dataChannel[0]) {
     p.log.warn('Cannot get native files hashes from previous version, channel does not yet exist');
     return {
       nativeFilesNotChanged: true,
@@ -322,9 +328,9 @@ async function checkNativeCode(channel: string, appId: string, bundle: string, s
     }
   }
 
-  const typedChannelData = <{version: {name: string, native_files_sha256  : string[] | null}}>(dataChannel as unknown)
+  const typedChannelData = dataChannel[0]
 
-  if (semver.major(bundle) > semver.major(typedChannelData.version.name)) {
+  if (semver.major(bundle) > semver.major(typedChannelData.name)) {
     p.log.warn("Uploading a new major version, skipping native check")
     return {
       nativeFilesNotChanged: true,
@@ -332,7 +338,7 @@ async function checkNativeCode(channel: string, appId: string, bundle: string, s
     }
   }
 
-  const nativeFilesRemoteHashes = typedChannelData.version.native_files_sha256
+  const nativeFilesRemoteHashes = typedChannelData.native_files_sha256
 
   if (!nativeFilesRemoteHashes) {
     p.log.warn('Cannot get native files hashes from previous version, skipping check for modified native files');
