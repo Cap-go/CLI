@@ -1,5 +1,5 @@
 import { randomUUID } from 'crypto';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, mkdirSync, unlinkSync } from 'fs';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';
@@ -15,7 +15,7 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, isPartialUpdate, getPartialUpdateBaseVersion, downloadFile
 } from '../utils';
 
 const alertMb = 20;
@@ -41,7 +41,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
-  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
+  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
   appid = appid || config?.app?.appId
@@ -207,9 +207,9 @@ It will be also visible in your dashboard\n`);
       url,
       data: zipped,
       headers: (!localS3 ? {
-       "Content-Type": "application/octet-stream",
-       "Cache-Control": "public, max-age=456789, immutable",
-       "x-amz-meta-crc32": checksum,
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "public, max-age=456789, immutable",
+        "x-amz-meta-crc32": checksum,
       } : undefined)
     })
     versionData.storage_provider = 'r2'
@@ -242,7 +242,7 @@ It will be also visible in your dashboard\n`);
       p.log.info(`Link device to this bundle to try it: ${bundleUrl}`);
     }
 
-    if(options.bundleUrl) {
+    if (options.bundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`);
     }
   } else {
@@ -266,9 +266,18 @@ It will be also visible in your dashboard\n`);
   return true
 }
 
-export const uploadCommand = async (apikey: string, options: Options) => {
+export const uploadCommand = async (appid: string, options: Options) => {
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
+
+    // check if the partial-update flag is set in capacitor.config.json
+    if (await isPartialUpdate()) {
+      p.log.info(`The partial-update flag was set. Preparing to perform a partial update.`);
+
+      const partialUpdateBaseVersion = await getPartialUpdateBaseVersion()
+      if (partialUpdateBaseVersion)
+        await uploadPartialUpdateCommand(appid, options, true)
+    }
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
@@ -282,5 +291,96 @@ export const uploadDeprecatedCommand = async (apikey: string, options: Options) 
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
+  }
+}
+
+export const uploadPartialUpdateCommand = async (appid: string, options: Options, shouldExit = true) => {
+  const config = await getConfig();
+  let { bundle, path, channel } = options;
+  appid = appid || config?.app?.appId
+  bundle = bundle || config?.app?.package?.version
+  path = path || config?.app?.webDir
+  channel = channel || 'dev';
+
+  if (existsSync(path)) {
+    const baseVersion = await getPartialUpdateBaseVersion()
+    const baseVersionPath = `${path}/../dist_base`
+    const partialVersionPath = `${path}/../dist_partial`
+
+    if (!baseVersion) {
+      p.log.error(`The base version you specified for creating a partial-update is invalid ${baseVersion}`);
+      program.error('')
+    }
+
+    try {
+      mkdirSync(baseVersionPath, { recursive: true })
+      mkdirSync(partialVersionPath, { recursive: true })
+
+      if (existsSync(baseVersionPath) && existsSync(partialVersionPath)) {
+        const apikey = options.apikey || findSavedKey()
+        const supabase = createSupabaseClient(apikey)
+        // check if specified base version does indeed exist
+        const { data: baseVersionDB, error: baseVersionDBError } = await supabase
+          .rpc('exist_app_versions', { appid, apikey, name_version: baseVersion })
+          .single()
+
+        if (baseVersionDB) {
+          // download the base version to the disk
+          const { data: baseData, error: baseError } = await supabase
+            .from('channels')
+            .select()
+            .eq('app_id', appid)
+            .eq('name', channel)
+            // .eq('created_by', update.created_by)
+            .single()
+
+          if (!baseData) {
+            p.log.error(`The base version you specified for creating a partial-update does not exist in the DB ${baseError}`);
+            program.error('')
+          }
+
+          const appidWeb = convertAppName(appid)
+          const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${baseData.id}`
+          p.log.info(`Bundle url: ${bundleUrl}`);
+
+          // write to disk
+          const downloadFilePath = `${path}/../dist_base.zip`;
+          await downloadFile(bundleUrl, downloadFilePath);
+          if (existsSync(downloadFilePath)) {
+            unlinkSync(downloadFilePath)
+
+            // reading archives
+            const zip = new AdmZip(downloadFilePath);
+            const zipEntries = zip.getEntries();
+
+            zipEntries.forEach(function (zipEntry) {
+              console.log(zipEntry.toString());
+            });
+            zip.extractAllTo(baseVersionPath, true);
+
+
+          }
+
+        } else {
+          p.log.error(`The bundle version on which to base the partial-update does not exist ${formatError(baseVersionDBError)}`);
+          program.error('');
+        }
+
+
+      }
+    } catch (error) {
+      p.log.error(`Failed to create the partial update folder: ${partialVersionPath}. Please enable write permissions.`);
+      program.error('');
+    }
+
+    options.bundle = `${bundle}_partial`
+    options.path = partialVersionPath
+    p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(options)}`)
+
+    // next, perform the partial update
+    await uploadBundle(appid, options, true)
+  } else {
+    p.log.error(`Cannot find the path to the full bundle to be partially updated. Did you delete it?`);
+    program.error('');
   }
 }

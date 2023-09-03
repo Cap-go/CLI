@@ -1,4 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import fetch from 'node-fetch';
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -261,7 +262,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         if (data.enable_progressive_deploy) {
             p.log.info('Progressive deploy is enabled')
 
-            if (data.secondaryVersionPercentage !== 1) 
+            if (data.secondaryVersionPercentage !== 1)
                 p.log.warn('Latest progressive deploy has not finished')
 
             update.secondVersion = update.version
@@ -272,7 +273,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             update.version = data.secondVersion
             update.secondaryVersionPercentage = 0.1
             p.log.info('Started new progressive upload!')
-            
+
             // update.version = undefined
         }
         return supabase
@@ -320,4 +321,35 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
 export const getHumanDate = (createdA: string | null) => {
     const date = new Date(createdA || '');
     return date.toLocaleString();
+}
+
+export const isPartialUpdate = async (): Promise<boolean> => {
+    const config = await getConfig();
+    const partialUpdate: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
+        && config.app.extConfig.plugins.CapacitorUpdater.partialUpdate) === true;
+    return partialUpdate;
+}
+
+export const getPartialUpdateBaseVersion = async () => {
+    const config = await getConfig();
+    const partialUpdateBaseVersion = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
+        && config.app.extConfig.plugins.CapacitorUpdater.partialUpdateBaseVersion) ? config.app.extConfig.plugins.CapacitorUpdater.partialUpdateBaseVersion : undefined
+    return partialUpdateBaseVersion;
+}
+
+export const downloadFile = async (url: string, outputPath: string): Promise<void> => {
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+        }
+
+        const fileContent = await response.buffer();
+        writeFileSync(outputPath, fileContent);
+
+        console.log(`File ${outputPath} downloaded successfully.`);
+    } catch (error) {
+        console.error('Error occurred while downloading the file:', error);
+    }
 }
