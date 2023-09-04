@@ -1,5 +1,6 @@
 import { randomUUID } from 'crypto';
 import { existsSync, readFileSync, mkdirSync, unlinkSync } from 'fs';
+import fs from 'fs-extra'
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';
@@ -15,7 +16,8 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, isPartialUpdate, getPartialUpdateBaseVersion, downloadFile
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey,
+  isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterImageFiles, removeExistingImageFiles
 } from '../utils';
 
 const alertMb = 20;
@@ -324,49 +326,53 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
           .rpc('exist_app_versions', { appid, apikey, name_version: baseVersion })
           .single()
 
-        if (baseVersionDB) {
-          // download the base version to the disk
-          const { data: baseData, error: baseError } = await supabase
-            .from('channels')
-            .select()
-            .eq('app_id', appid)
-            .eq('name', channel)
-            // .eq('created_by', update.created_by)
-            .single()
-
-          if (!baseData) {
-            p.log.error(`The base version you specified for creating a partial-update does not exist in the DB ${baseError}`);
-            program.error('')
-          }
-
-          const appidWeb = convertAppName(appid)
-          const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${baseData.id}`
-          p.log.info(`Bundle url: ${bundleUrl}`);
-
-          // write to disk
-          const downloadFilePath = `${path}/../dist_base.zip`;
-          await downloadFile(bundleUrl, downloadFilePath);
-          if (existsSync(downloadFilePath)) {
-            unlinkSync(downloadFilePath)
-
-            // reading archives
-            const zip = new AdmZip(downloadFilePath);
-            const zipEntries = zip.getEntries();
-
-            zipEntries.forEach(function (zipEntry) {
-              console.log(zipEntry.toString());
-            });
-            zip.extractAllTo(baseVersionPath, true);
-
-
-          }
-
-        } else {
+        if (!baseVersionDB) {
           p.log.error(`The bundle version on which to base the partial-update does not exist ${formatError(baseVersionDBError)}`);
           program.error('');
         }
 
+        // download the base version to the disk
+        const { data: baseData, error: baseError } = await supabase
+          .from('channels')
+          .select()
+          .eq('app_id', appid)
+          .eq('name', channel)
+          // .eq('created_by', update.created_by)
+          .single()
 
+        if (!baseData) {
+          p.log.error(`The base version you specified for creating a partial-update does not exist in the DB ${baseError}`);
+          program.error('')
+        }
+
+        const appidWeb = convertAppName(appid)
+        const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${baseData.id}`
+        p.log.info(`Bundle url: ${bundleUrl}`);
+
+        // write to disk
+        const downloadFilePath = `${path}/../dist_base.zip`;
+        await downloadFile(bundleUrl, downloadFilePath);
+        if (!existsSync(downloadFilePath)) {
+          p.log.error(`The base version you specified could not be downloaded`);
+          program.error('')
+        }
+
+        const zip = new AdmZip(downloadFilePath);
+        const zipEntries = zip.getEntries();
+        zipEntries.forEach(function (zipEntry) {
+          console.log(zipEntry.toString());
+        });
+        zip.extractAllTo(baseVersionPath, true);
+        unlinkSync(downloadFilePath)
+
+        // copy the contents of current bundle to partialVersionPath
+        fs.copySync(path, partialVersionPath, { overwrite: true })
+
+        const imageFiles = await filterImageFiles(path);
+        console.log('Matching image files:', imageFiles);
+        if (imageFiles && imageFiles.length > 0) {
+          removeExistingImageFiles(partialVersionPath, imageFiles)
+        }
       }
     } catch (error) {
       p.log.error(`Failed to create the partial update folder: ${partialVersionPath}. Please enable write permissions.`);

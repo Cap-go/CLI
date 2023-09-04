@@ -1,5 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
 import fetch from 'node-fetch';
+import { glob } from 'glob';
+import fs from 'fs-extra';
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -351,5 +353,34 @@ export const downloadFile = async (url: string, outputPath: string): Promise<voi
         console.log(`File ${outputPath} downloaded successfully.`);
     } catch (error) {
         console.error('Error occurred while downloading the file:', error);
+    }
+}
+
+export const filterImageFiles = async (directory: string): Promise<string[]> => {
+    const imageFiles: string[] = [];
+
+    const pattern = `${directory}/assets/**/*.{ico,svg,jpg,png,gif,webp}`;
+    const files = await glob(pattern);
+
+    for (const file of files) {
+        const stats = await fs.stat(file);
+        if (stats.isFile()) {
+            imageFiles.push(file);
+        }
+    }
+
+    return imageFiles;
+}
+
+export const removeExistingImageFiles = async (directory: string, files: string[]): Promise<void> => {
+    for (const file of files) {
+        const filePath = `${directory}/${file}`;
+        const exists = await fs.pathExists(filePath);
+        if (exists) {
+            await fs.remove(filePath);
+            console.log(`Deleted file: ${filePath}`);
+        } else {
+            console.log(`File not found: ${filePath}`);
+        }
     }
 }
