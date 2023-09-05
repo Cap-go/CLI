@@ -1266,6 +1266,13 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      exist_app: {
+        Args: {
+          appid: string
+          apikey: string
+        }
+        Returns: boolean
+      }
       exist_app_v2: {
         Args: {
           appid: string
@@ -1276,14 +1283,6 @@ export interface Database {
         Args: {
           appid: string
           name_version: string
-          apikey: string
-        }
-        Returns: boolean
-      }
-      exist_channel: {
-        Args: {
-          appid: string
-          name_channel: string
           apikey: string
         }
         Returns: boolean
@@ -1310,14 +1309,6 @@ export interface Database {
         }
         Returns: {
           name: string
-        }[]
-      }
-      find_missing_app_ids: {
-        Args: {
-          app_ids: string[]
-        }
-        Returns: {
-          missing_app_id: string
         }[]
       }
       get_apikey: {
@@ -1366,41 +1357,6 @@ export interface Database {
         }
         Returns: number
       }
-      get_dl_by_month: {
-        Args: {
-          userid: string
-          pastmonth: number
-        }
-        Returns: {
-          app_id: string
-          maxdownload: number
-        }[]
-      }
-      get_dl_by_month_by_app:
-        | {
-            Args: {
-              pastmonth: number
-              appid: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              userid: string
-              pastmonth: number
-              appid: string
-            }
-            Returns: {
-              app_id: string
-              maxdownload: number
-            }[]
-          }
-      get_max_channel: {
-        Args: {
-          userid: string
-        }
-        Returns: number
-      }
       get_max_plan: {
         Args: {
           userid: string
@@ -1410,18 +1366,6 @@ export interface Database {
           storage: number
           bandwidth: number
         }[]
-      }
-      get_max_shared: {
-        Args: {
-          userid: string
-        }
-        Returns: number
-      }
-      get_max_version: {
-        Args: {
-          userid: string
-        }
-        Returns: number
       }
       get_metered_usage: {
         Args: {
@@ -1435,21 +1379,6 @@ export interface Database {
           dateid: string
         }
         Returns: number
-      }
-      get_stats: {
-        Args: {
-          userid: string
-          dateid: string
-        }
-        Returns: {
-          max_channel: number
-          max_shared: number
-          max_update: number
-          max_version: number
-          max_app: number
-          max_device: number
-          mau: number
-        }[]
       }
       get_total_stats_v2: {
         Args: {
@@ -1477,22 +1406,6 @@ export interface Database {
           _channelid?: number
         }
         Returns: boolean
-      }
-      increment_stats_v2: {
-        Args: {
-          app_id: string
-          date_id: string
-          bandwidth: number
-          version_size: number
-          channels: number
-          shared: number
-          mlu: number
-          mlu_real: number
-          versions: number
-          devices: number
-          devices_real: number
-        }
-        Returns: undefined
       }
       increment_store: {
         Args: {
@@ -1630,25 +1543,15 @@ export interface Database {
       }
       update_app_usage:
         | {
+            Args: Record<PropertyKey, never>
+            Returns: undefined
+          }
+        | {
             Args: {
               minutes_interval: number
             }
             Returns: undefined
           }
-        | {
-            Args: Record<PropertyKey, never>
-            Returns: undefined
-          }
-      update_version_stats: {
-        Args: {
-          app_id: string
-          version_id: number
-          install: number
-          uninstall: number
-          fail: number
-        }
-        Returns: undefined
-      }
     }
     Enums: {
       app_mode: "prod" | "dev" | "livereload"

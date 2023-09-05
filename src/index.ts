@@ -112,7 +112,7 @@ bundle
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--keyData <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
@@ -155,14 +155,14 @@ bundle
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--keyData <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key');
 
 bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--keyData <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key');
 
 bundle
   .command('zip [appId]')
@@ -243,7 +243,7 @@ program
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--keyData <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
