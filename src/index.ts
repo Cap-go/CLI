@@ -113,6 +113,7 @@ bundle
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
@@ -244,6 +245,7 @@ program
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');

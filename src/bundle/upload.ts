@@ -26,7 +26,8 @@ interface Options extends OptionsBase {
   channel?: string
   displayIvSession?: boolean
   external?: string
-  key?: boolean | string
+  key?: boolean | string,
+  bundleUrl?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -234,10 +235,15 @@ It will be also visible in your dashboard\n`);
       program.error('');
     }
     const appidWeb = convertAppName(appid)
+    const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`
     if (data?.public) {
       p.log.info('Your update is now available in your public channel 🎉')
     } else if (data?.id) {
-      p.log.info(`Link device to this bundle to try it: ${hostWeb}/app/p/${appidWeb}/channel/${data.id}`);
+      p.log.info(`Link device to this bundle to try it: ${bundleUrl}`);
+    }
+
+    if(options.bundleUrl) {
+      p.log.info(`Bundle url: ${bundleUrl}`);
     }
   } else {
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
