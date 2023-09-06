@@ -135,36 +135,6 @@ export interface Database {
           }
         ]
       }
-      app_usage: {
-        Row: {
-          app_id: string
-          bandwidth: number
-          created_at: string | null
-          id: string
-          mau: number
-          mode: Database["public"]["Enums"]["usage_mode"]
-          storage: number
-        }
-        Insert: {
-          app_id: string
-          bandwidth?: number
-          created_at?: string | null
-          id?: string
-          mau?: number
-          mode?: Database["public"]["Enums"]["usage_mode"]
-          storage?: number
-        }
-        Update: {
-          app_id?: string
-          bandwidth?: number
-          created_at?: string | null
-          id?: string
-          mau?: number
-          mode?: Database["public"]["Enums"]["usage_mode"]
-          storage?: number
-        }
-        Relationships: []
-      }
       app_versions: {
         Row: {
           app_id: string
@@ -1462,9 +1432,17 @@ export interface Database {
           storage: number
         }[]
       }
-      get_user_id: {
+      get_user_id:
+      | {
         Args: {
           apikey: string
+        }
+        Returns: string
+      }
+    | {
+        Args: {
+          apikey: string
+          app_id: string
         }
         Returns: string
       }
@@ -1535,12 +1513,36 @@ export interface Database {
             }
             Returns: boolean
           }
+        | {
+          Args: {
+            apikey: string
+            keymode: Database["public"]["Enums"]["key_mode"][]
+            app_id: string,
+            right: Database["public"]["Enums"]["user_min_right"],
+            user_id: string
+            channel_id: number | null
+          }
+          Returns: boolean
+        }
       is_app_owner: {
         Args: {
           userid: string
           appid: string
         }
         Returns: boolean
+      }
+      is_owner_of_org: {
+        Args: {
+          user_id: string
+          org_id: string
+        }
+        Returns: boolean
+      }
+      get_user_main_org_id: {
+        Args: {
+          user_id: string
+        }
+        Returns: string
       }
       is_app_shared: {
         Args: {

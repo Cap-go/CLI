@@ -254,7 +254,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
         .eq('app_id', update.app_id)
         .eq('name', update.name)
-        .eq('created_by', update.created_by)
+        // .eq('created_by', update.created_by)
         .single()
 
     if (data && !error) {
@@ -280,7 +280,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
-            .eq('created_by', update.created_by)
+            // .eq('created_by', update.created_by)
             .select()
             .single()
     }
@@ -317,7 +317,87 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
     return userId;
 }
 
+export const verifyUserWithAppId = async (supabase: SupabaseClient<Database>, apikey: string,
+    appid: string, keymod: Database['public']['Enums']['key_mode'][] = ['all']) => {
+        await checkKey(supabase, apikey, keymod);
+
+        const { data: dataUser, error: userIdError } = await supabase
+            .rpc('get_user_id', { apikey, app_id: appid })
+            .single();
+    
+        const userId = (dataUser || '').toString();
+    
+        if (!userId || userIdError) {
+            program.error(`Cannot verify user ${formatError(userIdError)}`);
+        }
+        return userId;
+    }
+
+
 export const getHumanDate = (createdA: string | null) => {
     const date = new Date(createdA || '');
     return date.toLocaleString();
+}
+
+export const getUploadPermission = async (supabase: SupabaseClient<Database>, apikey: string,
+    appid: string, fakeUserId: string): Promise<{
+        upload: boolean;
+        write: boolean;
+    }> => {
+    const realUserId = await verifyUser(supabase, apikey, ['upload', 'write', 'all'])
+
+    const { data: orgId, error: orgIdError } = await supabase
+        .rpc('get_user_main_org_id', { user_id: fakeUserId })
+
+    if (!orgId || orgIdError) {
+        program.error(`Cannot verify user permissions. Cannot get user main org id. ${formatError(orgIdError)}`);
+    }
+
+    const { data: isOwner, error: ownerError } = await supabase
+    .rpc('is_owner_of_org' , {
+        user_id: realUserId,
+        org_id: orgId,
+    })
+
+    if (ownerError) {
+        program.error(`Cannot verify user permissions. Cannot check if user is owner. ${formatError(orgIdError)}`);
+    }
+
+    if (isOwner)
+        return { upload: false, write: false}
+
+    const { data: writeData, error: writeError } = await supabase
+        .rpc('is_allowed_capgkey', {
+            apikey,
+            keymode: ['upload', 'write', 'all'],
+            app_id: appid,
+            user_id: fakeUserId,
+            right: 'write',
+            channel_id: null
+        })
+
+    if (writeError) {
+        program.error(`Cannot verify user permissions ${formatError(writeError)}`);
+    }
+
+    if (writeData) {
+        return { upload: true, write: true }
+    }
+
+    const { data: uploadData, error: uploadError } = await supabase
+    .rpc('is_allowed_capgkey', {
+        apikey,
+        keymode: ['upload', 'write', 'all'],
+        app_id: appid,
+        user_id: fakeUserId,
+        right: 'upload',
+        channel_id: null
+    })
+
+
+    if (uploadError) {
+        program.error(`Cannot verify user permissions ${formatError(uploadError)}`);
+    }
+
+    return { upload: uploadData, write: false }
 }

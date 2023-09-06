@@ -15,7 +15,7 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
+  useLogSnag, verifyUserWithAppId, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, getUploadPermission
 } from '../utils';
 
 const alertMb = 20;
@@ -68,12 +68,18 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     program.error('');
   }
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
-
+  
   const supabase = createSupabaseClient(apikey)
-  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
+  const userId = await verifyUserWithAppId(supabase, apikey, appid, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appid);
+
+  const permissions = await getUploadPermission(supabase, apikey, appid, userId)
+  if (!permissions.upload) {
+    p.log.error(`You don't have upload permission for this app, please contact the app owner`);
+    program.error('');
+  }
 
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc('is_trial', { userid: userId })
@@ -223,7 +229,8 @@ It will be also visible in your dashboard\n`);
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
-  if (versionId) {
+
+  if (versionId && permissions.write) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
@@ -231,6 +238,7 @@ It will be also visible in your dashboard\n`);
       version: versionId,
     })
     if (dbError3) {
+      console.log(dbError3)
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
       program.error('');
     }
@@ -245,9 +253,11 @@ It will be also visible in your dashboard\n`);
     if(options.bundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`);
     }
-  } else {
+  } else if (!versionId) {
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
     program.error('');
+  } else if (!permissions.write) {
+    p.log.warn('Cannot set channel as a upload organization member')
   }
   await snag.publish({
     channel: 'app',
