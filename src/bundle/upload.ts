@@ -238,7 +238,6 @@ It will be also visible in your dashboard\n`);
       version: versionId,
     })
     if (dbError3) {
-      console.log(dbError3)
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
       program.error('');
     }
