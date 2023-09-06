@@ -27,6 +27,7 @@ interface Options extends OptionsBase {
   displayIvSession?: boolean
   external?: string
   key?: boolean | string,
+  keyData?: string,
   bundleUrl?: boolean
 }
 
@@ -109,9 +110,9 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     s.stop(`Checksum: ${checksum}`);
     if (key || existsSync(baseKeyPub)) {
       const publicKey = typeof key === 'string' ? key : baseKeyPub
-      let keyData = ''
+      let keyData = options.keyData || ''
       // check if publicKey exist
-      if (!existsSync(publicKey)) {
+      if (!keyData && !existsSync(publicKey)) {
         p.log.error(`Cannot find public key ${publicKey}`);
         if (ciDetect.isCI) {
           program.error('');
@@ -134,8 +135,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
         notify: false,
       }).catch()
       // open with fs publicKey path
-      const keyFile = readFileSync(publicKey)
-      keyData = keyFile.toString()
+      if (!keyData) {
+        const keyFile = readFileSync(publicKey)
+        keyData = keyFile.toString()
+      }
       // encrypt
       p.log.info(`Encrypting your bundle`);
       const res = encryptSource(zipped, keyData)
