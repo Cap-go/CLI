@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
-import fetch from 'node-fetch';
+import fetch from "node-fetch";
 import { glob } from 'glob';
 import fs from 'fs-extra';
 import { homedir } from 'os';
@@ -238,9 +238,15 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     }
     try {
         const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
-        return res.data.url
+        if (res && res.data) {
+            return res.data.url
+        } else {
+            p.log.error(`Could not get upload url: ${JSON.stringify(res)}`);
+            return ""
+        }
     } catch (error) {
-        p.log.error(`Cannot get upload url ${JSON.stringify(error)}`);
+        let e: Error = error as Error
+        p.log.error(`Cannot get upload url ${JSON.stringify(e.stack)}`);
     }
     return '';
 }
@@ -352,7 +358,7 @@ export const downloadFile = async (url: string, outputPath: string): Promise<voi
 
         console.log(`File ${outputPath} downloaded successfully.`);
     } catch (error) {
-        console.error('Error occurred while downloading the file:', error);
+        console.error('Error occurred while downloading the file: ', error);
     }
 }
 
@@ -383,4 +389,10 @@ export const removeExistingImageFiles = async (directory: string, files: string[
             console.log(`File not found: ${filePath}`);
         }
     }
+}
+
+// make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+export const safeBundle = (bundle: string): string => {
+    const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
+    return `${safeBundle}.zip`
 }

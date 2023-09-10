@@ -17,7 +17,7 @@ import {
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey,
-  isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterImageFiles, removeExistingImageFiles
+  isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterImageFiles, removeExistingImageFiles, safeBundle
 } from '../utils';
 
 const alertMb = 20;
@@ -92,11 +92,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   if (appVersion || appVersionError) {
     p.log.error(`Version already exists ${formatError(appVersionError)}`);
+    // TODO: remove
+    // return
     program.error('');
   }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
-  const fileName = `${safeBundle}.zip`;
+
+  const fileName = safeBundle(bundle);
 
   let sessionKey;
   let checksum = ''
@@ -200,7 +201,7 @@ It will be also visible in your dashboard\n`);
 
     const url = await uploadUrl(supabase, appid, fileName)
     if (!url) {
-      p.log.error(`Cannot get upload url`);
+      p.log.error(`Cannot get upload url. URL is invalid (null).`);
       program.error('');
     }
 
@@ -270,15 +271,19 @@ It will be also visible in your dashboard\n`);
 
 export const uploadCommand = async (appid: string, options: Options) => {
   try {
-    await uploadBundle(appid, options, true)
+    await uploadBundle(appid, options, false)
 
     // check if the partial-update flag is set in capacitor.config.json
     if (await isPartialUpdate()) {
       p.log.info(`The partial-update flag was set. Preparing to perform a partial update.`);
 
       const partialUpdateBaseVersion = await getPartialUpdateBaseVersion()
-      if (partialUpdateBaseVersion)
+      if (partialUpdateBaseVersion) {
         await uploadPartialUpdateCommand(appid, options, true)
+      }
+    } else {
+      p.outro('Time to share your update to the world 🌍')
+      process.exit()
     }
   } catch (error) {
     p.log.error(JSON.stringify(error))
@@ -303,16 +308,18 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
   bundle = bundle || config?.app?.package?.version
   path = path || config?.app?.webDir
   channel = channel || 'dev';
+  const { external, key = false, displayIvSession } = options;
 
   if (existsSync(path)) {
     const baseVersion = await getPartialUpdateBaseVersion()
-    const baseVersionPath = `${path}/../dist_base`
-    const partialVersionPath = `${path}/../dist_partial`
-
     if (!baseVersion) {
-      p.log.error(`The base version you specified for creating a partial-update is invalid ${baseVersion}`);
+      p.log.error(`The base version you specified for creating a partial-update is invalid: ${baseVersion}`);
       program.error('')
+    } else {
+      p.log.info(`The base version you specified for creating a partial-update is: ${baseVersion}`);
     }
+    const baseVersionPath = `${path}/../manifest/dist_${baseVersion}_base`
+    const partialVersionPath = `${path}/../manifest/dist_${baseVersion}_partial`
 
     try {
       mkdirSync(baseVersionPath, { recursive: true })
@@ -345,12 +352,20 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
           program.error('')
         }
 
-        const appidWeb = convertAppName(appid)
-        const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${baseData.id}`
+        const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
+        const data = {
+          user_id: userId,
+          app_id: appid,
+          storage_provider: external ? 'external' : 'r2-direct',
+          bucket_id: external ? undefined : safeBundle(bundle),
+        }
+
+        const res = await supabase.functions.invoke('download_link', { body: JSON.stringify(data) })
+        const bundleUrl = res.data.url
         p.log.info(`Bundle url: ${bundleUrl}`);
 
         // write to disk
-        const downloadFilePath = `${path}/../dist_base.zip`;
+        const downloadFilePath = `${path}/../manifest/dist_${baseVersion}_base.zip`;
         await downloadFile(bundleUrl, downloadFilePath);
         if (!existsSync(downloadFilePath)) {
           p.log.error(`The base version you specified could not be downloaded`);
@@ -375,7 +390,8 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
         }
       }
     } catch (error) {
-      p.log.error(`Failed to create the partial update folder: ${partialVersionPath}. Please enable write permissions.`);
+      let e: Error = error as Error
+      p.log.error(`Error: ${JSON.stringify(e.stack)}`);
       program.error('');
     }
 
