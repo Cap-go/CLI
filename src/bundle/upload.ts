@@ -318,8 +318,8 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
     } else {
       p.log.info(`The base version you specified for creating a partial-update is: ${baseVersion}`);
     }
-    const baseVersionPath = `${path}/../manifest/dist_${baseVersion}_base`
-    const partialVersionPath = `${path}/../manifest/dist_${baseVersion}_partial`
+    const baseVersionPath = `${path}/../manifest/dist_${baseVersion}-base`
+    const partialVersionPath = `${path}/../manifest/dist_${baseVersion}-partial`
 
     try {
       mkdirSync(baseVersionPath, { recursive: true })
@@ -348,24 +348,31 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
           .single()
 
         if (!baseData) {
-          p.log.error(`The base version you specified for creating a partial-update does not exist in the DB ${baseError}`);
+          p.log.error(`The base version you specified for a partial-update does not exist on the server: ${baseError}`);
           program.error('')
         }
 
         const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
         const data = {
+          api_key: apikey,
           user_id: userId,
           app_id: appid,
-          storage_provider: external ? 'external' : 'r2-direct',
+          storage_provider: external ? 'external' : 'r2',
           bucket_id: external ? undefined : safeBundle(bundle),
         }
 
+        // console.log(`Bundle URL payload: ${JSON.stringify(data)}`)
         const res = await supabase.functions.invoke('download_link', { body: JSON.stringify(data) })
-        const bundleUrl = res.data.url
+        const bundleUrl = res.data ? res.data.url : undefined
         p.log.info(`Bundle url: ${bundleUrl}`);
 
+        if (!bundleUrl) {
+          p.log.error(`The base version you specified for a partial-update could not be downloaded: ${bundleUrl}`);
+          program.error('')
+        }
+
         // write to disk
-        const downloadFilePath = `${path}/../manifest/dist_${baseVersion}_base.zip`;
+        const downloadFilePath = `${path}/../manifest/dist_${baseVersion}-base.zip`;
         await downloadFile(bundleUrl, downloadFilePath);
         if (!existsSync(downloadFilePath)) {
           p.log.error(`The base version you specified could not be downloaded`);
@@ -373,20 +380,16 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
         }
 
         const zip = new AdmZip(downloadFilePath);
-        const zipEntries = zip.getEntries();
-        zipEntries.forEach(function (zipEntry) {
-          console.log(zipEntry.toString());
-        });
         zip.extractAllTo(baseVersionPath, true);
         unlinkSync(downloadFilePath)
 
-        // copy the contents of current bundle to partialVersionPath
+        // copy the current bundle folder to the partial bundle folder
         fs.copySync(path, partialVersionPath, { overwrite: true })
 
-        const imageFiles = await filterImageFiles(path);
-        console.log('Matching image files:', imageFiles);
-        if (imageFiles && imageFiles.length > 0) {
-          removeExistingImageFiles(partialVersionPath, imageFiles)
+        const existingImageFiles = await filterImageFiles(path);
+        console.log('Matching image files:', existingImageFiles);
+        if (existingImageFiles && existingImageFiles.length > 0) {
+          removeExistingImageFiles(partialVersionPath, existingImageFiles)
         }
       }
     } catch (error) {
@@ -395,7 +398,7 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
       program.error('');
     }
 
-    options.bundle = `${bundle}_partial`
+    options.bundle = `${bundle}-partial`
     options.path = partialVersionPath
     p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(options)}`)
 

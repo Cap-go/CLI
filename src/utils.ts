@@ -371,7 +371,8 @@ export const filterImageFiles = async (directory: string): Promise<string[]> => 
     for (const file of files) {
         const stats = await fs.stat(file);
         if (stats.isFile()) {
-            imageFiles.push(file);
+            const strippedFile = file.replace(`${directory}/`, '');
+            imageFiles.push(strippedFile);
         }
     }
 
@@ -384,9 +385,7 @@ export const removeExistingImageFiles = async (directory: string, files: string[
         const exists = await fs.pathExists(filePath);
         if (exists) {
             await fs.remove(filePath);
-            console.log(`Deleted file: ${filePath}`);
-        } else {
-            console.log(`File not found: ${filePath}`);
+            // console.log(`Removed binary file: ${filePath}`);
         }
     }
 }
