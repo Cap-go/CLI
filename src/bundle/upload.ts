@@ -1,6 +1,7 @@
 import { randomUUID } from 'crypto';
 import { existsSync, readFileSync, mkdirSync, unlinkSync } from 'fs';
 import fs from 'fs-extra'
+import semver from 'semver/preload';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';
@@ -92,8 +93,6 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   if (appVersion || appVersionError) {
     p.log.error(`Version already exists ${formatError(appVersionError)}`);
-    // TODO: remove
-    // return
     program.error('');
   }
 
@@ -313,10 +312,15 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
   if (existsSync(path)) {
     const baseVersion = await getPartialUpdateBaseVersion()
     if (!baseVersion) {
-      p.log.error(`The base version you specified for creating a partial-update is invalid: ${baseVersion}`);
+      p.log.error(`The partial-update base version you specified is invalid: ${baseVersion}`);
       program.error('')
     } else {
-      p.log.info(`The base version you specified for creating a partial-update is: ${baseVersion}`);
+      p.log.info(`The partial-update base version you specified is: ${baseVersion}`);
+
+      if (!semver.lt(baseVersion, bundle)) {
+        p.log.info(`The partial-update base version (${baseVersion}) you specified must be lower than the current version (${bundle})`);
+        program.error('')
+      }
     }
     const baseVersionPath = `${path}/../manifest/dist_${baseVersion}-base`
     const partialVersionPath = `${path}/../manifest/dist_${baseVersion}-partial`
