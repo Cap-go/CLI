@@ -270,20 +270,19 @@ It will be also visible in your dashboard\n`);
 
 export const uploadCommand = async (appid: string, options: Options) => {
   try {
-    await uploadBundle(appid, options, false)
-
     // check if the partial-update flag is set in capacitor.config.json
     if (await isPartialUpdate()) {
       p.log.info(`The partial-update flag was set. Preparing to perform a partial update.`);
 
       const partialUpdateBaseVersion = await getPartialUpdateBaseVersion()
       if (partialUpdateBaseVersion) {
-        await uploadPartialUpdateCommand(appid, options, true)
+        await uploadPartialUpdateCommand(appid, options, false)
       }
-    } else {
-      p.outro('Time to share your update to the world 🌍')
-      process.exit()
     }
+
+    // upload the full bundle as usual
+    await uploadBundle(appid, options, true)
+
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
