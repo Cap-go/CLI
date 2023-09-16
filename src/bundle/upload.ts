@@ -401,7 +401,7 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
       program.error('');
     }
 
-    options.bundle = `${bundle}-partial`
+    options.bundle = `${bundle}-basedon-${baseVersion}`
     options.path = partialVersionPath
     p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(options)}`)
 
