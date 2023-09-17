@@ -18,7 +18,7 @@ import {
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey,
-  isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterImageFiles, removeExistingImageFiles, safeBundle
+  isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterBinaryFiles, removeExistingBinaryFiles, safeBundle
 } from '../utils';
 
 const alertMb = 20;
@@ -361,7 +361,7 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
           user_id: userId,
           app_id: appid,
           storage_provider: external ? 'external' : 'r2',
-          bucket_id: external ? undefined : safeBundle(bundle),
+          bucket_id: external ? undefined : safeBundle(baseVersion),
         }
 
         // console.log(`Bundle URL payload: ${JSON.stringify(data)}`)
@@ -389,10 +389,10 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
         // copy the current bundle folder to the partial bundle folder
         fs.copySync(path, partialVersionPath, { overwrite: true })
 
-        const existingImageFiles = await filterImageFiles(path);
-        console.log('Matching image files:', existingImageFiles);
-        if (existingImageFiles && existingImageFiles.length > 0) {
-          removeExistingImageFiles(partialVersionPath, existingImageFiles)
+        const existingBinaryFiles = await filterBinaryFiles(baseVersionPath);
+        console.log('Matching binary files in the base version that will be removed:', existingBinaryFiles);
+        if (existingBinaryFiles && existingBinaryFiles.length > 0) {
+          removeExistingBinaryFiles(partialVersionPath, existingBinaryFiles)
         }
       }
     } catch (error) {
@@ -401,12 +401,13 @@ export const uploadPartialUpdateCommand = async (appid: string, options: Options
       program.error('');
     }
 
-    options.bundle = `${bundle}-basedon-${baseVersion}`
-    options.path = partialVersionPath
-    p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(options)}`)
+    const optionsClone = Object.assign({}, options);
+    optionsClone.bundle = `${bundle}-basedon-${baseVersion}`
+    optionsClone.path = partialVersionPath
+    p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(optionsClone)}`)
 
     // next, perform the partial update
-    await uploadBundle(appid, options, true)
+    await uploadBundle(appid, optionsClone, false)
   } else {
     p.log.error(`Cannot find the path to the full bundle to be partially updated. Did you delete it?`);
     program.error('');

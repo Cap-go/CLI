@@ -362,8 +362,8 @@ export const downloadFile = async (url: string, outputPath: string): Promise<voi
     }
 }
 
-export const filterImageFiles = async (directory: string): Promise<string[]> => {
-    const imageFiles: string[] = [];
+export const filterBinaryFiles = async (directory: string): Promise<string[]> => {
+    const binaryFiles: string[] = [];
 
     const pattern = `${directory}/assets/**/*.{ico,svg,jpg,png,gif,webp}`;
     const files = await glob(pattern);
@@ -371,21 +371,23 @@ export const filterImageFiles = async (directory: string): Promise<string[]> => 
     for (const file of files) {
         const stats = await fs.stat(file);
         if (stats.isFile()) {
-            const strippedFile = file.replace(`${directory}/`, '');
-            imageFiles.push(strippedFile);
+            const startIndex = file.indexOf('/assets/');
+            const binaryFile = file.substring(startIndex + 1, file.length);
+            console.log(`Matched file: ${binaryFile}`);
+            binaryFiles.push(binaryFile);
         }
     }
 
-    return imageFiles;
+    return binaryFiles;
 }
 
-export const removeExistingImageFiles = async (directory: string, files: string[]): Promise<void> => {
+export const removeExistingBinaryFiles = async (directory: string, files: string[]): Promise<void> => {
     for (const file of files) {
         const filePath = `${directory}/${file}`;
         const exists = await fs.pathExists(filePath);
         if (exists) {
             await fs.remove(filePath);
-            // console.log(`Removed binary file: ${filePath}`);
+            console.log(`Removed binary file: ${filePath}`);
         }
     }
 }
