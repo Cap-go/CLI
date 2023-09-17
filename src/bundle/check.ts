@@ -18,7 +18,6 @@ export const searchInDirectory = (dirPath: string, searchString: string) => {
       found = searchInDirectory(filePath, searchString);
     } else if (stats.isFile() && path.extname(filePath) === ".js") {
       if (searchInFile(filePath, searchString)) {
-        console.log(`String ${searchString} found in file ${filePath}`);
         found = true;
       }
     }
