@@ -17,6 +17,7 @@ import {
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
 } from '../utils';
+import { searchInDirectory } from './check';
 
 const alertMb = 20;
 
@@ -32,6 +33,7 @@ interface Options extends OptionsBase {
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
+
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
@@ -68,6 +70,14 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.error(`Path ${path} does not exist, build your app first, or provide a valid path`);
     program.error('');
   }
+
+  const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
+
+  if (!isPluginConfigured) {
+    p.log.error(`Plugin is not configured in your JavaScript code see https://capgo.app/docs/plugin/api/#notifyappready`);
+    program.error('');
+  }
+
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
   const supabase = createSupabaseClient(apikey)
