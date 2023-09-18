@@ -74,7 +74,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
 
   if (!isPluginConfigured) {
-    p.log.error(`Plugin is not configured in your JavaScript code see https://capgo.app/docs/plugin/api/#notifyappready`);
+    p.log.error(`Did not find a call to notifyAppReady() in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
     program.error('');
   }
 
