@@ -28,7 +28,7 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   const keyPath = options.key || baseKey
   // check if publicKey exist
 
-  let { privateKey } = options.keyData || extConfig?.plugins?.CapacitorUpdater || "";
+  let { privateKey } = extConfig?.plugins?.CapacitorUpdater ?? options.keyData
 
   if (!existsSync(keyPath) && !privateKey) {
     program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
@@ -40,7 +40,7 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   // console.log('privateKey', privateKey)
 
   const zipFile = readFileSync(zipPath)
-  const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)
+  const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey ?? '')
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
   p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`);
