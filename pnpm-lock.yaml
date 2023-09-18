@@ -33,8 +33,8 @@ dependencies:
     specifier: ^3.8.0
     version: 3.8.0
   cloudflared:
-    specifier: ^0.4.0
-    version: 0.4.0
+    specifier: ^0.5.0
+    version: 0.5.0
   commander:
     specifier: 11.0.0
     version: 11.0.0
@@ -1359,8 +1359,8 @@ packages:
       shallow-clone: 3.0.1
     dev: true
 
-  /cloudflared@0.4.0:
-    resolution: {integrity: sha512-dVw3FcpL2LdpiVN6al0S3yG/hLCuwzPZ608a3173EfqWPQVf1v5MdQwQuzaqaB2LZ6nhi5rVRqIBRUjCyrz0JQ==}
+  /cloudflared@0.5.0:
+    resolution: {integrity: sha512-ILt34H2KNd15cbGm3VfLvswUHCJJ5vhDXN5M0u9BfEul4DLMQ/Y3ecOP5YUPFN9ERcVabfsMEcLbC0hN3AydTw==}
     hasBin: true
     requiresBuild: true
     dev: false
