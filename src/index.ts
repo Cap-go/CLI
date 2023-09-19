@@ -111,6 +111,7 @@ bundle
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
+  .option('--iv-session-key', 'Set the iv and session key for bundle url external')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')

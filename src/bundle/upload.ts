@@ -29,6 +29,7 @@ interface Options extends OptionsBase {
   external?: string
   key?: boolean | string,
   keyData?: string,
+  ivSessionKey?: string,
   bundleUrl?: boolean
 }
 
@@ -189,6 +190,7 @@ It will be also visible in your dashboard\n`);
       },
       notify: false,
     }).catch()
+    sessionKey = options.ivSessionKey
   }
   const versionData = {
     bucket_id: external ? undefined : fileName,
