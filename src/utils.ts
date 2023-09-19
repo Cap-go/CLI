@@ -174,7 +174,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
     }
 }
 export const findMainFile = async () => {
-    const mainRegex = /(main|index)\.(ts|js)$/
+    const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
     // search for main.ts or main.js in local dir and subdirs
     let mainFile = ''
     const pwd = process.cwd()
