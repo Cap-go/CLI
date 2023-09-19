@@ -32,9 +32,6 @@ dependencies:
   ci-info:
     specifier: ^3.8.0
     version: 3.8.0
-  cloudflared:
-    specifier: ^0.4.0
-    version: 0.4.0
   commander:
     specifier: 11.0.0
     version: 11.0.0
@@ -1357,12 +1354,6 @@ packages:
       kind-of: 6.0.3
       shallow-clone: 3.0.1
     dev: true
-
-  /cloudflared@0.4.0:
-    resolution: {integrity: sha512-dVw3FcpL2LdpiVN6al0S3yG/hLCuwzPZ608a3173EfqWPQVf1v5MdQwQuzaqaB2LZ6nhi5rVRqIBRUjCyrz0JQ==}
-    hasBin: true
-    requiresBuild: true
-    dev: false
 
   /color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}

@@ -19,7 +19,7 @@ import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
 import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
-import { watchApp } from './app/watch';
+// import { watchApp } from './app/watch';
 import { debugApp } from './app/debug';
 
 program
@@ -82,11 +82,11 @@ app
   .option('-d, --device <device>', 'the specific device to debug')
   .action(debugApp);
 
-app
-  .command('watch [port]')
-  .alias('w')
-  .description('watch for changes in your app and allow capgo app or your app to see changes in live')
-  .action(watchApp);
+// app
+//   .command('watch [port]')
+//   .alias('w')
+//   .description('watch for changes in your app and allow capgo app or your app to see changes in live')
+//   .action(watchApp);
 
 app
   .command('set [appId]')
