@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.13.24](https://github.com/Cap-go/capgo-cli/compare/v3.13.23...v3.13.24) (2023-09-19)
+
+
+### Bug Fixes
+
+* stop trial warning when paying ([ec05657](https://github.com/Cap-go/capgo-cli/commit/ec0565759b4348c05626423c5aff553b42760746))
+
 ### [3.13.23](https://github.com/Cap-go/capgo-cli/compare/v3.13.22...v3.13.23) (2023-09-19)
 
 ### [3.13.22](https://github.com/Cap-go/capgo-cli/compare/v3.13.21...v3.13.22) (2023-09-19)
