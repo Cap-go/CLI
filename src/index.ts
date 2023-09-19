@@ -68,7 +68,7 @@ app
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('list [appId]')
+  .command('list')
   .alias('l')
   .description('list apps in Capgo Cloud')
   .action(listApp)

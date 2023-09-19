@@ -38,31 +38,17 @@ export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: 
   return data;
 }
 
-export const listApp = async (appId: string, options: OptionsBase) => {
+export const listApp = async (options: OptionsBase) => {
   p.intro(`List apps in Capgo`);
 
   await checkLatest();
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig();
-
-  appId = appId || config?.app?.appId
-  if (!options.apikey) {
-    p.log.error(`Missing API key, you need to provide an API key to delete your app`);
-    program.error('');
-  }
-  if (!appId) {
-    p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
-    program.error('');
-  }
 
   const supabase = createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey);
 
   p.log.info(`Getting active bundle in Capgo`);
-
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   // Get all active app versions we might possibly be able to cleanup
   const allApps = await getActiveApps(supabase, userId);
