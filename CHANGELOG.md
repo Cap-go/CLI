@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.13.26](https://github.com/Cap-go/capgo-cli/compare/v3.13.25...v3.13.26) (2023-09-19)
+
+
+### Bug Fixes
+
+* missing ivSessionKey arg ([6d079f5](https://github.com/Cap-go/capgo-cli/commit/6d079f5f02fdbe2e96082fb2298f955277234e24))
+
 ### [3.13.25](https://github.com/Cap-go/capgo-cli/compare/v3.13.24...v3.13.25) (2023-09-19)
 
 
