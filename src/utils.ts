@@ -135,7 +135,8 @@ export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId:
         }, 1000)
     }
     const trialDays = await isTrial(supabase, userId)
-    if (trialDays > 0 && warning) {
+    const ispaying = await isPaying(supabase, userId)
+    if (trialDays > 0 && warning && !ispaying) {
         p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${hostWeb}/dashboard/settings/plans\n`);
     }
 }
