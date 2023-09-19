@@ -178,9 +178,9 @@ Optionally, you can give:
 This command is use when you use external source to store your code or for test purpose.
 The command will print your ivSessionKey and the encrypted zip, you can use it with the `--iv-session-key` and `--external` option of the `upload` command, or for decrypting the zip.
 
-For CI/CD you can get the sssion key that way for next step:
+For CI/CD you can get the sssion key that way for next step: [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132)
 
-https://github.com/Cap-go/CLI/pull/132
+
 
 ### Decrypt zip with your key
 `npx @capgo/cli encrypt [path/to/zip] [ivSessionKey]`
