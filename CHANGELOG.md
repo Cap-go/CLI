@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.13.29](https://github.com/Cap-go/capgo-cli/compare/v3.13.28...v3.13.29) (2023-09-19)
+
+
+### Bug Fixes
+
+* comment old cloudflare for now ([e7f0b26](https://github.com/Cap-go/capgo-cli/commit/e7f0b26a49a9ee5df766bf8829f00333b95f711b))
+
 ### [3.13.28](https://github.com/Cap-go/capgo-cli/compare/v3.13.27...v3.13.28) (2023-09-19)
 
 ### [3.13.27](https://github.com/Cap-go/capgo-cli/compare/v3.13.26...v3.13.27) (2023-09-19)
