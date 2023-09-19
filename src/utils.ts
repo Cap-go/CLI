@@ -204,9 +204,9 @@ interface Config {
         };
         extConfigFilePath: string;
         extConfig: {
-            extConfig: {};
+            extConfig: object;
             plugins: {
-                extConfig: {};
+                extConfig: object;
                 CapacitorUpdater: {
                     autoUpdate?: boolean;
                     localS3?: boolean;
