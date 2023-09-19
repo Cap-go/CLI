@@ -217,7 +217,6 @@ interface Config {
                     channelUrl?: string;
                     updateUrl?: string;
                     privateKey?: string;
-                    checkNotifyAppReady?: boolean
                 }
             }
             server: {

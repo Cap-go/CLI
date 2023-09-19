@@ -30,6 +30,7 @@ interface Options extends OptionsBase {
   key?: boolean | string,
   keyData?: string,
   bundleUrl?: boolean
+  codeCheck?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -47,8 +48,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
-  const checkNotifyAppReady = config.app?.extConfig?.plugins?.CapacitorUpdater?.checkNotifyAppReady;
-
+  const checkNotifyAppReady = options.codeCheck 
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
