@@ -203,7 +203,28 @@ interface Config {
             version: string;
         };
         extConfigFilePath: string;
-        extConfig: any
+        extConfig: {
+            extConfig: {};
+            plugins: {
+                extConfig: {};
+                CapacitorUpdater: {
+                    autoUpdate?: boolean;
+                    localS3?: boolean;
+                    localHost?: string;
+                    localWebHost?: string;
+                    localSupa?: string;
+                    localSupaAnon?: string;
+                    statsUrl?: string;
+                    channelUrl?: string;
+                    updateUrl?: string;
+                    privateKey?: string;
+                }
+            }
+            server: {
+                cleartext: boolean
+                url: string
+            }
+        }
     };
 }
 
