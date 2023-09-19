@@ -10,13 +10,14 @@ export const setLive = async (options: Options) => {
   const config = await getConfig();
   const { extConfig } = config.app;
   let server = {}
-  if (!extConfig.server) {
-    extConfig.server = {};
+  if (typeof extConfig.server !== 'undefined') {
+    extConfig.server = {
+      url: options.url!,
+      cleartext: true
+    };
   } else {
     server = extConfig.server;
   }
-  extConfig.server.url = options.url;
-  extConfig.server.cleartext = true;
   writeConfig(extConfig, config.app.extConfigFilePath);
   return server
 }

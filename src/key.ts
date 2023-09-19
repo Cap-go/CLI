@@ -43,7 +43,10 @@ export const saveKey = async (options: saveOptions, log = true) => {
 
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     if (!extConfig.plugins.CapacitorUpdater) {
       extConfig.plugins.CapacitorUpdater = {};
@@ -99,10 +102,10 @@ export const createKey = async (options: Options, log = true) => {
   const { extConfig } = config.app;
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
-    }
-    if (!extConfig.plugins.CapacitorUpdater) {
-      extConfig.plugins.CapacitorUpdater = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     extConfig.plugins.CapacitorUpdater.privateKey = privateKey;
     // console.log('extConfig', extConfig)

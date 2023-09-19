@@ -31,6 +31,7 @@ interface Options extends OptionsBase {
   keyData?: string,
   ivSessionKey?: string,
   bundleUrl?: boolean
+  codeCheck?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -48,6 +49,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
+  const checkNotifyAppReady = options.codeCheck 
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -72,11 +74,13 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     program.error('');
   }
 
-  const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
+  if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
+    const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
 
-  if (!isPluginConfigured) {
-    p.log.error(`Did not find a call to notifyAppReady() in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
-    program.error('');
+    if (!isPluginConfigured) {
+      p.log.error(`Did not find a call to notifyAppReady() in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
+      program.error('');
+    }
   }
 
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
