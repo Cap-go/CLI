@@ -45,8 +45,8 @@ dependencies:
     specifier: ^5.1.0
     version: 5.1.0
   logsnag:
-    specifier: ^0.1.8
-    version: 0.1.8
+    specifier: 1.0.0
+    version: 1.0.0
   mime:
     specifier: ^3.0.0
     version: 3.0.0
@@ -2835,8 +2835,8 @@ packages:
     resolution: {integrity: sha512-0KpjqXRVvrYyCsX1swR/XTK0va6VQkQM6MNo7PqW77ByjAhoARA8EfrP1N4+KlKj8YS0ZUCtRT/YUuhyYDujIQ==}
     dev: true
 
-  /logsnag@0.1.8:
-    resolution: {integrity: sha512-iXnlGc8/OaGNnfsTom0yPnuuVtiBEQvg3710k2NDcdEDM8KzIzSF1nre+eShHjqQOrd6mjA0sBHQi45tyrwbag==}
+  /logsnag@1.0.0:
+    resolution: {integrity: sha512-HMzjh75OR5EVY7Be4Rw8TcDTIY5UPsrXF1HvQ6EzDi21x5cQcDzi4Ts0Y/ruPCbxKY2KG17YjeeTzErXFewFBg==}
     dependencies:
       isomorphic-fetch: 3.0.0
     transitivePeerDependencies:

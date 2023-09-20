@@ -39,13 +39,11 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
     }
     const supabase = createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
-    await snag.publish({
+    await snag.track({
       channel: 'user-login',
       event: 'User CLI login',
       icon: '✅',
-      tags: {
-        'user-id': userId,
-      },
+      user_id: userId,
       notify: false,
     }).catch()
     p.log.success(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);

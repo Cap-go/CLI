@@ -36,12 +36,12 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
   p.log.info(`Active channels in Capgo: ${allVersions?.length}`);
 
   displayChannels(allVersions);
-  await snag.publish({
+  await snag.track({
     channel: 'channel',
     event: 'List channel',
     icon: '✅',
+    user_id: userId,
     tags: {
-      'user-id': userId,
       'app-id': appId,
     },
     notify: false,

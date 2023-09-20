@@ -139,12 +139,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
         }
         keyData = defaulPublicKey
       }
-      await snag.publish({
+      await snag.track({
         channel: 'app',
         event: 'App encryption',
         icon: '🔑',
+        user_id: userId,
         tags: {
-          'user-id': userId,
           'app-id': appid,
         },
         notify: false,
@@ -169,12 +169,12 @@ It will be also visible in your dashboard\n`);
     if (mbSize > alertMb) {
       p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
       p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
-      await snag.publish({
+      await snag.track({
         channel: 'app-error',
         event: 'App Too Large',
         icon: '🚛',
+        user_id: userId,
         tags: {
-          'user-id': userId,
           'app-id': appid,
         },
         notify: false,
@@ -184,12 +184,12 @@ It will be also visible in your dashboard\n`);
     p.log.error(`External link should should start with "https://" current is "${external}"`);
     program.error('');
   } else {
-    await snag.publish({
+    await snag.track({
       channel: 'app',
       event: 'App external',
       icon: '📤',
+      user_id: userId,
       tags: {
-        'user-id': userId,
         'app-id': appid,
       },
       notify: false,
@@ -268,12 +268,12 @@ It will be also visible in your dashboard\n`);
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
     program.error('');
   }
-  await snag.publish({
+  await snag.track({
     channel: 'app',
     event: 'App Uploaded',
     icon: '⏫',
+    user_id: userId,
     tags: {
-      'user-id': userId,
       'app-id': appid,
     },
     notify: false,

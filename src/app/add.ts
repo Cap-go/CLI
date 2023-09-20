@@ -120,12 +120,12 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
     p.log.error(`Could not add app ${formatError(dbVersionError)}`);
     program.error('');
   }
-  await snag.publish({
+  await snag.track({
     channel: 'app',
     event: 'App Added',
     icon: '🎉',
+    user_id: userId,
     tags: {
-      'user-id': userId,
       'app-id': appId,
     },
     notify: false,

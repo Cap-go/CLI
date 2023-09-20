@@ -16,13 +16,11 @@ export interface OptionsBaseDebug {
 }
 
 export const markSnag = async (channel: string, userId: string, snag: LogSnag, event: string, icon = '✅') => {
-  await snag.publish({
+  await snag.track({
       channel,
       event,
       icon,
-      tags: {
-          'user-id': userId,
-      },
+      user_id: userId,
       notify: false,
   }).catch()
 }

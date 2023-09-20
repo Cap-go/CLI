@@ -126,10 +126,11 @@ export const setChannel = async (channel: string, appId: string, options: Option
       p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
       program.error('');
     }
-    await snag.publish({
+    await snag.track({
       channel: 'channel',
       event: 'Set channel',
       icon: '✅',
+      user_id: userId,
       tags: {
         'user-id': userId,
         'app-id': appId,

@@ -53,7 +53,7 @@ export const zipBundle = async (appId: string, options: Options) => {
     if (mbSize > alertMb) {
         p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
         p.log.warn(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
-        await snag.publish({
+        await snag.track({
             channel: 'app-error',
             event: 'App Too Large',
             icon: '🚛',
@@ -67,7 +67,7 @@ export const zipBundle = async (appId: string, options: Options) => {
     s2.start(`Saving to ${appId}_${bundle}.zip`);
     writeFileSync(`${appId}_${bundle}.zip`, zipped);
     s2.stop(`Saved to ${appId}_${bundle}.zip`);
-    await snag.publish({
+    await snag.track({
         channel: 'app',
         event: 'App zip',
         icon: '⏫',

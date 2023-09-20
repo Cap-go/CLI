@@ -47,12 +47,12 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
     if (dbError) {
         program.error(`Could not delete app ${formatError(dbError)}`);
     }
-    await snag.publish({
+    await snag.track({
         channel: 'app',
         event: 'App Deleted',
         icon: '🗑️',
+        user_id: userId,
         tags: {
-            'user-id': userId,
             'app-id': appId,
         },
         notify: false,

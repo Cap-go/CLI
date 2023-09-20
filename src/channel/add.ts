@@ -44,12 +44,12 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
             created_by: userId
         });
         p.log.success(`Channel created ✅`);
-        await snag.publish({
+        await snag.track({
             channel: 'channel',
             event: 'Create channel',
             icon: '✅',
+            user_id: userId,
             tags: {
-                'user-id': userId,
                 'app-id': appId,
                 'channel': channelId,
             },

@@ -52,12 +52,12 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
         const versionData = await getVersionData(supabase, appId, userId, bundle);
         await checkVersionNotUsedInChannel(supabase, appId, userId, versionData);
         await checkVersionNotUsedInDeviceOverride(supabase, appId, versionData);
-        await snag.publish({
+        await snag.track({
             channel: 'bundle',
             event: 'Unlink bundle',
             icon: '✅',
+            user_id: userId,
             tags: {
-                'user-id': userId,
                 'app-id': appId,
             },
             notify: false,
