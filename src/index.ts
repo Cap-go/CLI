@@ -116,7 +116,7 @@ bundle
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
-  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code')  
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')  
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
 
@@ -172,7 +172,8 @@ bundle
   .description('Zip a bundle')
   .action(zipBundle)
   .option('-p, --path <path>', 'path of the folder to upload')
-  .option('-b, --bundle <bundle>', 'bundle version number to name the zip file');
+  .option('-b, --bundle <bundle>', 'bundle version number to name the zip file')
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder');
 
 const channel = program
   .command('channel')

@@ -11,12 +11,14 @@ import {
     useLogSnag,
     regexSemver,
 } from '../utils';
+import { checkIndexPosition, searchInDirectory } from './check';
 
 const alertMb = 20;
 
 interface Options extends OptionsBase {
     bundle?: string
     path?: string
+    codeCheck?: boolean
 }
 
 export const zipBundle = async (appId: string, options: Options) => {
@@ -41,6 +43,19 @@ export const zipBundle = async (appId: string, options: Options) => {
         program.error('');
     }
     p.log.info(`Started from path "${path}"`);
+    const checkNotifyAppReady = options.codeCheck 
+    if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
+        const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
+        if (!isPluginConfigured) {
+            p.log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
+            program.error('');
+        }
+        const foundIndex = checkIndexPosition(path);
+        if (!foundIndex) {
+            p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
+            program.error('');
+        }
+    }
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();

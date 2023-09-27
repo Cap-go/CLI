@@ -17,7 +17,7 @@ import {
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
 } from '../utils';
-import { searchInDirectory } from './check';
+import { checkIndexPosition, searchInDirectory } from './check';
 
 const alertMb = 20;
 
@@ -76,10 +76,14 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
     const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
-
     if (!isPluginConfigured) {
-      p.log.error(`Did not find a call to notifyAppReady() in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
+      p.log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
       program.error('');
+    }
+    const foundIndex = checkIndexPosition(path);
+    if (!foundIndex) {
+        p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
+        program.error('');
     }
   }
 
