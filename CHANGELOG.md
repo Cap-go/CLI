@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [3.14.0](https://github.com/Cap-go/capgo-cli/compare/v3.13.31...v3.14.0) (2023-09-27)
+
+
+### Features
+
+* add index check in upload ([09bcecc](https://github.com/Cap-go/capgo-cli/commit/09bcecc75534e802fb0a415ff880219a096d3959))
+
 ### [3.13.31](https://github.com/Cap-go/capgo-cli/compare/v3.13.30...v3.13.31) (2023-09-20)
 
 
