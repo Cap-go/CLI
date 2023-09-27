@@ -21,7 +21,7 @@ Optionally, you can give:
 - `--local` to save the API key in the local folder.
 
 ## Add new app to Cloud
-`npx @capgo/cli add [appId]`
+`npx @capgo/cli app add [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 > 💡 All option will be guessed in your config if not provided.
 
@@ -39,7 +39,7 @@ Example of capacitor.config.json for appId and AppName, the icon is guess in the
 }
 ```
 ### Send version to Cloud
-`npx @capgo/cli upload [appId]`
+`npx @capgo/cli bundle upload [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init)
 Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
@@ -51,6 +51,7 @@ Optionally, you can give:
 - `--no-key` to ignore signing key and send clear update.
 - `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 - `--iv-session-key [key]` to send a custom session key to the cloud.
+- `--no-code-check` to ignore code check and send the update.
 - `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132).
 
 > ⭐️ External option help to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 30 MB. With this setting, Capgo store only the link to the zip and send the link to all app.
@@ -104,22 +105,23 @@ Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
 
 ### List versions
-`npx @capgo/cli list [appId] `
+`npx @capgo/cli app list [appId] `
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 ### Doctor installed package
 `npx @capgo/cli doctor`
 Learn info about the Capgo package installed on your project and see if update are available.
 
-### Delete package to Cloud
-`npx @capgo/cli delete [appId]`
+### Delete bundle to Cloud
+`npx @capgo/cli bundle delete [appId]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 Optionally, you can give:
 - `--apikey [key]` API key to link to your account.
 - `--bundle [bundleVersion]` with the version number will only delete this version
-### Cleanup older packages in a SemVer range for a major version to Cloud
-`npx @capgo/cli cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
+
+### Cleanup older bundles in a SemVer range for a major version to Cloud
+`npx @capgo/cli bundle cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/init).
 
 Optionally, you can give:
@@ -129,12 +131,12 @@ Optionally, you can give:
 
 For example: 
 If you have 10 versions from 10.0.1 to 10.0.11, and you use 
-`npx @capgo/cli cleanup [appId] --bundle=10.0.0` 
+`npx @capgo/cli bundle cleanup [appId] --bundle=10.0.0` 
 it will remove 10.0.1 to 10.0.6. 
 10.0.7 until 10.0.11 will be kept.
 
 If you have 20 versions in total, and you don't provide a bundle number like this:
-`npx @capgo/cli cleanup [appId] --keep=2`
+`npx @capgo/cli bundle cleanup [appId] --keep=2`
 It will remove 18 versions, and keep the last 2.
 
 > This command will ask for confirmation, it shows a table of what it will be keeping and removing.
@@ -171,7 +173,7 @@ Optionally, you can give:
 This command is useful if you followed the recommendation and didn't commit the key in your app, and in the config.
 
 ### Encrypt zip with your key
-`npx @capgo/cli encrypt [path/to/zip]`
+`npx @capgo/cli bundle encrypt [path/to/zip]`
 Optionally, you can give:
 `--key [/path/to/my/private_key]` the path of your private key.
 `--key-data [privateKey]` the private key data, if you want to use inline.
@@ -183,7 +185,7 @@ For CI/CD you can get the sssion key that way for next step: [parsing bundle url
 
 
 ### Decrypt zip with your key
-`npx @capgo/cli encrypt [path/to/zip] [ivSessionKey]`
+`npx @capgo/cli bundle encrypt [path/to/zip] [ivSessionKey]`
 
 Optionally, you can give:
 `--key [/path/to/my/private_key]` the path of your private key.
