@@ -173,6 +173,7 @@ bundle
   .action(zipBundle)
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-b, --bundle <bundle>', 'bundle version number to name the zip file')
+  .option('-n, --name <name>', 'name of the zip file')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder');
 
 const channel = program

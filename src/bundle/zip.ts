@@ -19,6 +19,7 @@ interface Options extends OptionsBase {
     bundle?: string
     path?: string
     codeCheck?: boolean
+    name?: string
 }
 
 export const zipBundle = async (appId: string, options: Options) => {
@@ -79,9 +80,10 @@ export const zipBundle = async (appId: string, options: Options) => {
         }).catch()
     }
     const s2 = p.spinner()
-    s2.start(`Saving to ${appId}_${bundle}.zip`);
-    writeFileSync(`${appId}_${bundle}.zip`, zipped);
-    s2.stop(`Saved to ${appId}_${bundle}.zip`);
+    const name = options.name || `${appId}_${bundle}.zip`
+    s2.start(`Saving to ${name}`);
+    writeFileSync(name, zipped);
+    s2.stop(`Saved to ${name}`);
     await snag.track({
         channel: 'app',
         event: 'App zip',
