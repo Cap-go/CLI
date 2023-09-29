@@ -4,6 +4,7 @@ import { findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import LogSnag from 'logsnag';
+import semver from 'semver'
 import { Database } from 'types/supabase.types';
 import { markSnag , waitLog } from './app/debug';
 import { createKey } from './key';
@@ -77,6 +78,7 @@ const step3 = async (userId: string, snag: LogSnag,
     await markStep(userId, snag, 3)
 }
 
+const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 const step4 = async (userId: string, snag: LogSnag,
     apikey: string, appId: string,) => {
 
@@ -86,6 +88,14 @@ const step4 = async (userId: string, snag: LogSnag,
         const s = p.spinner();
         s.start(`Checking if @capgo/capacitor-updater is installed`);
         const pack = JSON.parse(readFileSync('package.json').toString());
+        const coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
+        if (!coreVersion) {
+            s.stop(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
+            process.exit()
+        } else if (semver.lt(coreVersion, '5.0.0')) {
+            s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
+            process.exit()
+        }
         const pm = findPackageManagerType();
         if (pm === 'unknown') {
             s.stop(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm or yarn`)
