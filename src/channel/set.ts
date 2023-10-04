@@ -99,10 +99,6 @@ export const setChannel = async (channel: string, appId: string, options: Option
       p.log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`);
       channelPayload.disableAutoUpdateUnderNative = !downgrade
     }
-    if (upgrade != null) {
-      p.log.info(`Set ${appId} channel: ${channel} to ${upgrade ? 'allow' : 'disallow'} upgrade`);
-      channelPayload.disableAutoUpdateToMajor = !upgrade
-    }
     if (ios != null) {
       p.log.info(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`);
       channelPayload.ios = !!ios
