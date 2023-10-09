@@ -48,6 +48,7 @@ const getInstalledDependencies = async () => {
 export const getInfo = async () => {
     console.log('     💊   Capgo Doctor  💊\n')
     console.log(` OS: ${os.version()}\n`)
+    console.log(` Node: ${process.version}\n`)
     console.log(' Installed Dependencies:\n')
     const installedDependencies = await getInstalledDependencies()
     if (Object.keys(installedDependencies).length === 0) {
