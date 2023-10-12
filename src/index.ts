@@ -118,7 +118,11 @@ bundle
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')  
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload');
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
+  .option(
+    '--min-update-version <minUpdateVersion>',
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
+  )
 
 bundle
   .command('delete [bundleId] [appId]')
@@ -252,6 +256,10 @@ program
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload')
+  .option(
+    '--min-update-version <minUpdateVersion>',
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
+  );
 
 program.parseAsync();

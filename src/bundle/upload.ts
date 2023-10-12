@@ -18,6 +18,7 @@ import {
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
+import { requireUpdateMetadata } from '../utils';
 
 const alertMb = 20;
 
@@ -31,7 +32,8 @@ interface Options extends OptionsBase {
   keyData?: string,
   ivSessionKey?: string,
   bundleUrl?: boolean
-  codeCheck?: boolean
+  codeCheck?: boolean,
+  minUpdateVersion?: string
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -39,7 +41,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
-  const { external, key = false, displayIvSession } = options;
+  const { external, key = false, displayIvSession, minUpdateVersion } = options;
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -94,6 +96,19 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appid);
+
+  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+  if (updateMetadataRequired && !minUpdateVersion) {
+    p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`);
+    program.error('');
+  }
+
+  if (minUpdateVersion) {
+    if (!regexSemver.test(minUpdateVersion)) {
+      p.log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`);
+      program.error('');
+    }
+  }
 
   const { data: isTrial, error: isTrialsError } = await supabase
     .rpc('is_trial', { userid: userId })
@@ -208,6 +223,7 @@ It will be also visible in your dashboard\n`);
     session_key: sessionKey,
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
+    minUpdateVersion,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)

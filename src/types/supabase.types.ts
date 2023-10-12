@@ -444,7 +444,7 @@ export interface Database {
           beta: boolean
           created_at: string
           created_by: string
-          disableAutoUpdateToMajor: boolean
+          disableAutoUpdate: Database["public"]["Enums"]["disable_update"]
           disableAutoUpdateUnderNative: boolean
           enable_progressive_deploy: boolean
           enableAbTesting: boolean
@@ -466,7 +466,7 @@ export interface Database {
           beta?: boolean
           created_at?: string
           created_by: string
-          disableAutoUpdateToMajor?: boolean
+          disableAutoUpdate?: Database["public"]["Enums"]["disable_update"]
           disableAutoUpdateUnderNative?: boolean
           enable_progressive_deploy?: boolean
           enableAbTesting?: boolean
@@ -488,7 +488,7 @@ export interface Database {
           beta?: boolean
           created_at?: string
           created_by?: string
-          disableAutoUpdateToMajor?: boolean
+          disableAutoUpdate?: Database["public"]["Enums"]["disable_update"]
           disableAutoUpdateUnderNative?: boolean
           enable_progressive_deploy?: boolean
           enableAbTesting?: boolean
@@ -1554,6 +1554,7 @@ export interface Database {
           }
     }
     Enums: {
+      disable_update: "major" | "minor" | "version_number" | "none"
       app_mode: "prod" | "dev" | "livereload"
       key_mode: "read" | "write" | "all" | "upload"
       pay_as_you_go_type: "base" | "units"

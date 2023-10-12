@@ -339,6 +339,26 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
     return userId;
 }
 
+export const requireUpdateMetadata = async (supabase: SupabaseClient<Database>, channel: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .from('channels')
+        .select('disableAutoUpdate')
+        .eq('name', channel)
+        .limit(1)
+
+    if (error) {
+        p.log.error(`Cannot check if disableAutoUpdate is required ${JSON.stringify(error)}`);
+        program.error('')
+    }
+
+    // Channel does not exist and the default is never 'version_number'
+    if (data.length === 0)
+        return false
+
+    const { disableAutoUpdate } = (data[0])
+    return disableAutoUpdate === 'version_number'
+}
+
 export const getHumanDate = (createdA: string | null) => {
     const date = new Date(createdA || '');
     return date.toLocaleString();
