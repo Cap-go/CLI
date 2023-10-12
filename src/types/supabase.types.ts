@@ -703,36 +703,6 @@ export interface Database {
         }
         Relationships: []
       }
-      logs: {
-        Row: {
-          action: string
-          app_id: string
-          created_at: string | null
-          device_id: string
-          platform: Database["public"]["Enums"]["platform_os"]
-          version: number
-          version_build: string
-        }
-        Insert: {
-          action: string
-          app_id: string
-          created_at?: string | null
-          device_id: string
-          platform: Database["public"]["Enums"]["platform_os"]
-          version: number
-          version_build: string
-        }
-        Update: {
-          action?: string
-          app_id?: string
-          created_at?: string | null
-          device_id?: string
-          platform?: Database["public"]["Enums"]["platform_os"]
-          version?: number
-          version_build?: string
-        }
-        Relationships: []
-      }
       notifications: {
         Row: {
           created_at: string | null
