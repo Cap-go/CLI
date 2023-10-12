@@ -39,7 +39,8 @@ const getInstalledDependencies = async () => {
     }
     for (const dependency in dependencies) {
         if (Object.prototype.hasOwnProperty.call(dependencies, dependency) && dependency.startsWith('@capgo/')) {
-            installedDependencies[dependency] = dependencies[dependency]
+            // remove ^ or ~ from version
+            const version = dependencies[dependency].replace('^', '').replace('~', '')
         }
     }
     return installedDependencies
