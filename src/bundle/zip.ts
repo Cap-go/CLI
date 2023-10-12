@@ -93,6 +93,11 @@ export const zipBundle = async (appId: string, options: Options) => {
         },
         notify: false,
     }).catch()
+    const output = {
+        checksum: checksum,
+        filename: name
+    };
+    p.log.info(JSON.stringify(output));
     p.outro(`Done ✅`);
     process.exit()
 }
