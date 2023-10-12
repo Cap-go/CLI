@@ -27,7 +27,6 @@ export const currentBundle = async (channel: string, appId: string, options: Opt
     const config = await getConfig();
     appId = appId || config?.app?.appId
   
-    console.log(appId, options.apikey)
     if (!options.apikey) {
       p.log.error("Missing API key, you need to provide a API key to upload your bundle");
       program.error('');
