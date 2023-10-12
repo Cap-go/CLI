@@ -69,4 +69,6 @@ export const currentBundle = async (channel: string, options: Options, appId: st
         p.log.info(`Current bundle for channel ${channel} is ${version.name}`)
     else
         console.log(version.name)
+
+    process.exit()
 }
