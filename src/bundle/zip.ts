@@ -84,6 +84,10 @@ export const zipBundle = async (appId: string, options: Options) => {
     s2.start(`Saving to ${name}`);
     writeFileSync(name, zipped);
     s2.stop(`Saved to ${name}`);
+
+    const zipObject = {"Checksum": checksum, "Name" : name};
+    p.log.info(JSON.stringify(zipObject, null, 2));
+    
     await snag.track({
         channel: 'app',
         event: 'App zip',
