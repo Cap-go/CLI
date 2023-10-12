@@ -9,6 +9,7 @@ import { getInfo } from './app/info';
 import { saveKeyCommand, createKeyCommand } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
+import { currentBundle } from './bundle/current';
 import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
 import pack from '../package.json'
 import { loginCommand } from './login';
@@ -139,6 +140,14 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 bundle
+    .command('current [channel]')
+    .description('Get current bundle for specific channel in Capgo Cloud')
+    .action(currentBundle)
+    .option('-c, --channel <channel>', 'channel to get the current bundle from')
+    .option('-a, --apikey <apikey>', 'apikey to link to your account')
+    .option('--quiet', 'only print the bundle version')
+
+bundle
   .command('unlink [appId]')
   .alias('u')
   .description('Unlink a bundle in Capgo Cloud')
@@ -221,7 +230,10 @@ channel
   .option('--android', 'Allow sending update to android devices')
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
-  .option('--no-self-assign', 'Disable devices to self assign to this channel');
+  .option('--no-self-assign', 'Disable devices to self assign to this channel')
+  .option('--disable-auto-update <disableAutoUpdate>', 
+    'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none'
+  )
 
 const key = program
   .command('key')
