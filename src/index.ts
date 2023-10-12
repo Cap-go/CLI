@@ -9,7 +9,7 @@ import { getInfo } from './app/info';
 import { saveKeyCommand, createKeyCommand } from './key';
 import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { currentBundle } from './bundle/current';
+import { currentBundle } from './channel/currentBundle';
 import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
 import pack from '../package.json'
 import { loginCommand } from './login';
@@ -140,14 +140,6 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 bundle
-    .command('current [channel]')
-    .description('Get current bundle for specific channel in Capgo Cloud')
-    .action(currentBundle)
-    .option('-c, --channel <channel>', 'channel to get the current bundle from')
-    .option('-a, --apikey <apikey>', 'apikey to link to your account')
-    .option('--quiet', 'only print the bundle version')
-
-bundle
   .command('unlink [appId]')
   .alias('u')
   .description('Unlink a bundle in Capgo Cloud')
@@ -211,6 +203,14 @@ channel
   .alias('l')
   .description('List channel')
   .action(listChannels)
+
+channel
+  .command('currentBundle [channel] [appId]')
+  .description('Get current bundle for specific channel in Capgo Cloud')
+  .action(currentBundle)
+  .option('-c, --channel <channel>', 'channel to get the current bundle from')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('--quiet', 'only print the bundle version')
 
 channel
   .command('set [channelId] [appId]')
