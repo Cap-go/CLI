@@ -16,9 +16,12 @@ interface Options extends OptionsBase {
   upgrade?: boolean;
   ios?: boolean;
   android?: boolean;
-  selfAssign?: boolean;
+  selfAssign?: boolean,
+  disableAutoUpdate: string,
   channel?: string;
 }
+
+const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'none']
 
 export const setChannel = async (channel: string, appId: string, options: Options) => {
   p.intro(`Set channel`);
@@ -41,7 +44,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appId);
 
-  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state } = options;
+  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options;
   if (!channel) {
     p.log.error("Missing argument, you need to provide a channel");
     program.error('');
@@ -57,7 +60,8 @@ export const setChannel = async (channel: string, appId: string, options: Option
     upgrade == null &&
     ios == null &&
     android == null &&
-    selfAssign == null) {
+    selfAssign == null &&
+    disableAutoUpdate == null) {
     p.log.error("Missing argument, you need to provide a option to set");
     program.error('');
   }
@@ -110,6 +114,25 @@ export const setChannel = async (channel: string, appId: string, options: Option
     if (selfAssign != null) {
       p.log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`);
       channelPayload.allow_device_self_set = !!selfAssign
+    }
+    if (disableAutoUpdate != null) {
+      let finalDisableAutoUpdate = disableAutoUpdate.toLocaleLowerCase()
+
+      // The user passed an unimplemented strategy
+      if (!disableAutoUpdatesPossibleOptions.includes(finalDisableAutoUpdate)) {
+        // eslint-disable-next-line max-len
+        p.log.error(`Channel strategy ${finalDisableAutoUpdate} is not known. The possible values are: ${disableAutoUpdatesPossibleOptions.join(', ')}.`);
+        program.error('');
+      }
+
+      // This metadata is called differently in the database
+      if (finalDisableAutoUpdate === 'metadata') {
+        finalDisableAutoUpdate = 'version_number'
+      }
+
+      // This cast is safe, look above
+      channelPayload.disableAutoUpdate = finalDisableAutoUpdate as any
+      p.log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`);
     }
     try {
       const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
