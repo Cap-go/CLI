@@ -61,7 +61,10 @@ export const zipBundle = async (appId: string, options: Options) => {
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
     p.log.info(`Zipped ${zipped.byteLength} bytes`);
+    const s = p.spinner()
+    s.start(`Calculating checksum`);
     const checksum = await getChecksum(zipped, 'crc32');
+    s.stop(`Checksum: ${checksum}`);
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     if (mbSize > alertMb) {
         p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
@@ -76,13 +79,11 @@ export const zipBundle = async (appId: string, options: Options) => {
             notify: false,
         }).catch()
     }
+    const s2 = p.spinner()
     const name = options.name || `${appId}_${bundle}.zip`
+    s2.start(`Saving to ${name}`);
     writeFileSync(name, zipped);
-    
-    const zipObject = {"Checksum": checksum, "Name" : name};
-    p.log.info(JSON.stringify(zipObject, null, 2));
-
-    p.log.info();
+    s2.stop(`Saved to ${name}`);
     await snag.track({
         channel: 'app',
         event: 'App zip',
