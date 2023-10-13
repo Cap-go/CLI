@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@capacitor/cli':
-    specifier: 5.2.2
-    version: 5.2.2
+    specifier: 5.5.0
+    version: 5.5.0
   '@capgo/find-package-manager':
     specifier: ^0.0.7
     version: 0.0.7
@@ -198,8 +198,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@capacitor/cli@5.2.2:
-    resolution: {integrity: sha512-h/cefX3sefLcmd4VI2h+fNIYKWH1QCUACWAH8bkdJ+aEL+x2xYbGlqeW6Belb3E2Uvu9OA+cz7YVDnNRcjyQyw==}
+  /@capacitor/cli@5.5.0:
+    resolution: {integrity: sha512-JkF7p+EV1mEFObp3e/3snKZiiDPbHTAXlch9jKcvvuCjm92Be7ka8sG4M3fH8BPajSE3jRNPZa/xt7bITDvAAA==}
     engines: {node: '>=16.0.0'}
     hasBin: true
     dependencies:
@@ -211,7 +211,7 @@ packages:
       debug: 4.3.4
       env-paths: 2.2.1
       kleur: 4.1.5
-      native-run: 1.7.2
+      native-run: 1.7.3
       open: 8.4.2
       plist: 3.1.0
       prompts: 2.4.2
@@ -2979,8 +2979,8 @@ packages:
     resolution: {integrity: sha512-ONmRUqK7zj7DWX0D9ADe03wbwOBZxNAfF20PlGfCWQcD3+/MakShIHrMqx9YwPTfxDdF1zLeL+RGZiR9kGMLdg==}
     dev: true
 
-  /native-run@1.7.2:
-    resolution: {integrity: sha512-2aahC8iXIO8BcvEukVMrYwL5sXurkuIGyQgfSGBto832W6ejV+cB5Ww+2/CRxmyozhbxARJ2OMpEGPV8sTqsrQ==}
+  /native-run@1.7.3:
+    resolution: {integrity: sha512-vEw8X3Yu8TAbP4/uCJV3nCsCrhfHgUecRRDc69ZU9EK0QXHHc7YDzmIeI7SfA08ywzPlC9YcpITcB6bgMbrtwQ==}
     engines: {node: '>=12.13.0'}
     hasBin: true
     dependencies:
