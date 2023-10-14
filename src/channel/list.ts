@@ -21,7 +21,7 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
   }
   const supabase = createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, appId);
 

@@ -22,7 +22,3 @@ const init = async () => {
 }
 
 init()
-// (is_app_shared(uid(), app_id) OR is_allowed_apikey((((current_setting('request.headers'::text, true))::json ->> 'capgkey'::text))::character varying, '{read}'::key_mode[]))
-// is_allowed_apikey(((current_setting('request.headers'::text, true))::json ->> 'capgkey'::text), '{read}'::key_mode[])
-
-// (((current_setting('request.headers'::text, true))::json ->> 'capgkey'::text) = 'dKC9teP4zHh7Lr5ak7hErgYn385C'::text)

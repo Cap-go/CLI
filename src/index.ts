@@ -190,18 +190,21 @@ channel
   .description('Create channel')
   .action(addChannelCommand)
   .option('-d, --default', 'set the channel as default')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
   .command('delete [channelId] [appId]')
   .alias('d')
   .description('Delete channel')
   .action(deleteChannel)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
   .command('list [appId]')
   .alias('l')
   .description('List channel')
   .action(listChannels)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
   .command('set [channelId] [appId]')
