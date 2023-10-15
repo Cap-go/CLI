@@ -493,7 +493,20 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, cha
     const dependenciesObject = await getLocalDepenencies()
     const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, channel)
 
-    const finalDepenencies = dependenciesObject
+    const finalDepenencies: 
+    ({
+        name: string;
+        localVersion: string;
+        remoteVersion: string;
+    } | {
+        name: string;
+        localVersion: string;
+        remoteVersion: undefined;
+    }  | {
+        name: string;
+        localVersion: undefined;
+        remoteVersion: string;
+    })[] = dependenciesObject
         .filter((a) => !!a.native)
         .map((local) => {
             const remotePackage = mappedRemoteNativePackages.get(local.name)
@@ -510,6 +523,12 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, cha
                 remoteVersion: undefined
             }
         })
+
+    const removeNotInLocal = [...mappedRemoteNativePackages]
+        .filter(([remoteName, _v]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
+        .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }));
+
+    finalDepenencies.push(...removeNotInLocal)
 
     return { 
         finalCompatibility: finalDepenencies,

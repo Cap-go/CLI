@@ -59,7 +59,7 @@ export const checkCompatibilityCommand = async (appId: string, options: Options)
 
         t.addRow({
             Package: name,
-            'Local version': localVersion,
+            'Local version': localVersion ?? 'None',
             'Remote version': remoteVersion ?? 'None',
             Compatible: remoteVersion === localVersion ? '✅' : '❌',
         });

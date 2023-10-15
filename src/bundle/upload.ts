@@ -33,7 +33,8 @@ interface Options extends OptionsBase {
   ivSessionKey?: string,
   bundleUrl?: boolean
   codeCheck?: boolean,
-  minUpdateVersion?: string
+  minUpdateVersion?: string,
+  autoMinUpdateVersion?: boolean,
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -41,7 +42,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
-  const { external, key = false, displayIvSession, minUpdateVersion } = options;
+  const { external, key = false, displayIvSession, autoMinUpdateVersion } = options;
+  let { minUpdateVersion } = options
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -102,8 +104,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
   .from('channels')
-  .select('version')
+  .select('version ( minUpdateVersion )')
   .eq('name', channel)
+  .eq('app_id', appid)
+  .single()
       
   let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>>;
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
@@ -119,12 +123,36 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     localDependencies = localDependenciesWithChannel
     
     if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
-      p.log.warn(`Your bundle is not compatible with the channel ${channel}`);
+      p.log.error(`Your bundle is not compatible with the channel ${channel}`);
       p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
+
+      if (autoMinUpdateVersion) {
+        minUpdateVersion = bundle
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      }
+    } else if (autoMinUpdateVersion) {
+      try {
+        const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
+        if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
+          p.log.error('Invalid min update version, skipping auto setting compatibility');
+          program.error('');
+        }
+  
+        minUpdateVersion = lastMinUpdateVersion
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      } catch (error) {
+        p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`);
+        program.error('');
+      }
     }
   } else {
     p.log.warn(`Channel ${channel} does not exist, cannot check compatibility`);
     localDependencies = await getLocalDepenencies()
+
+    if (autoMinUpdateVersion) {
+      minUpdateVersion = bundle
+      p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+    }
   }
 
   if (updateMetadataRequired && !minUpdateVersion) {
