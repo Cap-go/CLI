@@ -464,6 +464,11 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, c
         program.error('');
     }
 
+    if (!castedRemoteNativePackages) {
+        p.log.error(`Error parsing native packages, perhaps the metadata does not exist?`);
+        program.error('');
+    }
+
     // Check types
     castedRemoteNativePackages.forEach((data: any) => {
         if (typeof data !== 'object') {
