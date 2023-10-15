@@ -104,7 +104,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
   .from('channels')
-  .select('version ( minUpdateVersion )')
+  .select('version ( minUpdateVersion, native_packages )')
   .eq('name', channel)
   .eq('app_id', appid)
   .single()
@@ -113,7 +113,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
 
   // We only check compatibility IF the channel exists
-  if (!channelError && channelData) {
+  if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages) {
     const { 
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel 
@@ -146,7 +146,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
       }
     }
   } else {
-    p.log.warn(`Channel ${channel} does not exist, cannot check compatibility`);
+    p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
     localDependencies = await getLocalDepenencies()
 
     if (autoMinUpdateVersion) {
