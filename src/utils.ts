@@ -1,4 +1,5 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
+import fs from 'fs/promises'
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -53,6 +54,8 @@ export const defaulPublicKey = `-----BEGIN RSA PUBLIC KEY-----
     1an8wXEuzoC0DgYaczgTjovwR+ewSGhSHJliQdM0Qa3o1iN87DldWtydImMsPjJ3
     DUwpsjAMRe5X8Et4+udFW2ciYnQo9H0CkwIDAQAB
     -----END RSA PUBLIC KEY-----`
+
+const nativeFileRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
 
 if (process.env.SUPA_DB !== 'production') {
     console.log('hostSupa', hostSupa);
@@ -364,4 +367,165 @@ export const requireUpdateMetadata = async (supabase: SupabaseClient<Database>, 
 export const getHumanDate = (createdA: string | null) => {
     const date = new Date(createdA || '');
     return date.toLocaleString();
+}
+
+// https://stackoverflow.com/questions/17699599/node-js-check-if-file-exists
+export const fileExists = async (path: string) => !!(await fs.stat(path).catch(e => false));
+
+export async function getLocalDepenencies() {
+    if (!await fileExists('./package.json')) {
+        p.log.error("Missing package.json, you need to be in a capacitor project");
+        program.error('');
+    }
+
+    
+    let packageJson;
+    try {
+        packageJson = JSON.parse(await fs.readFile('./package.json', 'utf8'));
+    } catch (err) {
+        p.log.error("Invalid package.json, JSON parsing failed");
+        console.error('json parse error: ', err)
+        program.error('');
+    }
+    
+    const { dependencies } = packageJson
+    if (!dependencies) {
+        p.log.error("Missing dependencies section in package.json");
+        program.error('');
+    }
+
+    for (const [key, value] of Object.entries(dependencies)) {
+        if (typeof value !== 'string') {
+            p.log.error(`Invalid dependency ${key}: ${value}, expected string, got ${typeof value}`);
+            program.error('');
+        }
+    }
+
+    if (!await fileExists('./node_modules/')) {
+        p.log.error('Missing node_modules folder, please run npm install');
+        program.error('');
+    }
+
+    let anyInvalid = false;
+
+    const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
+        // eslint-disable-next-line consistent-return
+        .map(async ([key, value]) => {
+            const dependencyFolderExists = await fileExists(`./node_modules/${key}`)
+
+            if (!dependencyFolderExists) {
+                anyInvalid = true
+                p.log.error(`Missing dependency ${key}, please run npm install`);
+                return {name: key, version: value}
+            }
+            
+            let hasNativeFiles = false;
+            await walkDir(`./node_modules/${key}`, async (path) => {
+                if (nativeFileRegex.test(path)) {
+                    hasNativeFiles = true;
+                }
+            })
+
+            return {
+                name: key,
+                version: value,
+                native: hasNativeFiles,
+            }
+        }))
+
+
+    if (anyInvalid || dependenciesObject.find((a) => a.native === undefined))
+        program.error('');
+
+    return dependenciesObject as { name: string; version: string; native: boolean; }[];
+}
+
+export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, channel: string) {
+    const { data: remoteNativePackages, error } = await supabase
+        .from('channels')
+        .select(`version ( 
+            native_packages 
+        )`)
+        .eq('name', channel)
+        .single()
+
+
+    if (error) {
+        p.log.error(`Error fetching native packages: ${error.message}`);
+        program.error('');
+    }
+
+    let castedRemoteNativePackages
+    try {
+        castedRemoteNativePackages = (remoteNativePackages as any).version.native_packages
+    } catch (err) {
+        // If we do not do this we will get an unreadable
+        p.log.error(`Error parsing native packages`);
+        program.error('');
+    }
+
+    // Check types
+    castedRemoteNativePackages.forEach((data: any) => {
+        if (typeof data !== 'object') {
+            p.log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`);
+            program.error('');
+        }
+
+        const { name, version } = data
+        if (!name || typeof name !== 'string') {
+            p.log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`);
+            program.error('');
+        }
+
+        if (!version || typeof version !== 'string') {
+            p.log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`);
+            program.error('');
+        }
+    })
+
+    const mappedRemoteNativePackages = new Map((castedRemoteNativePackages as { name: string, version: string }[])
+        .map(a => [a.name, a]))
+
+    return mappedRemoteNativePackages
+}
+
+export async function checkCompatibility(supabase: SupabaseClient<Database>, channel: string) {
+    const dependenciesObject = await getLocalDepenencies()
+    const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, channel)
+
+    const finalDepenencies = dependenciesObject
+        .filter((a) => !!a.native)
+        .map((local) => {
+            const remotePackage = mappedRemoteNativePackages.get(local.name)
+            if (remotePackage)
+                return {
+                    name: local.name,
+                    localVersion: local.version,
+                    remoteVersion: remotePackage.version
+                }
+            
+            return {
+                name: local.name,
+                localVersion: local.version,
+                remoteVersion: undefined
+            }
+        })
+
+    return { 
+        finalCompatibility: finalDepenencies,
+        localDependencies: dependenciesObject,
+     }
+}
+
+async function walkDir(dir: string, callback: (path: string) => Promise<void>) {
+    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    for (const dirent of dirents) {
+        const fullPath = `${dirent.path}/${dirent.name}`
+
+        if (dirent.isDirectory()) {
+            await walkDir(fullPath, callback)
+        } else {
+            await callback(`${dirent.path}/${dirent.name}`)
+        }
+    }
 }

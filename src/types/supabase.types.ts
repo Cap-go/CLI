@@ -182,6 +182,7 @@ export interface Database {
           id: number
           minUpdateVersion: string | null
           name: string
+          native_packages: Json[] | null
           session_key: string | null
           storage_provider: string
           updated_at: string | null
@@ -197,6 +198,7 @@ export interface Database {
           id?: number
           minUpdateVersion?: string | null
           name: string
+          native_packages?: Json[] | null
           session_key?: string | null
           storage_provider?: string
           updated_at?: string | null
@@ -212,6 +214,7 @@ export interface Database {
           id?: number
           minUpdateVersion?: string | null
           name?: string
+          native_packages?: Json[] | null
           session_key?: string | null
           storage_provider?: string
           updated_at?: string | null

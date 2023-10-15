@@ -15,10 +15,10 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, checkCompatibility, requireUpdateMetadata,
+  getLocalDepenencies
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
-import { requireUpdateMetadata } from '../utils';
 
 const alertMb = 20;
 
@@ -98,6 +98,35 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   await checkAppExistsAndHasPermissionErr(supabase, appid);
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+
+  // Check compatibility here
+  const { data: channelData, error: channelError } = await supabase
+  .from('channels')
+  .select('version')
+  .eq('name', channel)
+      
+  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>>;
+  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
+
+  // We only check compatibility IF the channel exists
+  if (!channelError && channelData) {
+    const { 
+      finalCompatibility: finalCompatibilityWithChannel,
+      localDependencies: localDependenciesWithChannel 
+    } = await checkCompatibility(supabase, channel)
+
+    finalCompatibility = finalCompatibilityWithChannel
+    localDependencies = localDependenciesWithChannel
+    
+    if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
+      p.log.warn(`Your bundle is not compatible with the channel ${channel}`);
+      p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
+    }
+  } else {
+    p.log.warn(`Channel ${channel} does not exist, cannot check compatibility`);
+    localDependencies = await getLocalDepenencies()
+  }
+
   if (updateMetadataRequired && !minUpdateVersion) {
     p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`);
     program.error('');
@@ -215,6 +244,13 @@ It will be also visible in your dashboard\n`);
     }).catch()
     sessionKey = options.ivSessionKey
   }
+
+  const hashedLocalDependencies = new Map(localDependencies
+      .filter((a) => !!a.native && a.native !== undefined)
+      .map((a) => [a.name, a]))
+
+  const nativePackages = Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version }))
+
   const versionData = {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
@@ -224,6 +260,7 @@ It will be also visible in your dashboard\n`);
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
+    native_packages: nativePackages,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
