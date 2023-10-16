@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.18](https://github.com/Cap-go/capgo-cli/compare/v3.14.17...v3.14.18) (2023-10-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency commander to v11.1.0 ([e18b072](https://github.com/Cap-go/capgo-cli/commit/e18b07264fb0705ca796198181656216cc057f3d))
+
 ### [3.14.17](https://github.com/Cap-go/capgo-cli/compare/v3.14.16...v3.14.17) (2023-10-16)
 
 ### [3.14.16](https://github.com/Cap-go/capgo-cli/compare/v3.14.15...v3.14.16) (2023-10-13)
