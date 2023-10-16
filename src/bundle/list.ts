@@ -24,7 +24,7 @@ export const listBundle = async (appId: string, options: OptionsBase) => {
 
     const supabase = createSupabaseClient(options.apikey)
 
-    const userId = await verifyUser(supabase, options.apikey);
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 
     p.log.info(`Querying available versions of: ${appId} in Capgo`);
 

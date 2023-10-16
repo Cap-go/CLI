@@ -46,7 +46,7 @@ export const listApp = async (options: OptionsBase) => {
 
   const supabase = createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey);
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 
   p.log.info(`Getting active bundle in Capgo`);
 
