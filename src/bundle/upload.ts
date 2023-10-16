@@ -134,7 +134,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
       try {
         const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
         if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
-          p.log.error('Invalid min update version, skipping auto setting compatibility');
+          p.log.error('Invalid remote min update version, skipping auto setting compatibility');
           program.error('');
         }
   
