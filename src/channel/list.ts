@@ -19,7 +19,7 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
     p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
     program.error('');
   }
-  const supabase = createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
   // Check we have app access to this appId

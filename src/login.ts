@@ -37,7 +37,7 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
       const userHomeDir = homedir();
       writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`);
     }
-    const supabase = createSupabaseClient(apikey)
+    const supabase = await createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
     await snag.track({
       channel: 'user-login',

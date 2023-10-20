@@ -3,9 +3,8 @@ import { Table } from 'console-table-printer';
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { OptionsBase } from '../api/utils';
-import { createSupabaseClient, findSavedKey, formatError, getConfig, getHumanDate, verifyUser } from '../utils';
+import { createSupabaseClient, findSavedKey, formatError, getHumanDate, verifyUser } from '../utils';
 import { checkLatest } from '../api/update';
 
 const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {
@@ -44,7 +43,7 @@ export const listApp = async (options: OptionsBase) => {
   await checkLatest();
   options.apikey = options.apikey || findSavedKey()
 
-  const supabase = createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 

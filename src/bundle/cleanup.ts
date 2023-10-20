@@ -57,7 +57,7 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   if (!appid) {
     program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
   }
-  const supabase = createSupabaseClient(apikey)
+  const supabase = await createSupabaseClient(apikey)
 
   const userId = await verifyUser(supabase, apikey);
 

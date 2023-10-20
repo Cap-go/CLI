@@ -22,7 +22,7 @@ export const listBundle = async (appId: string, options: OptionsBase) => {
         program.error('');
     }
 
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 

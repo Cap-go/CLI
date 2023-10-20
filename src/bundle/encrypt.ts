@@ -4,7 +4,7 @@ import ciDetect from 'ci-info';
 import * as p from '@clack/prompts';
 import { checkLatest } from '../api/update';
 import { encryptSource } from '../api/crypto';
-import { baseKeyPub, defaulPublicKey } from '../utils';
+import { baseKeyPub, getLocalConfig } from '../utils';
 
 interface Options {
   key?: string
@@ -15,6 +15,8 @@ export const encryptZip = async (zipPath: string, options: Options) => {
   p.intro(`Encryption`);
 
   await checkLatest();
+  const localConfig = await getLocalConfig()
+
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
@@ -38,7 +40,7 @@ export const encryptZip = async (zipPath: string, options: Options) => {
       p.log.error(`Error: Missing public key`);
       program.error('');
     }
-    publicKey = defaulPublicKey
+    publicKey = localConfig.signKey || ''
   } else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
