@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "3.14.16",
+  "version": "3.14.20",
   "description": "A CLI to upload to capgo servers",
   "main": "dist/index.js",
   "bin": {
@@ -51,7 +51,7 @@
     "adm-zip": "^0.5.10",
     "axios": "^1.4.0",
     "ci-info": "^3.8.0",
-    "commander": "11.0.0",
+    "commander": "11.1.0",
     "console-table-printer": "^2.11.2",
     "fs-extra": "11.1.1",
     "get-latest-version": "^5.1.0",
@@ -90,7 +90,7 @@
     "ts-node": "^10.9.1",
     "tsconfig-paths": "4.2.0",
     "typescript": "5.2.2",
-    "webpack": "5.88.2",
+    "webpack": "5.89.0",
     "webpack-cli": "^5.1.4",
     "webpack-node-externals": "^3.0.0"
   }

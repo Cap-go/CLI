@@ -36,7 +36,7 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
         p.log.error("Missing argument, you need to provide a bundle, or be in a capacitor project");
         program.error('');
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId

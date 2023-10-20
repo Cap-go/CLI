@@ -17,7 +17,7 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
     if (!appId) {
         program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId

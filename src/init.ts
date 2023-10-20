@@ -275,7 +275,7 @@ export const initApp = async (apikey: string, appId: string, options: SuperOptio
     } else {
         log.stop('Login Done ✅');
     }
-    const supabase = createSupabaseClient(apikey)
+    const supabase = await createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['upload', 'all', 'read', 'write']);
     await markStep(userId, snag, 1)
 

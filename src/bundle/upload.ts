@@ -11,11 +11,11 @@ import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
-  hostWeb, getConfig, createSupabaseClient,
+  getConfig, createSupabaseClient,
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, checkCompatibility, requireUpdateMetadata,
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
   getLocalDepenencies
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
@@ -93,7 +93,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
-  const supabase = createSupabaseClient(apikey)
+  const localConfig = await getLocalConfig()
+  const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
@@ -172,7 +173,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`);
-    p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
+    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans`);
   }
 
   // check if app already exist
@@ -213,7 +214,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
           p.log.error(`Error: Missing public key`);
           program.error('');
         }
-        keyData = defaulPublicKey
+        keyData = localConfig.signKey || ''
       }
       await snag.track({
         channel: 'app',
@@ -339,7 +340,7 @@ It will be also visible in your dashboard\n`);
       program.error('');
     }
     const appidWeb = convertAppName(appid)
-    const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`
+    const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
     if (data?.public) {
       p.log.info('Your update is now available in your public channel 🎉')
     } else if (data?.id) {
