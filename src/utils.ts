@@ -50,6 +50,9 @@ export const getLocalConfig = async () => {
     }
 
 }
+
+const nativeFileRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
+
 interface CapgoConfig {
     supaHost: string
     supaKey: string

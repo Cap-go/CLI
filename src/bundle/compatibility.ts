@@ -32,7 +32,7 @@ export const checkCompatibilityCommand = async (appId: string, options: Options)
         program.error('');
     }
     
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const _ = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 
