@@ -1,8 +1,7 @@
 import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
-import { OptionsBase } from '../api/utils';
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
+import { OptionsBase, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
 import { deleteSpecificVersion } from '../api/versions';
 
 interface Options extends OptionsBase {
@@ -27,7 +26,7 @@ export const deleteBundle = async (bundleId: string, appId: string, options: Opt
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
   const apikey = options.apikey || findSavedKey()
 

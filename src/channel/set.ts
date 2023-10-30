@@ -1,9 +1,9 @@
 import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
+  OptionsBase,
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from '../utils';
@@ -42,7 +42,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options;
   if (!channel) {
@@ -67,8 +67,6 @@ export const setChannel = async (channel: string, appId: string, options: Option
   }
   try {
     await checkPlanValid(supabase, userId)
-    // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,

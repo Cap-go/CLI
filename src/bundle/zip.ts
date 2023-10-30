@@ -5,8 +5,8 @@ import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import { checkLatest } from '../api/update';
-import { OptionsBase } from '../api/utils';
 import {
+    OptionsBase,
     getConfig,
     useLogSnag,
     regexSemver,

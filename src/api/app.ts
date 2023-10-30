@@ -1,21 +1,27 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
-import { OptionsBase } from './utils';
+import { isAllowedApp, OptionsBase } from '../utils';
 
-export const checkAppExistsAndHasPermission = async (supabase: SupabaseClient<Database>, appid: string,
-  shouldExist = true) => {
-  const { data: app, error: dbError0 } = await supabase
+export const checkAppExists = async (supabase: SupabaseClient<Database>, appid: string) => {
+  const { data: app } = await supabase
     .rpc('exist_app_v2', { appid })
     .single();
-  return app !== shouldExist || dbError0;
+  return !!app;
 }
 
-export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient<Database>, appid: string,
+export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient<Database>, apikey: string, appid: string,
   shouldExist = true) => {
-  const res = await checkAppExistsAndHasPermission(supabase, appid, shouldExist);
-  if (res) {
-    program.error(`App ${appid} does not exist or you don't have permission to access it`);
+  const res = await checkAppExists(supabase, appid);
+  const perm = await isAllowedApp(supabase, apikey, appid);
+  if (res && !shouldExist) {
+    program.error(`App ${appid} does not exist`);
+  }
+  if (!res && shouldExist) {
+    program.error(`App ${appid} already exist`);
+  }
+  if (res && !perm) {
+    program.error(`App ${appid} exist and you don't have permission to access it`);
   }
 }
 

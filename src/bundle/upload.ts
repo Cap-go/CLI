@@ -7,10 +7,10 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
 import axios from "axios";
 import { checkLatest } from '../api/update';
-import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
+  OptionsBase,
   getConfig, createSupabaseClient,
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
@@ -96,7 +96,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appid);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
   if (updateMetadataRequired && !minUpdateVersion) {

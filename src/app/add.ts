@@ -4,7 +4,7 @@ import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from 'fs-extra';
 import { checkLatest } from '../api/update';
-import { checkAppExistsAndHasPermissionErr, checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
+import { checkAppExistsAndHasPermissionErr, newIconPath, Options, checkAppExists } from '../api/app';
 import {
   getConfig, createSupabaseClient,
   findSavedKey, useLogSnag, verifyUser, formatError
@@ -33,10 +33,10 @@ export const addApp = async (appId: string, options: Options, shouldExit = true)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
   if (shouldExit) {
-    await checkAppExistsAndHasPermissionErr(supabase, appId, false);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
   } else {
-    const res = await checkAppExistsAndHasPermission(supabase, appId, false);
-    if (res) {
+    const res = await checkAppExists(supabase, appId);
+    if (!res) {
       return false
     }
   }

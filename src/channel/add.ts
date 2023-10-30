@@ -2,8 +2,7 @@ import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { createChannel, findUnknownVersion } from "../api/channels";
-import { OptionsBase } from "../api/utils";
-import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
+import { OptionsBase, findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
 interface Options extends OptionsBase {
     default?: boolean;
@@ -28,7 +27,7 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     p.log.info(`Creating channel ${appId}#${channelId} to Capgo`);
     try {

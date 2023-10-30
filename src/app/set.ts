@@ -24,7 +24,7 @@ export const setApp = async (appId: string, options: Options) => {
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     const { name, icon, retention } = options;
 

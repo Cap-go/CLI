@@ -1,8 +1,7 @@
 import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
-import { OptionsBase } from "../api/utils";
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from "../utils";
+import { OptionsBase, createSupabaseClient, findSavedKey, getConfig, verifyUser } from "../utils";
 
 
 interface Options extends OptionsBase {
@@ -39,7 +38,7 @@ export const currentBundle = async (channel: string, appId: string, options: Opt
   
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     if (!channel) {
         p.log.error(`Please provide a channel to get the bundle from.`);

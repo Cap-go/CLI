@@ -3,9 +3,9 @@ import * as p from '@clack/prompts';
 import { getVersionData } from 'api/versions';
 import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override';
 import { checkVersionNotUsedInChannel } from '../api/channels';
-import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
+    OptionsBase, 
     getConfig, createSupabaseClient,
     formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from '../utils';
@@ -40,7 +40,7 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     if (!channel) {
         p.log.error("Missing argument, you need to provide a channel");

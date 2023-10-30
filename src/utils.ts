@@ -8,7 +8,6 @@ import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import { CapacitorConfig } from '@capacitor/cli';
 import axios from 'axios';
 
 export const baseKey = '.capgo_key';
@@ -18,6 +17,10 @@ export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
 // eslint-disable-next-line max-len
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+
+export interface OptionsBase {
+    apikey: string;
+}
 
 export const getConfig = async () => {
     let config: Config;
@@ -130,6 +133,16 @@ export const isTrial = async (supabase: SupabaseClient<Database>, userId: string
 export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data, error } = await supabase
         .rpc('is_allowed_action_user', { userid: userId })
+        .single()
+    if (error) {
+        throw error
+    }
+    return data
+}
+
+export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .rpc('is_allowed_action', { apikey: apikey, appid: appId })
         .single()
     if (error) {
         throw error

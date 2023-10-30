@@ -3,8 +3,7 @@ import { Table } from 'console-table-printer';
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import { OptionsBase } from '../api/utils';
-import { createSupabaseClient, findSavedKey, formatError, getHumanDate, verifyUser } from '../utils';
+import { OptionsBase, createSupabaseClient, findSavedKey, formatError, getHumanDate, verifyUser } from '../utils';
 import { checkLatest } from '../api/update';
 
 const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {

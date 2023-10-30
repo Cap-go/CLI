@@ -2,8 +2,7 @@ import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { delChannel } from "../api/channels";
-import { OptionsBase } from "../api/utils";
-import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
+import { OptionsBase, findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
 export const deleteChannel = async (channelId: string, appId: string, options: OptionsBase) => {
     p.intro(`Delete channel`);
@@ -24,7 +23,7 @@ export const deleteChannel = async (channelId: string, appId: string, options: O
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`);
     try {

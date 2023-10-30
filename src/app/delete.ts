@@ -1,8 +1,7 @@
 import { program } from "commander";
 import * as p from '@clack/prompts';
-import { OptionsBase } from "../api/utils";
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
-import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from "../utils";
+import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser, OptionsBase } from "../utils";
 
 export const deleteApp = async (appId: string, options: OptionsBase) => {
     p.intro(`Deleting`);
@@ -21,7 +20,7 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     const { error } = await supabase
         .storage

@@ -2,8 +2,7 @@ import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { getActiveChannels, displayChannels } from '../api/channels';
-import { OptionsBase } from '../api/utils';
-import { findSavedKey, getConfig, createSupabaseClient, verifyUser, useLogSnag } from '../utils';
+import { OptionsBase, findSavedKey, getConfig, createSupabaseClient, verifyUser, useLogSnag } from '../utils';
 
 export const listChannels = async (appId: string, options: OptionsBase) => {
   p.intro(`List channels`);
@@ -23,12 +22,9 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
   p.log.info(`Querying available channels in Capgo`);
-
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
 
   // Get all active app versions we might possibly be able to cleanup
   const allVersions = await getActiveChannels(supabase, appId, userId);
