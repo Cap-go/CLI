@@ -1,4 +1,5 @@
 import { SupabaseClient } from '@supabase/supabase-js';
+import * as p from '@clack/prompts';
 import { program } from 'commander';
 import { Database } from 'types/supabase.types';
 import { isAllowedApp, OptionsBase } from '../utils';
@@ -14,14 +15,18 @@ export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient
   shouldExist = true) => {
   const res = await checkAppExists(supabase, appid);
   const perm = await isAllowedApp(supabase, apikey, appid);
+
   if (res && !shouldExist) {
-    program.error(`App ${appid} does not exist`);
+    p.log.error(`App ${appid} already exist`);
+    program.error('');
   }
   if (!res && shouldExist) {
-    program.error(`App ${appid} already exist`);
+    p.log.error(`App ${appid} does not exist`);
+    program.error('');
   }
   if (res && !perm) {
-    program.error(`App ${appid} exist and you don't have permission to access it`);
+    p.log.error(`App ${appid} exist and you don't have permission to access it`);
+    program.error('');
   }
 }
 

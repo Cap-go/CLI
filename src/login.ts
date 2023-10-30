@@ -16,7 +16,8 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
   }
   if (!apikey) {
     if (shouldExit) {
-      program.error("Missing API key, you need to provide a API key to upload your bundle");
+      p.log.error('Missing API key, you need to provide a API key to upload your bundle');
+      program.error('');
     }
     return false
   }

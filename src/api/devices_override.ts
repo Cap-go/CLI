@@ -12,8 +12,10 @@ export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClie
     .select()
     .eq('app_id', appid)
     .eq('version', versionData.id)
-  if (errorDevice)
-    program.error(`Cannot check Device override ${appid}@${versionData.name} ${formatError(errorDevice)}`);
+  if (errorDevice) {
+    p.log.error(`Cannot check Device override ${appid}@${versionData.name}`);
+    program.error('');
+  }
   if (deviceFound && deviceFound.length > 0) {
     p.intro(`❌ Version ${appid}@${versionData.name} is used in ${deviceFound.length} device override`)
     if (await p.confirm({ message: 'unlink it?' })) {
@@ -33,7 +35,8 @@ export const checkVersionNotUsedInDeviceOverride = async (supabase: SupabaseClie
       }
     }
     else {
-      program.error(`unlink it first`);
+      p.log.error(`Unlink it first`);
+      program.error('');
     }
   }
 }

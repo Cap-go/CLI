@@ -31,7 +31,8 @@ export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: 
     .order('created_at', { ascending: false });
 
   if (vError) {
-    program.error(`Apps not found in database ${formatError(vError)} `);
+    p.log.error('Apps not found');
+    program.error('');
   }
   return data;
 }

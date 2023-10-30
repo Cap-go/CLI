@@ -51,10 +51,12 @@ export const cleanupBundle = async (appid: string, options: Options) => {
   const config = await getConfig();
   appid = appid || config?.app?.appId
   if (!apikey) {
-    program.error('Missing API key, you need to provide an API key to delete your app');
+    p.log.error('Missing API key, you need to provide an API key to delete your app');
+    program.error('');
   }
   if (!appid) {
-    program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
+    p.log.error('Missing argument, you need to provide a appid, or be in a capacitor project');
+    program.error('');
   }
   const supabase = await createSupabaseClient(apikey)
 

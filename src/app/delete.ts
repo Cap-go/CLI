@@ -11,10 +11,12 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
     const snag = useLogSnag()
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error('Missing API key, you need to provide a API key to upload your bundle');
+        program.error('');
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project');
+        program.error('');
     }
     const supabase = await createSupabaseClient(options.apikey)
 
@@ -27,14 +29,15 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
         .from(`images/${userId}`)
         .remove([appId])
     if (error) {
-        program.error(`Could not add app ${formatError(error)}`);
+        p.log.error('Could not delete app logo');
     }
     const { error: delError } = await supabase
         .storage
         .from(`apps/${appId}/${userId}`)
         .remove(['versions'])
     if (delError) {
-        program.error(`Could not delete app version ${formatError(delError)}`);
+        p.log.error('Could not delete app version');
+        program.error('');
     }
 
     const { error: dbError } = await supabase
@@ -44,7 +47,8 @@ export const deleteApp = async (appId: string, options: OptionsBase) => {
         .eq('user_id', userId)
 
     if (dbError) {
-        program.error(`Could not delete app ${formatError(dbError)}`);
+        p.log.error('Could not delete app');
+        program.error('');
     }
     await snag.track({
         channel: 'app',

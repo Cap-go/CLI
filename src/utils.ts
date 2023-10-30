@@ -27,7 +27,8 @@ export const getConfig = async () => {
     try {
         config = await loadConfig();
     } catch (err) {
-        program.error("No capacitor config file found, run `cap init` first");
+        p.log.error('No capacitor config file found, run `cap init` first');
+        program.error('')
     }
     return config;
 }
@@ -75,7 +76,8 @@ export const getRemoteConfig = async () => {
 export const createSupabaseClient = async (apikey: string) => {
     const config = await getRemoteConfig()
     if (!config.supaHost || !config.supaKey) {
-        program.error('Cannot connect to server please try again later');
+        p.log.error('Cannot connect to server please try again later');
+        program.error('');
     }
     return createClient<Database>(config.supaHost, config.supaKey, {
         auth: {
@@ -91,63 +93,57 @@ export const createSupabaseClient = async (apikey: string) => {
 
 export const checkKey = async (supabase: SupabaseClient<Database>, apikey: string,
     keymode: Database['public']['Enums']['key_mode'][]) => {
-    const { data: apiAccess, error: apiAccessError } = await supabase
+    const { data: apiAccess} = await supabase
         .rpc('is_allowed_capgkey', { apikey, keymode })
         .single()
 
-    if (!apiAccess || apiAccessError) {
-        program.error(`Invalid API key or insufficient permissions ${formatError(apiAccessError)}`);
+    if (!apiAccess) {
+        p.log.error(`Invalid API key or insufficient permissions.`);
+        // create a string from keymode array with comma and space and "or" for the last one
+        const keymodeStr = keymode.map((k, i) => {
+            if (i === keymode.length - 1) {
+                return `or ${k}`
+            }
+            return `${k}, `
+        }).join('')
+        p.log.error(`Your key should be: ${keymodeStr} mode.`);
+        program.error('')
     }
 }
 
 export const isGoodPlan = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_good_plan_v3', { userid: userId })
         .single()
-    if (error) {
-        throw error
-    }
     return data || false
 }
 
 export const isPaying = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_paying', { userid: userId })
         .single()
-    if (error) {
-        throw error
-    }
     return data || false
 }
 
 export const isTrial = async (supabase: SupabaseClient<Database>, userId: string): Promise<number> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_trial', { userid: userId })
         .single()
-    if (error) {
-        throw error
-    }
     return data || 0
 }
 
 export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_allowed_action_user', { userid: userId })
         .single()
-    if (error) {
-        throw error
-    }
-    return data
+    return !!data
 }
 
 export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_allowed_action', { apikey: apikey, appid: appId })
         .single()
-    if (error) {
-        throw error
-    }
-    return data
+    return !!data
 }
 
 export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
@@ -186,8 +182,10 @@ export const findSavedKey = (quiet = false) => {
             p.log.info(`Use local apy key ${keyPath}`)
         key = readFileSync(keyPath, 'utf8').trim();
     }
-    if (!key)
-        program.error('Key not found, please login first');
+    if (!key) {
+        p.log.error(`Cannot find API key in local folder or global, please login first with npx @capacitor/cli login`);
+        program.error('')
+    }
     return key
 }
 
@@ -354,6 +352,7 @@ export const useLogSnag = (): LogSnag => {
 }
 
 export const convertAppName = (appName: string) => appName.replace(/\./g, '--')
+
 export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: string,
     keymod: Database['public']['Enums']['key_mode'][] = ['all']) => {
     await checkKey(supabase, apikey, keymod);
@@ -365,7 +364,8 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
     const userId = (dataUser || '').toString();
 
     if (!userId || userIdError) {
-        program.error(`Cannot verify user ${formatError(userIdError)}`);
+        p.log.error(`Cannot auth user with apikey`);
+        program.error('')
     }
     return userId;
 }
