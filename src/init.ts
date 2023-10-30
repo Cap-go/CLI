@@ -88,7 +88,8 @@ const step4 = async (userId: string, snag: LogSnag,
         const s = p.spinner();
         s.start(`Checking if @capgo/capacitor-updater is installed`);
         const pack = JSON.parse(readFileSync('package.json').toString());
-        const coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
+        let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
+        coreVersion = coreVersion?.replace('^', '').replace('~', '')
         if (!coreVersion) {
             s.stop(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
             process.exit()
