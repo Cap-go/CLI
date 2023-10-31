@@ -16,6 +16,7 @@ const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {
   data.reverse().forEach(row => {
     t.addRow({
       Name: row.name,
+      id: row.app_id,
       Created: getHumanDate(row.created_at)
     });
   });
