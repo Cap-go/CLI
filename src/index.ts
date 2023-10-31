@@ -22,6 +22,7 @@ import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
 // import { watchApp } from './app/watch';
 import { debugApp } from './app/debug';
+import { checkCompatibilityCommand } from './bundle/compatibility';
 
 program
   .name(pack.name)
@@ -124,6 +125,13 @@ bundle
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
   )
+  .option('--auto-min-update-version', 'Set the min update version based on native packages')
+
+bundle
+    .command('compatibility [appId]')
+    .action(checkCompatibilityCommand)
+    .option('-a, --apikey <apikey>', 'apikey to link to your account')
+    .option('-c, --channel <channel>', 'channel to check the compatibility with')
 
 bundle
   .command('delete [bundleId] [appId]')

@@ -15,10 +15,10 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
+  getLocalDepenencies
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
-import { requireUpdateMetadata } from '../utils';
 
 const alertMb = 20;
 
@@ -33,7 +33,8 @@ interface Options extends OptionsBase {
   ivSessionKey?: string,
   bundleUrl?: boolean
   codeCheck?: boolean,
-  minUpdateVersion?: string
+  minUpdateVersion?: string,
+  autoMinUpdateVersion?: boolean,
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -41,7 +42,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
-  const { external, key = false, displayIvSession, minUpdateVersion } = options;
+  const { external, key = false, displayIvSession, autoMinUpdateVersion } = options;
+  let { minUpdateVersion } = options
   const apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -99,6 +101,61 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+
+  // Check compatibility here
+  const { data: channelData, error: channelError } = await supabase
+  .from('channels')
+  .select('version ( minUpdateVersion, native_packages )')
+  .eq('name', channel)
+  .eq('app_id', appid)
+  .single()
+      
+  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>>;
+  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
+
+  // We only check compatibility IF the channel exists
+  if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages) {
+    const { 
+      finalCompatibility: finalCompatibilityWithChannel,
+      localDependencies: localDependenciesWithChannel 
+    } = await checkCompatibility(supabase, channel)
+
+    finalCompatibility = finalCompatibilityWithChannel
+    localDependencies = localDependenciesWithChannel
+    
+    if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
+      p.log.error(`Your bundle is not compatible with the channel ${channel}`);
+      p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
+
+      if (autoMinUpdateVersion) {
+        minUpdateVersion = bundle
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      }
+    } else if (autoMinUpdateVersion) {
+      try {
+        const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
+        if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
+          p.log.error('Invalid remote min update version, skipping auto setting compatibility');
+          program.error('');
+        }
+  
+        minUpdateVersion = lastMinUpdateVersion
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      } catch (error) {
+        p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`);
+        program.error('');
+      }
+    }
+  } else {
+    p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
+    localDependencies = await getLocalDepenencies()
+
+    if (autoMinUpdateVersion) {
+      minUpdateVersion = bundle
+      p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+    }
+  }
+
   if (updateMetadataRequired && !minUpdateVersion) {
     p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`);
     program.error('');
@@ -216,6 +273,13 @@ It will be also visible in your dashboard\n`);
     }).catch()
     sessionKey = options.ivSessionKey
   }
+
+  const hashedLocalDependencies = new Map(localDependencies
+      .filter((a) => !!a.native && a.native !== undefined)
+      .map((a) => [a.name, a]))
+
+  const nativePackages = Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version }))
+
   const versionData = {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
@@ -225,6 +289,7 @@ It will be also visible in your dashboard\n`);
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
+    native_packages: nativePackages,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
