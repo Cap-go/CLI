@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.26](https://github.com/Cap-go/capgo-cli/compare/v3.14.25...v3.14.26) (2023-10-31)
+
+
+### Bug Fixes
+
+* add appId on list app command ([2b36ede](https://github.com/Cap-go/capgo-cli/commit/2b36ede3853e8756798d8af16a32c4f3675f8985))
+
 ### [3.14.25](https://github.com/Cap-go/capgo-cli/compare/v3.14.24...v3.14.25) (2023-10-31)
 
 
