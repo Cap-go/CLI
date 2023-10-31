@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.27](https://github.com/Cap-go/capgo-cli/compare/v3.14.26...v3.14.27) (2023-10-31)
+
+
+### Bug Fixes
+
+* is_app_owner in the CLI ([5440fd4](https://github.com/Cap-go/capgo-cli/commit/5440fd4015c0b3bdf829e9e3196e714d8f73e35f))
+
 ### [3.14.26](https://github.com/Cap-go/capgo-cli/compare/v3.14.25...v3.14.26) (2023-10-31)
 
 
