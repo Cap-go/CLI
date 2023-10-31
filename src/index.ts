@@ -132,6 +132,7 @@ bundle
     .action(checkCompatibilityCommand)
     .option('-a, --apikey <apikey>', 'apikey to link to your account')
     .option('-c, --channel <channel>', 'channel to check the compatibility with')
+    .option('--text', 'output text instead of emojis')
 
 bundle
   .command('delete [bundleId] [appId]')
