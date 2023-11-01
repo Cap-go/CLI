@@ -5,7 +5,8 @@ import { createSupabaseClient, findSavedKey, getConfig, verifyUser, checkCompati
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 
 interface Options extends OptionsBase {
-    channel?: string
+    channel?: string,
+    text?: boolean,
 }
 
 export const checkCompatibilityCommand = async (appId: string, options: Options) => {
@@ -53,6 +54,10 @@ export const checkCompatibilityCommand = async (appId: string, options: Options)
         charLength: { "❌": 2, "✅": 2 },
     });
     
+
+    const yesSymbol = options.text ? 'Yes' : '✅'
+    const noSymbol = options.text ? 'No' : '❌'
+
     finalCompatibility.forEach((data) => {
         const { name, localVersion, remoteVersion } = data
 
@@ -60,7 +65,7 @@ export const checkCompatibilityCommand = async (appId: string, options: Options)
             Package: name,
             'Local version': localVersion ?? 'None',
             'Remote version': remoteVersion ?? 'None',
-            Compatible: remoteVersion === localVersion ? '✅' : '❌',
+            Compatible: remoteVersion === localVersion ? yesSymbol : noSymbol,
         });
     })
     
