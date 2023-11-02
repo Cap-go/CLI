@@ -115,6 +115,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   // We only check compatibility IF the channel exists
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages) {
+    const spinner = p.spinner();
+    spinner.start(`Checking bundle compatibility with channel ${channel}`);
     const { 
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel 
@@ -146,6 +148,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
         program.error('');
       }
     }
+    spinner.stop(`Bundle compatible with ${channel} channel`);
   } else {
     p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
     localDependencies = await getLocalDepenencies()
