@@ -88,9 +88,9 @@ export const zipBundle = async (appId: string, options: Options) => {
 
     if (options.json) {
       const output = {
-        bundle: bundle,
+        bundle,
         filename: name,
-        checksum: checksum,
+        checksum,
       };
       console.log(output);
     }

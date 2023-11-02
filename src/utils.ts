@@ -1,5 +1,4 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
-import fs from 'fs/promises'
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -146,7 +145,7 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
 
 export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> => {
     const { data } = await supabase
-        .rpc('is_allowed_action', { apikey, appid: appId })
+        .rpc('is_app_owner', { apikey, appid: appId })
         .single()
     return !!data
 }
@@ -400,11 +399,8 @@ export const getHumanDate = (createdA: string | null) => {
     return date.toLocaleString();
 }
 
-// https://stackoverflow.com/questions/17699599/node-js-check-if-file-exists
-export const fileExists = async (path: string) => !!(await fs.stat(path).catch(e => false));
-
 export async function getLocalDepenencies() {
-    if (!await fileExists('./package.json')) {
+    if (!existsSync('./package.json')) {
         p.log.error("Missing package.json, you need to be in a capacitor project");
         program.error('');
     }
@@ -412,7 +408,7 @@ export async function getLocalDepenencies() {
     
     let packageJson;
     try {
-        packageJson = JSON.parse(await fs.readFile('./package.json', 'utf8'));
+        packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
     } catch (err) {
         p.log.error("Invalid package.json, JSON parsing failed");
         console.error('json parse error: ', err)
@@ -432,7 +428,7 @@ export async function getLocalDepenencies() {
         }
     }
 
-    if (!await fileExists('./node_modules/')) {
+    if (!existsSync('./node_modules/')) {
         p.log.error('Missing node_modules folder, please run npm install');
         program.error('');
     }
@@ -442,7 +438,7 @@ export async function getLocalDepenencies() {
     const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
         // eslint-disable-next-line consistent-return
         .map(async ([key, value]) => {
-            const dependencyFolderExists = await fileExists(`./node_modules/${key}`)
+            const dependencyFolderExists = existsSync(`./node_modules/${key}`)
 
             if (!dependencyFolderExists) {
                 anyInvalid = true
@@ -468,7 +464,7 @@ export async function getLocalDepenencies() {
                 version: value,
                 native: hasNativeFiles,
             }
-        }))
+        })).catch(() => [])
 
 
     if (anyInvalid || dependenciesObject.find((a) => a.native === undefined))
@@ -477,13 +473,14 @@ export async function getLocalDepenencies() {
     return dependenciesObject as { name: string; version: string; native: boolean; }[];
 }
 
-export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, channel: string) {
+export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
     const { data: remoteNativePackages, error } = await supabase
         .from('channels')
         .select(`version ( 
             native_packages 
         )`)
         .eq('name', channel)
+        .eq('app_id', appId)
         .single()
 
 
@@ -531,9 +528,9 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, c
     return mappedRemoteNativePackages
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, channel: string) {
+export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {
     const dependenciesObject = await getLocalDepenencies()
-    const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, channel)
+    const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
     const finalDepenencies: 
     ({
@@ -567,7 +564,7 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, cha
         })
 
     const removeNotInLocal = [...mappedRemoteNativePackages]
-        .filter(([remoteName, _v]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
+        .filter(([remoteName]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
         .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }));
 
     finalDepenencies.push(...removeNotInLocal)

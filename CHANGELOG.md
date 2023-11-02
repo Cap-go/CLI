@@ -2,6 +2,52 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.33](https://github.com/Cap-go/capgo-cli/compare/v3.14.32...v3.14.33) (2023-11-02)
+
+### [3.14.32](https://github.com/Cap-go/capgo-cli/compare/v3.14.31...v3.14.32) (2023-11-02)
+
+
+### Bug Fixes
+
+* getRemoteDepenencies use appID ([dac09a5](https://github.com/Cap-go/capgo-cli/commit/dac09a5727da6fd57671c6f05951a469acf762db))
+
+### [3.14.31](https://github.com/Cap-go/capgo-cli/compare/v3.14.30...v3.14.31) (2023-11-02)
+
+
+### Bug Fixes
+
+* duplicated apikey ([001c63b](https://github.com/Cap-go/capgo-cli/commit/001c63bb5c033118e895bf6e9e2a0fa8699c0b7e))
+
+### [3.14.30](https://github.com/Cap-go/capgo-cli/compare/v3.14.29...v3.14.30) (2023-11-02)
+
+
+### Bug Fixes
+
+* issue apikey ([b7bfb27](https://github.com/Cap-go/capgo-cli/commit/b7bfb274c933210af0028f5ed58e7b2077d2283b))
+
+### [3.14.29](https://github.com/Cap-go/capgo-cli/compare/v3.14.28...v3.14.29) (2023-11-02)
+
+
+### Bug Fixes
+
+* issue reading file in certain os ([d7dca17](https://github.com/Cap-go/capgo-cli/commit/d7dca1779e6b43df74c7955613ab19368c4ff90d))
+
+### [3.14.28](https://github.com/Cap-go/capgo-cli/compare/v3.14.27...v3.14.28) (2023-11-01)
+
+### [3.14.27](https://github.com/Cap-go/capgo-cli/compare/v3.14.26...v3.14.27) (2023-10-31)
+
+
+### Bug Fixes
+
+* is_app_owner in the CLI ([5440fd4](https://github.com/Cap-go/capgo-cli/commit/5440fd4015c0b3bdf829e9e3196e714d8f73e35f))
+
+### [3.14.26](https://github.com/Cap-go/capgo-cli/compare/v3.14.25...v3.14.26) (2023-10-31)
+
+
+### Bug Fixes
+
+* add appId on list app command ([2b36ede](https://github.com/Cap-go/capgo-cli/commit/2b36ede3853e8756798d8af16a32c4f3675f8985))
+
 ### [3.14.25](https://github.com/Cap-go/capgo-cli/compare/v3.14.24...v3.14.25) (2023-10-31)
 
 

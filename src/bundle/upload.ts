@@ -44,7 +44,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   let { bundle, path, channel } = options;
   const { external, key = false, displayIvSession, autoMinUpdateVersion } = options;
   let { minUpdateVersion } = options
-  const apikey = options.apikey || findSavedKey()
+  options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
   channel = channel || 'dev';
@@ -64,7 +64,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     program.error('');
   }
   path = path || config?.app?.webDir
-  if (!apikey) {
+  if (!options.apikey) {
     p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
     program.error('');
   }
@@ -94,8 +94,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
 
   const localConfig = await getLocalConfig()
-  const supabase = await createSupabaseClient(apikey)
-  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
+  const supabase = await createSupabaseClient(options.apikey)
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
@@ -115,10 +115,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   // We only check compatibility IF the channel exists
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages) {
+    const spinner = p.spinner();
+    spinner.start(`Checking bundle compatibility with channel ${channel}`);
     const { 
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel 
-    } = await checkCompatibility(supabase, channel)
+    } = await checkCompatibility(supabase, appid, channel)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
@@ -146,6 +148,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
         program.error('');
       }
     }
+    spinner.stop(`Bundle compatible with ${channel} channel`);
   } else {
     p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
     localDependencies = await getLocalDepenencies()
@@ -178,7 +181,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
+    .rpc('exist_app_versions', { appid, apikey: options.apikey, name_version: bundle })
     .single()
 
   if (appVersion || appVersionError) {
@@ -292,7 +295,7 @@ It will be also visible in your dashboard\n`);
     native_packages: nativePackages,
     checksum,
   }
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
+  const { error: dbError } = await updateOrCreateVersion(supabase, versionData, options.apikey)
   if (dbError) {
     p.log.error(`Cannot add bundle ${formatError(dbError)}`);
     program.error('');
@@ -318,7 +321,7 @@ It will be also visible in your dashboard\n`);
       } : undefined)
     })
     versionData.storage_provider = 'r2'
-    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, apikey)
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, options.apikey)
     if (dbError2) {
       p.log.error(`Cannot update bundle ${formatError(dbError)}`);
       program.error('');
@@ -326,7 +329,7 @@ It will be also visible in your dashboard\n`);
     spinner.stop('Bundle Uploaded 💪')
   }
   const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
+    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
     .single()
   if (versionId) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {

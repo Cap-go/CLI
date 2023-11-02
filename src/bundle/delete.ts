@@ -28,10 +28,8 @@ export const deleteBundle = async (bundleId: string, appId: string, options: Opt
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
-  const apikey = options.apikey || findSavedKey()
-
   appId = appId || config?.app?.appId
-  if (!apikey) {
+  if (!options.apikey) {
     p.log.error('Missing API key, you need to provide an API key to delete your app');
     program.error('');
   }

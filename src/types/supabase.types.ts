@@ -1422,19 +1422,6 @@ export interface Database {
             Args: Record<PropertyKey, never>
             Returns: number
           }
-        | {
-            Args: {
-              dateid: string
-            }
-            Returns: number
-          }
-        | {
-            Args: {
-              userid: string
-              dateid: string
-            }
-            Returns: number
-          }
       get_total_stats_v2:
         | {
             Args: {
@@ -1601,6 +1588,13 @@ export interface Database {
             Returns: boolean
           }
       is_app_owner:
+        | {
+            Args: {
+              apikey: string
+              appid: string
+            }
+            Returns: boolean
+          }
         | {
             Args: {
               appid: string

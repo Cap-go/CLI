@@ -1,7 +1,7 @@
 import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
-import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser, OptionsBase } from "../utils";
+import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser, OptionsBase } from "../utils";
 
 export const deleteApp = async (appId: string, options: OptionsBase) => {
     p.intro(`Deleting`);
