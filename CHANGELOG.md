@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.32](https://github.com/Cap-go/capgo-cli/compare/v3.14.31...v3.14.32) (2023-11-02)
+
+
+### Bug Fixes
+
+* getRemoteDepenencies use appID ([dac09a5](https://github.com/Cap-go/capgo-cli/commit/dac09a5727da6fd57671c6f05951a469acf762db))
+
 ### [3.14.31](https://github.com/Cap-go/capgo-cli/compare/v3.14.30...v3.14.31) (2023-11-02)
 
 
