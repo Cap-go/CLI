@@ -44,13 +44,13 @@ const getRemovableVersionsInSemverRange = (data: Database['public']['Tables']['a
 export const cleanupBundle = async (appid: string, options: Options) => {
   p.intro(`Cleanup versions in Capgo`);
   await checkLatest();
-  const apikey = options.apikey || findSavedKey()
+  options.apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options;
   const force = options.force || false;
 
   const config = await getConfig();
   appid = appid || config?.app?.appId
-  if (!apikey) {
+  if (!options.apikey) {
     p.log.error('Missing API key, you need to provide an API key to delete your app');
     program.error('');
   }
@@ -58,9 +58,9 @@ export const cleanupBundle = async (appid: string, options: Options) => {
     p.log.error('Missing argument, you need to provide a appid, or be in a capacitor project');
     program.error('');
   }
-  const supabase = await createSupabaseClient(apikey)
+  const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, apikey);
+  const userId = await verifyUser(supabase, options.apikey);
 
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
