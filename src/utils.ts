@@ -1,5 +1,4 @@
 import { existsSync, readdirSync, readFileSync } from 'fs';
-import fs from 'fs/promises'
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -399,11 +398,8 @@ export const getHumanDate = (createdA: string | null) => {
     return date.toLocaleString();
 }
 
-// https://stackoverflow.com/questions/17699599/node-js-check-if-file-exists
-export const fileExists = async (path: string) => !!(await fs.stat(path).catch(e => false));
-
 export async function getLocalDepenencies() {
-    if (!await fileExists('./package.json')) {
+    if (!existsSync('./package.json')) {
         p.log.error("Missing package.json, you need to be in a capacitor project");
         program.error('');
     }
@@ -411,7 +407,7 @@ export async function getLocalDepenencies() {
     
     let packageJson;
     try {
-        packageJson = JSON.parse(await fs.readFile('./package.json', 'utf8'));
+        packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
     } catch (err) {
         p.log.error("Invalid package.json, JSON parsing failed");
         console.error('json parse error: ', err)
@@ -431,7 +427,7 @@ export async function getLocalDepenencies() {
         }
     }
 
-    if (!await fileExists('./node_modules/')) {
+    if (!existsSync('./node_modules/')) {
         p.log.error('Missing node_modules folder, please run npm install');
         program.error('');
     }
@@ -441,7 +437,7 @@ export async function getLocalDepenencies() {
     const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
         // eslint-disable-next-line consistent-return
         .map(async ([key, value]) => {
-            const dependencyFolderExists = await fileExists(`./node_modules/${key}`)
+            const dependencyFolderExists = existsSync(`./node_modules/${key}`)
 
             if (!dependencyFolderExists) {
                 anyInvalid = true
@@ -461,7 +457,7 @@ export async function getLocalDepenencies() {
                 version: value,
                 native: hasNativeFiles,
             }
-        }))
+        })).catch(() => [])
 
 
     if (anyInvalid || dependenciesObject.find((a) => a.native === undefined))
@@ -560,7 +556,7 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, cha
         })
 
     const removeNotInLocal = [...mappedRemoteNativePackages]
-        .filter(([remoteName, _v]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
+        .filter(([remoteName]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
         .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }));
 
     finalDepenencies.push(...removeNotInLocal)
@@ -568,11 +564,11 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, cha
     return { 
         finalCompatibility: finalDepenencies,
         localDependencies: dependenciesObject,
-     }
+    }
 }
 
 async function walkDir(dir: string, callback: (path: string) => Promise<void>) {
-    const dirents = await fs.readdir(dir, { withFileTypes: true });
+    const dirents = readdirSync(dir, { withFileTypes: true });
     for (const dirent of dirents) {
         const fullPath = `${dirent.path}/${dirent.name}`
 
