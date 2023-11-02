@@ -466,13 +466,14 @@ export async function getLocalDepenencies() {
     return dependenciesObject as { name: string; version: string; native: boolean; }[];
 }
 
-export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, channel: string) {
+export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
     const { data: remoteNativePackages, error } = await supabase
         .from('channels')
         .select(`version ( 
             native_packages 
         )`)
         .eq('name', channel)
+        .eq('app_id', appId)
         .single()
 
 
@@ -520,9 +521,9 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, c
     return mappedRemoteNativePackages
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, channel: string) {
+export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {
     const dependenciesObject = await getLocalDepenencies()
-    const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, channel)
+    const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
     const finalDepenencies: 
     ({

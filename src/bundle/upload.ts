@@ -118,7 +118,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     const { 
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel 
-    } = await checkCompatibility(supabase, channel)
+    } = await checkCompatibility(supabase, appid, channel)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
