@@ -35,6 +35,7 @@ interface Options extends OptionsBase {
   codeCheck?: boolean,
   minUpdateVersion?: string,
   autoMinUpdateVersion?: boolean,
+  ignoreMetadataCheck?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
@@ -42,7 +43,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
-  const { external, key = false, displayIvSession, autoMinUpdateVersion } = options;
+  const { external, key = false, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options;
   let { minUpdateVersion } = options
   options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
@@ -110,11 +111,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   .eq('app_id', appid)
   .single()
       
-  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>>;
+  // eslint-disable-next-line no-undef-init
+  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined;
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
 
   // We only check compatibility IF the channel exists
-  if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages) {
+  if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
     const spinner = p.spinner();
     spinner.start(`Checking bundle compatibility with channel ${channel}`);
     const { 
@@ -149,7 +151,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
       }
     }
     spinner.stop(`Bundle compatible with ${channel} channel`);
-  } else {
+  } else if (!ignoreMetadataCheck) {
     p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
     localDependencies = await getLocalDepenencies()
 
@@ -159,7 +161,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     }
   }
 
-  if (updateMetadataRequired && !minUpdateVersion) {
+  if (updateMetadataRequired && !minUpdateVersion && !ignoreMetadataCheck) {
     p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`);
     program.error('');
   }
@@ -277,11 +279,12 @@ It will be also visible in your dashboard\n`);
     sessionKey = options.ivSessionKey
   }
 
-  const hashedLocalDependencies = new Map(localDependencies
+  const hashedLocalDependencies = localDependencies ? new Map(localDependencies
       .filter((a) => !!a.native && a.native !== undefined)
-      .map((a) => [a.name, a]))
+      .map((a) => [a.name, a])) : new Map()
 
-  const nativePackages = Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version }))
+  // eslint-disable-next-line max-len
+  const nativePackages = (hashedLocalDependencies.size > 0) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
 
   const versionData = {
     bucket_id: external ? undefined : fileName,
