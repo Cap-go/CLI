@@ -83,8 +83,8 @@ devDependencies:
     specifier: ^2.0.0
     version: 2.0.2
   '@types/prettyjson':
-    specifier: ^0.0.30
-    version: 0.0.30
+    specifier: ^0.0.33
+    version: 0.0.33
   '@types/prompt-sync':
     specifier: ^4.2.0
     version: 4.2.2
@@ -666,8 +666,8 @@ packages:
     resolution: {integrity: sha512-D8TtchWVnU2ZdPVDY6tBJuz8MUDmCNVduilZTrf0Gn/u5I/uZEXOsaL4Gs4F0j43cysHsU/4h7eqAKc+SF2boQ==}
     dev: false
 
-  /@types/prettyjson@0.0.30:
-    resolution: {integrity: sha512-BQ15wnnSvzlvDAVvd4t+zXjd9o6QAcfBeEUlZcinDYeb0A1xTfRBc0s8nxHlctojnsxDrbiG7amTqLWbXsiK7Q==}
+  /@types/prettyjson@0.0.33:
+    resolution: {integrity: sha512-hHZMkavT9OXFq8p6pTCiaREtPxMRfy9NMp+Qa4PWH0RINQjyh0crOhoqUFA/cvIZncpjBpdvxkoe7nmVbyBJXw==}
     dev: true
 
   /@types/prompt-sync@4.2.2:

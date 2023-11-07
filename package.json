@@ -69,7 +69,7 @@
     "@types/mime": "^3.0.1",
     "@types/node": "^20.4.9",
     "@types/npmcli__ci-detect": "^2.0.0",
-    "@types/prettyjson": "^0.0.30",
+    "@types/prettyjson": "^0.0.33",
     "@types/prompt-sync": "^4.2.0",
     "@types/qrcode": "^1.5.1",
     "@types/semver": "^7.5.0",
