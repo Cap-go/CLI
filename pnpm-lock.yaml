@@ -6,8 +6,8 @@ settings:
 
 dependencies:
   '@capacitor/cli':
-    specifier: 5.5.0
-    version: 5.5.0
+    specifier: 5.5.1
+    version: 5.5.1
   '@capgo/find-package-manager':
     specifier: ^0.0.7
     version: 0.0.7
@@ -204,8 +204,8 @@ packages:
       to-fast-properties: 2.0.0
     dev: true
 
-  /@capacitor/cli@5.5.0:
-    resolution: {integrity: sha512-JkF7p+EV1mEFObp3e/3snKZiiDPbHTAXlch9jKcvvuCjm92Be7ka8sG4M3fH8BPajSE3jRNPZa/xt7bITDvAAA==}
+  /@capacitor/cli@5.5.1:
+    resolution: {integrity: sha512-/oGd2IIc+k1H/fc7tUzP7vqMtZi0gNcJ4/4wUE2kzAnETxxxHXMM/2V62KfjCby/OOAzJbtI7n5OPlnWE9un1A==}
     engines: {node: '>=16.0.0'}
     hasBin: true
     dependencies:
