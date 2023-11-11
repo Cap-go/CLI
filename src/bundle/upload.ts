@@ -284,7 +284,7 @@ It will be also visible in your dashboard\n`);
       .map((a) => [a.name, a])) : new Map()
 
   // eslint-disable-next-line max-len
-  const nativePackages = (hashedLocalDependencies.size > 0) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
+  const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
 
   const versionData = {
     bucket_id: external ? undefined : fileName,
