@@ -9,6 +9,7 @@ import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 import axios from 'axios';
+import { promiseFiles } from 'node-dir'
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;
@@ -446,11 +447,17 @@ export async function getLocalDepenencies() {
             }
             
             let hasNativeFiles = false;
-            await walkDir(`./node_modules/${key}`, async (path) => {
-                if (nativeFileRegex.test(path)) {
-                    hasNativeFiles = true;
-                }
-            })
+            await promiseFiles(`./node_modules/${key}`)
+                .then(files => {
+                    if (files.find(fileName => nativeFileRegex.test(fileName))) {
+                        hasNativeFiles = true;
+                    }
+                })
+                .catch(error => {
+                    p.log.error(`Error reading node_modulses files for ${key} package`)
+                    console.error(error)
+                    program.error('')
+                })
 
             return {
                 name: key,
@@ -565,18 +572,5 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     return { 
         finalCompatibility: finalDepenencies,
         localDependencies: dependenciesObject,
-    }
-}
-
-async function walkDir(dir: string, callback: (path: string) => Promise<void>) {
-    const dirents = readdirSync(dir, { withFileTypes: true });
-    for (const dirent of dirents) {
-        const fullPath = `${dirent.path}/${dirent.name}`
-
-        if (dirent.isDirectory()) {
-            await walkDir(fullPath, callback)
-        } else {
-            await callback(`${dirent.path}/${dirent.name}`)
-        }
-    }
+     }
 }

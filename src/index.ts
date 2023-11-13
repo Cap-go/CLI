@@ -126,6 +126,7 @@ bundle
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
   )
   .option('--auto-min-update-version', 'Set the min update version based on native packages')
+  .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
 
 bundle
     .command('compatibility [appId]')
