@@ -150,7 +150,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     }
     spinner.stop(`Bundle compatible with ${channel} channel`);
   } else {
-    p.log.warn(`Channel ${channel} does not exist or previous metadata does not exist, cannot check compatibility`);
+    p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`);
     localDependencies = await getLocalDepenencies()
 
     if (autoMinUpdateVersion) {
