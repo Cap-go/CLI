@@ -83,8 +83,8 @@ devDependencies:
     specifier: ^20.4.9
     version: 20.8.7
   '@types/node-dir':
-    specifier: ^0.0.36
-    version: 0.0.36
+    specifier: ^0.0.37
+    version: 0.0.37
   '@types/npmcli__ci-detect':
     specifier: ^2.0.0
     version: 2.0.2
@@ -659,8 +659,8 @@ packages:
     resolution: {integrity: sha512-i8MBln35l856k5iOhKk2XJ4SeAWg75mLIpZB4v6imOagKL6twsukBZGDMNhdOVk7yRFTMPpfILocMos59Q1otQ==}
     dev: true
 
-  /@types/node-dir@0.0.36:
-    resolution: {integrity: sha512-AX3okNJU28JvIz3bsYK1mqaS1q61ShkADoAeIUiqgTrmPC0T2mXK2OXHTfIC4NTe1U1x0E63LiCZ6lFuCWDMKA==}
+  /@types/node-dir@0.0.37:
+    resolution: {integrity: sha512-QRQfeHPWcXXTlMXIMjqu2vBvLd4Pxl7/e5ejQYXjLbYeJhjblUr/rAjrNJikwVqbMVJW8gwO4Irep/a1ArL06Q==}
     dependencies:
       '@types/node': 20.8.7
     dev: true
