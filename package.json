@@ -59,6 +59,7 @@
     "mime": "^3.0.0",
     "node-dir": "^0.1.17",
     "open": "^9.1.0",
+    "os-name": "^5.1.0",
     "prettyjson": "^1.2.5",
     "prompt-sync": "^4.2.0",
     "qrcode": "^1.5.3",
