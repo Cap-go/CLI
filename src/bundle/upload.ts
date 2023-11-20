@@ -1,5 +1,7 @@
 import { randomUUID } from 'crypto';
-import { existsSync, readFileSync } from 'fs';
+import { existsSync, readFileSync, mkdirSync, unlinkSync } from 'fs';
+import fs from 'fs-extra'
+import semver from 'semver/preload';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';
@@ -16,7 +18,8 @@ import {
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
   useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
-  getLocalDepenencies
+  getLocalDepenencies, isPartialUpdate, getPartialUpdateBaseVersion, downloadFile, filterBinaryFiles, removeExistingBinaryFiles,
+  safeBundle
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
 
@@ -51,10 +54,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
-  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
+  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
-  const checkNotifyAppReady = options.codeCheck 
+  const checkNotifyAppReady = options.codeCheck
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -87,8 +90,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     }
     const foundIndex = checkIndexPosition(path);
     if (!foundIndex) {
-        p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
-        program.error('');
+      p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
+      program.error('');
     }
   }
 
@@ -105,12 +108,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
-  .from('channels')
-  .select('version ( minUpdateVersion, native_packages )')
-  .eq('name', channel)
-  .eq('app_id', appid)
-  .single()
-      
+    .from('channels')
+    .select('version ( minUpdateVersion, native_packages )')
+    .eq('name', channel)
+    .eq('app_id', appid)
+    .single()
+
   // eslint-disable-next-line no-undef-init
   let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined;
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
@@ -119,14 +122,14 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
     const spinner = p.spinner();
     spinner.start(`Checking bundle compatibility with channel ${channel}`);
-    const { 
+    const {
       finalCompatibility: finalCompatibilityWithChannel,
-      localDependencies: localDependenciesWithChannel 
+      localDependencies: localDependenciesWithChannel
     } = await checkCompatibility(supabase, appid, channel)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
-    
+
     if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
       p.log.error(`Your bundle is not compatible with the channel ${channel}`);
       p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
@@ -142,7 +145,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
           p.log.error('Invalid remote min update version, skipping auto setting compatibility');
           program.error('');
         }
-  
+
         minUpdateVersion = lastMinUpdateVersion
         p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
       } catch (error) {
@@ -190,9 +193,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`);
     program.error('');
   }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
-  const fileName = `${safeBundle}.zip`;
+  const fileName = safeBundle(bundle);
 
   let sessionKey;
   let checksum = ''
@@ -280,8 +281,8 @@ It will be also visible in your dashboard\n`);
   }
 
   const hashedLocalDependencies = localDependencies ? new Map(localDependencies
-      .filter((a) => !!a.native && a.native !== undefined)
-      .map((a) => [a.name, a])) : new Map()
+    .filter((a) => !!a.native && a.native !== undefined)
+    .map((a) => [a.name, a])) : new Map()
 
   // eslint-disable-next-line max-len
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
@@ -309,7 +310,7 @@ It will be also visible in your dashboard\n`);
 
     const url = await uploadUrl(supabase, appid, fileName)
     if (!url) {
-      p.log.error(`Cannot get upload url`);
+      p.log.error(`Cannot get upload url. URL is invalid (null).`);
       program.error('');
     }
 
@@ -318,9 +319,9 @@ It will be also visible in your dashboard\n`);
       url,
       data: zipped,
       headers: (!localS3 ? {
-       "Content-Type": "application/octet-stream",
-       "Cache-Control": "public, max-age=456789, immutable",
-       "x-amz-meta-crc32": checksum,
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "public, max-age=456789, immutable",
+        "x-amz-meta-crc32": checksum,
       } : undefined)
     })
     versionData.storage_provider = 'r2'
@@ -353,7 +354,7 @@ It will be also visible in your dashboard\n`);
       p.log.info(`Link device to this bundle to try it: ${bundleUrl}`);
     }
 
-    if(options.bundleUrl) {
+    if (options.bundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`);
     }
   } else {
@@ -377,9 +378,21 @@ It will be also visible in your dashboard\n`);
   return true
 }
 
-export const uploadCommand = async (apikey: string, options: Options) => {
+export const uploadCommand = async (appid: string, options: Options) => {
   try {
-    await uploadBundle(apikey, options, true)
+    // check if the partial-update flag is set in capacitor.config.json
+    if (await isPartialUpdate()) {
+      p.log.info(`The partial-update flag was set. Preparing to perform a partial update.`);
+
+      const partialUpdateBaseVersion = await getPartialUpdateBaseVersion()
+      if (partialUpdateBaseVersion) {
+        await uploadPartialUpdateCommand(appid, options, false)
+      }
+    }
+
+    // upload the full bundle as usual
+    await uploadBundle(appid, options, true)
+
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
@@ -393,5 +406,120 @@ export const uploadDeprecatedCommand = async (apikey: string, options: Options) 
   } catch (error) {
     p.log.error(JSON.stringify(error))
     program.error('')
+  }
+}
+
+export const uploadPartialUpdateCommand = async (appid: string, options: Options, shouldExit = true) => {
+  const config = await getConfig();
+  let { bundle, path, channel } = options;
+  appid = appid || config?.app?.appId
+  bundle = bundle || config?.app?.package?.version
+  path = path || config?.app?.webDir
+  channel = channel || 'dev';
+  const { external, key = false, displayIvSession } = options;
+
+  if (existsSync(path)) {
+    const baseVersion = await getPartialUpdateBaseVersion()
+    if (!baseVersion) {
+      p.log.error(`The partial-update base version you specified is invalid: ${baseVersion}`);
+      program.error('')
+    } else {
+      p.log.info(`The partial-update base version you specified is: ${baseVersion}`);
+
+      if (!semver.lt(baseVersion, bundle)) {
+        p.log.info(`The partial-update base version (${baseVersion}) you specified must be lower than the current version (${bundle})`);
+        program.error('')
+      }
+    }
+    const baseVersionPath = `${path}/../manifest/dist_${baseVersion}-base`
+    const partialVersionPath = `${path}/../manifest/dist_${baseVersion}-partial`
+
+    try {
+      mkdirSync(baseVersionPath, { recursive: true })
+      mkdirSync(partialVersionPath, { recursive: true })
+
+      if (existsSync(baseVersionPath) && existsSync(partialVersionPath)) {
+        const apikey = options.apikey || findSavedKey()
+        const supabase = createSupabaseClient(apikey)
+        // check if specified base version does indeed exist
+        const { data: baseVersionDB, error: baseVersionDBError } = await supabase
+          .rpc('exist_app_versions', { appid, apikey, name_version: baseVersion })
+          .single()
+
+        if (!baseVersionDB) {
+          p.log.error(`The bundle version on which to base the partial-update does not exist ${formatError(baseVersionDBError)}`);
+          program.error('');
+        }
+
+        // download the base version to the disk
+        const { data: baseData, error: baseError } = await supabase
+          .from('channels')
+          .select()
+          .eq('app_id', appid)
+          .eq('name', channel)
+          // .eq('created_by', update.created_by)
+          .single()
+
+        if (!baseData) {
+          p.log.error(`The base version you specified for a partial-update does not exist on the server: ${baseError}`);
+          program.error('')
+        }
+
+        const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
+        const data = {
+          api_key: apikey,
+          user_id: userId,
+          app_id: appid,
+          storage_provider: external ? 'external' : 'r2',
+          bucket_id: external ? undefined : safeBundle(baseVersion),
+        }
+
+        // console.log(`Bundle URL payload: ${JSON.stringify(data)}`)
+        const res = await supabase.functions.invoke('download_link', { body: JSON.stringify(data) })
+        const bundleUrl = res.data ? res.data.url : undefined
+        p.log.info(`Bundle url: ${bundleUrl}`);
+
+        if (!bundleUrl) {
+          p.log.error(`The base version you specified for a partial-update could not be downloaded: ${bundleUrl}`);
+          program.error('')
+        }
+
+        // write to disk
+        const downloadFilePath = `${path}/../manifest/dist_${baseVersion}-base.zip`;
+        await downloadFile(bundleUrl, downloadFilePath);
+        if (!existsSync(downloadFilePath)) {
+          p.log.error(`The base version you specified could not be downloaded`);
+          program.error('')
+        }
+
+        const zip = new AdmZip(downloadFilePath);
+        zip.extractAllTo(baseVersionPath, true);
+        unlinkSync(downloadFilePath)
+
+        // copy the current bundle folder to the partial bundle folder
+        fs.copySync(path, partialVersionPath, { overwrite: true })
+
+        const existingBinaryFiles = await filterBinaryFiles(baseVersionPath);
+        console.log('Matching binary files in the base version that will be removed:', existingBinaryFiles);
+        if (existingBinaryFiles && existingBinaryFiles.length > 0) {
+          removeExistingBinaryFiles(partialVersionPath, existingBinaryFiles)
+        }
+      }
+    } catch (error) {
+      let e: Error = error as Error
+      p.log.error(`Error: ${JSON.stringify(e.stack)}`);
+      program.error('');
+    }
+
+    const optionsClone = Object.assign({}, options);
+    optionsClone.bundle = `${bundle}-basedon-${baseVersion}`
+    optionsClone.path = partialVersionPath
+    p.log.info(`CLI options updated for partial-updates: ${JSON.stringify(optionsClone)}`)
+
+    // next, perform the partial update
+    await uploadBundle(appid, optionsClone, false)
+  } else {
+    p.log.error(`Cannot find the path to the full bundle to be partially updated. Did you delete it?`);
+    program.error('');
   }
 }

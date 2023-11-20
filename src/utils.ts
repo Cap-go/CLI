@@ -1,4 +1,7 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
+import { existsSync, readdirSync, readFileSync, writeFileSync } from 'fs';
+import fetch from "node-fetch";
+import { glob } from 'glob';
+import fs from 'fs-extra';
 import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
@@ -251,6 +254,8 @@ interface Config {
                     channelUrl?: string;
                     updateUrl?: string;
                     privateKey?: string;
+                    partialUpdate?: boolean;
+                    partialUpdateBaseVersion?: string;
                 }
             }
             server: {
@@ -290,9 +295,15 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     }
     try {
         const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
-        return res.data.url
+        if (res && res.data) {
+            return res.data.url
+        } else {
+            p.log.error(`Could not get upload url: ${JSON.stringify(res)}`);
+            return ""
+        }
     } catch (error) {
-        p.log.error(`Cannot get upload url ${JSON.stringify(error)}`);
+        let e: Error = error as Error
+        p.log.error(`Cannot get upload url ${JSON.stringify(e.stack)}`);
     }
     return '';
 }
@@ -573,4 +584,71 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
         finalCompatibility: finalDepenencies,
         localDependencies: dependenciesObject,
      }
+}
+
+export const isPartialUpdate = async (): Promise<boolean> => {
+    const config = await getConfig();
+    const partialUpdate: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
+        && config.app.extConfig.plugins.CapacitorUpdater.partialUpdate) === true;
+    return partialUpdate;
+}
+
+export const getPartialUpdateBaseVersion = async () => {
+    const config = await getConfig();
+    const partialUpdateBaseVersion = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
+        && config.app.extConfig.plugins.CapacitorUpdater.partialUpdateBaseVersion) ? config.app.extConfig.plugins.CapacitorUpdater.partialUpdateBaseVersion : undefined
+    return partialUpdateBaseVersion;
+}
+
+export const downloadFile = async (url: string, outputPath: string): Promise<void> => {
+    try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+            throw new Error(`Failed to download file: ${response.status} ${response.statusText}`);
+        }
+
+        const fileContent = await response.buffer();
+        writeFileSync(outputPath, fileContent);
+
+        console.log(`File ${outputPath} downloaded successfully.`);
+    } catch (error) {
+        console.error('Error occurred while downloading the file: ', error);
+    }
+}
+
+export const filterBinaryFiles = async (directory: string): Promise<string[]> => {
+    const binaryFiles: string[] = [];
+
+    const pattern = `${directory}/assets/**/*.{ico,svg,jpg,png,gif,webp}`;
+    const files = await glob(pattern);
+
+    for (const file of files) {
+        const stats = await fs.stat(file);
+        if (stats.isFile()) {
+            const startIndex = file.indexOf('/assets/');
+            const binaryFile = file.substring(startIndex + 1, file.length);
+            console.log(`Matched file: ${binaryFile}`);
+            binaryFiles.push(binaryFile);
+        }
+    }
+
+    return binaryFiles;
+}
+
+export const removeExistingBinaryFiles = async (directory: string, files: string[]): Promise<void> => {
+    for (const file of files) {
+        const filePath = `${directory}/${file}`;
+        const exists = await fs.pathExists(filePath);
+        if (exists) {
+            await fs.remove(filePath);
+            console.log(`Removed binary file: ${filePath}`);
+        }
+    }
+}
+
+// make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
+export const safeBundle = (bundle: string): string => {
+    const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__');
+    return `${safeBundle}.zip`
 }
