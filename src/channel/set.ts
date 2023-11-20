@@ -1,12 +1,12 @@
 import { program } from 'commander';
+import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import { OptionsBase } from '../api/utils';
-import { checkAppExistsAndHasPermission } from "../api/app";
+import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
+  OptionsBase,
   getConfig, createSupabaseClient, updateOrCreateChannel,
   formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from '../utils';
-// import { definitions } from '../types/types_supabase';
 
 interface Options extends OptionsBase {
   bundle: string;
@@ -16,34 +16,42 @@ interface Options extends OptionsBase {
   upgrade?: boolean;
   ios?: boolean;
   android?: boolean;
-  selfAssign?: boolean;
+  selfAssign?: boolean,
+  disableAutoUpdate: string,
   channel?: string;
 }
 
-export const setChannel = async (appId: string, options: Options) => {
-  options.apikey = options.apikey || findSavedKey() || ''
+const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'none']
+
+export const setChannel = async (channel: string, appId: string, options: Options) => {
+  p.intro(`Set channel`);
+  options.apikey = options.apikey || findSavedKey()
   const config = await getConfig();
   appId = appId || config?.app?.appId
   const snag = useLogSnag()
 
   if (!options.apikey) {
-    program.error("Missing API key, you need to provide a API key to upload your bundle");
+    p.log.error("Missing API key, you need to provide a API key to upload your bundle");
+    program.error('');
   }
   if (!appId) {
-    program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+    program.error('');
   }
-  const supabase = createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
-  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, channel, state } = options;
+  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options;
   if (!channel) {
-    program.error("Missing argument, you need to provide a channel");
+    p.log.error("Missing argument, you need to provide a channel");
+    program.error('');
   }
   if (latest && bundle) {
-    program.error("Cannot set latest and bundle at the same time");
+    p.log.error("Cannot set latest and bundle at the same time");
+    program.error('');
   }
   if (bundle == null &&
     state == null &&
@@ -52,13 +60,13 @@ export const setChannel = async (appId: string, options: Options) => {
     upgrade == null &&
     ios == null &&
     android == null &&
-    selfAssign == null) {
-    program.error("Missing argument, you need to provide a option to set");
+    selfAssign == null &&
+    disableAutoUpdate == null) {
+    p.log.error("Missing argument, you need to provide a option to set");
+    program.error('');
   }
   try {
     await checkPlanValid(supabase, userId)
-    // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,
@@ -75,50 +83,71 @@ export const setChannel = async (appId: string, options: Options) => {
         .eq('user_id', userId)
         .eq('deleted', false)
         .single()
-      if (vError || !data)
-        program.error(`Cannot find version ${bundleVersion}`);
-      console.log(`Set ${appId} channel: ${channel} to @${bundleVersion}`);
+      if (vError || !data) {
+        p.log.error(`Cannot find version ${bundleVersion}`);
+        program.error('');
+      }
+      p.log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`);
       channelPayload.version = data.id
     }
     if (state != null) {
       if (state === 'public' || state === 'private') {
-        console.log(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`);
+        p.log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`);
       }
-      console.log(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`);
+      p.log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`);
       channelPayload.public = state === 'public' || state === 'default'
     }
     if (downgrade != null) {
-      console.log(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`);
+      p.log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`);
       channelPayload.disableAutoUpdateUnderNative = !downgrade
     }
-    if (upgrade != null) {
-      console.log(`Set ${appId} channel: ${channel} to ${upgrade ? 'allow' : 'disallow'} upgrade`);
-      channelPayload.disableAutoUpdateToMajor = !upgrade
-    }
     if (ios != null) {
-      console.log(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`);
+      p.log.info(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`);
       channelPayload.ios = !!ios
     }
     if (android != null) {
-      console.log(`Set ${appId} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`);
+      p.log.info(`Set ${appId} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`);
       channelPayload.android = !!android
     }
     if (selfAssign != null) {
-      console.log(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`);
+      p.log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`);
       channelPayload.allow_device_self_set = !!selfAssign
     }
+    if (disableAutoUpdate != null) {
+      let finalDisableAutoUpdate = disableAutoUpdate.toLocaleLowerCase()
+
+      // The user passed an unimplemented strategy
+      if (!disableAutoUpdatesPossibleOptions.includes(finalDisableAutoUpdate)) {
+        // eslint-disable-next-line max-len
+        p.log.error(`Channel strategy ${finalDisableAutoUpdate} is not known. The possible values are: ${disableAutoUpdatesPossibleOptions.join(', ')}.`);
+        program.error('');
+      }
+
+      // This metadata is called differently in the database
+      if (finalDisableAutoUpdate === 'metadata') {
+        finalDisableAutoUpdate = 'version_number'
+      }
+
+      // This cast is safe, look above
+      channelPayload.disableAutoUpdate = finalDisableAutoUpdate as any
+      p.log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`);
+    }
     try {
-      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload, options.apikey)
-      if (dbError)
-        program.error(`Cannot set channel ${formatError(dbError)}`);
+      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
+      if (dbError) {
+        p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
+        program.error('');
+      }
     }
     catch (e) {
-      program.error(`Cannot set channel ${formatError(e)}`);
+      p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`);
+      program.error('');
     }
-    await snag.publish({
-      channel: 'app',
-      event: 'Set app',
+    await snag.track({
+      channel: 'channel',
+      event: 'Set channel',
       icon: '✅',
+      user_id: userId,
       tags: {
         'user-id': userId,
         'app-id': appId,
@@ -126,8 +155,9 @@ export const setChannel = async (appId: string, options: Options) => {
       notify: false,
     }).catch()
   } catch (err) {
-    program.error(`Unknow error ${formatError(err)}`);
+    p.log.error(`Unknow error ${formatError(err)}`);
+    program.error('');
   }
-  console.log(`Done ✅`);
+  p.outro(`Done ✅`);
   process.exit()
 }

@@ -1,38 +1,61 @@
 import { program } from 'commander';
-import { checkAppExistsAndHasPermission } from '../api/app';
-import { OptionsBase } from '../api/utils';
-import { getActiveAppVersions, displayBundles } from '../api/versions';
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
+import { Table } from 'console-table-printer';
+import { SupabaseClient } from '@supabase/supabase-js';
+import * as p from '@clack/prompts';
+import { Database } from 'types/supabase.types';
+import { OptionsBase, createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils';
+import { checkLatest } from '../api/update';
 
-export const listApp = async (appId: string, options: OptionsBase) => {
-  const apikey = options.apikey || findSavedKey()
-  const config = await getConfig();
+const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {
+  const t = new Table({
+    title: "Apps",
+    charLength: { "❌": 2, "✅": 2 },
+  });
 
-  console.log('COMMAND DEPRECATED, use "app list" instead')
-  appId = appId || config?.app?.appId
-  if (!apikey) {
-    program.error('Missing API key, you need to provide an API key to delete your app');
+  // add rows with color
+  data.reverse().forEach(row => {
+    t.addRow({
+      Name: row.name,
+      id: row.app_id,
+      Created: getHumanDate(row.created_at)
+    });
+  });
+
+  p.log.success(t.render());
+}
+
+export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: string) => {
+  const { data, error: vError } = await supabase
+    .from('apps')
+    .select()
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false });
+
+  if (vError) {
+    p.log.error('Apps not found');
+    program.error('');
   }
-  if (!appId) {
-    program.error('Missing argument, you need to provide a appid, or be in a capacitor project');
-  }
-  console.log(`Querying available versions in Capgo`);
+  return data;
+}
 
-  const supabase = createSupabaseClient(apikey)
+export const listApp = async (options: OptionsBase) => {
+  p.intro(`List apps in Capgo`);
 
-  const userId = await verifyUser(supabase, apikey);
+  await checkLatest();
+  options.apikey = options.apikey || findSavedKey()
 
-  console.log(`Querying available versions in Capgo`);
+  const supabase = await createSupabaseClient(options.apikey)
 
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
+
+  p.log.info(`Getting active bundle in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  const allVersions = await getActiveAppVersions(supabase, appId, userId);
+  const allApps = await getActiveApps(supabase, userId);
 
-  console.log(`Active versions in Capgo: ${allVersions?.length}`);
+  p.log.info(`Active app in Capgo: ${allApps?.length}`);
 
-  displayBundles(allVersions);
-  console.log(`Done ✅`);
+  displayApp(allApps);
+  p.outro(`Done ✅`);
   process.exit()
 }

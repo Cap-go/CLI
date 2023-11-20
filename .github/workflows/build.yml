@@ -12,9 +12,9 @@ jobs:
     steps:
       - name: Check out
         uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2.2.4
+      - uses: pnpm/action-setup@v2
         with:
-          version: 7
+          version: 8
       - name: Use Node.js
         uses: actions/setup-node@v3
         with:
@@ -29,6 +29,9 @@ jobs:
       - name: Build
         id: build_code
         run: pnpm build
+      - name: Run
+        id: run_cli
+        run: node dist/index.js --help
       - uses: rxfork/npm-publish@v1
         if: "!contains(github.ref, '-alpha.')"
         with:

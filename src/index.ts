@@ -1,113 +1,167 @@
 import { program } from 'commander';
+import { zipBundle } from './bundle/zip';
+import { initApp } from './init';
+import { listBundle } from './bundle/list';
 import { decryptZip } from './bundle/decrypt';
 import { encryptZip } from './bundle/encrypt';
-import { addApp } from './app/add';
+import { addCommand } from './app/add';
 import { getInfo } from './app/info';
-import { manageKey } from './key';
-import { deleteVersion } from './bundle/delete';
+import { saveKeyCommand, createKeyCommand } from './key';
+import { deleteBundle } from './bundle/delete';
 import { setChannel } from './channel/set';
-import { uploadVersion } from './bundle/upload';
+import { currentBundle } from './channel/currentBundle';
+import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
 import pack from '../package.json'
-import { login } from './login';
+import { loginCommand } from './login';
 import { listApp } from './app/list';
-import { cleanupApp } from './bundle/cleanup';
-import { addChannel } from './channel/add';
+import { cleanupBundle } from './bundle/cleanup';
+import { addChannelCommand } from './channel/add';
 import { deleteChannel } from './channel/delete';
 import { listChannels } from './channel/list';
 import { setApp } from './app/set';
 import { deleteApp } from './app/delete';
+// import { watchApp } from './app/watch';
+import { debugApp } from './app/debug';
+import { checkCompatibilityCommand } from './bundle/compatibility';
 
 program
-  .description('Manage packages and bundle versions in capgo Cloud')
+  .name(pack.name)
+  .description('Manage packages and bundle versions in Capgo Cloud')
   .version(pack.version);
 
 program
   .command('login [apikey]')
   .alias('l')
   .description('Save apikey to your machine or folder')
-  .action(login)
+  .action(loginCommand)
   .option('--local', 'Only save in local folder');
+
+program
+  .command('doctor')
+  .description('Get info about your Capgo app install')
+  .action(getInfo);
+
+program
+  .command('init [apikey] [appId]')
+  .description('Init a new app')
+  .action(initApp)
+  .option('-n, --name <name>', 'app name')
+  .option('-i, --icon <icon>', 'app icon path')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 const app = program
   .command('app')
   .description('Manage app');
 
 app
-  .command('add [appid]')
+  .command('add [appId]')
   .alias('a')
-  .description('Add a new app in capgo Cloud')
-  .action(addApp)
+  .description('Add a new app in Capgo Cloud')
+  .action(addCommand)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('delete [appid]')
+  .command('delete [appId]')
   .alias('d')
-  .description('Delete an app in capgo Cloud')
+  .description('Delete an app in Capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('list [appid]')
+  .command('list')
   .alias('l')
-  .description('list apps in capgo Cloud')
+  .description('list apps in Capgo Cloud')
   .action(listApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 app
-  .command('set [appid]')
+  .command('debug  [appId]')
+  .alias('d')
+  .description('Listen for live updates event in Capgo Cloud to debug your app')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-d, --device <device>', 'the specific device to debug')
+  .action(debugApp);
+
+// app
+//   .command('watch [port]')
+//   .alias('w')
+//   .description('watch for changes in your app and allow capgo app or your app to see changes in live')
+//   .action(watchApp);
+
+app
+  .command('set [appId]')
   .alias('s')
-  .description('Set an app in capgo Cloud')
+  .description('Set an app in Capgo Cloud')
   .action(setApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
-
-app
-  .command('doctor')
-  .description('Get info about your Capgo app install')
-  .action(getInfo);
-
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-r, --retention <retention>', 'retention period of app bundle in days')
 
 const bundle = program
   .command('bundle')
   .description('Manage bundle');
 
 bundle
-  .command('upload [appid]')
+  .command('upload [appId]')
   .alias('u')
-  .description('Upload a new bundle in capgo Cloud')
-  .action(uploadVersion)
+  .description('Upload a new bundle in Capgo Cloud')
+  .action(uploadCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
+  .option('--iv-session-key <key>', 'Set the iv and session key for bundle url external')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--keyData <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')  
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
+  .option(
+    '--min-update-version <minUpdateVersion>',
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
+  )
+  .option('--auto-min-update-version', 'Set the min update version based on native packages')
+  .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
 
 bundle
-  .command('delete [appid]')
+    .command('compatibility [appId]')
+    .action(checkCompatibilityCommand)
+    .option('-a, --apikey <apikey>', 'apikey to link to your account')
+    .option('-c, --channel <channel>', 'channel to check the compatibility with')
+    .option('--text', 'output text instead of emojis')
+
+bundle
+  .command('delete [bundleId] [appId]')
   .alias('d')
-  .description('Delete a bundle in capgo Cloud')
-  .action(deleteVersion)
+  .description('Delete a bundle in Capgo Cloud')
+  .action(deleteBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 bundle
-  .command('list [appid]')
+  .command('list [appId]')
   .alias('l')
-  .description('List bundle in capgo Cloud')
-  .action(listApp)
+  .description('List bundle in Capgo Cloud')
+  .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
 
 bundle
-  .command('cleanup [appid]')
+  .command('unlink [appId]')
+  .alias('u')
+  .description('Unlink a bundle in Capgo Cloud')
+  .action(listBundle)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink');
+
+bundle
+  .command('cleanup [appId]')
   .alias('c')
-  .action(cleanupApp)
-  .description('Cleanup bundle in capgo Cloud')
+  .action(cleanupBundle)
+  .description('Cleanup bundle in Capgo Cloud')
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
@@ -119,39 +173,61 @@ bundle
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--keyData <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key');
 
 bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--keyData <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key');
+
+bundle
+  .command('zip [appId]')
+  .description('Zip a bundle')
+  .action(zipBundle)
+  .option('-p, --path <path>', 'path of the folder to upload')
+  .option('-b, --bundle <bundle>', 'bundle version number to name the zip file')
+  .option('-n, --name <name>', 'name of the zip file')
+  .option('-j, --json', 'output in JSON')
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder');
 
 const channel = program
   .command('channel')
   .description('Manage channel');
 
 channel
-  .command('add [channelid] [appid]')
+  .command('add [channelId] [appId]')
   .alias('a')
   .description('Create channel')
-  .action(addChannel)
+  .action(addChannelCommand)
+  .option('-d, --default', 'set the channel as default')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
-  .command('delete [channelid] [appid]')
+  .command('delete [channelId] [appId]')
   .alias('d')
   .description('Delete channel')
   .action(deleteChannel)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
-  .command('list [appid]')
+  .command('list [appId]')
   .alias('l')
   .description('List channel')
   .action(listChannels)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 channel
-  .command('set [channelid] [appid]')
+  .command('currentBundle [channel] [appId]')
+  .description('Get current bundle for specific channel in Capgo Cloud')
+  .action(currentBundle)
+  .option('-c, --channel <channel>', 'channel to get the current bundle from')
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('--quiet', 'only print the bundle version')
+
+channel
+  .command('set [channelId] [appId]')
   .alias('s')
   .description('Set channel')
   .action(setChannel)
@@ -168,27 +244,48 @@ channel
   .option('--android', 'Allow sending update to android devices')
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
-  .option('--no-self-assign', 'Disable devices to self assign to this channel');
+  .option('--no-self-assign', 'Disable devices to self assign to this channel')
+  .option('--disable-auto-update <disableAutoUpdate>', 
+    'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none'
+  )
 
-program
-  .command('key [option]')
+const key = program
+  .command('key')
+  .description('Manage key');
+
+key
+  .command('save')
   .description('Save base64 signing key in capacitor config, usefull for CI')
-  .action(manageKey)
+  .action(saveKeyCommand)
+  .option('-f, --force', 'force generate a new one')
+  .option('--key', 'key path to save in capacitor config')
+  .option('--key-data', 'key data to save in capacitor config');
+
+
+key
+  .command('create')
+  .description('Create a new signing key')
+  .action(createKeyCommand)
   .option('-f, --force', 'force generate a new one');
 
 program
-  .command('upload [appid]')
+  .command('upload [appId]')
   .alias('u')
-  .description('(Deprecated) Upload a new bundle to capgo Cloud')
-  .action(uploadVersion)
+  .description('(Deprecated) Upload a new bundle to Capgo Cloud')
+  .action(uploadDeprecatedCommand)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to capgo cloud')
+  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--keyData <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload');
+  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload')
+  .option(
+    '--min-update-version <minUpdateVersion>',
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
+  );
 
 program.parseAsync();

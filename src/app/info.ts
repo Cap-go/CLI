@@ -1,17 +1,30 @@
 import { readFileSync } from "fs"
-import getLatest from "get-latest-version"
 import { join } from "path"
+import os from 'os';
+import osName from 'os-name';
+import getLatest from "get-latest-version"
+import Spinnies from '@trufflesuite/spinnies';
 import pack from '../../package.json'
 
 const getLatestDependencies = async (installedDependencies: { [key: string]: string }) => {
     const latestDependencies: { [key: string]: string } = {}
+    const all = []
     for (const dependency in installedDependencies) {
-        // get in npm the last version of the dependency
-        const v = await getLatest(dependency)
-        if (v) {
-            latestDependencies[dependency] = v
+        if (Object.prototype.hasOwnProperty.call(installedDependencies, dependency)) {
+            // get in npm the last version of the dependency
+            all.push(getLatest(dependency))
         }
     }
+    await Promise.all(all)
+        .then((values) => {
+            const keys = Object.keys(installedDependencies)
+            for (let i = 0; i < values.length; i += 1) {
+                const v = values[i]
+                if (v) {
+                    latestDependencies[keys[i]] = v
+                }
+            }
+        })
     return latestDependencies
 }
 
@@ -26,18 +39,20 @@ const getInstalledDependencies = async () => {
         '@capgo/cli': pack.version,
     }
     for (const dependency in dependencies) {
-        if (dependency.startsWith('@capgo/')) {
-            installedDependencies[dependency] = dependencies[dependency]
+        if (Object.prototype.hasOwnProperty.call(dependencies, dependency) && dependency.startsWith('@capgo/')) {
+            // remove ^ or ~ from version
+            const version = dependencies[dependency].replace('^', '').replace('~', '')
+            installedDependencies[dependency] = version
         }
     }
     return installedDependencies
 }
 
 export const getInfo = async () => {
-    console.log('     💊   Capgo Doctor  💊')
-    console.log('\n')
-    console.log(' Latest Dependencies:')
-    console.log('\n')
+    console.log('     💊   Capgo Doctor  💊\n')
+    console.log(` OS: ${osName()} ${os.platform()} ${os.version()}\n`)
+    console.log(` Node: ${process.version}\n`)
+    console.log(' Installed Dependencies:\n')
     const installedDependencies = await getInstalledDependencies()
     if (Object.keys(installedDependencies).length === 0) {
         console.log('\n')
@@ -45,19 +60,23 @@ export const getInfo = async () => {
         console.log('\x1b[31m%s\x1b[0m', '🚨 No dependencies found')
         process.exit(1)
     }
-    // eslint-disable-next-line guard-for-in
     for (const dependency in installedDependencies) {
-        const installedVersion = (installedDependencies as any)[dependency]
-        console.log(`   ${dependency}: ${installedVersion}`)
+        if (Object.prototype.hasOwnProperty.call(installedDependencies, dependency)) {
+            const installedVersion = (installedDependencies as any)[dependency]
+            console.log(`   ${dependency}: ${installedVersion}`)
+        }
     }
     console.log('\n')
-    console.log(' Installed Dependencies:')
-    console.log('\n')
+    const spinnies = new Spinnies();
+    spinnies.add('loading', { text: 'Loading latest dependencies' });
     const latestDependencies = await getLatestDependencies(installedDependencies)
-    // eslint-disable-next-line guard-for-in
+    spinnies.succeed('loading', { text: 'Latest Dependencies:' });
+    console.log('\n')
     for (const dependency in latestDependencies) {
-        const latestVersion = (latestDependencies as any)[dependency]
-        console.log(`   ${dependency}: ${latestVersion}`)
+        if (Object.prototype.hasOwnProperty.call(latestDependencies, dependency)) {
+            const latestVersion = (latestDependencies as any)[dependency]
+            console.log(`   ${dependency}: ${latestVersion}`)
+        }
     }
     if (JSON.stringify(installedDependencies) !== JSON.stringify(latestDependencies)) {
         console.log('\n')

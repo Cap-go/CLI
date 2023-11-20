@@ -1,39 +1,43 @@
 import { program } from "commander";
-import { OptionsBase } from "../api/utils";
-import { checkAppExistsAndHasPermission } from '../api/app';
-import { createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from "../utils";
+import * as p from '@clack/prompts';
+import { checkAppExistsAndHasPermissionErr } from '../api/app';
+import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser, OptionsBase } from "../utils";
 
-export const deleteApp = async (appId: string, userId: string, options: OptionsBase) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+export const deleteApp = async (appId: string, options: OptionsBase) => {
+    p.intro(`Deleting`);
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     const snag = useLogSnag()
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error('Missing API key, you need to provide a API key to upload your bundle');
+        program.error('');
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project');
+        program.error('');
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
-    await verifyUser(supabase, options.apikey, ['write', 'all']);
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     const { error } = await supabase
         .storage
         .from(`images/${userId}`)
         .remove([appId])
     if (error) {
-        program.error(`Could not add app ${formatError(error)}`);
+        p.log.error('Could not delete app logo');
     }
     const { error: delError } = await supabase
         .storage
         .from(`apps/${appId}/${userId}`)
         .remove(['versions'])
     if (delError) {
-        program.error(`Could not delete app version ${formatError(delError)}`);
+        p.log.error('Could not delete app version');
+        program.error('');
     }
 
     const { error: dbError } = await supabase
@@ -43,19 +47,20 @@ export const deleteApp = async (appId: string, userId: string, options: OptionsB
         .eq('user_id', userId)
 
     if (dbError) {
-        program.error(`Could not delete app ${formatError(dbError)}`);
+        p.log.error('Could not delete app');
+        program.error('');
     }
-    await snag.publish({
+    await snag.track({
         channel: 'app',
         event: 'App Deleted',
         icon: '🗑️',
+        user_id: userId,
         tags: {
-            'user-id': userId,
             'app-id': appId,
         },
         notify: false,
     }).catch()
-    console.log("App deleted in Capgo")
-    console.log(`Done ✅`);
+    p.log.success(`App deleted in Capgo`);
+    p.outro('Done ✅');
     process.exit()
 }

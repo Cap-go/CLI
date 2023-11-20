@@ -1,28 +1,41 @@
+import { randomUUID } from "crypto";
 import { getType } from 'mime';
 import { program } from "commander";
-import { randomUUID } from "crypto";
+import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from "fs-extra";
-import { checkAppExistsAndHasPermission, newIconPath, Options } from '../api/app';
+import { checkAppExistsAndHasPermissionErr, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
-export const setApp = async (appId: string, userId: string, options: Options) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+export const setApp = async (appId: string, options: Options) => {
+    p.intro(`Set app`);
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
+        program.error(``);
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        program.error(``);
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
-    await verifyUser(supabase, options.apikey, ['write', 'all']);
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
-    const { name, icon } = options;
+    const { name, icon, retention } = options;
+
+    if (retention && !Number.isNaN(Number(retention))) {
+        p.log.error(`retention value must be a number`);
+        program.error(``);
+    }
+    else if (retention && retention < 0) {
+        p.log.error(`retention value cannot be less than 0`);
+        program.error(``)
+    }
 
     let iconBuff;
     let iconType;
@@ -33,15 +46,15 @@ export const setApp = async (appId: string, userId: string, options: Options) =>
         iconBuff = readFileSync(icon);
         const contentType = getType(icon);
         iconType = contentType || 'image/png';
-        console.warn(`Found app icon ${icon}`);
+        p.log.warn(`Found app icon ${icon}`);
     }
     else if (existsSync(newIconPath)) {
         iconBuff = readFileSync(newIconPath);
         const contentType = getType(newIconPath);
         iconType = contentType || 'image/png';
-        console.warn(`Found app icon ${newIconPath}`);
+        p.log.warn(`Found app icon ${newIconPath}`);
     } else {
-        console.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
+        p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`);
     }
     if (iconBuff && iconType) {
         const { error } = await supabase.storage
@@ -50,7 +63,8 @@ export const setApp = async (appId: string, userId: string, options: Options) =>
                 contentType: iconType,
             })
         if (error) {
-            program.error(`Could not add app ${formatError(error)}`);
+            p.log.error(`Could not add app ${formatError(error)}`);
+            program.error(``);
         }
         const { data: signedURLData } = await supabase
             .storage
@@ -58,17 +72,20 @@ export const setApp = async (appId: string, userId: string, options: Options) =>
             .getPublicUrl(fileName)
         signedURL = signedURLData?.publicUrl || signedURL
     }
+    // retention is in seconds in the database but received as days here
     const { error: dbError } = await supabase
         .from('apps')
         .update({
             icon_url: signedURL,
             name,
+            retention: !retention ? undefined : retention * 24 * 60 * 60,
         })
         .eq('app_id', appId)
         .eq('user_id', userId)
     if (dbError) {
-        program.error(`Could not add app ${formatError(dbError)}`);
+        p.log.error(`Could not add app ${formatError(dbError)}`);
+        program.error(``);
     }
-    console.log(`Done ✅`);
+    p.outro(`Done ✅`);
     process.exit()
 }

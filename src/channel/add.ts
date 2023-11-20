@@ -1,49 +1,71 @@
 import { program } from "commander";
-import { checkAppExistsAndHasPermission } from "../api/app";
+import * as p from '@clack/prompts';
+import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { createChannel, findUnknownVersion } from "../api/channels";
-import { OptionsBase } from "../api/utils";
-import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
+import { OptionsBase, findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
-export const addChannel = async (channelId: string, appId: string, options: OptionsBase) => {
-    options.apikey = options.apikey || findSavedKey() || ''
+interface Options extends OptionsBase {
+    default?: boolean;
+}
+
+export const addChannel = async (channelId: string, appId: string, options: Options, shouldExit = true) => {
+    p.intro(`Create channel`);
+    options.apikey = options.apikey || findSavedKey()
     const config = await getConfig();
     appId = appId || config?.app?.appId
     const snag = useLogSnag()
 
     if (!options.apikey) {
-        program.error("Missing API key, you need to provide a API key to upload your bundle");
+        p.log.error("Missing API key, you need to provide a API key to upload your bundle");
+        program.error('');
     }
     if (!appId) {
-        program.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
+        program.error('');
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermission(supabase, appId, options.apikey);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
-    console.log(`Create channel ${appId}#${channelId} to Capgo cloud`);
+    p.log.info(`Creating channel ${appId}#${channelId} to Capgo`);
     try {
-        const { data } = await findUnknownVersion(supabase, appId)
+        const data = await findUnknownVersion(supabase, appId)
         if (!data) {
-            program.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
+            p.log.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`);
+            program.error('');
         }
-        await createChannel(supabase, { name: channelId, app_id: appId, version: data.id, created_by: userId });
-        console.log(`Channel created ✅`);
-        await snag.publish({
-            channel: 'app',
+        await createChannel(supabase, {
+            name: channelId,
+            app_id: appId,
+            version: data.id,
+            created_by: userId
+        });
+        p.log.success(`Channel created ✅`);
+        await snag.track({
+            channel: 'channel',
             event: 'Create channel',
             icon: '✅',
+            user_id: userId,
             tags: {
-                'user-id': userId,
                 'app-id': appId,
                 'channel': channelId,
             },
             notify: false,
         }).catch()
     } catch (error) {
-        console.log(`Cannot create Channel 🙀`, error);
+        p.log.error(`Cannot create Channel 🙀`);
+        return false
     }
-    console.log(`Done ✅`);
-    process.exit()
+    if (shouldExit) {
+        p.outro(`Done ✅`);
+        process.exit()
+    }
+    return true
+}
+
+
+export const addChannelCommand = async (apikey: string, appId: string, options: Options) => {
+    addChannel(apikey, appId, options, true)
 }

@@ -1,7 +1,10 @@
-import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { program } from 'commander'
+import ciDetect from 'ci-info';
+import * as p from '@clack/prompts';
+import { checkLatest } from '../api/update';
 import { encryptSource } from '../api/crypto';
-import { baseKeyPub } from '../utils';
+import { baseKeyPub, getLocalConfig } from '../utils';
 
 interface Options {
   key?: string
@@ -9,10 +12,16 @@ interface Options {
 }
 
 export const encryptZip = async (zipPath: string, options: Options) => {
+  p.intro(`Encryption`);
+
+  await checkLatest();
+  const localConfig = await getLocalConfig()
+
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
-    program.error(`Zip not found at the path ${zipPath}`);
+    p.log.error(`Error: Zip not found at the path ${zipPath}`);
+    program.error('');
   }
 
   const keyPath = options.key || baseKeyPub
@@ -21,7 +30,17 @@ export const encryptZip = async (zipPath: string, options: Options) => {
   let publicKey = options.keyData || "";
 
   if (!existsSync(keyPath) && !publicKey) {
-    program.error(`Cannot find public key ${keyPath} or as keyData option`)
+    p.log.warning(`Cannot find public key ${keyPath} or as keyData option`);
+    if (ciDetect.isCI) {
+      p.log.error(`Error: Missing public key`);
+      program.error('');
+    }
+    const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+    if (!res) {
+      p.log.error(`Error: Missing public key`);
+      program.error('');
+    }
+    publicKey = localConfig.signKey || ''
   } else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
@@ -30,9 +49,10 @@ export const encryptZip = async (zipPath: string, options: Options) => {
 
   const zipFile = readFileSync(zipPath)
   const encodedZip = encryptSource(zipFile, publicKey)
-  console.log('ivSessionKey', encodedZip.ivSessionKey)
+  p.log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`);
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
-  console.log(`Done ✅`);
+  p.log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`);
+  p.outro(`Done ✅`);
   process.exit()
 }

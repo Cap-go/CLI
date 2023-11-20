@@ -1,30 +1,38 @@
-import { program } from 'commander'
 import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { program } from 'commander'
 import { writeConfig } from '@capacitor/cli/dist/config';
+import * as p from '@clack/prompts';
 import { createRSA } from './api/crypto';
 import { baseKey, baseKeyPub, getConfig } from './utils';
+import { checkLatest } from './api/update';
 
-interface Options {
-  force?: boolean;
+interface saveOptions {
   key?: string
   keyData?: string
 }
+interface Options {
+  force?: boolean;
+}
 
-const saveKey = async (privateKeyPath: string | undefined, privateKeyData: string | undefined) => {
-  if (!existsSync('.git')) {
-    program.error('To use local you should be in a git repository');
+export const saveKey = async (options: saveOptions, log = true) => {
+  if (log) {
+    p.intro(`Save keys 🔑`);
   }
-
   const config = await getConfig();
   const { extConfig } = config.app;
 
-  const keyPath = privateKeyPath || baseKey
+  const keyPath = options.key || baseKey
   // check if publicKey exist
 
-  let privateKey = privateKeyData || "";
+  let privateKey = options.keyData || "";
 
   if (!existsSync(keyPath) && !privateKey) {
-    program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+    if (log) {
+      p.log.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`);
+      program.error('');
+    } else {
+      return false
+    }
   } else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
@@ -33,7 +41,10 @@ const saveKey = async (privateKeyPath: string | undefined, privateKeyData: strin
 
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     if (!extConfig.plugins.CapacitorUpdater) {
       extConfig.plugins.CapacitorUpdater = {};
@@ -42,27 +53,42 @@ const saveKey = async (privateKeyPath: string | undefined, privateKeyData: strin
     // console.log('extConfig', extConfig)
     writeConfig(extConfig, config.app.extConfigFilePath)
   }
-
-  console.log(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
-  console.log(`your app will decode the zip archive with this key\n`);
-
+  if (log) {
+    p.log.success(`private key saved into ${config.app.extConfigFilePath} file in local directory`);
+    p.log.success(`your app will decode the zip archive with this key`);
+  }
+  return true
+}
+export const saveKeyCommand = async (options: saveOptions) => {
+  p.intro(`Save keys 🔑`);
+  await checkLatest();
+  await saveKey(options)
 }
 
-const createKey = async (options: Options) => {
+export const createKey = async (options: Options, log = true) => {
   // write in file .capgo the apikey in home directory
-
-  if (!existsSync('.git')) {
-    program.error('To use local you should be in a git repository');
+  if (log) {
+    p.intro(`Create keys 🔑`);
   }
   const { publicKey, privateKey } = createRSA()
 
   // check if baseName already exist
   if (existsSync(baseKeyPub) && !options.force) {
-    program.error(`Public Key already exists, use --force to overwrite`);
+    if (log) {
+      p.log.error('Public Key already exists, use --force to overwrite');
+      program.error('');
+    } else {
+      return false
+    }
   }
   writeFileSync(baseKeyPub, publicKey);
   if (existsSync(baseKey) && !options.force) {
-    program.error(`Private Key already exists, use --force to overwrite`);
+    if (log) {
+      p.log.error('Private Key already exists, use --force to overwrite');
+      program.error('');
+    } else {
+      return false
+    }
   }
   writeFileSync(baseKey, privateKey);
 
@@ -70,37 +96,32 @@ const createKey = async (options: Options) => {
   const { extConfig } = config.app;
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
-    }
-    if (!extConfig.plugins.CapacitorUpdater) {
-      extConfig.plugins.CapacitorUpdater = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     extConfig.plugins.CapacitorUpdater.privateKey = privateKey;
     // console.log('extConfig', extConfig)
     writeConfig(extConfig, config.app.extConfigFilePath)
   }
 
-  console.log(`Your RSA key has been generated using node-rsa with this settings:\n
-- encryptionScheme — 'pkcs1_oaep'.
-- signingScheme — 'pkcs8-sha256'.
-- bits — 2048.
-- exp — 65537.\n`);
-  console.log(`public key saved into ${baseKeyPub} file in local directory\n`);
-  console.log(`This key will be use to encode your zipped bundle before sending it to Capgo,
-than make them unreadable by Capgo and unmodifiable by anyone\n`);
-  console.log(`Private key saved into ${config.app.extConfigFilePath} file in local directory`);
-  console.log(`Your app will decode with this key the zipped bundle\n`);
+  if (log) {
+    p.log.success('Your RSA key has been generated')
+    p.log.success(`Public key saved in ${baseKeyPub}`)
+    p.log.success('This key will be use to encrypt your bundle before sending it to Capgo')
+    p.log.success('Keep it safe')
+    p.log.success('Than make it unreadable by Capgo and unmodifiable by anyone')
+    p.log.success(`Private key saved in ${config.app.extConfigFilePath}`);
+    p.log.success('Your app will be the only one having it');
+    p.log.success('Only your users can decrypt your update');
+    p.log.success('Only you can send them an update');
+    p.outro(`Done ✅`);
+  }
+  return true
 }
 
-export const manageKey = async (option: string, options: Options) => {
-
-  if (option === 'save') {
-    saveKey(options.key, options.keyData);
-  } else
-    if (option === 'create') {
-      createKey(options);
-    } else {
-      program.error('You should provide a valid option (create or save)');
-    }
-  process.exit()
+export const createKeyCommand = async (options: Options) => {
+  await checkLatest();
+  await createKey(options)
 }

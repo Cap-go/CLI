@@ -2,12 +2,916 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-## [3.0.0-alpha.3](https://github.com/Cap-go/capgo-cli/compare/v3.0.0-alpha.2...v3.0.0-alpha.3) (2023-02-20)
+### [3.14.43](https://github.com/Cap-go/capgo-cli/compare/v3.14.42...v3.14.43) (2023-11-17)
+
+### [3.14.42](https://github.com/Cap-go/capgo-cli/compare/v3.14.41...v3.14.42) (2023-11-13)
+
+
+### Bug Fixes
+
+* message to look less problematic ([c641706](https://github.com/Cap-go/capgo-cli/commit/c641706d285730ffc6dbcf6876b2d52deda8af1f))
+
+### [3.14.41](https://github.com/Cap-go/capgo-cli/compare/v3.14.40...v3.14.41) (2023-11-13)
+
+### [3.14.40](https://github.com/Cap-go/capgo-cli/compare/v3.14.39...v3.14.40) (2023-11-13)
+
+### [3.14.39](https://github.com/Cap-go/capgo-cli/compare/v3.14.38...v3.14.39) (2023-11-11)
+
+### [3.14.38](https://github.com/Cap-go/capgo-cli/compare/v3.14.37...v3.14.38) (2023-11-11)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v5.5.1 ([080b120](https://github.com/Cap-go/capgo-cli/commit/080b1208efaefe3b94d52c4292eccb458163e812))
+
+### [3.14.37](https://github.com/Cap-go/capgo-cli/compare/v3.14.36...v3.14.37) (2023-11-11)
+
+### [3.14.36](https://github.com/Cap-go/capgo-cli/compare/v3.14.35...v3.14.36) (2023-11-11)
+
+### [3.14.35](https://github.com/Cap-go/capgo-cli/compare/v3.14.34...v3.14.35) (2023-11-10)
+
+### [3.14.34](https://github.com/Cap-go/capgo-cli/compare/v3.14.33...v3.14.34) (2023-11-07)
+
+### [3.14.33](https://github.com/Cap-go/capgo-cli/compare/v3.14.32...v3.14.33) (2023-11-02)
+
+### [3.14.32](https://github.com/Cap-go/capgo-cli/compare/v3.14.31...v3.14.32) (2023-11-02)
+
+
+### Bug Fixes
+
+* getRemoteDepenencies use appID ([dac09a5](https://github.com/Cap-go/capgo-cli/commit/dac09a5727da6fd57671c6f05951a469acf762db))
+
+### [3.14.31](https://github.com/Cap-go/capgo-cli/compare/v3.14.30...v3.14.31) (2023-11-02)
+
+
+### Bug Fixes
+
+* duplicated apikey ([001c63b](https://github.com/Cap-go/capgo-cli/commit/001c63bb5c033118e895bf6e9e2a0fa8699c0b7e))
+
+### [3.14.30](https://github.com/Cap-go/capgo-cli/compare/v3.14.29...v3.14.30) (2023-11-02)
+
+
+### Bug Fixes
+
+* issue apikey ([b7bfb27](https://github.com/Cap-go/capgo-cli/commit/b7bfb274c933210af0028f5ed58e7b2077d2283b))
+
+### [3.14.29](https://github.com/Cap-go/capgo-cli/compare/v3.14.28...v3.14.29) (2023-11-02)
+
+
+### Bug Fixes
+
+* issue reading file in certain os ([d7dca17](https://github.com/Cap-go/capgo-cli/commit/d7dca1779e6b43df74c7955613ab19368c4ff90d))
+
+### [3.14.28](https://github.com/Cap-go/capgo-cli/compare/v3.14.27...v3.14.28) (2023-11-01)
+
+### [3.14.27](https://github.com/Cap-go/capgo-cli/compare/v3.14.26...v3.14.27) (2023-10-31)
+
+
+### Bug Fixes
+
+* is_app_owner in the CLI ([5440fd4](https://github.com/Cap-go/capgo-cli/commit/5440fd4015c0b3bdf829e9e3196e714d8f73e35f))
+
+### [3.14.26](https://github.com/Cap-go/capgo-cli/compare/v3.14.25...v3.14.26) (2023-10-31)
+
+
+### Bug Fixes
+
+* add appId on list app command ([2b36ede](https://github.com/Cap-go/capgo-cli/commit/2b36ede3853e8756798d8af16a32c4f3675f8985))
+
+### [3.14.25](https://github.com/Cap-go/capgo-cli/compare/v3.14.24...v3.14.25) (2023-10-31)
+
+
+### Bug Fixes
+
+* build issue ([5c9391d](https://github.com/Cap-go/capgo-cli/commit/5c9391d607ba3221b9a0275fce2ccb2cbc351461))
+
+### [3.14.24](https://github.com/Cap-go/capgo-cli/compare/v3.14.23...v3.14.24) (2023-10-31)
+
+### [3.14.23](https://github.com/Cap-go/capgo-cli/compare/v3.14.22...v3.14.23) (2023-10-30)
+
+
+### Bug Fixes
+
+* init issue with core version ([1e3971b](https://github.com/Cap-go/capgo-cli/commit/1e3971b96bb04c2cdf9317a7580a1128364f0373))
+
+### [3.14.22](https://github.com/Cap-go/capgo-cli/compare/v3.14.21...v3.14.22) (2023-10-30)
+
+
+### Bug Fixes
+
+* cli issue not cheking app right properly ([0f9a80b](https://github.com/Cap-go/capgo-cli/commit/0f9a80b677f3b75f9cdad6447fcb05a78fed3a64))
+* error messages format ([c976d49](https://github.com/Cap-go/capgo-cli/commit/c976d49229d4a50bd9813d270f4703a213166bdc))
+
+### [3.14.21](https://github.com/Cap-go/capgo-cli/compare/v3.14.20...v3.14.21) (2023-10-23)
+
+### [3.14.20](https://github.com/Cap-go/capgo-cli/compare/v3.14.19...v3.14.20) (2023-10-20)
+
+
+### Bug Fixes
+
+* use remote config instead of in code config ([9c2f3ad](https://github.com/Cap-go/capgo-cli/commit/9c2f3ad09686694b6657d5aa5e194db9666a780d))
+
+### [3.14.19](https://github.com/Cap-go/capgo-cli/compare/v3.14.18...v3.14.19) (2023-10-16)
+
+### [3.14.18](https://github.com/Cap-go/capgo-cli/compare/v3.14.17...v3.14.18) (2023-10-16)
+
+
+### Bug Fixes
+
+* **deps:** update dependency commander to v11.1.0 ([e18b072](https://github.com/Cap-go/capgo-cli/commit/e18b07264fb0705ca796198181656216cc057f3d))
+
+### [3.14.17](https://github.com/Cap-go/capgo-cli/compare/v3.14.16...v3.14.17) (2023-10-16)
+
+### [3.14.16](https://github.com/Cap-go/capgo-cli/compare/v3.14.15...v3.14.16) (2023-10-13)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v5.5.0 ([1d7d46c](https://github.com/Cap-go/capgo-cli/commit/1d7d46cb885c471136bc2fd81594bf44edabba19))
+
+### [3.14.15](https://github.com/Cap-go/capgo-cli/compare/v3.14.14...v3.14.15) (2023-10-13)
+
+### [3.14.14](https://github.com/Cap-go/capgo-cli/compare/v3.14.13...v3.14.14) (2023-10-13)
+
+### [3.14.13](https://github.com/Cap-go/capgo-cli/compare/v3.14.12...v3.14.13) (2023-10-12)
+
+### [3.14.12](https://github.com/Cap-go/capgo-cli/compare/v3.14.11...v3.14.12) (2023-10-12)
+
+### [3.14.11](https://github.com/Cap-go/capgo-cli/compare/v3.14.10...v3.14.11) (2023-10-12)
+
+### [3.14.10](https://github.com/Cap-go/capgo-cli/compare/v3.14.9...v3.14.10) (2023-10-12)
+
+### [3.14.9](https://github.com/Cap-go/capgo-cli/compare/v3.14.8...v3.14.9) (2023-10-12)
+
+### [3.14.8](https://github.com/Cap-go/capgo-cli/compare/v3.14.7...v3.14.8) (2023-10-12)
+
+
+### Bug Fixes
+
+* doctor command ([ef31b8e](https://github.com/Cap-go/capgo-cli/commit/ef31b8e3cd3378d32b96db45e171e98a39746f68))
+
+### [3.14.7](https://github.com/Cap-go/capgo-cli/compare/v3.14.6...v3.14.7) (2023-10-12)
+
+
+### Bug Fixes
+
+* remove log table ([202dcc4](https://github.com/Cap-go/capgo-cli/commit/202dcc4cfb2e752bfd6b6bfbd2cc2cd34661e877))
+
+### [3.14.6](https://github.com/Cap-go/capgo-cli/compare/v3.14.5...v3.14.6) (2023-10-12)
+
+
+### Bug Fixes
+
+* types ([679aa56](https://github.com/Cap-go/capgo-cli/commit/679aa5645c0ad0cadea7d6068ce61e547fa89fbb))
+
+### [3.14.5](https://github.com/Cap-go/capgo-cli/compare/v3.14.4...v3.14.5) (2023-10-12)
+
+### [3.14.4](https://github.com/Cap-go/capgo-cli/compare/v3.14.3...v3.14.4) (2023-10-09)
+
+
+### Bug Fixes
+
+* add node version in doctor command ([a69018f](https://github.com/Cap-go/capgo-cli/commit/a69018f12c092c0da2d80e0fffa69468349f0bf8))
+
+### [3.14.3](https://github.com/Cap-go/capgo-cli/compare/v3.14.2...v3.14.3) (2023-10-06)
+
+
+### Bug Fixes
+
+* cli messages ([fe55c31](https://github.com/Cap-go/capgo-cli/commit/fe55c3139d1b7854ab54485cd5194d083efdd23b))
+
+### [3.14.2](https://github.com/Cap-go/capgo-cli/compare/v3.14.1...v3.14.2) (2023-09-29)
+
+
+### Bug Fixes
+
+* prevent v4 users to install capgo ([e0342c3](https://github.com/Cap-go/capgo-cli/commit/e0342c3d3fff5ab2a36d1213c92ca3650744c406))
+
+### [3.14.1](https://github.com/Cap-go/capgo-cli/compare/v3.14.0...v3.14.1) (2023-09-27)
+
+## [3.14.0](https://github.com/Cap-go/capgo-cli/compare/v3.13.31...v3.14.0) (2023-09-27)
+
+
+### Features
+
+* add index check in upload ([09bcecc](https://github.com/Cap-go/capgo-cli/commit/09bcecc75534e802fb0a415ff880219a096d3959))
+
+### [3.13.31](https://github.com/Cap-go/capgo-cli/compare/v3.13.30...v3.13.31) (2023-09-20)
+
+
+### Bug Fixes
+
+* logsnag tracking issue ([695486a](https://github.com/Cap-go/capgo-cli/commit/695486a2a2aa39067b91db3af0d9027ffcb4d8ef))
+
+### [3.13.30](https://github.com/Cap-go/capgo-cli/compare/v3.13.29...v3.13.30) (2023-09-19)
+
+
+### Bug Fixes
+
+* lint ([2fee360](https://github.com/Cap-go/capgo-cli/commit/2fee360ebe64b39dae68ab2d071301c1044e7501))
+
+### [3.13.29](https://github.com/Cap-go/capgo-cli/compare/v3.13.28...v3.13.29) (2023-09-19)
+
+
+### Bug Fixes
+
+* comment old cloudflare for now ([e7f0b26](https://github.com/Cap-go/capgo-cli/commit/e7f0b26a49a9ee5df766bf8829f00333b95f711b))
+
+### [3.13.28](https://github.com/Cap-go/capgo-cli/compare/v3.13.27...v3.13.28) (2023-09-19)
+
+### [3.13.27](https://github.com/Cap-go/capgo-cli/compare/v3.13.26...v3.13.27) (2023-09-19)
+
+
+### Bug Fixes
+
+* error in args ([785d7e2](https://github.com/Cap-go/capgo-cli/commit/785d7e23b6bd9d1ab5be0674600142a253f6b8d4))
+
+### [3.13.26](https://github.com/Cap-go/capgo-cli/compare/v3.13.25...v3.13.26) (2023-09-19)
+
+
+### Bug Fixes
+
+* missing ivSessionKey arg ([6d079f5](https://github.com/Cap-go/capgo-cli/commit/6d079f5f02fdbe2e96082fb2298f955277234e24))
+
+### [3.13.25](https://github.com/Cap-go/capgo-cli/compare/v3.13.24...v3.13.25) (2023-09-19)
+
+
+### Bug Fixes
+
+* list command issue ([cb46a1e](https://github.com/Cap-go/capgo-cli/commit/cb46a1e5849a64389355c937dba30455ecd5a35e))
+
+### [3.13.24](https://github.com/Cap-go/capgo-cli/compare/v3.13.23...v3.13.24) (2023-09-19)
+
+
+### Bug Fixes
+
+* stop trial warning when paying ([ec05657](https://github.com/Cap-go/capgo-cli/commit/ec0565759b4348c05626423c5aff553b42760746))
+
+### [3.13.23](https://github.com/Cap-go/capgo-cli/compare/v3.13.22...v3.13.23) (2023-09-19)
+
+### [3.13.22](https://github.com/Cap-go/capgo-cli/compare/v3.13.21...v3.13.22) (2023-09-19)
+
+### [3.13.21](https://github.com/Cap-go/capgo-cli/compare/v3.13.20...v3.13.21) (2023-09-19)
+
+### [3.13.20](https://github.com/Cap-go/capgo-cli/compare/v3.13.19...v3.13.20) (2023-09-18)
+
+### [3.13.19](https://github.com/Cap-go/capgo-cli/compare/v3.13.18...v3.13.19) (2023-09-18)
+
+### [3.13.18](https://github.com/Cap-go/capgo-cli/compare/v3.13.17...v3.13.18) (2023-09-18)
+
+### [3.13.17](https://github.com/Cap-go/capgo-cli/compare/v3.13.16...v3.13.17) (2023-09-17)
+
+### [3.13.16](https://github.com/Cap-go/capgo-cli/compare/v3.13.15...v3.13.16) (2023-09-06)
+
+
+### Bug Fixes
+
+* keyData issue ([3547827](https://github.com/Cap-go/capgo-cli/commit/354782769292994408e3f980343c4b67f292b0bc))
+
+### [3.13.15](https://github.com/Cap-go/capgo-cli/compare/v3.13.14...v3.13.15) (2023-09-05)
+
+
+### Bug Fixes
+
+* keyData issue ([202780c](https://github.com/Cap-go/capgo-cli/commit/202780ce03cbac71510a6dced3960df8f544d2af))
+
+### [3.13.14](https://github.com/Cap-go/capgo-cli/compare/v3.13.13...v3.13.14) (2023-08-30)
+
+### [3.13.13](https://github.com/Cap-go/capgo-cli/compare/v3.13.12...v3.13.13) (2023-08-29)
+
+
+### Bug Fixes
+
+* build issue ([a7464ac](https://github.com/Cap-go/capgo-cli/commit/a7464ac52646c20a62b05921ddcb08d9f68c3c91))
+
+### [3.13.12](https://github.com/Cap-go/capgo-cli/compare/v3.13.11...v3.13.12) (2023-08-29)
+
+
+### Bug Fixes
+
+* use only exist v2 ([e8053d8](https://github.com/Cap-go/capgo-cli/commit/e8053d81641c4620988edcf8fd74e1eddda4fb83))
+
+### [3.13.11](https://github.com/Cap-go/capgo-cli/compare/v3.13.10...v3.13.11) (2023-08-28)
+
+### [3.13.10](https://github.com/Cap-go/capgo-cli/compare/v3.13.9...v3.13.10) (2023-08-26)
+
+
+### Bug Fixes
+
+* relove old log message ([186e68e](https://github.com/Cap-go/capgo-cli/commit/186e68e3558354377fcb6c01b5134521fcdc292c))
+
+### [3.13.9](https://github.com/Cap-go/capgo-cli/compare/v3.13.8...v3.13.9) (2023-08-26)
+
+### [3.13.8](https://github.com/Cap-go/capgo-cli/compare/v3.13.7...v3.13.8) (2023-08-24)
+
+### [3.13.7](https://github.com/Cap-go/capgo-cli/compare/v3.13.6...v3.13.7) (2023-08-24)
+
+### [3.13.6](https://github.com/Cap-go/capgo-cli/compare/v3.13.5...v3.13.6) (2023-08-23)
+
+
+### Bug Fixes
+
+* upload issues ([c9618a1](https://github.com/Cap-go/capgo-cli/commit/c9618a1d631682b193821de1c41e036074ada10b))
+
+### [3.13.5](https://github.com/Cap-go/capgo-cli/compare/v3.13.4...v3.13.5) (2023-08-21)
+
+### [3.13.4](https://github.com/Cap-go/capgo-cli/compare/v3.13.3...v3.13.4) (2023-08-17)
+
+### [3.13.3](https://github.com/Cap-go/capgo-cli/compare/v3.13.2...v3.13.3) (2023-08-17)
+
+
+### Bug Fixes
+
+* deps ([9cb74c8](https://github.com/Cap-go/capgo-cli/commit/9cb74c8d16d1a422a30953538ce5f7ab67b440ec))
+
+### [3.13.2](https://github.com/Cap-go/capgo-cli/compare/v3.13.1...v3.13.2) (2023-08-17)
+
+
+### Bug Fixes
+
+* CLI save retention in secs ([19fbb8e](https://github.com/Cap-go/capgo-cli/commit/19fbb8e5b9110ddc0bf4d24cacfc88e2484677e4))
+
+### [3.13.1](https://github.com/Cap-go/capgo-cli/compare/v3.13.0...v3.13.1) (2023-08-17)
+
+
+### Bug Fixes
+
+* error message ([342cb25](https://github.com/Cap-go/capgo-cli/commit/342cb251e12c83a9d88aeecef6c7aeba3e53b0d0))
+
+## [3.13.0](https://github.com/Cap-go/capgo-cli/compare/v3.12.7...v3.13.0) (2023-08-17)
+
+
+### Features
+
+* added option to set bundle retention on app ([6378bd1](https://github.com/Cap-go/capgo-cli/commit/6378bd1ad622e22bf0d848c11f8ff7c4db823622))
+
+### [3.12.7](https://github.com/Cap-go/capgo-cli/compare/v3.12.6...v3.12.7) (2023-08-17)
+
+
+### Bug Fixes
+
+* save key command ([669d3dc](https://github.com/Cap-go/capgo-cli/commit/669d3dcebbac8039c389b2dd30c7a7e2a9c3ce94))
+
+### [3.12.6](https://github.com/Cap-go/capgo-cli/compare/v3.12.5...v3.12.6) (2023-08-11)
+
+
+### Bug Fixes
+
+* docs url ([df24286](https://github.com/Cap-go/capgo-cli/commit/df24286be5e448bf83f599cd4bb28022f381c0a8))
+
+### [3.12.5](https://github.com/Cap-go/capgo-cli/compare/v3.12.4...v3.12.5) (2023-08-10)
+
+
+### Bug Fixes
+
+* lint ([6bad7d1](https://github.com/Cap-go/capgo-cli/commit/6bad7d1ba5e7bee34dadf9acc1ed89fff48af8ea))
+
+### [3.12.4](https://github.com/Cap-go/capgo-cli/compare/v3.12.3...v3.12.4) (2023-07-27)
+
+### [3.12.3](https://github.com/Cap-go/capgo-cli/compare/v3.12.2...v3.12.3) (2023-07-27)
+
+
+### Bug Fixes
+
+* behavior cleanup command ([1ffffc2](https://github.com/Cap-go/capgo-cli/commit/1ffffc2c70a5c7fb7932f0ae784fb4d356f62325))
+
+### [3.12.2](https://github.com/Cap-go/capgo-cli/compare/v3.12.1...v3.12.2) (2023-07-24)
+
+
+### Bug Fixes
+
+* add deviceId for debug command ([99c235b](https://github.com/Cap-go/capgo-cli/commit/99c235b5bf6ca5a83d7dbeb0d8619fe6c4c2b3e3))
+
+### [3.12.1](https://github.com/Cap-go/capgo-cli/compare/v3.12.0...v3.12.1) (2023-07-04)
+
+
+### Bug Fixes
+
+* use debug channel ([2ab536d](https://github.com/Cap-go/capgo-cli/commit/2ab536de63635589b3ac1ab3ed4eb5d5aad69f8b))
+
+## [3.12.0](https://github.com/Cap-go/capgo-cli/compare/v3.11.7...v3.12.0) (2023-07-03)
+
+
+### Features
+
+* add debug command ([ee270bb](https://github.com/Cap-go/capgo-cli/commit/ee270bb2c49fdba41f786558d181250b753cdab8))
+
+### [3.11.7](https://github.com/Cap-go/capgo-cli/compare/v3.11.6...v3.11.7) (2023-06-27)
+
+
+### Bug Fixes
+
+* catch better errors uploadUrl ([f1a0066](https://github.com/Cap-go/capgo-cli/commit/f1a0066c6bd84be164248f9462c1227f5282be7b))
+
+### [3.11.6](https://github.com/Cap-go/capgo-cli/compare/v3.11.5...v3.11.6) (2023-06-26)
+
+
+### Bug Fixes
+
+* upload name ([cbe75cd](https://github.com/Cap-go/capgo-cli/commit/cbe75cd2c46110a35e80a853373af7f1cdd42c28))
+
+### [3.11.5](https://github.com/Cap-go/capgo-cli/compare/v3.11.4...v3.11.5) (2023-06-23)
+
+
+### Bug Fixes
+
+* build ([5b56135](https://github.com/Cap-go/capgo-cli/commit/5b5613526b8971da48b35a6cb830abe1e432b65e))
+
+### [3.11.4](https://github.com/Cap-go/capgo-cli/compare/v3.11.3...v3.11.4) (2023-06-23)
+
+
+### Bug Fixes
+
+* make error when use set channel with wrong key ([8b9380c](https://github.com/Cap-go/capgo-cli/commit/8b9380cc08225191268008dab6a5af1ab2163ee1))
+
+### [3.11.3](https://github.com/Cap-go/capgo-cli/compare/v3.11.2...v3.11.3) (2023-06-23)
+
+
+### Bug Fixes
+
+* stringify the error ([d87cb31](https://github.com/Cap-go/capgo-cli/commit/d87cb3120eac9c0867f88f03b601a69c0bf667b0))
+
+### [3.11.2](https://github.com/Cap-go/capgo-cli/compare/v3.11.1...v3.11.2) (2023-06-23)
+
+
+### Bug Fixes
+
+* lint ([0f6ec8a](https://github.com/Cap-go/capgo-cli/commit/0f6ec8ac5542a49becfcbd8a972a14f464c672e2))
+
+### [3.11.1](https://github.com/Cap-go/capgo-cli/compare/v3.11.0...v3.11.1) (2023-06-22)
+
+
+### Bug Fixes
+
+* issue upload ([93482f0](https://github.com/Cap-go/capgo-cli/commit/93482f0af3cb82dc7a3e468268928cd5ed14eced))
+
+## [3.11.0](https://github.com/Cap-go/capgo-cli/compare/v3.10.21...v3.11.0) (2023-06-21)
+
+
+### Features
+
+* use new direct upload ! ([57ab2b9](https://github.com/Cap-go/capgo-cli/commit/57ab2b9dd90692eea400c47d2f10a3d61a7f56c0))
+
+
+### Bug Fixes
+
+* CI/CD ([1a51047](https://github.com/Cap-go/capgo-cli/commit/1a510476ed6162a1865c46f4394cf7fdb1d66a6c))
+* lockfile ([1fd21fe](https://github.com/Cap-go/capgo-cli/commit/1fd21fea1a9ec86bcb81a5d7347eb6b799efa006))
+* packages ([0bdbab2](https://github.com/Cap-go/capgo-cli/commit/0bdbab2bd9d68eb5ab2b7b9d1c0bf5dcfa1b7614))
+* remove deprecated ([ab7e10d](https://github.com/Cap-go/capgo-cli/commit/ab7e10dcb481e21e65c499710a7a630949385f59))
+
+### [3.10.21](https://github.com/Cap-go/capgo-cli/compare/v3.10.20...v3.10.21) (2023-06-21)
+
+
+### Bug Fixes
+
+* warning supabase ([6424e84](https://github.com/Cap-go/capgo-cli/commit/6424e846f05593658a51ff919e2e78cc45bb1876))
+
+### [3.10.20](https://github.com/Cap-go/capgo-cli/compare/v3.10.19...v3.10.20) (2023-05-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v5 ([e88af39](https://github.com/Cap-go/capgo-cli/commit/e88af39e0b2bae54b8376b3c9e5154d090533869))
+
+### [3.10.19](https://github.com/Cap-go/capgo-cli/compare/v3.10.18...v3.10.19) (2023-05-24)
+
+
+### Bug Fixes
+
+* **deps:** update dependency cloudflared to ^0.4.0 ([48b5d82](https://github.com/Cap-go/capgo-cli/commit/48b5d82b08b59a45e08822e4ac5c54c00ddee2fa))
+* upgrade cloudflared from 0.3.5 to 0.4.0 ([deaf8d6](https://github.com/Cap-go/capgo-cli/commit/deaf8d606737745e138f0c813df14924a85fb24e))
+
+### [3.10.18](https://github.com/Cap-go/capgo-cli/compare/v3.10.17...v3.10.18) (2023-05-22)
+
+### [3.10.17](https://github.com/Cap-go/capgo-cli/compare/v3.10.16...v3.10.17) (2023-05-17)
+
+
+### Bug Fixes
+
+* storage_provider as external when external ([216bd11](https://github.com/Cap-go/capgo-cli/commit/216bd11ba949f006fff9cdb0324c29b709be97de))
+
+### [3.10.16](https://github.com/Cap-go/capgo-cli/compare/v3.10.15...v3.10.16) (2023-05-15)
+
+### [3.10.15](https://github.com/Cap-go/capgo-cli/compare/v3.10.14...v3.10.15) (2023-05-12)
+
+
+### Bug Fixes
+
+* **deps:** update dependency @capacitor/cli to v4.8.0 ([affafb9](https://github.com/Cap-go/capgo-cli/commit/affafb91af726980fc789d9ad8ac1436f56880cd))
+
+### [3.10.14](https://github.com/Cap-go/capgo-cli/compare/v3.10.13...v3.10.14) (2023-05-12)
+
+### [3.10.13](https://github.com/Cap-go/capgo-cli/compare/v3.10.12...v3.10.13) (2023-05-12)
+
+### [3.10.12](https://github.com/Cap-go/capgo-cli/compare/v3.10.11...v3.10.12) (2023-05-11)
+
+### [3.10.11](https://github.com/Cap-go/capgo-cli/compare/v3.10.10...v3.10.11) (2023-05-11)
+
+### [3.10.10](https://github.com/Cap-go/capgo-cli/compare/v3.10.9...v3.10.10) (2023-04-25)
+
+
+### Bug Fixes
+
+* remove deprecated package ([117ec69](https://github.com/Cap-go/capgo-cli/commit/117ec6914492cbea8e9a8b7ce21592c11848bd3f))
+
+### [3.10.9](https://github.com/Cap-go/capgo-cli/compare/v3.10.8...v3.10.9) (2023-04-24)
+
+
+### Bug Fixes
+
+* CI scripts ([d5245d8](https://github.com/Cap-go/capgo-cli/commit/d5245d86885891bbfa7c94df142f04533bbc717f))
+
+### [3.10.8](https://github.com/Cap-go/capgo-cli/compare/v3.10.7...v3.10.8) (2023-04-24)
+
+
+### Bug Fixes
+
+* add to CI basic run ([3b1cfa6](https://github.com/Cap-go/capgo-cli/commit/3b1cfa600dc02162ba25eaf6e99260e33976e1a0))
+
+### [3.10.7](https://github.com/Cap-go/capgo-cli/compare/v3.10.6...v3.10.7) (2023-04-24)
+
+
+### Bug Fixes
+
+* build issue ESM ([65c0ddb](https://github.com/Cap-go/capgo-cli/commit/65c0ddbad1dfabb5968220d3d1a7eb1aa44a2ff6))
+
+### [3.10.6](https://github.com/Cap-go/capgo-cli/compare/v3.10.5...v3.10.6) (2023-04-23)
+
+
+### Bug Fixes
+
+* upgrade packages ([ed630a3](https://github.com/Cap-go/capgo-cli/commit/ed630a353f2f3a3ec695e402f670aeb3cb94549b))
+
+### [3.10.5](https://github.com/Cap-go/capgo-cli/compare/v3.10.4...v3.10.5) (2023-04-23)
+
+
+### Bug Fixes
+
+* command params ([93cd759](https://github.com/Cap-go/capgo-cli/commit/93cd7597e4ff5dca901b0ff703d81b9dfd8d0f36))
+
+### [3.10.4](https://github.com/Cap-go/capgo-cli/compare/v3.10.3...v3.10.4) (2023-04-23)
+
+### [3.10.3](https://github.com/Cap-go/capgo-cli/compare/v3.10.2...v3.10.3) (2023-04-23)
+
+
+### Bug Fixes
+
+* delete bundle ([a2605aa](https://github.com/Cap-go/capgo-cli/commit/a2605aa63ccf6afedd31435155e530c6673d3ced))
+
+### [3.10.2](https://github.com/Cap-go/capgo-cli/compare/v3.10.1...v3.10.2) (2023-04-15)
+
+
+### Bug Fixes
+
+* add comment after init ([6682d2e](https://github.com/Cap-go/capgo-cli/commit/6682d2e604ca54557dba35d59d878dda8cf8929b))
+
+### [3.10.1](https://github.com/Cap-go/capgo-cli/compare/v3.10.0...v3.10.1) (2023-04-12)
+
+
+### Bug Fixes
+
+* table display ([d3d769f](https://github.com/Cap-go/capgo-cli/commit/d3d769f334505f56e5a01be81c7e5cdef903e6df))
+
+## [3.10.0](https://github.com/Cap-go/capgo-cli/compare/v3.9.2...v3.10.0) (2023-04-12)
+
+
+### Features
+
+* use clack everywhere to prompt ([8224ba4](https://github.com/Cap-go/capgo-cli/commit/8224ba4d36c8cbf2820f8293dde8d8b7617c675f))
+
+### [3.9.2](https://github.com/Cap-go/capgo-cli/compare/v3.9.1...v3.9.2) (2023-04-12)
+
+
+### Bug Fixes
+
+* tunnel watch ([80084d1](https://github.com/Cap-go/capgo-cli/commit/80084d1200412870838980212a2bd4ebf74f7048))
+
+### [3.9.1](https://github.com/Cap-go/capgo-cli/compare/v3.9.0...v3.9.1) (2023-04-12)
+
+
+### Bug Fixes
+
+* better watch system ([eca70a0](https://github.com/Cap-go/capgo-cli/commit/eca70a0161691a22a4149d41fb83db74441eacae))
+
+## [3.9.0](https://github.com/Cap-go/capgo-cli/compare/v3.8.5...v3.9.0) (2023-04-10)
+
+
+### Features
+
+* add tunnel feature ([ef19eea](https://github.com/Cap-go/capgo-cli/commit/ef19eeaf4d8a3cf0b05648f10e879e42cbb8ae2e))
+
+### [3.8.5](https://github.com/Cap-go/capgo-cli/compare/v3.8.4...v3.8.5) (2023-04-04)
+
+
+### Bug Fixes
+
+* typo ([4ecb74b](https://github.com/Cap-go/capgo-cli/commit/4ecb74b082089170efe35e1ce50c1cdc83c8dd28))
+
+### [3.8.4](https://github.com/Cap-go/capgo-cli/compare/v3.8.3...v3.8.4) (2023-03-23)
+
+
+### Bug Fixes
+
+* better error message ([178310f](https://github.com/Cap-go/capgo-cli/commit/178310f4b15980df2a03eaa34b11ead907f110b3))
+
+### [3.8.3](https://github.com/Cap-go/capgo-cli/compare/v3.8.2...v3.8.3) (2023-03-23)
+
+
+### Bug Fixes
+
+* add snag for new steps ([af67dc0](https://github.com/Cap-go/capgo-cli/commit/af67dc0bca1965ad54a6befb1730e11134622a68))
+* deps ([2deed9b](https://github.com/Cap-go/capgo-cli/commit/2deed9b39c876b2d22c2f7d9dc5011941ace0c77))
+
+### [3.8.2](https://github.com/Cap-go/capgo-cli/compare/v3.8.1...v3.8.2) (2023-03-23)
+
+
+### Bug Fixes
+
+* typo ([8b728ab](https://github.com/Cap-go/capgo-cli/commit/8b728ab56ba0eaaf35012e410baae7818ce856e4))
+
+### [3.8.1](https://github.com/Cap-go/capgo-cli/compare/v3.8.0...v3.8.1) (2023-03-23)
+
+## [3.8.0](https://github.com/Cap-go/capgo-cli/compare/v3.7.1...v3.8.0) (2023-03-23)
+
+
+### Features
+
+* allow custom supabase ([60218de](https://github.com/Cap-go/capgo-cli/commit/60218de4b1e51734e71dbc8fca7290585873a658))
+
+### [3.7.1](https://github.com/Cap-go/capgo-cli/compare/v3.7.0...v3.7.1) (2023-03-22)
+
+
+### Bug Fixes
+
+* add missing events ([32a08ae](https://github.com/Cap-go/capgo-cli/commit/32a08aef5bda039ab5f87cb10d1ccb2a500ff8db))
+
+## [3.7.0](https://github.com/Cap-go/capgo-cli/compare/v3.6.7...v3.7.0) (2023-03-22)
+
+
+### Features
+
+* add the wait log system ([41f1f04](https://github.com/Cap-go/capgo-cli/commit/41f1f04f2676b2925341d118754145ed4f403f63))
+
+### [3.6.7](https://github.com/Cap-go/capgo-cli/compare/v3.6.6...v3.6.7) (2023-03-20)
+
+### [3.6.6](https://github.com/Cap-go/capgo-cli/compare/v3.6.5...v3.6.6) (2023-03-10)
+
+
+### Bug Fixes
+
+* onboarding events ([c0f5cd6](https://github.com/Cap-go/capgo-cli/commit/c0f5cd6b2ac430657ffff770a5d8f4fead2857f0))
+
+### [3.6.5](https://github.com/Cap-go/capgo-cli/compare/v3.6.4...v3.6.5) (2023-03-07)
+
+
+### Bug Fixes
+
+* issue verifyuser ([184a9e6](https://github.com/Cap-go/capgo-cli/commit/184a9e641fa2b886345bf96a6044caf3713ee210))
+
+### [3.6.4](https://github.com/Cap-go/capgo-cli/compare/v3.6.3...v3.6.4) (2023-03-07)
+
+
+### Bug Fixes
+
+* add snag for new onboarding ([263fcbe](https://github.com/Cap-go/capgo-cli/commit/263fcbedacf1fc66ed7c74a188a3f96c9613f5a6))
+
+### [3.6.3](https://github.com/Cap-go/capgo-cli/compare/v3.6.2...v3.6.3) (2023-03-07)
+
+
+### Bug Fixes
+
+* better init command ([7d1c687](https://github.com/Cap-go/capgo-cli/commit/7d1c687986bef48ced19fb7323ff1d5df1237f3b))
+
+### [3.6.2](https://github.com/Cap-go/capgo-cli/compare/v3.6.1...v3.6.2) (2023-03-06)
+
+
+### Bug Fixes
+
+* issue get-latest-version with multi npmrc ([0d83df0](https://github.com/Cap-go/capgo-cli/commit/0d83df09792ab666f741095bfd4366c43184d728))
+
+### [3.6.1](https://github.com/Cap-go/capgo-cli/compare/v3.6.0...v3.6.1) (2023-03-05)
+
+
+### Bug Fixes
+
+* issue with os-name ([17c5d53](https://github.com/Cap-go/capgo-cli/commit/17c5d539706204ee21aefaf55fa7df192f76c435))
+
+## [3.6.0](https://github.com/Cap-go/capgo-cli/compare/v3.5.6...v3.6.0) (2023-03-05)
+
+
+### Features
+
+* add os check in doctor ([fd31e68](https://github.com/Cap-go/capgo-cli/commit/fd31e6825a34aaedeca2c57152632a5b675f79bd))
+
+### [3.5.6](https://github.com/Cap-go/capgo-cli/compare/v3.5.5...v3.5.6) (2023-03-05)
+
+
+### Bug Fixes
+
+* add deprecated notice to old upload command ([f929782](https://github.com/Cap-go/capgo-cli/commit/f929782c44af123150a026bf0032e1e9edb11e90))
+
+### [3.5.5](https://github.com/Cap-go/capgo-cli/compare/v3.5.4...v3.5.5) (2023-03-04)
+
+
+### Bug Fixes
+
+* check dist path before upload ([80739cf](https://github.com/Cap-go/capgo-cli/commit/80739cf77e5cfb2ff0545735de5a396f61ec03b5))
+
+### [3.5.4](https://github.com/Cap-go/capgo-cli/compare/v3.5.3...v3.5.4) (2023-03-02)
+
+
+### Bug Fixes
+
+* upload key issue ([7104252](https://github.com/Cap-go/capgo-cli/commit/71042522df121519eb721fb95723defc15e3d408))
+
+### [3.5.3](https://github.com/Cap-go/capgo-cli/compare/v3.5.2...v3.5.3) (2023-03-01)
+
+
+### Bug Fixes
+
+* init modify the message ([89648e3](https://github.com/Cap-go/capgo-cli/commit/89648e3996f164d15b5eb9b59c4477a6f634796c))
+
+### [3.5.2](https://github.com/Cap-go/capgo-cli/compare/v3.5.1...v3.5.2) (2023-03-01)
+
+
+### Bug Fixes
+
+* link in init manual ([e308478](https://github.com/Cap-go/capgo-cli/commit/e308478da14d7bbde80accba767c24966c166910))
+
+### [3.5.1](https://github.com/Cap-go/capgo-cli/compare/v3.5.0...v3.5.1) (2023-03-01)
+
+
+### Bug Fixes
+
+* init find without comma ([8b2dd12](https://github.com/Cap-go/capgo-cli/commit/8b2dd12876283c2513a54d7a1b13fd34a4654d91))
+
+## [3.5.0](https://github.com/Cap-go/capgo-cli/compare/v3.4.1...v3.5.0) (2023-03-01)
+
+
+### Features
+
+* add zip command ([df46a67](https://github.com/Cap-go/capgo-cli/commit/df46a67133693b08bc65e5aba9468a13d0737aa0))
+
+### [3.4.1](https://github.com/Cap-go/capgo-cli/compare/v3.4.0...v3.4.1) (2023-03-01)
+
+
+### Bug Fixes
+
+* no error display ([0ff0dd0](https://github.com/Cap-go/capgo-cli/commit/0ff0dd03d6ccbd9faf91465881717f7b6c24768b))
+
+## [3.4.0](https://github.com/Cap-go/capgo-cli/compare/v3.3.0...v3.4.0) (2023-03-01)
+
+
+### Features
+
+* allow end-to-end in init ([5b2bae3](https://github.com/Cap-go/capgo-cli/commit/5b2bae3173b7f06862562871f7d9c39fe38304fe))
+
+## [3.3.0](https://github.com/Cap-go/capgo-cli/compare/v3.2.0...v3.3.0) (2023-03-01)
+
+
+### Features
+
+* add unlink command and prompts ([a178363](https://github.com/Cap-go/capgo-cli/commit/a178363e8f651e024346b857e9d4693791c5738f))
+
+## [3.2.0](https://github.com/Cap-go/capgo-cli/compare/v3.1.0...v3.2.0) (2023-02-28)
+
+
+### Features
+
+* better init, and upload auto increment version if not found ([cec556d](https://github.com/Cap-go/capgo-cli/commit/cec556de03f27ee6272718884139db37d65c71e8))
+
+## [3.1.0](https://github.com/Cap-go/capgo-cli/compare/v3.0.14...v3.1.0) (2023-02-28)
+
+
+### Features
+
+* add init command ([02fa952](https://github.com/Cap-go/capgo-cli/commit/02fa9527597db4d9ccd976aa8f41e3788ea18524))
+
+### [3.0.14](https://github.com/Cap-go/capgo-cli/compare/v3.0.13...v3.0.14) (2023-02-27)
+
+### [3.0.13](https://github.com/Cap-go/capgo-cli/compare/v3.0.12...v3.0.13) (2023-02-27)
+
+### [3.0.12](https://github.com/Cap-go/capgo-cli/compare/v3.0.11...v3.0.12) (2023-02-22)
+
+
+### Bug Fixes
+
+* channel list ([3ddff7f](https://github.com/Cap-go/capgo-cli/commit/3ddff7fb8000c36db69193e0fc291bcb440ae1c4))
+
+### [3.0.11](https://github.com/Cap-go/capgo-cli/compare/v3.0.10...v3.0.11) (2023-02-20)
+
+### [3.0.10](https://github.com/Cap-go/capgo-cli/compare/v3.0.9...v3.0.10) (2023-02-20)
+
+
+### Bug Fixes
+
+* list commands ([e792bfa](https://github.com/Cap-go/capgo-cli/commit/e792bfafb50dd4d6f5ad2d9afe8fec9177599fb0))
+
+### [3.0.9](https://github.com/Cap-go/capgo-cli/compare/v3.0.8...v3.0.9) (2023-02-20)
+
+
+### Bug Fixes
+
+* key issue ([51f9692](https://github.com/Cap-go/capgo-cli/commit/51f969204e37dc8aff1b0da07e646a4260f13215))
+
+### [3.0.8](https://github.com/Cap-go/capgo-cli/compare/v3.0.7...v3.0.8) (2023-02-20)
+
+
+### Bug Fixes
+
+* set and delete args ([6151394](https://github.com/Cap-go/capgo-cli/commit/615139482a3598a4380820783d45dd089dd6cad1))
+
+### [3.0.7](https://github.com/Cap-go/capgo-cli/compare/v3.0.6...v3.0.7) (2023-02-20)
+
+
+### Bug Fixes
+
+* find key apikey issues ([b0d1fc6](https://github.com/Cap-go/capgo-cli/commit/b0d1fc68db3c33ba5b3335df8286731bd3ac3fa1))
+
+### [3.0.6](https://github.com/Cap-go/capgo-cli/compare/v3.0.5...v3.0.6) (2023-02-20)
+
+
+### Bug Fixes
+
+* thorw error if no key found ([898e8d1](https://github.com/Cap-go/capgo-cli/commit/898e8d19ae05c6217b6a4f075763021f4177deaf))
+
+### [3.0.5](https://github.com/Cap-go/capgo-cli/compare/v3.0.4...v3.0.5) (2023-02-20)
+
+
+### Bug Fixes
+
+* use simpler query ([50f4b79](https://github.com/Cap-go/capgo-cli/commit/50f4b7908d34b455eda84088d62056331a29bb94))
+
+### [3.0.4](https://github.com/Cap-go/capgo-cli/compare/v3.0.3...v3.0.4) (2023-02-20)
+
+
+### Bug Fixes
+
+* list message issue ([193c518](https://github.com/Cap-go/capgo-cli/commit/193c518841241fee60a14a09596f7e91b97cc7d3))
+
+### [3.0.3](https://github.com/Cap-go/capgo-cli/compare/v3.0.2...v3.0.3) (2023-02-20)
+
+
+### Bug Fixes
+
+* add issue ([14c5536](https://github.com/Cap-go/capgo-cli/commit/14c553689c13aa311c1bdc32fe80d0d940fcbd65))
+
+### [3.0.2](https://github.com/Cap-go/capgo-cli/compare/v3.0.1...v3.0.2) (2023-02-20)
+
+
+### Bug Fixes
+
+* **deps:** update dependency cli-progress to v3.12.0 ([da4d35b](https://github.com/Cap-go/capgo-cli/commit/da4d35bd4cd664526a94211e1ea0390aa51b5318))
+
+### [3.0.1](https://github.com/Cap-go/capgo-cli/compare/v3.0.0...v3.0.1) (2023-02-20)
+
+## [3.0.0](https://github.com/Cap-go/capgo-cli/compare/v2.7.0...v3.0.0) (2023-02-20)
 
 
 ### Bug Fixes
 
 * add back upload to suport old usages ([d658200](https://github.com/Cap-go/capgo-cli/commit/d6582003b5b21467c57cf8a862ec115dcac8602d))
+* lint ([20f27bd](https://github.com/Cap-go/capgo-cli/commit/20f27bd60da883815100e6be142664b42d332da0))
+
+## [3.0.0-alpha.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.2...v3.0.0-alpha.2) (2023-02-10)
+
+
+### Bug Fixes
+
+* file path ([228913f](https://github.com/Cap-go/capgo-cli/commit/228913ff779c9a027a6fbba528bf7bfaf6470436))
+
+## [3.0.0-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v2.5.10-alpha.0...v3.0.0-alpha.1) (2023-02-04)
+
+
+### ⚠ BREAKING CHANGES
+
+* trigger ci
+
+### Bug Fixes
+
+* trigger ci ([7c4c35f](https://github.com/Cap-go/capgo-cli/commit/7c4c35f8f095a9c67843fbd2343d90d96720cc72))
+* trigger ci ([d28daa5](https://github.com/Cap-go/capgo-cli/commit/d28daa5e79dce68d2b3f23e4e94985140005ffac))
+* trigger ci ([51e2914](https://github.com/Cap-go/capgo-cli/commit/51e291419101f8c8f362e03b765948280b533fb8))
+
+### [2.5.10-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.10...v2.5.10-alpha.0) (2023-02-04)
+
+
+### Bug Fixes
+
+* npm publish ([1249213](https://github.com/Cap-go/capgo-cli/commit/124921324bde43dce24562ed369e77f604f3d5e8))
+* trigger ci ([464dd6a](https://github.com/Cap-go/capgo-cli/commit/464dd6a650266e5b5bb0a46049a917d26af1d22a))
+
+## [3.0.0-alpha.0](https://github.com/Cap-go/capgo-cli/compare/v2.5.8...v3.0.0-alpha.0) (2023-02-03)
+
+
+### ⚠ BREAKING CHANGES
+
+* add new commands and refactor for sub commands
+
+### Features
+
+* add new commands and refactor for sub commands ([c3aab3a](https://github.com/Cap-go/capgo-cli/commit/c3aab3afa6b86c5b2ca3864c196a3c02ea258991))
 
 ## [3.0.0-alpha.2](https://github.com/Cap-go/capgo-cli/compare/v2.6.1...v3.0.0-alpha.2) (2023-02-10)
 
