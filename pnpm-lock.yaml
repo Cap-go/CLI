@@ -74,8 +74,8 @@ dependencies:
 
 devDependencies:
   '@types/adm-zip':
-    specifier: 0.5.0
-    version: 0.5.0
+    specifier: 0.5.5
+    version: 0.5.5
   '@types/fs-extra':
     specifier: ^11.0.1
     version: 11.0.4
@@ -607,8 +607,8 @@ packages:
     resolution: {integrity: sha512-vxhUy4J8lyeyinH7Azl1pdd43GJhZH/tP2weN8TntQblOY+A0XbT8DJk1/oCPuOOyg/Ja757rG0CgHcWC8OfMA==}
     dev: true
 
-  /@types/adm-zip@0.5.0:
-    resolution: {integrity: sha512-FCJBJq9ODsQZUNURo5ILAQueuA8WJhRvuihS3ke2iI25mJlfV2LK8jG2Qj2z2AWg8U0FtWWqBHVRetceLskSaw==}
+  /@types/adm-zip@0.5.5:
+    resolution: {integrity: sha512-YCGstVMjc4LTY5uK9/obvxBya93axZOVOyf2GSUulADzmLhYE45u2nAssCs/fWBs1Ifq5Vat75JTPwd5XZoPJw==}
     dependencies:
       '@types/node': 20.9.0
     dev: true
