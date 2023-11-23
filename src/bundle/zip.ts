@@ -113,7 +113,7 @@ export const zipBundle = async (appId: string, options: Options) => {
         filename: name,
         checksum,
       };
-      console.log(output);
+      console.log(JSON.stringify(output));
     }
     
     await snag.track({
