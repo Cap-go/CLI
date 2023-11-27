@@ -1,10 +1,20 @@
 {
-  "extends": ["airbnb-base", "plugin:@typescript-eslint/recommended", "eslint-config-prettier"],
+  "extends": [
+    "airbnb-base",
+    "plugin:@typescript-eslint/recommended",
+    "eslint-config-prettier"
+  ],
   "parser": "@typescript-eslint/parser",
-  "plugins": ["@typescript-eslint", "prettier"],
+  "plugins": [
+    "@typescript-eslint",
+    "prettier"
+  ],
   "settings": {
     "import/parsers": {
-      "@typescript-eslint/parser": [".ts", ".tsx"]
+      "@typescript-eslint/parser": [
+        ".ts",
+        ".tsx"
+      ]
     },
     "import/resolver": {
       "typescript": {}
@@ -12,13 +22,20 @@
   },
   "rules": {
     "no-shadow": "off",
-    "@typescript-eslint/no-shadow": ["error"],
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-shadow": [
+      "error"
+    ],
     "import/prefer-default-export": 0,
     "no-param-reassign": 0,
     "import/no-extraneous-dependencies": [
       2,
       {
-        "devDependencies": ["**/spec.tsx", "**/spec.ts", "__tests__/**/*"]
+        "devDependencies": [
+          "**/spec.tsx",
+          "**/spec.ts",
+          "__tests__/**/*"
+        ]
       }
     ],
     "import/extensions": 0,
