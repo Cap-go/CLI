@@ -85,7 +85,7 @@ export const waitLog = async (channel: string, supabase: SupabaseClient<Database
     const data = await getStats(supabase, query)
     //   console.log('data', data)
     if (data) {
-        p.log.info(`Device: ${data.device_id}`)
+        p.log.info(`Log from Device: ${data.device_id}`)
         if (data.action === 'get') {
             p.log.info('Update Sent your your device, wait until event download complete')
             await markSnag(channel, userId, snag, 'done')
@@ -160,6 +160,9 @@ export const waitLog = async (channel: string, supabase: SupabaseClient<Database
         }
         else if (data.action === 'checksum_fail') {
             p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
+        }
+        else {
+            p.log.error(`Log from Capgo ${data.action}`)
         }
         now = new Date().toISOString()
         query.after = now
