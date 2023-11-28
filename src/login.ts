@@ -16,7 +16,8 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
   }
   if (!apikey) {
     if (shouldExit) {
-      program.error("Missing API key, you need to provide a API key to upload your bundle");
+      p.log.error('Missing API key, you need to provide a API key to upload your bundle');
+      program.error('');
     }
     return false
   }
@@ -37,15 +38,13 @@ export const login = async (apikey: string, options: Options, shouldExit = true)
       const userHomeDir = homedir();
       writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`);
     }
-    const supabase = createSupabaseClient(apikey)
+    const supabase = await createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload']);
-    await snag.publish({
+    await snag.track({
       channel: 'user-login',
       event: 'User CLI login',
       icon: '✅',
-      tags: {
-        'user-id': userId,
-      },
+      user_id: userId,
       notify: false,
     }).catch()
     p.log.success(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`);

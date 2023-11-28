@@ -39,7 +39,9 @@ const getInstalledDependencies = async () => {
     }
     for (const dependency in dependencies) {
         if (Object.prototype.hasOwnProperty.call(dependencies, dependency) && dependency.startsWith('@capgo/')) {
-            installedDependencies[dependency] = dependencies[dependency]
+            // remove ^ or ~ from version
+            const version = dependencies[dependency].replace('^', '').replace('~', '')
+            installedDependencies[dependency] = version
         }
     }
     return installedDependencies
@@ -47,7 +49,8 @@ const getInstalledDependencies = async () => {
 
 export const getInfo = async () => {
     console.log('     💊   Capgo Doctor  💊\n')
-    console.log(` OS: ${os.version()}\n`)
+    console.log(` OS: ${os.platform()} ${os.version()}\n`)
+    console.log(` Node: ${process.version}\n`)
     console.log(' Installed Dependencies:\n')
     const installedDependencies = await getInstalledDependencies()
     if (Object.keys(installedDependencies).length === 0) {

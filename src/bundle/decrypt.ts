@@ -16,22 +16,25 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
-    program.error(`Zip not found at the path ${zipPath}`);
+    p.log.error(`Zip not found at the path ${zipPath}`);
+    program.error('');
   }
 
   const config = await getConfig();
   const { extConfig } = config.app;
 
   if (!options.key && !existsSync(baseKey) && !extConfig.plugins?.CapacitorUpdater?.privateKey) {
-    program.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
+    p.log.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`);
+    program.error('');
   }
   const keyPath = options.key || baseKey
   // check if publicKey exist
 
-  let { privateKey } = options.keyData || extConfig?.plugins?.CapacitorUpdater || "";
+  let privateKey = extConfig?.plugins?.CapacitorUpdater?.privateKey
 
   if (!existsSync(keyPath) && !privateKey) {
-    program.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+    p.log.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`);
+    program.error('');
   } else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
@@ -40,7 +43,8 @@ export const decryptZip = async (zipPath: string, ivsessionKey: string, options:
   // console.log('privateKey', privateKey)
 
   const zipFile = readFileSync(zipPath)
-  const decodedZip = decryptSource(zipFile, ivsessionKey, privateKey)
+  
+  const decodedZip = decryptSource(zipFile, ivsessionKey,  options.keyData ?? privateKey ?? '')
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
   p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`);

@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { getType } from 'mime';
 import { program } from "commander";
 import * as p from '@clack/prompts';
-import { existsSync, readFileSync } from "fs-extra";
+import { existsSync, readFileSync } from "node:fs";
 import { checkAppExistsAndHasPermissionErr, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
@@ -20,11 +20,11 @@ export const setApp = async (appId: string, options: Options) => {
         p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
         program.error(``);
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     const { name, icon, retention } = options;
 

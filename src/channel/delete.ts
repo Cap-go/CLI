@@ -2,8 +2,7 @@ import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { delChannel } from "../api/channels";
-import { OptionsBase } from "../api/utils";
-import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
+import { OptionsBase, findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
 export const deleteChannel = async (channelId: string, appId: string, options: OptionsBase) => {
     p.intro(`Delete channel`);
@@ -20,17 +19,17 @@ export const deleteChannel = async (channelId: string, appId: string, options: O
         p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
         program.error('');
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`);
     try {
         await delChannel(supabase, channelId, appId, userId);
         p.log.success(`Channel deleted`);
-        await snag.publish({
+        await snag.track({
             channel: 'channel',
             event: 'Delete channel',
             icon: '✅',

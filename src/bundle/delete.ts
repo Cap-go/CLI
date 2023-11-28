@@ -1,8 +1,7 @@
 import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
-import { OptionsBase } from '../api/utils';
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
+import { OptionsBase, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils';
 import { deleteSpecificVersion } from '../api/versions';
 
 interface Options extends OptionsBase {
@@ -23,16 +22,14 @@ export const deleteBundle = async (bundleId: string, appId: string, options: Opt
     p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
     program.error('');
   }
-  const supabase = createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appId);
-
-  const apikey = options.apikey || findSavedKey()
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
   appId = appId || config?.app?.appId
-  if (!apikey) {
+  if (!options.apikey) {
     p.log.error('Missing API key, you need to provide an API key to delete your app');
     program.error('');
   }

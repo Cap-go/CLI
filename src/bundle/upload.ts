@@ -7,16 +7,18 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
 import axios from "axios";
 import { checkLatest } from '../api/update';
-import { OptionsBase } from '../api/utils';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
-  hostWeb, getConfig, createSupabaseClient,
+  OptionsBase,
+  getConfig, createSupabaseClient,
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUserWithAppId, regexSemver, baseKeyPub, convertAppName, defaulPublicKey, getUploadPermission
+  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
+  getLocalDepenencies
 } from '../utils';
+import { checkIndexPosition, searchInDirectory } from './check';
 
 const alertMb = 20;
 
@@ -27,15 +29,23 @@ interface Options extends OptionsBase {
   displayIvSession?: boolean
   external?: string
   key?: boolean | string,
+  keyData?: string,
+  ivSessionKey?: string,
   bundleUrl?: boolean
+  codeCheck?: boolean,
+  minUpdateVersion?: string,
+  autoMinUpdateVersion?: boolean,
+  ignoreMetadataCheck?: boolean
 }
 
 export const uploadBundle = async (appid: string, options: Options, shouldExit = true) => {
+
   p.intro(`Uploading`);
   await checkLatest();
   let { bundle, path, channel } = options;
-  const { external, key = false, displayIvSession } = options;
-  const apikey = options.apikey || findSavedKey()
+  const { external, key = false, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options;
+  let { minUpdateVersion } = options
+  options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
   channel = channel || 'dev';
@@ -44,6 +54,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
+  const checkNotifyAppReady = options.codeCheck 
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -54,7 +65,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     program.error('');
   }
   path = path || config?.app?.webDir
-  if (!apikey) {
+  if (!options.apikey) {
     p.log.error(`Missing API key, you need to provide a API key to upload your bundle`);
     program.error('');
   }
@@ -67,13 +78,100 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     p.log.error(`Path ${path} does not exist, build your app first, or provide a valid path`);
     program.error('');
   }
+
+  if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
+    const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
+    if (!isPluginConfigured) {
+      p.log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
+      program.error('');
+    }
+    const foundIndex = checkIndexPosition(path);
+    if (!foundIndex) {
+        p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
+        program.error('');
+    }
+  }
+
   p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`);
-  
-  const supabase = createSupabaseClient(apikey)
+
+  const localConfig = await getLocalConfig()
+  const supabase = await createSupabaseClient(options.apikey)
   const userId = await verifyUserWithAppId(supabase, apikey, appid, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, appid);
+  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
+
+  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+
+  // Check compatibility here
+  const { data: channelData, error: channelError } = await supabase
+  .from('channels')
+  .select('version ( minUpdateVersion, native_packages )')
+  .eq('name', channel)
+  .eq('app_id', appid)
+  .single()
+      
+  // eslint-disable-next-line no-undef-init
+  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined;
+  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
+
+  // We only check compatibility IF the channel exists
+  if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
+    const spinner = p.spinner();
+    spinner.start(`Checking bundle compatibility with channel ${channel}`);
+    const { 
+      finalCompatibility: finalCompatibilityWithChannel,
+      localDependencies: localDependenciesWithChannel 
+    } = await checkCompatibility(supabase, appid, channel)
+
+    finalCompatibility = finalCompatibilityWithChannel
+    localDependencies = localDependenciesWithChannel
+    
+    if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
+      p.log.error(`Your bundle is not compatible with the channel ${channel}`);
+      p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
+
+      if (autoMinUpdateVersion) {
+        minUpdateVersion = bundle
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      }
+    } else if (autoMinUpdateVersion) {
+      try {
+        const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
+        if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
+          p.log.error('Invalid remote min update version, skipping auto setting compatibility');
+          program.error('');
+        }
+  
+        minUpdateVersion = lastMinUpdateVersion
+        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+      } catch (error) {
+        p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`);
+        program.error('');
+      }
+    }
+    spinner.stop(`Bundle compatible with ${channel} channel`);
+  } else if (!ignoreMetadataCheck) {
+    p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`);
+    localDependencies = await getLocalDepenencies()
+
+    if (autoMinUpdateVersion) {
+      minUpdateVersion = bundle
+      p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
+    }
+  }
+
+  if (updateMetadataRequired && !minUpdateVersion && !ignoreMetadataCheck) {
+    p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`);
+    program.error('');
+  }
+
+  if (minUpdateVersion) {
+    if (!regexSemver.test(minUpdateVersion)) {
+      p.log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`);
+      program.error('');
+    }
+  }
 
   const permissions = await getUploadPermission(supabase, apikey, appid, userId)
   if (!permissions.upload) {
@@ -86,12 +184,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     .single()
   if (isTrial && isTrial > 0 || isTrialsError) {
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`);
-    p.log.warn(`Upgrade here: ${hostWeb}/dashboard/settings/plans`);
+    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans`);
   }
 
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc('exist_app_versions', { appid, apikey, name_version: bundle })
+    .rpc('exist_app_versions', { appid, apikey: options.apikey, name_version: bundle })
     .single()
 
   if (appVersion || appVersionError) {
@@ -115,9 +213,9 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     s.stop(`Checksum: ${checksum}`);
     if (key || existsSync(baseKeyPub)) {
       const publicKey = typeof key === 'string' ? key : baseKeyPub
-      let keyData = ''
+      let keyData = options.keyData || ''
       // check if publicKey exist
-      if (!existsSync(publicKey)) {
+      if (!keyData && !existsSync(publicKey)) {
         p.log.error(`Cannot find public key ${publicKey}`);
         if (ciDetect.isCI) {
           program.error('');
@@ -127,21 +225,23 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
           p.log.error(`Error: Missing public key`);
           program.error('');
         }
-        keyData = defaulPublicKey
+        keyData = localConfig.signKey || ''
       }
-      await snag.publish({
+      await snag.track({
         channel: 'app',
         event: 'App encryption',
         icon: '🔑',
+        user_id: userId,
         tags: {
-          'user-id': userId,
           'app-id': appid,
         },
         notify: false,
       }).catch()
       // open with fs publicKey path
-      const keyFile = readFileSync(publicKey)
-      keyData = keyFile.toString()
+      if (!keyData) {
+        const keyFile = readFileSync(publicKey)
+        keyData = keyFile.toString()
+      }
       // encrypt
       p.log.info(`Encrypting your bundle`);
       const res = encryptSource(zipped, keyData)
@@ -157,12 +257,12 @@ It will be also visible in your dashboard\n`);
     if (mbSize > alertMb) {
       p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
       p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
-      await snag.publish({
+      await snag.track({
         channel: 'app-error',
         event: 'App Too Large',
         icon: '🚛',
+        user_id: userId,
         tags: {
-          'user-id': userId,
           'app-id': appid,
         },
         notify: false,
@@ -172,17 +272,26 @@ It will be also visible in your dashboard\n`);
     p.log.error(`External link should should start with "https://" current is "${external}"`);
     program.error('');
   } else {
-    await snag.publish({
+    await snag.track({
       channel: 'app',
       event: 'App external',
       icon: '📤',
+      user_id: userId,
       tags: {
-        'user-id': userId,
         'app-id': appid,
       },
       notify: false,
     }).catch()
+    sessionKey = options.ivSessionKey
   }
+
+  const hashedLocalDependencies = localDependencies ? new Map(localDependencies
+      .filter((a) => !!a.native && a.native !== undefined)
+      .map((a) => [a.name, a])) : new Map()
+
+  // eslint-disable-next-line max-len
+  const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
+
   const versionData = {
     bucket_id: external ? undefined : fileName,
     user_id: userId,
@@ -191,9 +300,11 @@ It will be also visible in your dashboard\n`);
     session_key: sessionKey,
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
+    minUpdateVersion,
+    native_packages: nativePackages,
     checksum,
   }
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData, apikey)
+  const { error: dbError } = await updateOrCreateVersion(supabase, versionData, options.apikey)
   if (dbError) {
     p.log.error(`Cannot add bundle ${formatError(dbError)}`);
     program.error('');
@@ -219,7 +330,7 @@ It will be also visible in your dashboard\n`);
       } : undefined)
     })
     versionData.storage_provider = 'r2'
-    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, apikey)
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, options.apikey)
     if (dbError2) {
       p.log.error(`Cannot update bundle ${formatError(dbError)}`);
       program.error('');
@@ -227,7 +338,7 @@ It will be also visible in your dashboard\n`);
     spinner.stop('Bundle Uploaded 💪')
   }
   const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
+    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
     .single()
 
   if (versionId && permissions.write) {
@@ -242,7 +353,7 @@ It will be also visible in your dashboard\n`);
       program.error('');
     }
     const appidWeb = convertAppName(appid)
-    const bundleUrl = `${hostWeb}/app/p/${appidWeb}/channel/${data.id}`
+    const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
     if (data?.public) {
       p.log.info('Your update is now available in your public channel 🎉')
     } else if (data?.id) {
@@ -258,12 +369,12 @@ It will be also visible in your dashboard\n`);
   } else if (!permissions.write) {
     p.log.warn('Cannot set channel as a upload organization member')
   }
-  await snag.publish({
+  await snag.track({
     channel: 'app',
     event: 'App Uploaded',
     icon: '⏫',
+    user_id: userId,
     tags: {
-      'user-id': userId,
       'app-id': appid,
     },
     notify: false,

@@ -2,8 +2,7 @@ import { program } from "commander";
 import * as p from '@clack/prompts';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import { createChannel, findUnknownVersion } from "../api/channels";
-import { OptionsBase } from "../api/utils";
-import { findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
+import { OptionsBase, findSavedKey, getConfig, useLogSnag, createSupabaseClient, verifyUser } from "../utils";
 
 interface Options extends OptionsBase {
     default?: boolean;
@@ -24,11 +23,11 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
         p.log.error("Missing argument, you need to provide a appId, or be in a capacitor project");
         program.error('');
     }
-    const supabase = createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey)
 
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all']);
     // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionErr(supabase, appId);
+    await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId);
 
     p.log.info(`Creating channel ${appId}#${channelId} to Capgo`);
     try {
@@ -44,12 +43,12 @@ export const addChannel = async (channelId: string, appId: string, options: Opti
             created_by: userId
         });
         p.log.success(`Channel created ✅`);
-        await snag.publish({
+        await snag.track({
             channel: 'channel',
             event: 'Create channel',
             icon: '✅',
+            user_id: userId,
             tags: {
-                'user-id': userId,
                 'app-id': appId,
                 'channel': channelId,
             },

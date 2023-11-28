@@ -4,10 +4,9 @@ import { Table } from 'console-table-printer';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 // import { definitions } from '../types/types_supabase';
-import { formatError, getHumanDate } from '../utils';
+import { getHumanDate } from '../utils';
 import { checkVersionNotUsedInChannel } from './channels';
 import { checkVersionNotUsedInDeviceOverride } from './devices_override';
-import { deleteFromStorage } from './storage';
 
 export const deleteAppVersion = async (supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) => {
   const { error: delAppSpecVersionError } = await supabase
@@ -20,7 +19,8 @@ export const deleteAppVersion = async (supabase: SupabaseClient<Database>, appid
     .eq('user_id', userId)
     .eq('name', bundle);
   if (delAppSpecVersionError) {
-    program.error(`App Version ${appid}@${bundle} not found in database '${formatError(delAppSpecVersionError)}'`);
+    p.log.error(`App Version ${appid}@${bundle} not found in database`);
+    program.error('');
   }
 }
 
@@ -29,8 +29,6 @@ export const deleteSpecificVersion = async (supabase: SupabaseClient<Database>, 
   await checkVersionNotUsedInChannel(supabase, appid, userId, versionData);
   await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData);
   // Delete only a specific version in storage
-  await deleteFromStorage(supabase, userId, appid, versionData, bundle);
-
   await deleteAppVersion(supabase, appid, userId, bundle);
 }
 
@@ -62,7 +60,8 @@ export const getActiveAppVersions = async (supabase: SupabaseClient<Database>, a
     .order('created_at', { ascending: false });
 
   if (vError) {
-    program.error(`App ${appid} not found in database ${formatError(vError)} `);
+    p.log.error(`App ${appid} not found in database`);
+    program.error('');
   }
   return data;
 }
@@ -75,7 +74,8 @@ export const getChannelsVersion = async (supabase: SupabaseClient<Database>, app
     .eq('app_id', appid)
   
   if (channelsError) {
-    program.error(`App ${appid} not found in database ${formatError(channelsError)} `);
+    p.log.error(`App ${appid} not found in database`);
+    program.error('');
   }
   return channels.map(c => c.version);
 }
@@ -90,7 +90,8 @@ export const getVersionData = async (supabase: SupabaseClient<Database>, appid: 
     .eq('deleted', false)
     .single();
   if (!versionData || versionIdError) {
-    program.error(`App Version ${appid}@${bundle} doesn't exist ${formatError(versionIdError)}`);
+    p.log.error(`App Version ${appid}@${bundle} doesn't exist`);
+    program.error('');
   }
   return versionData;
 }

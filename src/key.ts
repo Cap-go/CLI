@@ -15,11 +15,9 @@ interface Options {
 }
 
 export const saveKey = async (options: saveOptions, log = true) => {
-  if (!existsSync('.git')) {
-    p.log.error('To use local you should be in a git repository');
-    program.error('');
+  if (log) {
+    p.intro(`Save keys 🔑`);
   }
-
   const config = await getConfig();
   const { extConfig } = config.app;
 
@@ -43,7 +41,10 @@ export const saveKey = async (options: saveOptions, log = true) => {
 
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     if (!extConfig.plugins.CapacitorUpdater) {
       extConfig.plugins.CapacitorUpdater = {};
@@ -68,10 +69,6 @@ export const createKey = async (options: Options, log = true) => {
   // write in file .capgo the apikey in home directory
   if (log) {
     p.intro(`Create keys 🔑`);
-  }
-  if (!existsSync('.git')) {
-    p.log.error('To use local you should be in a git repository');
-    program.error('');
   }
   const { publicKey, privateKey } = createRSA()
 
@@ -99,10 +96,10 @@ export const createKey = async (options: Options, log = true) => {
   const { extConfig } = config.app;
   if (extConfig) {
     if (!extConfig.plugins) {
-      extConfig.plugins = {};
-    }
-    if (!extConfig.plugins.CapacitorUpdater) {
-      extConfig.plugins.CapacitorUpdater = {};
+      extConfig.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {}
+      };
     }
     extConfig.plugins.CapacitorUpdater.privateKey = privateKey;
     // console.log('extConfig', extConfig)
@@ -112,8 +109,9 @@ export const createKey = async (options: Options, log = true) => {
   if (log) {
     p.log.success('Your RSA key has been generated')
     p.log.success(`Public key saved in ${baseKeyPub}`)
-    p.log.success('This key will be use to crypt your bundle before sending it to Capgo')
-    p.log.success('Than make them unreadable by Capgo and unmodifiable by anyone')
+    p.log.success('This key will be use to encrypt your bundle before sending it to Capgo')
+    p.log.success('Keep it safe')
+    p.log.success('Than make it unreadable by Capgo and unmodifiable by anyone')
     p.log.success(`Private key saved in ${config.app.extConfigFilePath}`);
     p.log.success('Your app will be the only one having it');
     p.log.success('Only your users can decrypt your update');

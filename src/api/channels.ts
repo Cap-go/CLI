@@ -13,8 +13,10 @@ export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Data
     .eq('app_id', appid)
     .eq('created_by', userId)
     .eq('version', versionData.id)
-  if (errorChannel)
-    program.error(`Cannot check Version ${appid}@${versionData.name} ${formatError(errorChannel)}`);
+  if (errorChannel) {
+    p.log.error(`Cannot check Version ${appid}@${versionData.name}`);
+    program.error('');
+  }
   if (channelFound && channelFound.length > 0) {
     p.intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
     if (await p.confirm({ message: 'unlink it?' })) {
@@ -36,7 +38,8 @@ export const checkVersionNotUsedInChannel = async (supabase: SupabaseClient<Data
       }
     }
     else {
-      program.error(`unlink it first`);
+      p.log.error(`Unlink it first`);
+      program.error('');
     }
     p.outro(`Version unlinked from ${channelFound.length} channel`)
   }
@@ -93,7 +96,8 @@ export const getActiveChannels = async (supabase: SupabaseClient<Database>, appi
     .order('created_at', { ascending: false });
 
   if (vError) {
-    program.error(`App ${appid} not found in database ${formatError(vError)} `);
+    p.log.error(`App ${appid} not found in database`);
+    program.error('');
   }
   return data;
 }
