@@ -3,7 +3,7 @@ import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, FunctionsError, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
@@ -148,6 +148,106 @@ export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: s
         .rpc('is_app_owner', { apikey, appid: appId })
         .single()
     return !!data
+}
+
+export enum OrganizationPerm {
+  'none' = 0,
+  'read' = 1,
+  'upload' = 2,
+  'write' = 3,
+  'admin' = 4,
+  'owner' = 5,
+}
+
+export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
+
+export const isAllowedAppOrg = async (
+    supabase: SupabaseClient<Database>,
+    apikey: string, 
+    appId: string, 
+): Promise<{ okay: true, data: OrganizationPerm } | { okay: false, error: 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' }> => {
+    const { data, error } = await supabase
+        .rpc('get_org_perm_for_apikey', { apikey, app_id: appId })
+        .single()
+
+    if (error) {
+        p.log.error('Cannot get permissions for organization!')
+        console.error(error)
+        process.exit(1)
+    }
+
+    const ok = (data as string).includes('perm')
+    if (ok) {
+        let perm = null as (OrganizationPerm | null)
+        
+        switch (data as string) {
+            case 'perm_none': {
+                perm = OrganizationPerm.none
+                break;
+            }
+            case 'perm_read': {
+                perm = OrganizationPerm.read
+                break;
+            }
+            case 'perm_upload': {
+                perm = OrganizationPerm.upload
+                break;
+            }
+            case 'perm_write': {
+                perm = OrganizationPerm.write
+                break;
+            }
+            case 'perm_admin': {
+                perm = OrganizationPerm.admin
+                break;
+            }
+            case 'perm_owner': {
+                perm = OrganizationPerm.owner
+                break;
+            }
+            default: {
+                if ((data as string).includes('invite')) {
+                    p.log.info('Please accept/deny the organization invitation before trying to access the app')
+                    process.exit(1)
+                }
+
+                p.log.error(`Invalid output when fetching organization permission. Response: ${data}`)
+                process.exit(1)
+            }
+        }
+
+        return {
+            okay: true,
+            data: perm
+        }
+    }
+
+    // This means that something went wrong here
+    let functionError = null as 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' | null
+
+    switch (data as string) {
+        case 'INVALID_APIKEY': {
+            functionError = 'INVALID_APIKEY'
+            break
+        }
+        case 'NO_APP': {
+            functionError = 'NO_APP'
+            break
+        }
+        case 'NO_ORG': {
+            functionError = 'NO_ORG'
+            break
+        }
+        default: {
+            p.log.error(`Invalid error when fetching organization permission. Response: ${data}`)
+            process.exit(1)
+        }
+    }
+
+    return {
+        okay: false,
+        error: functionError
+    }
 }
 
 export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
@@ -374,22 +474,6 @@ export const verifyUser = async (supabase: SupabaseClient<Database>, apikey: str
     return userId;
 }
 
-export const verifyUserWithAppId = async (supabase: SupabaseClient<Database>, apikey: string,
-    appid: string, keymod: Database['public']['Enums']['key_mode'][] = ['all']) => {
-        await checkKey(supabase, apikey, keymod);
-
-        const { data: dataUser, error: userIdError } = await supabase
-            .rpc('get_user_id', { apikey, app_id: appid })
-            .single();
-    
-        const userId = (dataUser || '').toString();
-    
-        if (!userId || userIdError) {
-            program.error(`Cannot verify user ${formatError(userIdError)}`);
-        }
-        return userId;
-    }
-
 export const requireUpdateMetadata = async (supabase: SupabaseClient<Database>, channel: string): Promise<boolean> => {
     const { data, error } = await supabase
         .from('channels')
@@ -415,67 +499,6 @@ export const getHumanDate = (createdA: string | null) => {
     return date.toLocaleString();
 }
 
-export const getUploadPermission = async (supabase: SupabaseClient<Database>, apikey: string,
-    appid: string, fakeUserId: string): Promise<{
-        upload: boolean;
-        write: boolean;
-    }> => {
-    const realUserId = await verifyUser(supabase, apikey, ['upload', 'write', 'all'])
-
-    const { data: orgId, error: orgIdError } = await supabase
-        .rpc('get_user_main_org_id', { user_id: fakeUserId })
-
-    if (!orgId || orgIdError) {
-        program.error(`Cannot verify user permissions. Cannot get user main org id. ${formatError(orgIdError)}`);
-    }
-
-    const { data: isOwner, error: ownerError } = await supabase
-    .rpc('is_owner_of_org' , {
-        user_id: realUserId,
-        org_id: orgId,
-    })
-
-    if (ownerError) {
-        program.error(`Cannot verify user permissions. Cannot check if user is owner. ${formatError(orgIdError)}`);
-    }
-
-    if (isOwner)
-        return { upload: false, write: false}
-
-    const { data: writeData, error: writeError } = await supabase
-        .rpc('is_allowed_capgkey', {
-            apikey,
-            keymode: ['upload', 'write', 'all'],
-            app_id: appid,
-            user_id: fakeUserId,
-            right: 'write',
-            channel_id: null
-        })
-
-    if (writeError) {
-        program.error(`Cannot verify user permissions ${formatError(writeError)}`);
-    }
-
-    if (writeData) {
-        return { upload: true, write: true }
-    }
-
-    const { data: uploadData, error: uploadError } = await supabase
-    .rpc('is_allowed_capgkey', {
-        apikey,
-        keymode: ['upload', 'write', 'all'],
-        app_id: appid,
-        user_id: fakeUserId,
-        right: 'upload',
-        channel_id: null
-    })
-
-
-    if (uploadError) {
-        program.error(`Cannot verify user permissions ${formatError(uploadError)}`);
-    }
-
-    return { upload: uploadData, write: false }
 export async function getLocalDepenencies() {
     if (!existsSync('./package.json')) {
         p.log.error("Missing package.json, you need to be in a capacitor project");

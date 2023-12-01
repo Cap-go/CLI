@@ -7,7 +7,7 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
 import axios from "axios";
 import { checkLatest } from '../api/update';
-import { checkAppExistsAndHasPermissionErr } from "../api/app";
+import { checkAppExistsAndHasPermissionOrgErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
   OptionsBase,
@@ -15,8 +15,11 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
-  getLocalDepenencies
+  useLogSnag, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
+  getLocalDepenencies,
+  verifyUser,
+  OrganizationPerm,
+  hasOrganizationPerm
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
 
@@ -96,10 +99,12 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
 
   const localConfig = await getLocalConfig()
   const supabase = await createSupabaseClient(options.apikey)
-  const userId = await verifyUserWithAppId(supabase, apikey, appid, ['write', 'all', 'upload']);
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
+  // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
+
+  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
 
@@ -171,12 +176,6 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
       p.log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`);
       program.error('');
     }
-  }
-
-  const permissions = await getUploadPermission(supabase, apikey, appid, userId)
-  if (!permissions.upload) {
-    p.log.error(`You don't have upload permission for this app, please contact the app owner`);
-    program.error('');
   }
 
   const { data: isTrial, error: isTrialsError } = await supabase
@@ -341,7 +340,7 @@ It will be also visible in your dashboard\n`);
     .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
     .single()
 
-  if (versionId && permissions.write) {
+  if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
@@ -366,7 +365,7 @@ It will be also visible in your dashboard\n`);
   } else if (!versionId) {
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
     program.error('');
-  } else if (!permissions.write) {
+  } else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     p.log.warn('Cannot set channel as a upload organization member')
   }
   await snag.track({

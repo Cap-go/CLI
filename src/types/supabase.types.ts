@@ -1348,6 +1348,13 @@ export interface Database {
           image_url: string
         }[]
       }
+      get_org_perm_for_apikey: {
+        Args: {
+          apikey: string
+          app_id: string
+        }
+        Returns: string
+      }
       get_orgs: {
         Args: {
           userid: string
