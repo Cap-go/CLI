@@ -2,7 +2,39 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
-### [3.14.44-alpha.1](https://github.com/Cap-go/capgo-cli/compare/v3.14.44-alpha.0...v3.14.44-alpha.1) (2023-11-23)
+### [3.14.50](https://github.com/Cap-go/capgo-cli/compare/v3.14.49...v3.14.50) (2023-11-27)
+
+### [3.14.49](https://github.com/Cap-go/capgo-cli/compare/v3.14.48...v3.14.49) (2023-11-27)
+
+
+### Bug Fixes
+
+* lint issue ([9200c0d](https://github.com/Cap-go/capgo-cli/commit/9200c0dc46710b7c10c6fb2c7120a8fe948878c3))
+
+### [3.14.48](https://github.com/Cap-go/capgo-cli/compare/v3.14.47...v3.14.48) (2023-11-27)
+
+
+### Bug Fixes
+
+* add better messages ([00a1d0c](https://github.com/Cap-go/capgo-cli/commit/00a1d0c57de6b1ee5e2d57a567e7fb537c533178))
+
+### [3.14.47](https://github.com/Cap-go/capgo-cli/compare/v3.14.46...v3.14.47) (2023-11-27)
+
+
+### Bug Fixes
+
+* debug command ([4cda008](https://github.com/Cap-go/capgo-cli/commit/4cda008e0505969293d7e958bd0c54746a1c6223))
+
+### [3.14.46](https://github.com/Cap-go/capgo-cli/compare/v3.14.45...v3.14.46) (2023-11-27)
+
+### [3.14.45](https://github.com/Cap-go/capgo-cli/compare/v3.14.44...v3.14.45) (2023-11-23)
+
+
+### Bug Fixes
+
+* dep updates ([06307ad](https://github.com/Cap-go/capgo-cli/commit/06307ad7b78d69fef4a54bf6cae67b019a34b5ef))
+
+### [3.14.44](https://github.com/Cap-go/capgo-cli/compare/v3.14.44-alpha.0...v3.14.44) (2023-11-23)
 
 
 ### Bug Fixes

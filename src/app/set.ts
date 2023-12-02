@@ -2,7 +2,7 @@ import { randomUUID } from "crypto";
 import { getType } from 'mime';
 import { program } from "commander";
 import * as p from '@clack/prompts';
-import { existsSync, readFileSync } from "fs-extra";
+import { existsSync, readFileSync } from "node:fs";
 import { checkAppExistsAndHasPermissionErr, newIconPath, Options } from '../api/app';
 import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from "../utils";
 
