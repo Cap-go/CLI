@@ -2,8 +2,8 @@ import { randomUUID } from 'crypto';
 import { writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
-import * as p from '@clack/prompts';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
+import { jsonLogger } from 'json_logger';
 import { checkLatest } from '../api/update';
 import {
     OptionsBase,
@@ -24,9 +24,9 @@ interface Options extends OptionsBase {
 }
 
 export const zipBundle = async (appId: string, options: Options) => {
-    await checkLatest();
+    const logger = jsonLogger(options.json)
+    await checkLatest(logger);
     let { bundle, path } = options;
-    const { json } = options
     const snag = useLogSnag()
 
     const config = await getConfig();
@@ -34,61 +34,45 @@ export const zipBundle = async (appId: string, options: Options) => {
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0];
     bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
-    if (!json)
-        p.intro(`Zipping ${appId}@${bundle}`);
+
+    logger.intro(`Zipping ${appId}@${bundle}`);
     // check if bundle is valid 
     if (!regexSemver.test(bundle)) {
-        if (!json)
-            p.log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
-        else
-            console.error(JSON.stringify({ error: 'invalid_semver' }))
+        logger.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`);
         program.error('');
     }
     path = path || config?.app?.webDir
     if (!appId || !bundle || !path) {
-        if (!json)
-            p.log.error("Missing argument, you need to provide a appId and a bundle and a path, or be in a capacitor project");
-        else
-            console.error(JSON.stringify({ error: 'missing_argument' }))
+        logger.error("Missing argument, you need to provide a appId and a bundle and a path, or be in a capacitor project");
         program.error('');
     }
-    if (!json)
-        p.log.info(`Started from path "${path}"`);
-    const checkNotifyAppReady = options.codeCheck 
+    logger.info(`Started from path "${path}"`);
+    const checkNotifyAppReady = options.codeCheck
     if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
         const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
         if (!isPluginConfigured) {
-            if (!json)
-                p.log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
-            else
-                console.error(JSON.stringify({ error: 'notifyAppReady_not_in_source_code' }))
+            logger.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`);
             program.error('');
         }
         const foundIndex = checkIndexPosition(path);
-        if (!foundIndex) {
-            if (!json)
-                p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
-            else
-                console.error(JSON.stringify({ error: 'index_html_not_found' }))
+        if (!foundIndex) {            
+            logger.error(`index.html is missing in the root folder or in the only folder in the root folder`);
             program.error('');
         }
     }
     const zip = new AdmZip();
     zip.addLocalFolder(path);
     const zipped = zip.toBuffer();
-    if (!json)
-        p.log.info(`Zipped ${zipped.byteLength} bytes`);
-    const s = p.spinner()
-    if (!json)
-        s.start(`Calculating checksum`);
+    logger.info(`Zipped ${zipped.byteLength} bytes`);
+    const s = logger.spinner()
+    s.start(`Calculating checksum`);
     const checksum = await getChecksum(zipped, 'crc32');
-    if (!json)
-        s.stop(`Checksum: ${checksum}`);
+    s.stop(`Checksum: ${checksum}`);
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024);
     // We do not issue this warning for json
-    if (mbSize > alertMb && !json) {
-        p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
-        p.log.warn(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
+    if (mbSize > alertMb) {
+        logger.warning(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`);
+        logger.warning(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`);
         await snag.track({
             channel: 'app-error',
             event: 'App Too Large',
@@ -99,23 +83,18 @@ export const zipBundle = async (appId: string, options: Options) => {
             notify: false,
         }).catch()
     }
-    const s2 = p.spinner()
+    const s2 = logger.spinner()
     const name = options.name || `${appId}_${bundle}.zip`
-    if (!json)
-        s2.start(`Saving to ${name}`);
+    s2.start(`Saving to ${name}`);
     writeFileSync(name, zipped);
-    if (!json)
-        s2.stop(`Saved to ${name}`);
+    s2.stop(`Saved to ${name}`);
 
-    if (options.json) {
-      const output = {
+    logger.printJson({
         bundle,
         filename: name,
         checksum,
-      };
-      console.log(JSON.stringify(output));
-    }
-    
+    });
+
     await snag.track({
         channel: 'app',
         event: 'App zip',
@@ -126,7 +105,6 @@ export const zipBundle = async (appId: string, options: Options) => {
         notify: false,
     }).catch()
 
-    if (!json)
-        p.outro(`Done ✅`);
+    logger.outro(`Done ✅`);
     process.exit()
 }
