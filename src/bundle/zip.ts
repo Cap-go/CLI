@@ -34,7 +34,6 @@ export const zipBundle = async (appId: string, options: Options) => {
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0];
     bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
-
     logger.intro(`Zipping ${appId}@${bundle}`);
     // check if bundle is valid 
     if (!regexSemver.test(bundle)) {
@@ -55,7 +54,7 @@ export const zipBundle = async (appId: string, options: Options) => {
             program.error('');
         }
         const foundIndex = checkIndexPosition(path);
-        if (!foundIndex) {            
+        if (!foundIndex) {
             logger.error(`index.html is missing in the root folder or in the only folder in the root folder`);
             program.error('');
         }
