@@ -3,7 +3,7 @@ import * as p from '@clack/prompts';
 import { JsonLogger } from "../json_logger";
 import pack from '../../package.json'
 
-export const checkLatest = async (logger: JsonLogger | undefined) => {
+export const checkLatest = async (logger: JsonLogger | undefined = undefined) => {
     const latest = await getLatest('@capgo/cli')
     if (latest !== pack.version) {
         const message = `🚨 You are using @capgo/cli@${pack.version} it's not the latest version.
