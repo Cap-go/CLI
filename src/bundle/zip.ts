@@ -3,7 +3,7 @@ import { writeFileSync } from 'fs';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
-import { jsonLogger } from 'json_logger';
+import { jsonLogger } from '../json_logger';
 import { checkLatest } from '../api/update';
 import {
     OptionsBase,

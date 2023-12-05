@@ -1,6 +1,6 @@
 import getLatest from "get-latest-version"
 import * as p from '@clack/prompts';
-import { JsonLogger } from "json_logger";
+import { JsonLogger } from "../json_logger";
 import pack from '../../package.json'
 
 export const checkLatest = async (logger: JsonLogger | undefined) => {
