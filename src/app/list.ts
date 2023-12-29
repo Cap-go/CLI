@@ -1,6 +1,6 @@
 import { program } from 'commander';
 import { Table } from 'console-table-printer';
-import { SupabaseClient } from '@supabase/supabase-js';
+import { SupabaseClient, createClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 import { OptionsBase, createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils';
@@ -28,7 +28,7 @@ export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: 
   const { data, error: vError } = await supabase
     .from('apps')
     .select()
-    .eq('user_id', userId)
+    // .eq('user_id', userId)
     .order('created_at', { ascending: false });
 
   if (vError) {

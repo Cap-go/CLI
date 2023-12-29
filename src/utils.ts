@@ -3,7 +3,7 @@ import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
-import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, FunctionsError, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
@@ -148,6 +148,106 @@ export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: s
         .rpc('is_app_owner', { apikey, appid: appId })
         .single()
     return !!data
+}
+
+export enum OrganizationPerm {
+  'none' = 0,
+  'read' = 1,
+  'upload' = 2,
+  'write' = 3,
+  'admin' = 4,
+  'owner' = 5,
+}
+
+export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
+
+export const isAllowedAppOrg = async (
+    supabase: SupabaseClient<Database>,
+    apikey: string, 
+    appId: string, 
+): Promise<{ okay: true, data: OrganizationPerm } | { okay: false, error: 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' }> => {
+    const { data, error } = await supabase
+        .rpc('get_org_perm_for_apikey', { apikey, app_id: appId })
+        .single()
+
+    if (error) {
+        p.log.error('Cannot get permissions for organization!')
+        console.error(error)
+        process.exit(1)
+    }
+
+    const ok = (data as string).includes('perm')
+    if (ok) {
+        let perm = null as (OrganizationPerm | null)
+        
+        switch (data as string) {
+            case 'perm_none': {
+                perm = OrganizationPerm.none
+                break;
+            }
+            case 'perm_read': {
+                perm = OrganizationPerm.read
+                break;
+            }
+            case 'perm_upload': {
+                perm = OrganizationPerm.upload
+                break;
+            }
+            case 'perm_write': {
+                perm = OrganizationPerm.write
+                break;
+            }
+            case 'perm_admin': {
+                perm = OrganizationPerm.admin
+                break;
+            }
+            case 'perm_owner': {
+                perm = OrganizationPerm.owner
+                break;
+            }
+            default: {
+                if ((data as string).includes('invite')) {
+                    p.log.info('Please accept/deny the organization invitation before trying to access the app')
+                    process.exit(1)
+                }
+
+                p.log.error(`Invalid output when fetching organization permission. Response: ${data}`)
+                process.exit(1)
+            }
+        }
+
+        return {
+            okay: true,
+            data: perm
+        }
+    }
+
+    // This means that something went wrong here
+    let functionError = null as 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' | null
+
+    switch (data as string) {
+        case 'INVALID_APIKEY': {
+            functionError = 'INVALID_APIKEY'
+            break
+        }
+        case 'NO_APP': {
+            functionError = 'NO_APP'
+            break
+        }
+        case 'NO_ORG': {
+            functionError = 'NO_ORG'
+            break
+        }
+        default: {
+            p.log.error(`Invalid error when fetching organization permission. Response: ${data}`)
+            process.exit(1)
+        }
+    }
+
+    return {
+        okay: false,
+        error: functionError
+    }
 }
 
 export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
@@ -309,7 +409,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
         .eq('app_id', update.app_id)
         .eq('name', update.name)
-        .eq('created_by', update.created_by)
+        // .eq('created_by', update.created_by)
         .single()
 
     if (data && !error) {
@@ -335,7 +435,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             .update(update)
             .eq('app_id', update.app_id)
             .eq('name', update.name)
-            .eq('created_by', update.created_by)
+            // .eq('created_by', update.created_by)
             .select()
             .single()
     }

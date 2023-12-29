@@ -92,7 +92,7 @@ export const getActiveChannels = async (supabase: SupabaseClient<Database>, appi
     .from('channels')
     .select()
     .eq('app_id', appid)
-    .eq('created_by', userId)
+    // .eq('created_by', userId)
     .order('created_at', { ascending: false });
 
   if (vError) {

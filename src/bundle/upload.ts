@@ -7,7 +7,7 @@ import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
 import axios from "axios";
 import { checkLatest } from '../api/update';
-import { checkAppExistsAndHasPermissionErr } from "../api/app";
+import { checkAppExistsAndHasPermissionOrgErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
 import {
   OptionsBase,
@@ -15,8 +15,11 @@ import {
   uploadUrl,
   updateOrCreateChannel, updateOrCreateVersion,
   formatError, findSavedKey, checkPlanValid,
-  useLogSnag, verifyUser, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
-  getLocalDepenencies
+  useLogSnag, regexSemver, baseKeyPub, convertAppName, getLocalConfig, checkCompatibility, requireUpdateMetadata,
+  getLocalDepenencies,
+  verifyUser,
+  OrganizationPerm,
+  hasOrganizationPerm
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
 
@@ -99,7 +102,9 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload']);
   await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
+  // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
+
+  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
 
@@ -334,7 +339,8 @@ It will be also visible in your dashboard\n`);
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
     .single()
-  if (versionId) {
+
+  if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
@@ -356,9 +362,11 @@ It will be also visible in your dashboard\n`);
     if(options.bundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`);
     }
-  } else {
+  } else if (!versionId) {
     p.log.warn('Cannot set bundle with upload key, use key with more rights for that');
     program.error('');
+  } else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+    p.log.warn('Cannot set channel as a upload organization member')
   }
   await snag.track({
     channel: 'app',
