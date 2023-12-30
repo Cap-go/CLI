@@ -1,6 +1,6 @@
 import { program } from 'commander';
 import { Table } from 'console-table-printer';
-import { SupabaseClient, createClient } from '@supabase/supabase-js';
+import { SupabaseClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
 import { OptionsBase, createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils';
@@ -24,7 +24,7 @@ const displayApp = (data: Database['public']['Tables']['apps']['Row'][]) => {
   p.log.success(t.render());
 }
 
-export const getActiveApps = async (supabase: SupabaseClient<Database>, userId: string) => {
+export const getActiveApps = async (supabase: SupabaseClient<Database>) => {
   const { data, error: vError } = await supabase
     .from('apps')
     .select()
@@ -46,12 +46,12 @@ export const listApp = async (options: OptionsBase) => {
 
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
+  await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload']);
 
   p.log.info(`Getting active bundle in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  const allApps = await getActiveApps(supabase, userId);
+  const allApps = await getActiveApps(supabase);
 
   p.log.info(`Active app in Capgo: ${allApps?.length}`);
 

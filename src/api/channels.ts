@@ -87,7 +87,7 @@ export const displayChannels = (data: (Database['public']['Tables']['channels'][
   p.log.success(t.render());
 }
 
-export const getActiveChannels = async (supabase: SupabaseClient<Database>, appid: string, userId: string) => {
+export const getActiveChannels = async (supabase: SupabaseClient<Database>, appid: string) => {
   const { data, error: vError } = await supabase
     .from('channels')
     .select()

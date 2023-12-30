@@ -3,7 +3,7 @@ import { homedir } from 'os';
 import { resolve } from 'path';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
-import { createClient, FunctionsError, SupabaseClient } from '@supabase/supabase-js';
+import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';

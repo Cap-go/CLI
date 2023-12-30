@@ -27,7 +27,7 @@ export const listChannels = async (appId: string, options: OptionsBase) => {
   p.log.info(`Querying available channels in Capgo`);
 
   // Get all active app versions we might possibly be able to cleanup
-  const allVersions = await getActiveChannels(supabase, appId, userId);
+  const allVersions = await getActiveChannels(supabase, appId);
 
   p.log.info(`Active channels in Capgo: ${allVersions?.length}`);
 
