@@ -9,8 +9,8 @@ dependencies:
     specifier: 5.5.1
     version: 5.5.1
   '@capgo/find-package-manager':
-    specifier: ^0.0.7
-    version: 0.0.7
+    specifier: ^0.0.9
+    version: 0.0.9
   '@clack/prompts':
     specifier: ^0.7.0
     version: 0.7.0
@@ -224,8 +224,9 @@ packages:
       - supports-color
     dev: false
 
-  /@capgo/find-package-manager@0.0.7:
-    resolution: {integrity: sha512-Wxrx0nhWZgksvgriMBLKoagMV0Yl67PvGnf9TRExZM73NDkiYfu23VcY6m+yJwqtapb9G9zyOH5Qs0CFuqBx+Q==}
+  /@capgo/find-package-manager@0.0.9:
+    resolution: {integrity: sha512-nG4Gm7KUZU/ExikS5le5eMwCyR4YZHPerLwKtjE0iGhyc5vn+WozkTT7MwIRkNRLfJQChq0rq16AhlVawHjl1A==}
+    engines: {node: '>=16.0.0', npm: '>=7.0.0'}
     dev: false
 
   /@clack/core@0.3.3:
