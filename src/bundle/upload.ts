@@ -19,7 +19,8 @@ import {
   getLocalDepenencies,
   verifyUser,
   OrganizationPerm,
-  hasOrganizationPerm
+  hasOrganizationPerm,
+  getAppOwner
 } from '../utils';
 import { checkIndexPosition, searchInDirectory } from './check';
 
@@ -54,10 +55,10 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   channel = channel || 'dev';
 
   const config = await getConfig();
-  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater 
+  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
     && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true;
 
-  const checkNotifyAppReady = options.codeCheck 
+  const checkNotifyAppReady = options.codeCheck
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0];
@@ -90,8 +91,8 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
     }
     const foundIndex = checkIndexPosition(path);
     if (!foundIndex) {
-        p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
-        program.error('');
+      p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`);
+      program.error('');
     }
   }
 
@@ -100,22 +101,22 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   const localConfig = await getLocalConfig()
   const supabase = await createSupabaseClient(options.apikey)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload']);
-  await checkPlanValid(supabase, userId, false)
   // Check we have app access to this appId
   // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
+  await checkPlanValid(supabase, userId, appid, options.apikey, false)
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
 
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
-  .from('channels')
-  .select('version ( minUpdateVersion, native_packages )')
-  .eq('name', channel)
-  .eq('app_id', appid)
-  .single()
-      
+    .from('channels')
+    .select('version ( minUpdateVersion, native_packages )')
+    .eq('name', channel)
+    .eq('app_id', appid)
+    .single()
+
   // eslint-disable-next-line no-undef-init
   let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined;
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility'];
@@ -124,14 +125,14 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
     const spinner = p.spinner();
     spinner.start(`Checking bundle compatibility with channel ${channel}`);
-    const { 
+    const {
       finalCompatibility: finalCompatibilityWithChannel,
-      localDependencies: localDependenciesWithChannel 
+      localDependencies: localDependenciesWithChannel
     } = await checkCompatibility(supabase, appid, channel)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
-    
+
     if (finalCompatibility.find((x) => x.localVersion !== x.remoteVersion)) {
       p.log.error(`Your bundle is not compatible with the channel ${channel}`);
       p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`);
@@ -147,7 +148,7 @@ export const uploadBundle = async (appid: string, options: Options, shouldExit =
           p.log.error('Invalid remote min update version, skipping auto setting compatibility');
           program.error('');
         }
-  
+
         minUpdateVersion = lastMinUpdateVersion
         p.log.info(`Auto set min-update-version to ${minUpdateVersion}`);
       } catch (error) {
@@ -285,15 +286,17 @@ It will be also visible in your dashboard\n`);
   }
 
   const hashedLocalDependencies = localDependencies ? new Map(localDependencies
-      .filter((a) => !!a.native && a.native !== undefined)
-      .map((a) => [a.name, a])) : new Map()
+    .filter((a) => !!a.native && a.native !== undefined)
+    .map((a) => [a.name, a])) : new Map()
 
   // eslint-disable-next-line max-len
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
 
+  const appOwner = await getAppOwner(supabase, appid)
+
   const versionData = {
     bucket_id: external ? undefined : fileName,
-    user_id: userId,
+    user_id: appOwner,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
@@ -323,14 +326,15 @@ It will be also visible in your dashboard\n`);
       url,
       data: zipped,
       headers: (!localS3 ? {
-       "Content-Type": "application/octet-stream",
-       "Cache-Control": "public, max-age=456789, immutable",
-       "x-amz-meta-crc32": checksum,
+        "Content-Type": "application/octet-stream",
+        "Cache-Control": "public, max-age=456789, immutable",
+        "x-amz-meta-crc32": checksum,
       } : undefined)
     })
     versionData.storage_provider = 'r2'
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData, options.apikey)
     if (dbError2) {
+      console.log(dbError2)
       p.log.error(`Cannot update bundle ${formatError(dbError)}`);
       program.error('');
     }
@@ -344,11 +348,12 @@ It will be also visible in your dashboard\n`);
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
-      created_by: userId,
+      created_by: appOwner,
       version: versionId,
     })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this.`);
+      console.log(dbError3)
       program.error('');
     }
     const appidWeb = convertAppName(appid)
@@ -359,7 +364,7 @@ It will be also visible in your dashboard\n`);
       p.log.info(`Link device to this bundle to try it: ${bundleUrl}`);
     }
 
-    if(options.bundleUrl) {
+    if (options.bundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`);
     }
   } else if (!versionId) {

@@ -36,16 +36,16 @@ export const getConfig = async () => {
 
 export const getLocalConfig = async () => {
     try {
-    const config: Config = await getConfig();
-    const capConfig: Partial<CapgoConfig> = {
-        host: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
-        hostWeb: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
-    }
-    if (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon) {
-        capConfig.supaKey = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon
-        capConfig.supaHost = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa
-    }
-    return capConfig
+        const config: Config = await getConfig();
+        const capConfig: Partial<CapgoConfig> = {
+            host: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
+            hostWeb: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
+        }
+        if (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon) {
+            capConfig.supaKey = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon
+            capConfig.supaHost = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa
+        }
+        return capConfig
     } catch (error) {
         return {
             host: defaultHost,
@@ -68,13 +68,13 @@ export const getRemoteConfig = async () => {
     // call host + /api/get_config and parse the result as json using axios
     const localConfig = await getLocalConfig()
     return axios
-    .get(`${defaultApiHost}/get_config`)
-    .then((res) => res.data as CapgoConfig)
-    .then(data => ({...data, ...localConfig} as CapgoConfig))
-    .catch(() => {
-        console.log('Local config', localConfig);
-        return localConfig
-    })
+        .get(`${defaultApiHost}/get_config`)
+        .then((res) => res.data as CapgoConfig)
+        .then(data => ({ ...data, ...localConfig } as CapgoConfig))
+        .catch(() => {
+            console.log('Local config', localConfig);
+            return localConfig
+        })
 }
 
 export const createSupabaseClient = async (apikey: string) => {
@@ -97,7 +97,7 @@ export const createSupabaseClient = async (apikey: string) => {
 
 export const checkKey = async (supabase: SupabaseClient<Database>, apikey: string,
     keymode: Database['public']['Enums']['key_mode'][]) => {
-    const { data: apiAccess} = await supabase
+    const { data: apiAccess } = await supabase
         .rpc('is_allowed_capgkey', { apikey, keymode })
         .single()
 
@@ -143,6 +143,31 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
     return !!data
 }
 
+export const isAllowedActionAppIdApiKey = async (supabase: SupabaseClient<Database>, appId: string, apikey: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .rpc('is_allowed_action', { apikey, appid: appId })
+        .single()
+
+    return !!data
+}
+
+export const getAppOwner = async (supabase: SupabaseClient<Database>, appId: string): Promise<string> => {
+    const { data, error } = await supabase
+        .from('apps')
+        .select('user_id')
+        .eq('app_id', appId)
+        .single()
+
+    if (error) {
+        p.log.error('Cannot get app owner, exiting')
+        p.log.error('Please report the following error to capgo\'s staff')
+        console.error(error)
+        process.exit(1)
+    }
+
+    return data.user_id
+}
+
 export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> => {
     const { data } = await supabase
         .rpc('is_app_owner', { apikey, appid: appId })
@@ -151,20 +176,20 @@ export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: s
 }
 
 export enum OrganizationPerm {
-  'none' = 0,
-  'read' = 1,
-  'upload' = 2,
-  'write' = 3,
-  'admin' = 4,
-  'owner' = 5,
+    'none' = 0,
+    'read' = 1,
+    'upload' = 2,
+    'write' = 3,
+    'admin' = 4,
+    'owner' = 5,
 }
 
 export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
 
 export const isAllowedAppOrg = async (
     supabase: SupabaseClient<Database>,
-    apikey: string, 
-    appId: string, 
+    apikey: string,
+    appId: string,
 ): Promise<{ okay: true, data: OrganizationPerm } | { okay: false, error: 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' }> => {
     const { data, error } = await supabase
         .rpc('get_org_perm_for_apikey', { apikey, app_id: appId })
@@ -179,7 +204,7 @@ export const isAllowedAppOrg = async (
     const ok = (data as string).includes('perm')
     if (ok) {
         let perm = null as (OrganizationPerm | null)
-        
+
         switch (data as string) {
             case 'perm_none': {
                 perm = OrganizationPerm.none
@@ -250,9 +275,9 @@ export const isAllowedAppOrg = async (
     }
 }
 
-export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
+export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, appId: string, apikey: string, warning = true) => {
     const config = await getRemoteConfig()
-    const validPlan = await isAllowedAction(supabase, userId)
+    const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
     if (!validPlan) {
         p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`);
         setTimeout(() => {
@@ -416,7 +441,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
         if (data.enable_progressive_deploy) {
             p.log.info('Progressive deploy is enabled')
 
-            if (data.secondaryVersionPercentage !== 1) 
+            if (data.secondaryVersionPercentage !== 1)
                 p.log.warn('Latest progressive deploy has not finished')
 
             update.secondVersion = update.version
@@ -427,7 +452,7 @@ export const updateOrCreateChannel = async (supabase: SupabaseClient<Database>,
             update.version = data.secondVersion
             update.secondaryVersionPercentage = 0.1
             p.log.info('Started new progressive upload!')
-            
+
             // update.version = undefined
         }
         return supabase
@@ -505,7 +530,7 @@ export async function getLocalDepenencies() {
         program.error('');
     }
 
-    
+
     let packageJson;
     try {
         packageJson = JSON.parse(readFileSync('./package.json', 'utf8'));
@@ -514,7 +539,7 @@ export async function getLocalDepenencies() {
         console.error('json parse error: ', err)
         program.error('');
     }
-    
+
     const { dependencies } = packageJson
     if (!dependencies) {
         p.log.error("Missing dependencies section in package.json");
@@ -543,9 +568,9 @@ export async function getLocalDepenencies() {
             if (!dependencyFolderExists) {
                 anyInvalid = true
                 p.log.error(`Missing dependency ${key}, please run npm install`);
-                return {name: key, version: value}
+                return { name: key, version: value }
             }
-            
+
             let hasNativeFiles = false;
             await promiseFiles(`./node_modules/${key}`)
                 .then(files => {
@@ -632,36 +657,36 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     const dependenciesObject = await getLocalDepenencies()
     const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
-    const finalDepenencies: 
-    ({
-        name: string;
-        localVersion: string;
-        remoteVersion: string;
-    } | {
-        name: string;
-        localVersion: string;
-        remoteVersion: undefined;
-    }  | {
-        name: string;
-        localVersion: undefined;
-        remoteVersion: string;
-    })[] = dependenciesObject
-        .filter((a) => !!a.native)
-        .map((local) => {
-            const remotePackage = mappedRemoteNativePackages.get(local.name)
-            if (remotePackage)
+    const finalDepenencies:
+        ({
+            name: string;
+            localVersion: string;
+            remoteVersion: string;
+        } | {
+            name: string;
+            localVersion: string;
+            remoteVersion: undefined;
+        } | {
+            name: string;
+            localVersion: undefined;
+            remoteVersion: string;
+        })[] = dependenciesObject
+            .filter((a) => !!a.native)
+            .map((local) => {
+                const remotePackage = mappedRemoteNativePackages.get(local.name)
+                if (remotePackage)
+                    return {
+                        name: local.name,
+                        localVersion: local.version,
+                        remoteVersion: remotePackage.version
+                    }
+
                 return {
                     name: local.name,
                     localVersion: local.version,
-                    remoteVersion: remotePackage.version
+                    remoteVersion: undefined
                 }
-            
-            return {
-                name: local.name,
-                localVersion: local.version,
-                remoteVersion: undefined
-            }
-        })
+            })
 
     const removeNotInLocal = [...mappedRemoteNativePackages]
         .filter(([remoteName]) => dependenciesObject.find((a) => a.name === remoteName) === undefined)
@@ -669,8 +694,8 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
 
     finalDepenencies.push(...removeNotInLocal)
 
-    return { 
+    return {
         finalCompatibility: finalDepenencies,
         localDependencies: dependenciesObject,
-     }
+    }
 }

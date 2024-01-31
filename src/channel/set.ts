@@ -66,7 +66,7 @@ export const setChannel = async (channel: string, appId: string, options: Option
     program.error('');
   }
   try {
-    await checkPlanValid(supabase, userId)
+    await checkPlanValid(supabase, userId, appId, options.apikey)
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,
