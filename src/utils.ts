@@ -41,6 +41,7 @@ export const getLocalConfig = async () => {
             host: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
             hostWeb: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
         }
+        // eslint-disable-next-line max-len
         if (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon) {
             capConfig.supaKey = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon
             capConfig.supaHost = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa
@@ -387,26 +388,15 @@ interface Config {
 }
 
 export const updateOrCreateVersion = async (supabase: SupabaseClient<Database>,
-    update: Database['public']['Tables']['app_versions']['Insert'], apikey: string) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update: Database['public']['Tables']['app_versions']['Insert'], apikey: string) =>
     // console.log('updateOrCreateVersion', update, apikey)
-    const { data, error } = await supabase
-        .rpc('exist_app_versions', { appid: update.app_id, name_version: update.name, apikey })
-        .single()
 
-    if (data && !error) {
-        update.deleted = false
-        return supabase
-            .from('app_versions')
-            .update(update)
-            .eq('app_id', update.app_id)
-            .eq('name', update.name)
-    }
-    // console.log('create Version', data, error)
+    supabase.from('app_versions')
+        .upsert(update, { onConflict: 'name,app_id' })
+        .eq('app_id', update.app_id)
+        .eq('name', update.name)
 
-    return supabase
-        .from('app_versions')
-        .insert(update)
-}
 
 export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, bucketId: string): Promise<string> {
     const data = {
