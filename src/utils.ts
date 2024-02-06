@@ -144,6 +144,31 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
     return !!data
 }
 
+export const isAllowedActionAppIdApiKey = async (supabase: SupabaseClient<Database>, appId: string, apikey: string): Promise<boolean> => {
+    const { data, error } = await supabase
+        .rpc('is_allowed_action', { apikey, appid: appId })
+        .single()
+
+    return !!data
+}
+
+export const getAppOwner = async (supabase: SupabaseClient<Database>, appId: string): Promise<string> => {
+    const { data, error } = await supabase
+        .from('apps')
+        .select('user_id')
+        .eq('app_id', appId)
+        .single()
+
+    if (error) {
+        p.log.error('Cannot get app owner, exiting')
+        p.log.error('Please report the following error to capgo\'s staff')
+        console.error(error)
+        process.exit(1)
+    }
+
+    return data.user_id
+}
+
 export const isAllowedApp = async (supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> => {
     const { data } = await supabase
         .rpc('is_app_owner', { apikey, appid: appId })
@@ -251,9 +276,9 @@ export const isAllowedAppOrg = async (
     }
 }
 
-export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, warning = true) => {
+export const checkPlanValid = async (supabase: SupabaseClient<Database>, userId: string, appId: string, apikey: string, warning = true) => {
     const config = await getRemoteConfig()
-    const validPlan = await isAllowedAction(supabase, userId)
+    const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
     if (!validPlan) {
         p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`);
         setTimeout(() => {

@@ -5,7 +5,7 @@ import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override';
 import { checkVersionNotUsedInChannel } from '../api/channels';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
-    OptionsBase, 
+    OptionsBase,
     getConfig, createSupabaseClient,
     formatError, findSavedKey, checkPlanValid, useLogSnag, verifyUser
 } from '../utils';
@@ -47,7 +47,7 @@ export const unlinkDevice = async (channel: string, appId: string, options: Opti
         program.error('');
     }
     try {
-        await checkPlanValid(supabase, userId)
+        await checkPlanValid(supabase, userId, appId, options.apikey)
 
         const versionData = await getVersionData(supabase, appId, userId, bundle);
         await checkVersionNotUsedInChannel(supabase, appId, userId, versionData);
