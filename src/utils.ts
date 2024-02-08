@@ -145,7 +145,7 @@ export const isAllowedAction = async (supabase: SupabaseClient<Database>, userId
 }
 
 export const isAllowedActionAppIdApiKey = async (supabase: SupabaseClient<Database>, appId: string, apikey: string): Promise<boolean> => {
-    const { data, error } = await supabase
+    const { data } = await supabase
         .rpc('is_allowed_action', { apikey, appid: appId })
         .single()
 
