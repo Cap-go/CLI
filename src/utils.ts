@@ -404,7 +404,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
         bucket_id: bucketId,
     }
     try {
-        const res = await supabase.functions.invoke('upload_link', { body: JSON.stringify(data) })
+        const res = await supabase.functions.invoke('private/upload_link', { body: JSON.stringify(data) })
         return res.data.url
     } catch (error) {
         p.log.error(`Cannot get upload url ${JSON.stringify(error)}`);
