@@ -8,7 +8,7 @@ import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
 import { Database } from 'types/supabase.types';
-import axios from 'axios';
+import ky from 'ky';
 import { promiseFiles } from 'node-dir'
 
 export const baseKey = '.capgo_key';
@@ -68,9 +68,9 @@ interface CapgoConfig {
 export const getRemoteConfig = async () => {
     // call host + /api/get_config and parse the result as json using axios
     const localConfig = await getLocalConfig()
-    return axios
+    return ky
         .get(`${defaultApiHost}/get_config`)
-        .then((res) => res.data as CapgoConfig)
+        .then((res) => res.json<CapgoConfig>())
         .then(data => ({ ...data, ...localConfig } as CapgoConfig))
         .catch(() => {
             console.log('Local config', localConfig);
