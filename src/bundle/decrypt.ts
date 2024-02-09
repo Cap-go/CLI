@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { program } from 'commander'
 import * as p from '@clack/prompts';
 import { decryptSource } from '../api/crypto';

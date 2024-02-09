@@ -1,5 +1,5 @@
-import { randomUUID } from 'crypto';
-import { existsSync, readFileSync } from 'fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';

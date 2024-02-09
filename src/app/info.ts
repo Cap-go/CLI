@@ -1,6 +1,6 @@
 import { readFileSync } from "fs"
-import { join } from "path"
-import os from 'os';
+import { join } from "node:path"
+import os from 'node:os';
 import getLatest from "get-latest-version"
 import Spinnies from '@trufflesuite/spinnies';
 import pack from '../../package.json'

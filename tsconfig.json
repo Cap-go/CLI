@@ -11,17 +11,29 @@
     "sourceMap": true,
     "outDir": "dist",
     "baseUrl": "src",
-    "lib": ["es2016", "dom"],
+    "lib": [
+      "es2016",
+      "dom"
+    ],
     "typeRoots": [
       "src/types/*"
     ],
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist", "__tests__", "**/*.spec.ts"],
-  "paths": {
+    "paths": {
       "*": [
-          "src/types/*"
+        "src/types/*"
       ],
-      "@capacitor/cli/dist/config": ["src/types/capacitor-cli.d.ts"]
-  }
+      "@capacitor/cli/dist/config": [
+        "src/types/capacitor-cli.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "__tests__",
+    "**/*.spec.ts"
+  ],
 }

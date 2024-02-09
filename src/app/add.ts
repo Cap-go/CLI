@@ -1,4 +1,4 @@
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import { getType } from 'mime';
 import { program } from 'commander';
 import * as p from '@clack/prompts';

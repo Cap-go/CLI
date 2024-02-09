@@ -4,7 +4,7 @@ import {
     constants,
     publicEncrypt, privateDecrypt,
     randomBytes, createCipheriv, createDecipheriv
-} from 'crypto';
+} from 'node:crypto';
 
 const algorithm = "aes-128-cbc";
 const oaepHash = 'sha256';

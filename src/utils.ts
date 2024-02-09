@@ -1,6 +1,6 @@
-import { existsSync, readdirSync, readFileSync } from 'fs';
-import { homedir } from 'os';
-import { resolve } from 'path';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { resolve } from 'node:path';
 import { loadConfig } from '@capacitor/cli/dist/config';
 import { program } from 'commander';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
