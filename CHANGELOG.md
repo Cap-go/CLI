@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [3.14.69](https://github.com/Cap-go/capgo-cli/compare/v3.14.68...v3.14.69) (2024-02-10)
+
+
+### Bug Fixes
+
+* use new npm CI ([4bb5534](https://github.com/Cap-go/capgo-cli/commit/4bb553468f1d8b82f88a340cab9d28d914a614e0))
+
 ### [3.14.68](https://github.com/Cap-go/capgo-cli/compare/v3.14.67...v3.14.68) (2024-02-10)
 
 
