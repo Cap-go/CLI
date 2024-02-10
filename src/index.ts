@@ -64,7 +64,6 @@ app
 
 app
   .command('delete [appId]')
-  .alias('d')
   .description('Delete an app in Capgo Cloud')
   .action(deleteApp)
   .option('-a, --apikey <apikey>', 'apikey to link to your account');
@@ -78,7 +77,6 @@ app
 
 app
   .command('debug  [appId]')
-  .alias('d')
   .description('Listen for live updates event in Capgo Cloud to debug your app')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-d, --device <device>', 'the specific device to debug')
@@ -151,7 +149,6 @@ bundle
 
 bundle
   .command('unlink [appId]')
-  .alias('u')
   .description('Unlink a bundle in Capgo Cloud')
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
@@ -169,7 +166,6 @@ bundle
 
 bundle
   .command('decrypt [zipPath] [sessionKey]')
-  .alias('l')
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
   .option('--key <key>', 'custom path for private signing key')

@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getType } from 'mime';
+import mime from 'mime';
 import { program } from "commander";
 import * as p from '@clack/prompts';
 import { existsSync, readFileSync } from "node:fs";
@@ -44,13 +44,13 @@ export const setApp = async (appId: string, options: Options) => {
 
     if (icon && existsSync(icon)) {
         iconBuff = readFileSync(icon);
-        const contentType = getType(icon);
+        const contentType = mime.getType(icon);
         iconType = contentType || 'image/png';
         p.log.warn(`Found app icon ${icon}`);
     }
     else if (existsSync(newIconPath)) {
         iconBuff = readFileSync(newIconPath);
-        const contentType = getType(newIconPath);
+        const contentType = mime.getType(newIconPath);
         iconType = contentType || 'image/png';
         p.log.warn(`Found app icon ${newIconPath}`);
     } else {
