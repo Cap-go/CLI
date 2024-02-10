@@ -1,11 +1,11 @@
-import { randomUUID } from 'crypto';
-import { existsSync, readFileSync } from 'fs';
+import { randomUUID } from 'node:crypto';
+import { existsSync, readFileSync } from 'node:fs';
 import AdmZip from 'adm-zip';
 import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { checksum as getChecksum } from '@tomasklaen/checksum';
 import ciDetect from 'ci-info';
-import axios from "axios";
+import ky from 'ky';
 import { checkLatest } from '../api/update';
 import { checkAppExistsAndHasPermissionOrgErr } from "../api/app";
 import { encryptSource } from '../api/crypto';
@@ -320,11 +320,8 @@ It will be also visible in your dashboard\n`);
       p.log.error(`Cannot get upload url`);
       program.error('');
     }
-
-    await axios({
-      method: "put",
-      url,
-      data: zipped,
+    await ky.put(url, {
+      body: zipped,
       headers: (!localS3 ? {
         "Content-Type": "application/octet-stream",
         "Cache-Control": "public, max-age=456789, immutable",

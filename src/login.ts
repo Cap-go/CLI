@@ -1,5 +1,5 @@
-import { existsSync, writeFileSync, appendFileSync } from 'fs'
-import { homedir } from 'os'
+import { existsSync, writeFileSync, appendFileSync } from 'node:fs'
+import { homedir } from 'node:os'
 import { program } from 'commander';
 import * as p from '@clack/prompts';
 import { createSupabaseClient, useLogSnag, verifyUser } from './utils';

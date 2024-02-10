@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { program } from 'commander'
 import { writeConfig } from '@capacitor/cli/dist/config';
 import * as p from '@clack/prompts';

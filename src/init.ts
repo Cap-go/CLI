@@ -1,4 +1,4 @@
-import { writeFileSync, readFileSync } from 'fs';
+import { writeFileSync, readFileSync } from 'node:fs';
 import { execSync, ExecSyncOptions, spawnSync } from 'child_process';
 import { findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts';
