@@ -30,7 +30,7 @@
   ],
   "scripts": {
     "build": "node build.mjs",
-    "watch": "NODE_ENV=development node build.mjs",
+    "dev": "NODE_ENV=development node build.mjs",
     "no-debug": "node dist/index.js",
     "test": "npx --yes ts-node -T src/index.ts",
     "dev-build": "SUPA_DB=development node build.mjs",
