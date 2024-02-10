@@ -7,9 +7,9 @@ import { createClient, SupabaseClient } from '@supabase/supabase-js';
 import prettyjson from 'prettyjson';
 import { LogSnag } from 'logsnag';
 import * as p from '@clack/prompts';
-import { Database } from 'types/supabase.types';
 import ky from 'ky';
 import { promiseFiles } from 'node-dir'
+import { Database } from './types/supabase.types';
 
 export const baseKey = '.capgo_key';
 export const baseKeyPub = `${baseKey}.pub`;

@@ -2,7 +2,7 @@ import { program } from 'commander';
 import { Table } from 'console-table-printer';
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
-import { Database } from 'types/supabase.types';
+import { Database } from '../types/supabase.types';
 import { OptionsBase, createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils';
 import { checkLatest } from '../api/update';
 

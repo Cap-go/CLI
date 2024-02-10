@@ -2,7 +2,7 @@ import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import { program } from 'commander';
 import LogSnag from 'logsnag';
-import { Database } from 'types/supabase.types';
+import { Database } from '../types/supabase.types';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';
 import { checkLatest } from '../api/update';
 import { convertAppName, createSupabaseClient, findSavedKey, getLocalConfig, useLogSnag, verifyUser, getConfig } from '../utils';

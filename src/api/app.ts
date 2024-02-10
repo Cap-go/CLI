@@ -1,7 +1,7 @@
 import { SupabaseClient } from '@supabase/supabase-js';
 import * as p from '@clack/prompts';
 import { program } from 'commander';
-import { Database } from 'types/supabase.types';
+import { Database } from '../types/supabase.types';
 import { isAllowedApp, isAllowedAppOrg, OptionsBase, OrganizationPerm } from '../utils';
 
 export const checkAppExists = async (supabase: SupabaseClient<Database>, appid: string) => {

@@ -3,7 +3,7 @@ import semver from 'semver/preload';
 import * as p from '@clack/prompts';
 import promptSync from 'prompt-sync';
 import { SupabaseClient } from '@supabase/supabase-js';
-import { Database } from 'types/supabase.types';
+import { Database } from '../types/supabase.types';
 import { OptionsBase, createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils';
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions';
 import { checkAppExistsAndHasPermissionErr } from '../api/app';

@@ -5,7 +5,7 @@ import * as p from '@clack/prompts';
 import { SupabaseClient } from '@supabase/supabase-js';
 import LogSnag from 'logsnag';
 import semver from 'semver'
-import { Database } from 'types/supabase.types';
+import { Database } from './types/supabase.types';
 import { markSnag , waitLog } from './app/debug';
 import { createKey } from './key';
 import { addChannel } from './channel/add';

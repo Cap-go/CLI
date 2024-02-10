@@ -1,6 +1,6 @@
 import { program } from 'commander';
 import * as p from '@clack/prompts';
-import { Database } from 'types/supabase.types';
+import { Database } from '../types/supabase.types';
 import { checkAppExistsAndHasPermissionErr } from "../api/app";
 import {
   OptionsBase,
