@@ -404,7 +404,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
         bucket_id: bucketId,
     }
     try {
-        const pathUploadLink = 'private/upload_link'
+        const pathUploadLink = 'upload_link'
         // const pathUploadLink = 'private/upload_link' // TODO: switch to new endpoint when new backend released
         const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
         return res.data.url
