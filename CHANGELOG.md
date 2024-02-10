@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.0.0](https://github.com/Cap-go/capgo-cli/compare/v3.14.71...v4.0.0) (2024-02-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* use node 20
+
+### Features
+
+* use node 20 ([203a7da](https://github.com/Cap-go/capgo-cli/commit/203a7dad33693678551a6a0beccf7547289ba4d8))
+
 ### [3.14.71](https://github.com/Cap-go/capgo-cli/compare/v3.14.70...v3.14.71) (2024-02-10)
 
 ### [3.14.70](https://github.com/Cap-go/capgo-cli/compare/v3.14.69...v3.14.70) (2024-02-10)
