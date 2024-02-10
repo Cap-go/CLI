@@ -30,11 +30,11 @@ jobs:
       - name: Run
         id: run_cli
         run: node dist/index.js --help
-      - uses: rxfork/npm-publish@v3
+      - uses: JS-DevTools/npm-publish@v3
         if: ${{ !contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
-      - uses: rxfork/npm-publish@v3
+      - uses: JS-DevTools/npm-publish@v3
         if: ${{ contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
