@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.2](https://github.com/Cap-go/capgo-cli/compare/v4.0.1...v4.0.2) (2024-02-17)
+
+
+### Bug Fixes
+
+* add log when using custom supabase ([8a22378](https://github.com/Cap-go/capgo-cli/commit/8a223783cb95ec9a80555fb21f963fd9c38c311d))
+
 ### [4.0.1](https://github.com/Cap-go/capgo-cli/compare/v4.0.0...v4.0.1) (2024-02-10)
 
 
