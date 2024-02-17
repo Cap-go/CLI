@@ -43,6 +43,7 @@ export const getLocalConfig = async () => {
         }
         // eslint-disable-next-line max-len
         if (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon) {
+            p.log.info('Using custom supabase instance from capacitor.config.json')
             capConfig.supaKey = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon
             capConfig.supaHost = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa
         }
