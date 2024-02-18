@@ -8,11 +8,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Cap-go/capgo-cli.git"
+    "url": "git+https://github.com/Cap-go/CLI.git"
   },
   "bugs": {
-    "url": "https://github.com/Cap-go/capgo-cli/issues"
+    "url": "https://github.com/Cap-go/CLI/issues"
   },
+  "homepage": "https://github.com/Cap-go/CLIl#readme",
   "engines": {
     "npm": ">=8.0.0",
     "node": ">=20.0.0"
