@@ -50,8 +50,7 @@ interface QueryStats {
 export async function getStats(supabase: SupabaseClient<Database>, query: QueryStats)
 : Promise<Database['public']['Tables']['stats']['Row'] | null> {
     try {
-        const pathStats = 'get_stats'
-        // const pathStats = 'private/stats' // TODO: switch to new endpoint when new backend released
+        const pathStats = 'private/stats'
         const res = await supabase.functions.invoke(pathStats, { body: JSON.stringify(query) })
         const listData = res.data.data as Database['public']['Tables']['stats']['Row'][]
         if (listData?.length > 0) {

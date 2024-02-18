@@ -70,7 +70,7 @@ export const getRemoteConfig = async () => {
     // call host + /api/get_config and parse the result as json using axios
     const localConfig = await getLocalConfig()
     return ky
-        .get(`${defaultApiHost}/get_config`)
+        .get(`${defaultApiHost}/private/config`)
         .then((res) => res.json<CapgoConfig>())
         .then(data => ({ ...data, ...localConfig } as CapgoConfig))
         .catch(() => {
@@ -405,8 +405,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
         bucket_id: bucketId,
     }
     try {
-        const pathUploadLink = 'upload_link'
-        // const pathUploadLink = 'private/upload_link' // TODO: switch to new endpoint when new backend released
+        const pathUploadLink = 'private/upload_link'
         const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
         return res.data.url
     } catch (error) {
