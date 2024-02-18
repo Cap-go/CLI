@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.7](https://github.com/Cap-go/CLI/compare/v4.0.6...v4.0.7) (2024-02-18)
+
+
+### Bug Fixes
+
+* use new endpoint path ([f3b5ae3](https://github.com/Cap-go/CLI/commit/f3b5ae3b355a04d4ff804da25870c16d9a31392b))
+
 ### [4.0.6](https://github.com/Cap-go/CLI/compare/v4.0.5...v4.0.6) (2024-02-18)
 
 
