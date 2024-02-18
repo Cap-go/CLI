@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.3](https://github.com/Cap-go/capgo-cli/compare/v4.0.2...v4.0.3) (2024-02-18)
+
+
+### Bug Fixes
+
+* add provenance ([a70f6bb](https://github.com/Cap-go/capgo-cli/commit/a70f6bbc3e4b2e88f7c87e704c062d4832f4f674))
+
 ### [4.0.2](https://github.com/Cap-go/capgo-cli/compare/v4.0.1...v4.0.2) (2024-02-17)
 
 
