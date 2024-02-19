@@ -26,6 +26,9 @@ export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient
   }
   if (res && !perm) {
     p.log.error(`App ${appid} exist and you don't have permission to access it`);
+    if (appid === 'io.ionic.starter') {
+      p.log.info('Modify your appid in your capacitor.config.json file to something unique, this is a default appid for ionic starter app');
+    }
     program.error('');
   }
 }
