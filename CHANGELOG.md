@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.8](https://github.com/Cap-go/CLI/compare/v4.0.7...v4.0.8) (2024-02-19)
+
+
+### Bug Fixes
+
+* prevent usage of default appId ([8fa2002](https://github.com/Cap-go/CLI/commit/8fa2002f2913f84e52390bcf9cf147a954573867))
+
 ### [4.0.7](https://github.com/Cap-go/CLI/compare/v4.0.6...v4.0.7) (2024-02-18)
 
 
