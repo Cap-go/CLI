@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.9](https://github.com/Cap-go/CLI/compare/v4.0.8...v4.0.9) (2024-02-23)
+
+
+### Bug Fixes
+
+* timeout issue ([2377461](https://github.com/Cap-go/CLI/commit/237746148224fe146abc5cc733739cde6bc0701d))
+
 ### [4.0.8](https://github.com/Cap-go/CLI/compare/v4.0.7...v4.0.8) (2024-02-19)
 
 
