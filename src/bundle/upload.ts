@@ -321,6 +321,7 @@ It will be also visible in your dashboard\n`);
       program.error('');
     }
     await ky.put(url, {
+      timeout: 60000,
       body: zipped,
       headers: (!localS3 ? {
         "Content-Type": "application/octet-stream",
