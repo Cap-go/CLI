@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.11](https://github.com/Cap-go/CLI/compare/v4.0.10...v4.0.11) (2024-02-25)
+
+
+### Bug Fixes
+
+* deploy new is_good_plan_v5 ([38bc592](https://github.com/Cap-go/CLI/commit/38bc592312f5d6e351c7da3be3ea423e2747553e))
+
 ### [4.0.10](https://github.com/Cap-go/CLI/compare/v4.0.9...v4.0.10) (2024-02-24)
 
 
