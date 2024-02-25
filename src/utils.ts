@@ -119,7 +119,7 @@ export const checkKey = async (supabase: SupabaseClient<Database>, apikey: strin
 
 export const isGoodPlan = async (supabase: SupabaseClient<Database>, userId: string): Promise<boolean> => {
     const { data } = await supabase
-        .rpc('is_good_plan_v3', { userid: userId })
+        .rpc('is_good_plan_v5', { userid: userId })
         .single()
     return data || false
 }
