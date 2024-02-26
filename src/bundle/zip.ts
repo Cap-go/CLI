@@ -24,10 +24,11 @@ interface Options extends OptionsBase {
 }
 
 export const zipBundle = async (appId: string, options: Options) => {
-    await checkLatest();
     let { bundle, path } = options;
     const { json } = options
     const snag = useLogSnag()
+    if (!json)
+        await checkLatest();
 
     const config = await getConfig();
     appId = appId || config?.app?.appId
