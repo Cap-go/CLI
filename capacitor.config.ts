@@ -16,8 +16,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'com.neufmoispourtoi.app',
-  appName: '9moispourtoi',
+  appId: 'ee.forgr.capacitor_go',
+  appName: 'Capgo',
   webDir: 'dist',
   bundledWebRuntime: false,
   plugins: {
