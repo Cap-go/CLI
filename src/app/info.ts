@@ -49,13 +49,12 @@ async function getInstalledDependencies() {
 }
 
 export async function getInfo() {
-  p.log.info('     💊   Capgo Doctor  💊\n')
+  p.log.info(' 💊   Capgo Doctor  💊\n')
   p.log.info(` OS: ${os.platform()} ${os.version()}\n`)
   p.log.info(` Node: ${process.version}\n`)
   p.log.info(' Installed Dependencies:\n')
   const installedDependencies = await getInstalledDependencies()
   if (Object.keys(installedDependencies).length === 0) {
-    p.log.info('\n')
     // display in red color in shell with console log
     p.log.warning('\x1B[31m%s\x1B[0m 🚨 No dependencies found')
     process.exit(1)
@@ -68,10 +67,9 @@ export async function getInfo() {
   }
   p.log.info('\n')
   const spinnies = new Spinnies()
-  spinnies.add('loading', { text: 'Loading latest dependencies' })
+  spinnies.add('loading', { text: '  Loading latest dependencies' })
   const latestDependencies = await getLatestDependencies(installedDependencies)
-  spinnies.succeed('loading', { text: 'Latest Dependencies:' })
-  p.log.info('\n')
+  spinnies.succeed('loading', { text: '  Latest Dependencies:' })
   for (const dependency in latestDependencies) {
     if (Object.prototype.hasOwnProperty.call(latestDependencies, dependency)) {
       const latestVersion = (latestDependencies as any)[dependency]
@@ -79,13 +77,11 @@ export async function getInfo() {
     }
   }
   if (JSON.stringify(installedDependencies) !== JSON.stringify(latestDependencies)) {
-    p.log.info('\n')
     // display in red color in shell with console log
-    p.log.info('\x1B[31m%s\x1B[0m 🚨 Some dependencies are not up to date')
+    p.log.warn('\x1B[31m🚨 Some dependencies are not up to date\x1B[0m')
     process.exit(1)
   }
-  p.log.info('\n')
   // display in green color in shell with console log
-  p.log.info('\x1B[32m%s\x1B[0m ✅ All dependencies are up to date')
+  p.log.success('\x1B[32m✅ All dependencies are up to date\x1B[0m')
   process.exit()
 }
