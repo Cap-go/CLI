@@ -72,8 +72,11 @@ export function delChannel(supabase: SupabaseClient<Database>, name: string, app
     .eq('created_by', userId)
     .single()
 }
-
-export function displayChannels(data: (Database['public']['Tables']['channels']['Row'] & { keep?: string })[]) {
+interface version {
+  id: string
+  name: string
+}
+export function displayChannels(data: (Database['public']['Tables']['channels']['Row'] & { version?: version, secondVersion?: version })[]) {
   const t = new Table({
     title: 'Channels',
     charLength: { '❌': 2, '✅': 2 },
@@ -83,8 +86,21 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
   data.reverse().forEach((row) => {
     t.addRow({
       Name: row.name,
-      Created: getHumanDate(row.created_at),
+      ... (row.version ? { Version: row.version.name } : undefined),
       Public: row.public ? '✅' : '❌',
+      iOS: row.ios ? '❌' : '✅',
+      Android: row.android ? '❌' : '✅',
+      '⬆️ limit': row.disableAutoUpdate,
+      '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
+      'Self assign': row.allow_device_self_set ? '✅' : '❌',
+      'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
+      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined ),
+      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
+      'AB Testing': row.enableAbTesting ? '✅' : '❌',
+      ...( row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined ),
+      ...( row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
+      "Emulator": row.allow_emulator ? '✅' : '❌',
+      "Dev 📱": row.allow_dev ? '✅' : '❌',
     })
   })
 
@@ -94,7 +110,26 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
 export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {
   const { data, error: vError } = await supabase
     .from('channels')
-    .select()
+    .select(`
+      id,
+      name,
+      public,
+      allow_emulator,
+      allow_dev,
+      ios,
+      android,
+      allow_device_self_set,
+      disableAutoUpdateUnderNative,
+      disableAutoUpdate,
+      enable_progressive_deploy,
+      enableAbTesting,
+      secondaryVersionPercentage,
+      secondVersion (id, name),
+      created_at,
+      created_by,
+      app_id,
+      version (id, name)
+    `)
     .eq('app_id', appid)
     // .eq('created_by', userId)
     .order('created_at', { ascending: false })
