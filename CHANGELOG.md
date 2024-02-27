@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.0.13](https://github.com/Cap-go/CLI/compare/v4.0.12...v4.0.13) (2024-02-26)
+
+
+### Bug Fixes
+
+* add back lint with same config as usual ([8542260](https://github.com/Cap-go/CLI/commit/8542260aacd26842acbd4d623c4ef960fc776cec))
+* formating with clack of doctor command ([4bd7182](https://github.com/Cap-go/CLI/commit/4bd71820d9aab67e9d12048d140a4eb76d807859))
+
 ### [4.0.12](https://github.com/Cap-go/CLI/compare/v4.0.11...v4.0.12) (2024-02-26)
 
 ### [4.0.11](https://github.com/Cap-go/CLI/compare/v4.0.10...v4.0.11) (2024-02-25)
