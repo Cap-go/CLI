@@ -13,18 +13,18 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
 }
 
 export async function checkAppExistsAndHasPermissionErr(supabase: SupabaseClient<Database>, apikey: string, appid: string, shouldExist = true) {
-  const res = await checkAppExists(supabase, appid)
+  const appExist = await checkAppExists(supabase, appid)
   const perm = await isAllowedApp(supabase, apikey, appid)
 
-  if (res && !shouldExist) {
+  if (appExist && !shouldExist) {
     p.log.error(`App ${appid} already exist`)
     program.error('')
   }
-  if (!res && shouldExist) {
+  if (!appExist && shouldExist) {
     p.log.error(`App ${appid} does not exist`)
     program.error('')
   }
-  if (res && !perm) {
+  if (appExist && !perm) {
     p.log.error(`App ${appid} exist and you don't have permission to access it`)
     if (appid === 'io.ionic.starter')
       p.log.info('Modify your appid in your capacitor.config.json file to something unique, this is a default appid for ionic starter app')
