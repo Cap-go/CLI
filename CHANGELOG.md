@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.1.0](https://github.com/Cap-go/CLI/compare/v4.0.14...v4.1.0) (2024-02-27)
+
+
+### Features
+
+* better channel list ([93c8b04](https://github.com/Cap-go/CLI/commit/93c8b04407d1b3fe43963d9d8f11dc5e419008e8))
+
 ### [4.0.14](https://github.com/Cap-go/CLI/compare/v4.0.13...v4.0.14) (2024-02-27)
 
 ### [4.0.13](https://github.com/Cap-go/CLI/compare/v4.0.12...v4.0.13) (2024-02-26)
