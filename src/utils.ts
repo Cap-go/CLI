@@ -373,6 +373,7 @@ interface Config {
           channelUrl?: string
           updateUrl?: string
           privateKey?: string
+          publicKey?: string
         }
       }
       server: {

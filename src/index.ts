@@ -3,8 +3,8 @@ import pack from '../package.json'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
 import { listBundle } from './bundle/list'
-import { decryptZip } from './bundle/decrypt'
-import { encryptZip } from './bundle/encrypt'
+import { decryptZip, publicDecryptZip } from './bundle/decrypt'
+import { encryptZip, privateEncryptZip } from './bundle/encrypt'
 import { addCommand } from './app/add'
 import { getInfo } from './app/info'
 import { createKeyCommand, saveKeyCommand } from './key'
@@ -176,6 +176,20 @@ bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
+  .option('--key <key>', 'custom path for private signing key')
+  .option('--key-data <keyData>', 'base64 private signing key')
+
+bundle
+  .command('publicDecrypt [zipPath] [sessionKey]')
+  .description('Decrypt a signed zip bundle')
+  .action(publicDecryptZip)
+  .option('--key <key>', 'custom path for public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
+
+bundle
+  .command('privateEncrypt [zipPath]')
+  .description('Encrypt a zip bundle')
+  .action(privateEncryptZip)
   .option('--key <key>', 'custom path for private signing key')
   .option('--key-data <keyData>', 'base64 private signing key')
 

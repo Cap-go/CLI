@@ -2,8 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { decryptSource } from '../api/crypto'
-import { baseKey, getConfig } from '../utils'
+import { decryptSource, publicDecryptSource } from '../api/crypto'
+import { baseKey, baseKeyPub, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
 
 interface Options {
@@ -47,6 +47,49 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
   const zipFile = readFileSync(zipPath)
 
   const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? privateKey ?? '')
+  // write decodedZip in a file
+  writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
+  p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`)
+  process.exit()
+}
+
+
+export async function publicDecryptZip(zipPath: string, ivsessionKey: string, options: Options) {
+  p.intro(`Decrypt zip file`)
+  await checkLatest()
+  // write in file .capgo the apikey in home directory
+
+  if (!existsSync(zipPath)) {
+    p.log.error(`Zip not found at the path ${zipPath}`)
+    program.error('')
+  }
+
+  const config = await getConfig()
+  const { extConfig } = config.app
+
+  if (!options.key && !existsSync(baseKeyPub) && !extConfig.plugins?.CapacitorUpdater?.publicKey) {
+    p.log.error(`Public Key not found at the path ${baseKeyPub} or in ${config.app.extConfigFilePath}`)
+    program.error('')
+  }
+  const keyPath = options.key || baseKeyPub
+  // check if publicKey exist
+
+  let publicKey = extConfig?.plugins?.CapacitorUpdater?.publicKey
+
+  if (!existsSync(keyPath) && !publicKey) {
+    p.log.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+    program.error('')
+  }
+  else if (existsSync(keyPath)) {
+    // open with fs publicKey path
+    const keyFile = readFileSync(keyPath)
+    publicKey = keyFile.toString()
+  }
+  // console.log('publicKey', publicKey)
+
+  const zipFile = readFileSync(zipPath)
+
+  const decodedZip = publicDecryptSource(zipFile, ivsessionKey, options.keyData ?? publicKey ?? '')
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
   p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`)
