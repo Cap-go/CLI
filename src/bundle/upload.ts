@@ -316,7 +316,6 @@ It will be also visible in your dashboard\n`)
 
   const versionData = {
     bucket_id: external ? undefined : fileName,
-    user_id: appOwner,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
