@@ -15,6 +15,7 @@ import type {
   OptionsBase,
 } from '../utils'
 import {
+  EMPTY_UUID,
   OrganizationPerm,
   baseKeyPub,
   checkCompatibility,
@@ -323,6 +324,7 @@ It will be also visible in your dashboard\n`)
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
     native_packages: nativePackages,
+    owner_org: EMPTY_UUID,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
@@ -344,10 +346,10 @@ It will be also visible in your dashboard\n`)
       body: zipped,
       headers: (!localS3
         ? {
-            'Content-Type': 'application/octet-stream',
-            'Cache-Control': 'public, max-age=456789, immutable',
-            'x-amz-meta-crc32': checksum,
-          }
+          'Content-Type': 'application/octet-stream',
+          'Cache-Control': 'public, max-age=456789, immutable',
+          'x-amz-meta-crc32': checksum,
+        }
         : undefined),
     })
     versionData.storage_provider = 'r2'
@@ -368,6 +370,7 @@ It will be also visible in your dashboard\n`)
       app_id: appid,
       created_by: appOwner,
       version: versionId,
+      owner_org: EMPTY_UUID,
     })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)

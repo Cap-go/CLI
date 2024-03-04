@@ -2,8 +2,8 @@ import * as p from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
 import type { OptionsBase } from '../utils'
-import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { OrganizationPerm, checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -36,7 +36,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   // const hashedLocalDependencies = new Map(dependenciesObject
   //     .filter((a) => !!a.native && a.native !== undefined)

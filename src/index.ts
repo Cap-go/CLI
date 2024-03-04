@@ -148,12 +148,13 @@ bundle
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
-bundle
-  .command('unlink [appId]')
-  .description('Unlink a bundle in Capgo Cloud')
-  .action(listBundle)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
+// TODO: Fix this command!
+// bundle
+//   .command('unlink [appId]')
+//   .description('Unlink a bundle in Capgo Cloud')
+//   .action(listBundle)
+//   .option('-a, --apikey <apikey>', 'apikey to link to your account')
+//   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
 
 bundle
   .command('cleanup [appId]')

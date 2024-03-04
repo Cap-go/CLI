@@ -1,10 +1,10 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayBundles, getActiveAppVersions } from '../api/versions'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
 import { checkLatest } from '../api/update'
 
 export async function listBundle(appId: string, options: OptionsBase) {
@@ -30,7 +30,7 @@ export async function listBundle(appId: string, options: OptionsBase) {
   p.log.info(`Querying available versions of: ${appId} in Capgo`)
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   // Get all active app versions we might possibly be able to cleanup
   const allVersions = await getActiveAppVersions(supabase, appId, userId)

@@ -1,9 +1,9 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
 import { deleteSpecificVersion } from '../api/versions'
 
 interface Options extends OptionsBase {
@@ -28,7 +28,7 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
 
   appId = appId || config?.app?.appId
   if (!options.apikey) {

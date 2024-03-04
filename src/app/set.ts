@@ -5,8 +5,8 @@ import mime from 'mime'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import type { Options } from '../api/app'
-import { checkAppExistsAndHasPermissionErr, newIconPath } from '../api/app'
-import { createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from '../utils'
+import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from '../utils'
 
 export async function setApp(appId: string, options: Options) {
   p.intro(`Set app`)
@@ -26,11 +26,11 @@ export async function setApp(appId: string, options: Options) {
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
   const { name, icon, retention } = options
 
-  if (retention && !Number.isNaN(Number(retention))) {
+  if (retention && Number.isNaN(Number(retention))) {
     p.log.error(`retention value must be a number`)
     program.error(``)
   }

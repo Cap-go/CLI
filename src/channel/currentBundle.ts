@@ -1,9 +1,9 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -36,9 +36,9 @@ export async function currentBundle(channel: string, appId: string, options: Opt
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read'])
+  const _userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   if (!channel) {
     p.log.error(`Please provide a channel to get the bundle from.`)
@@ -50,7 +50,6 @@ export async function currentBundle(channel: string, appId: string, options: Opt
     .select('version ( name )')
     .eq('name', channel)
     .eq('app_id', appId)
-    .eq('created_by', userId)
     .limit(1)
 
   if (error || supabaseChannel.length === 0) {

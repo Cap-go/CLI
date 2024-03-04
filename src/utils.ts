@@ -18,6 +18,7 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
+export const EMPTY_UUID = '00000000-0000-0000-0000-000000000000'
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
@@ -186,7 +187,7 @@ export enum OrganizationPerm {
   upload = 2,
   write = 3,
   admin = 4,
-  owner = 5,
+  super_admin = 5,
 }
 
 export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
@@ -228,7 +229,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
         break
       }
       case 'perm_owner': {
-        perm = OrganizationPerm.owner
+        perm = OrganizationPerm.super_admin
         break
       }
       default: {
@@ -326,7 +327,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       && !dirent.name.startsWith('.')
       && !dirent.name.startsWith('node_modules')
       && !dirent.name.startsWith('dist'))
-      yield * getFiles(res)
+      yield* getFiles(res)
     else
       yield res
   }
@@ -417,7 +418,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
     .eq('app_id', update.app_id)
     .eq('name', update.name)
-  // .eq('created_by', update.created_by)
+    // .eq('created_by', update.created_by)
     .single()
 
   if (data && !error) {
@@ -443,7 +444,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
       .update(update)
       .eq('app_id', update.app_id)
       .eq('name', update.name)
-    // .eq('created_by', update.created_by)
+      // .eq('created_by', update.created_by)
       .select()
       .single()
   }
@@ -638,36 +639,36 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
   const finalDepenencies:
-  ({
-    name: string
-    localVersion: string
-    remoteVersion: string
-  } | {
-    name: string
-    localVersion: string
-    remoteVersion: undefined
-  } | {
-    name: string
-    localVersion: undefined
-    remoteVersion: string
-  })[] = dependenciesObject
-    .filter(a => !!a.native)
-    .map((local) => {
-      const remotePackage = mappedRemoteNativePackages.get(local.name)
-      if (remotePackage) {
+    ({
+      name: string
+      localVersion: string
+      remoteVersion: string
+    } | {
+      name: string
+      localVersion: string
+      remoteVersion: undefined
+    } | {
+      name: string
+      localVersion: undefined
+      remoteVersion: string
+    })[] = dependenciesObject
+      .filter(a => !!a.native)
+      .map((local) => {
+        const remotePackage = mappedRemoteNativePackages.get(local.name)
+        if (remotePackage) {
+          return {
+            name: local.name,
+            localVersion: local.version,
+            remoteVersion: remotePackage.version,
+          }
+        }
+
         return {
           name: local.name,
           localVersion: local.version,
-          remoteVersion: remotePackage.version,
+          remoteVersion: undefined,
         }
-      }
-
-      return {
-        name: local.name,
-        localVersion: local.version,
-        remoteVersion: undefined,
-      }
-    })
+      })
 
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)

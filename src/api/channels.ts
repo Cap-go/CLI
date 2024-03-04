@@ -6,12 +6,11 @@ import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { formatError, getHumanDate } from '../utils'
 
-export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, userId: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
+export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: channelFound, error: errorChannel } = await supabase
     .from('channels')
     .select()
     .eq('app_id', appid)
-    .eq('created_by', userId)
     .eq('version', versionData.id)
   if (errorChannel) {
     p.log.error(`Cannot check Version ${appid}@${versionData.name}`)
@@ -69,7 +68,6 @@ export function delChannel(supabase: SupabaseClient<Database>, name: string, app
     .delete()
     .eq('name', name)
     .eq('app_id', appId)
-    .eq('created_by', userId)
     .single()
 }
 interface version {
@@ -94,11 +92,11 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
       '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
       'Self assign': row.allow_device_self_set ? '✅' : '❌',
       'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
-      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined ),
-      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
+      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined),
+      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
       'AB Testing': row.enableAbTesting ? '✅' : '❌',
-      ...( row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined ),
-      ...( row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
+      ...(row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined),
+      ...(row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
       "Emulator": row.allow_emulator ? '✅' : '❌',
       "Dev 📱": row.allow_dev ? '✅' : '❌',
     })

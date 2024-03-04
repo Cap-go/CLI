@@ -1,10 +1,10 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
 
 export async function listChannels(appId: string, options: OptionsBase) {
   p.intro(`List channels`)
@@ -24,7 +24,7 @@ export async function listChannels(appId: string, options: OptionsBase) {
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   p.log.info(`Querying available channels in Capgo`)
 
