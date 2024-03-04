@@ -363,16 +363,25 @@ interface Config {
       plugins: {
         extConfig: object
         CapacitorUpdater: {
+          appReadyTimeout?: number
+          responseTimeout?: number
+          autoDeleteFailed?: boolean
+          autoDeletePrevious?: boolean
           autoUpdate?: boolean
+          resetWhenUpdate?: boolean
+          updateUrl?: string
+          statsUrl?: string
+          privateKey?: string
+          version?: string
+          directUpdate?: boolean
+          periodCheckDelay?: number
           localS3?: boolean
           localHost?: string
           localWebHost?: string
           localSupa?: string
           localSupaAnon?: string
-          statsUrl?: string
-          channelUrl?: string
-          updateUrl?: string
-          privateKey?: string
+          allowModifyUrl?: boolean
+          defaultChannel?: string
         }
       }
       server: {

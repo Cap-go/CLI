@@ -75,7 +75,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   appid = appid || config?.app?.appId
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const uuid = randomUUID().split('-')[0]
-  bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
+  bundle = bundle || config?.app?.extConfig?.plugins?.CapacitorUpdater?.version || config?.app?.package?.version || `0.0.1-beta.${uuid}`
   // check if bundle is valid
   if (!regexSemver.test(bundle)) {
     p.log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`)
