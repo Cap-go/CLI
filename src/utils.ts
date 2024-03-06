@@ -372,7 +372,6 @@ interface Config {
           statsUrl?: string
           channelUrl?: string
           updateUrl?: string
-          privateKey?: string
           publicKey?: string
         }
       }

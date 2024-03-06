@@ -169,8 +169,8 @@ bundle
   .command('decrypt [zipPath] [sessionKey]')
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
-  .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
+  .option('--key <key>', 'custom path for public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
 
 bundle
   .command('encrypt [zipPath]')
