@@ -4,8 +4,8 @@ import { program } from 'commander'
 import ciDetect from 'ci-info'
 import * as p from '@clack/prompts'
 import { checkLatest } from '../api/update'
-import { encryptSource, privateEncryptSource } from '../api/crypto'
-import { baseKey, baseKeyPub, getLocalConfig } from '../utils'
+import { encryptSource } from '../api/crypto'
+import { baseKey, getLocalConfig, getConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -17,6 +17,16 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   await checkLatest()
   const localConfig = await getLocalConfig()
+  const config = await getConfig()
+  const { extConfig } = config.app
+  // console.log('localConfig - ', localConfig)
+  // console.log('config - ', config)
+
+  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
+  const hasPublicKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.publicKey ? true : false
+
+  if (hasPrivateKeyInConfig)
+    p.log.warning(`There is still a privateKey in the config`)
 
   // write in file .capgo the apikey in home directory
 
@@ -25,79 +35,44 @@ export async function encryptZip(zipPath: string, options: Options) {
     program.error('')
   }
 
-  const keyPath = options.key || baseKeyPub
-  // check if publicKey exist
-
-  let publicKey = options.keyData || ''
-
-  if (!existsSync(keyPath) && !publicKey) {
-    p.log.warning(`Cannot find public key ${keyPath} or as keyData option`)
-    if (ciDetect.isCI) {
-      p.log.error(`Error: Missing public key`)
-      program.error('')
-    }
-    const res = await p.confirm({ message: 'Do you want to use our public key ?' })
-    if (!res) {
-      p.log.error(`Error: Missing public key`)
-      program.error('')
-    }
-    publicKey = localConfig.signKey || ''
-  }
-  else if (existsSync(keyPath)) {
-    // open with fs publicKey path
-    const keyFile = readFileSync(keyPath)
-    publicKey = keyFile.toString()
-  }
-
-  const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSource(zipFile, publicKey)
-  p.log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
-  // write decodedZip in a file
-  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
-  p.log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
-  p.outro(`Done ✅`)
-  process.exit()
-}
-
-export async function privateEncryptZip(zipPath: string, options: Options) {
-  p.intro(`Encryption`)
-
-  await checkLatest()
-  const localConfig = await getLocalConfig()
-
-  // write in file .capgo the apikey in home directory
-
-  if (!existsSync(zipPath)) {
-    p.log.error(`Error: Zip not found at the path ${zipPath}`)
-    program.error('')
+  if (!hasPublicKeyInConfig) {
+    p.log.warning(`Warning: Missing Public Key in config`)
   }
 
   const keyPath = options.key || baseKey
   // check if publicKey exist
-  ////let publicKey = options.keyData || ''
+
+  //let publicKey = options.keyData || ''
   let privateKey = options.keyData || ''
 
   if (!existsSync(keyPath) && !privateKey) {
-    p.log.warning(`Cannot find private key ${keyPath} or as keyData option`)
+    p.log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
     if (ciDetect.isCI) {
+      p.log.error(`Error: Missing key`)
+      program.error('')
+    }
+    const res = await p.confirm({ message: `Do you want to use our private key?` })
+    if (!res) {
       p.log.error(`Error: Missing private key`)
       program.error('')
     }
-    const res = await p.confirm({ message: 'Do you want to use our private key ?' })
-    if (!res) {
-      p.log.error(`Error: Missing public key`)
-      program.error('')
-    }
+
     privateKey = localConfig.signKey || ''
   }
   else if (existsSync(keyPath)) {
-    // open with fs publicKey path
+    // open with fs key path
     const keyFile = readFileSync(keyPath)
     privateKey = keyFile.toString()
   }
 
+  // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
+  if (privateKey && !privateKey.startsWith('-----BEGIN RSA PRIVATE KEY-----')) {
+      p.log.error(`the private key provided is not a valid RSA Private key`)
+      program.error('')
+  }
+
   const zipFile = readFileSync(zipPath)
-  const encodedZip = privateEncryptSource(zipFile, privateKey)
+  const encodedZip = encryptSource(zipFile, privateKey)
   p.log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)

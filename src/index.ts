@@ -3,8 +3,8 @@ import pack from '../package.json'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
 import { listBundle } from './bundle/list'
-import { decryptZip, publicDecryptZip } from './bundle/decrypt'
-import { encryptZip, privateEncryptZip } from './bundle/encrypt'
+import { decryptZip } from './bundle/decrypt'
+import { encryptZip } from './bundle/encrypt'
 import { addCommand } from './app/add'
 import { getInfo } from './app/info'
 import { createKeyCommand, saveKeyCommand } from './key'
@@ -180,20 +180,6 @@ bundle
   .option('--key-data <keyData>', 'base64 private signing key')
 
 bundle
-  .command('publicDecrypt [zipPath] [sessionKey]')
-  .description('Decrypt a signed zip bundle')
-  .action(publicDecryptZip)
-  .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'base64 public signing key')
-
-bundle
-  .command('privateEncrypt [zipPath]')
-  .description('Encrypt a zip bundle')
-  .action(privateEncryptZip)
-  .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
-
-bundle
   .command('zip [appId]')
   .description('Zip a bundle')
   .action(zipBundle)
@@ -264,11 +250,11 @@ const key = program
 
 key
   .command('save')
-  .description('Save base64 signing key in capacitor config, usefull for CI')
+  .description('Save base64 signing key in capacitor config, useful for CI')
   .action(saveKeyCommand)
   .option('-f, --force', 'force generate a new one')
   .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config')
+  .option('--key-data <keyData>', 'key data to save in capacitor config')
 
 key
   .command('create')
