@@ -324,6 +324,7 @@ It will be also visible in your dashboard\n`)
     minUpdateVersion,
     native_packages: nativePackages,
     owner_org: EMPTY_UUID,
+    user_id: userId,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
