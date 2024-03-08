@@ -1,45 +1,46 @@
-import { program } from 'commander';
-import { zipBundle } from './bundle/zip';
-import { initApp } from './init';
-import { listBundle } from './bundle/list';
-import { decryptZip } from './bundle/decrypt';
-import { encryptZip } from './bundle/encrypt';
-import { addCommand } from './app/add';
-import { getInfo } from './app/info';
-import { saveKeyCommand, createKeyCommand } from './key';
-import { deleteBundle } from './bundle/delete';
-import { setChannel } from './channel/set';
-import { currentBundle } from './channel/currentBundle';
-import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload';
+import { program } from 'commander'
 import pack from '../package.json'
-import { loginCommand } from './login';
-import { listApp } from './app/list';
-import { cleanupBundle } from './bundle/cleanup';
-import { addChannelCommand } from './channel/add';
-import { deleteChannel } from './channel/delete';
-import { listChannels } from './channel/list';
-import { setApp } from './app/set';
-import { deleteApp } from './app/delete';
+import { zipBundle } from './bundle/zip'
+import { initApp } from './init'
+import { listBundle } from './bundle/list'
+import { decryptZip } from './bundle/decrypt'
+import { encryptZip } from './bundle/encrypt'
+import { addCommand } from './app/add'
+import { getInfo } from './app/info'
+import { createKeyCommand, saveKeyCommand } from './key'
+import { deleteBundle } from './bundle/delete'
+import { setChannel } from './channel/set'
+import { currentBundle } from './channel/currentBundle'
+import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload'
+import { loginCommand } from './login'
+import { listApp } from './app/list'
+import { cleanupBundle } from './bundle/cleanup'
+import { addChannelCommand } from './channel/add'
+import { deleteChannel } from './channel/delete'
+import { listChannels } from './channel/list'
+import { setApp } from './app/set'
+import { deleteApp } from './app/delete'
+
 // import { watchApp } from './app/watch';
-import { debugApp } from './app/debug';
-import { checkCompatibilityCommand } from './bundle/compatibility';
+import { debugApp } from './app/debug'
+import { checkCompatibilityCommand } from './bundle/compatibility'
 
 program
   .name(pack.name)
   .description('Manage packages and bundle versions in Capgo Cloud')
-  .version(pack.version);
+  .version(pack.version)
 
 program
   .command('login [apikey]')
   .alias('l')
   .description('Save apikey to your machine or folder')
   .action(loginCommand)
-  .option('--local', 'Only save in local folder');
+  .option('--local', 'Only save in local folder')
 
 program
   .command('doctor')
   .description('Get info about your Capgo app install')
-  .action(getInfo);
+  .action(getInfo)
 
 program
   .command('init [apikey] [appId]')
@@ -47,11 +48,11 @@ program
   .action(initApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 const app = program
   .command('app')
-  .description('Manage app');
+  .description('Manage app')
 
 app
   .command('add [appId]')
@@ -60,29 +61,27 @@ app
   .action(addCommand)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 app
   .command('delete [appId]')
-  .alias('d')
   .description('Delete an app in Capgo Cloud')
   .action(deleteApp)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 app
   .command('list')
   .alias('l')
   .description('list apps in Capgo Cloud')
   .action(listApp)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 app
   .command('debug  [appId]')
-  .alias('d')
   .description('Listen for live updates event in Capgo Cloud to debug your app')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-d, --device <device>', 'the specific device to debug')
-  .action(debugApp);
+  .action(debugApp)
 
 // app
 //   .command('watch [port]')
@@ -102,7 +101,7 @@ app
 
 const bundle = program
   .command('bundle')
-  .description('Manage bundle');
+  .description('Manage bundle')
 
 bundle
   .command('upload [appId]')
@@ -118,22 +117,22 @@ bundle
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
-  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')  
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
   .option(
     '--min-update-version <minUpdateVersion>',
-    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
   .option('--auto-min-update-version', 'Set the min update version based on native packages')
   .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
 
 bundle
-    .command('compatibility [appId]')
-    .action(checkCompatibilityCommand)
-    .option('-a, --apikey <apikey>', 'apikey to link to your account')
-    .option('-c, --channel <channel>', 'channel to check the compatibility with')
-    .option('--text', 'output text instead of emojis')
+  .command('compatibility [appId]')
+  .action(checkCompatibilityCommand)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('-c, --channel <channel>', 'channel to check the compatibility with')
+  .option('--text', 'output text instead of emojis')
 
 bundle
   .command('delete [bundleId] [appId]')
@@ -147,15 +146,14 @@ bundle
   .alias('l')
   .description('List bundle in Capgo Cloud')
   .action(listBundle)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account');
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 bundle
   .command('unlink [appId]')
-  .alias('u')
   .description('Unlink a bundle in Capgo Cloud')
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink');
+  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
 
 bundle
   .command('cleanup [appId]')
@@ -165,22 +163,21 @@ bundle
   .option('-b, --bundle <bundle>', 'bundle version number of the app to delete')
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
-  .option('-f, --force', 'force removal');
+  .option('-f, --force', 'force removal')
 
 bundle
   .command('decrypt [zipPath] [sessionKey]')
-  .alias('l')
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key')
 
 bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key');
+  .option('--key-data <keyData>', 'base64 private signing key')
 
 bundle
   .command('zip [appId]')
@@ -190,11 +187,11 @@ bundle
   .option('-b, --bundle <bundle>', 'bundle version number to name the zip file')
   .option('-n, --name <name>', 'name of the zip file')
   .option('-j, --json', 'output in JSON')
-  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder');
+  .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
 
 const channel = program
   .command('channel')
-  .description('Manage channel');
+  .description('Manage channel')
 
 channel
   .command('add [channelId] [appId]')
@@ -245,13 +242,11 @@ channel
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel')
-  .option('--disable-auto-update <disableAutoUpdate>', 
-    'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none'
-  )
+  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none')
 
 const key = program
   .command('key')
-  .description('Manage key');
+  .description('Manage key')
 
 key
   .command('save')
@@ -259,14 +254,13 @@ key
   .action(saveKeyCommand)
   .option('-f, --force', 'force generate a new one')
   .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config');
-
+  .option('--key-data', 'key data to save in capacitor config')
 
 key
   .command('create')
   .description('Create a new signing key')
   .action(createKeyCommand)
-  .option('-f, --force', 'force generate a new one');
+  .option('-f, --force', 'force generate a new one')
 
 program
   .command('upload [appId]')
@@ -285,7 +279,7 @@ program
   .option('-b, --bundle <bundle>', 'bundle version number of the file to upload')
   .option(
     '--min-update-version <minUpdateVersion>',
-    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel'
-  );
+    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
+  )
 
-program.parseAsync();
+program.parseAsync()

@@ -1,53 +1,50 @@
-import { SupabaseClient } from '@supabase/supabase-js';
-import * as p from '@clack/prompts';
-import { program } from 'commander';
-import { Database } from 'types/supabase.types';
-import { isAllowedApp, isAllowedAppOrg, OptionsBase, OrganizationPerm } from '../utils';
+import type { SupabaseClient } from '@supabase/supabase-js'
+import * as p from '@clack/prompts'
+import { program } from 'commander'
+import type { Database } from '../types/supabase.types'
+import type { OptionsBase } from '../utils'
+import { OrganizationPerm, isAllowedApp, isAllowedAppOrg } from '../utils'
 
-export const checkAppExists = async (supabase: SupabaseClient<Database>, appid: string) => {
+export async function checkAppExists(supabase: SupabaseClient<Database>, appid: string) {
   const { data: app } = await supabase
     .rpc('exist_app_v2', { appid })
-    .single();
-  return !!app;
+    .single()
+  return !!app
 }
 
-export const checkAppExistsAndHasPermissionErr = async (supabase: SupabaseClient<Database>, apikey: string, appid: string,
-  shouldExist = true) => {
-  const res = await checkAppExists(supabase, appid);
-  const perm = await isAllowedApp(supabase, apikey, appid);
+export async function checkAppExistsAndHasPermissionErr(supabase: SupabaseClient<Database>, apikey: string, appid: string, shouldExist = true) {
+  const appExist = await checkAppExists(supabase, appid)
+  const perm = await isAllowedApp(supabase, apikey, appid)
 
-  if (res && !shouldExist) {
-    p.log.error(`App ${appid} already exist`);
-    program.error('');
+  if (appExist && !shouldExist) {
+    p.log.error(`App ${appid} already exist`)
+    program.error('')
   }
-  if (!res && shouldExist) {
-    p.log.error(`App ${appid} does not exist`);
-    program.error('');
+  if (!appExist && shouldExist) {
+    p.log.error(`App ${appid} does not exist`)
+    program.error('')
   }
-  if (res && !perm) {
-    p.log.error(`App ${appid} exist and you don't have permission to access it`);
-    program.error('');
+  if (appExist && !perm) {
+    p.log.error(`App ${appid} exist and you don't have permission to access it`)
+    if (appid === 'io.ionic.starter')
+      p.log.info('Modify your appid in your capacitor.config.json file to something unique, this is a default appid for ionic starter app')
+
+    program.error('')
   }
 }
 
-export const checkAppExistsAndHasPermissionOrgErr = async (
-  supabase: SupabaseClient<Database>, 
-  apikey: string, 
-  appid: string, 
-  requiredPermission: OrganizationPerm
-) => {
+export async function checkAppExistsAndHasPermissionOrgErr(supabase: SupabaseClient<Database>, apikey: string, appid: string, requiredPermission: OrganizationPerm) {
   const permissions = await isAllowedAppOrg(supabase, apikey, appid)
   if (!permissions.okay) {
-    // eslint-disable-next-line default-case
     switch (permissions.error) {
       case 'INVALID_APIKEY': {
         p.log.error('Invalid apikey, such apikey does not exists!')
-        program.error('');
+        program.error('')
         break
       }
       case 'NO_APP': {
-        p.log.error(`App ${appid} does not exist`);
-        program.error('');
+        p.log.error(`App ${appid} does not exist`)
+        program.error('')
         break
       }
       case 'NO_ORG': {
@@ -62,7 +59,6 @@ export const checkAppExistsAndHasPermissionOrgErr = async (
   const requiredPermNumber = requiredPermission as number
 
   if (requiredPermNumber > remotePermNumber) {
-    // eslint-disable-next-line max-len
     p.log.error(`Insuficcent permissions for app ${appid}. Current permission: ${OrganizationPerm[permissions.data]}, required for this action: ${OrganizationPerm[requiredPermission]}.`)
     program.error('')
   }
@@ -71,9 +67,9 @@ export const checkAppExistsAndHasPermissionOrgErr = async (
 }
 
 export interface Options extends OptionsBase {
-  name?: string;
-  icon?: string;
-  retention?: number;
+  name?: string
+  icon?: string
+  retention?: number
 }
 
-export const newIconPath = "assets/icon.png"
+export const newIconPath = 'assets/icon.png'
