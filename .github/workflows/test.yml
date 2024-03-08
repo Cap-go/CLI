@@ -11,24 +11,20 @@ jobs:
     name: "Build code and test"
     steps:
       - name: Check out
-        uses: actions/checkout@v3
-      - uses: pnpm/action-setup@v2
+        uses: actions/checkout@v4
+      - name: Setup bun
+        uses: oven-sh/setup-bun@v1.1.1
         with:
-          version: 8
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-          cache: "pnpm"
+          bun-version: latest
       - name: Install dependencies
         id: install_code
-        run: pnpm install --frozen-lockfile
+        run: bun install --frozen-lockfile
       - name: Lint
         id: lint_code
-        run: pnpm lint
+        run: bun run lint
       - name: Build
         id: build_code
-        run: pnpm build
+        run: bun run build
       - name: Run
         id: run_cli
         run: node dist/index.js --help
