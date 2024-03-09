@@ -391,10 +391,10 @@ export async function updateOrCreateVersion(supabase: SupabaseClient<Database>, 
     .eq('name', update.name)
 }
 
-export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, bucketId: string): Promise<string> {
+export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<string> {
   const data = {
     app_id: appId,
-    bucket_id: bucketId,
+    name,
   }
   try {
     const pathUploadLink = 'private/upload_link'

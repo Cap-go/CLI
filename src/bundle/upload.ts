@@ -315,7 +315,7 @@ It will be also visible in your dashboard\n`)
   const appOwner = await getAppOwner(supabase, appid)
 
   const versionData = {
-    bucket_id: external ? undefined : fileName,
+    // bucket_id: external ? undefined : fileName,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
@@ -336,7 +336,7 @@ It will be also visible in your dashboard\n`)
     const spinner = p.spinner()
     spinner.start(`Uploading Bundle`)
 
-    const url = await uploadUrl(supabase, appid, fileName)
+    const url = await uploadUrl(supabase, appid, bundle)
     if (!url) {
       p.log.error(`Cannot get upload url`)
       program.error('')
