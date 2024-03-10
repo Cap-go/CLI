@@ -62,7 +62,8 @@
     "prettyjson": "^1.2.5",
     "prompt-sync": "^4.2.0",
     "qrcode": "^1.5.3",
-    "semver": "^7.6.0"
+    "semver": "^7.6.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^2.6.4",

@@ -11,7 +11,7 @@ import { createKeyCommand, saveKeyCommand } from './key'
 import { deleteBundle } from './bundle/delete'
 import { setChannel } from './channel/set'
 import { currentBundle } from './channel/currentBundle'
-import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload'
+import { uploadCommand } from './bundle/upload'
 import { loginCommand } from './login'
 import { listApp } from './app/list'
 import { cleanupBundle } from './bundle/cleanup'
@@ -24,6 +24,7 @@ import { deleteApp } from './app/delete'
 // import { watchApp } from './app/watch';
 import { debugApp } from './app/debug'
 import { checkCompatibilityCommand } from './bundle/compatibility'
+import { uploadDeprecatedCommand } from 'bundle/upload-mono'
 
 program
   .name(pack.name)
@@ -126,6 +127,7 @@ bundle
   )
   .option('--auto-min-update-version', 'Set the min update version based on native packages')
   .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
+  .option('--partial', 'Uploads each file separately instead of one big zip file')
 
 bundle
   .command('compatibility [appId]')
