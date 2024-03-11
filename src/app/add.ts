@@ -8,6 +8,7 @@ import { checkLatest } from '../api/update'
 import type { Options } from '../api/app'
 import { checkAppExists, newIconPath } from '../api/app'
 import {
+  checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -60,6 +61,8 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
 
   let iconBuff
   let iconType
+
+  await checkPlanValid(supabase, userId, appId, options.apikey, false)
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)

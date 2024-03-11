@@ -26,6 +26,12 @@ export interface OptionsBase {
   apikey: string
 }
 
+export function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 export async function getConfig() {
   let config: Config
   try {
@@ -281,13 +287,13 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, userId:
   const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
-    setTimeout(() => {
+    wait(100)
       import('open')
         .then((module) => {
           module.default(`${config.hostWeb}/dashboard/settings/plans`)
         })
-      program.error('')
-    }, 1000)
+    wait(500)
+    program.error('')
   }
   const trialDays = await isTrial(supabase, userId)
   const ispaying = await isPaying(supabase, userId)

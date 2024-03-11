@@ -118,7 +118,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
-  await checkPlanValid(supabase, userId, appid, options.apikey, false)
+  await checkPlanValid(supabase, userId, appid, options.apikey, true)
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
 
