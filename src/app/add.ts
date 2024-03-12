@@ -38,6 +38,9 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   const supabase = await createSupabaseClient(options.apikey)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+
+  await checkPlanValid(supabase, userId, options.apikey, undefined, false)
+
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
   if (throwErr && appExist) {
@@ -61,8 +64,6 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
 
   let iconBuff
   let iconType
-
-  await checkPlanValid(supabase, userId, appId, options.apikey, false)
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)

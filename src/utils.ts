@@ -282,9 +282,10 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
-export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, appId: string, apikey: string, warning = true) {
+export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
-  const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
+
+  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
