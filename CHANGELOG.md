@@ -1,22 +1,22 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See
+[standard-version](https://github.com/conventional-changelog/standard-version)
+for commit guidelines.
 
 ## [5.0.0-alpha.2](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.1...v5.0.0-alpha.2) (2024-03-22)
 
-
 ### Bug Fixes
 
-* make no-key works ([11eed1a](https://github.com/Cap-go/CLI/commit/11eed1a515d44800ef369303dd14c5218b2164ca))
-
-## [5.0.0-alpha.1](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.0...v5.0.0-alpha.1) (2024-03-22)
+- make no-key works
+  ([11eed1a](https://github.com/Cap-go/CLI/commit/11eed1a515d44800ef369303dd14c5218b2164ca))
 
 ### [4.2.3](https://github.com/Cap-go/CLI/compare/v4.2.2...v4.2.3) (2024-03-12)
 
-
 ### Bug Fixes
 
-* issue check plan ([ed64d10](https://github.com/Cap-go/CLI/commit/ed64d107612cfc58548dca80bf1915e90b98ec33))
+- issue check plan
+  ([ed64d10](https://github.com/Cap-go/CLI/commit/ed64d107612cfc58548dca80bf1915e90b98ec33))
 
 ### [4.2.2](https://github.com/Cap-go/CLI/compare/v4.2.2-alpha.0...v4.2.2) (2024-03-11)
 

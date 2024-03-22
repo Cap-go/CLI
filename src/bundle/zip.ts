@@ -112,15 +112,6 @@ export async function zipBundle(appId: string, options: Options) {
   if (!json)
     s2.stop(`Saved to ${name}`)
 
-  if (options.json) {
-    const output = {
-      bundle,
-      filename: name,
-      checksum,
-    }
-    p.log.info(formatError(output))
-  }
-
   await snag.track({
     channel: 'app',
     event: 'App zip',
@@ -133,5 +124,15 @@ export async function zipBundle(appId: string, options: Options) {
 
   if (!json)
     p.outro(`Done ✅`)
+
+  if (json) {
+    const output = {
+      bundle,
+      filename: name,
+      checksum,
+    }
+    // Keep the console log and stringify
+    console.log(JSON.stringify(output, null, 2))
+  }
   process.exit()
 }
