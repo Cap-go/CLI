@@ -371,7 +371,7 @@ interface Config {
           resetWhenUpdate?: boolean
           updateUrl?: string
           statsUrl?: string
-          privateKey?: string
+          publicKey?: string
           version?: string
           directUpdate?: boolean
           periodCheckDelay?: number
