@@ -1,24 +1,38 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See
+[standard-version](https://github.com/conventional-changelog/standard-version)
+for commit guidelines.
 
 ## [5.0.0-alpha.0](https://github.com/Cap-go/CLI/compare/v4.2.2-alpha.0...v5.0.0-alpha.0) (2024-03-22)
 
-
 ### ⚠ BREAKING CHANGES
 
-* Merge branch 'jawa-the-hutt/main' into development
-* use new end to end
+- Merge branch 'jawa-the-hutt/main' into development
+- use new end to end
 
 ### Features
 
-* Merge branch 'jawa-the-hutt/main' into development ([b3fa8f5](https://github.com/Cap-go/CLI/commit/b3fa8f5d7af8a04e94527e8444aa1fa1ecb4ec12))
-* use new end to end ([37b9475](https://github.com/Cap-go/CLI/commit/37b9475ce62b557d39c4046f7dee3d196943db4c))
+- Merge branch 'jawa-the-hutt/main' into development
+  ([b3fa8f5](https://github.com/Cap-go/CLI/commit/b3fa8f5d7af8a04e94527e8444aa1fa1ecb4ec12))
+- use new end to end
+  ([37b9475](https://github.com/Cap-go/CLI/commit/37b9475ce62b557d39c4046f7dee3d196943db4c))
 
+### [4.2.3](https://github.com/Cap-go/CLI/compare/v4.2.2...v4.2.3) (2024-03-12)
 
 ### Bug Fixes
 
-* add better warning for old system ([df89bfc](https://github.com/Cap-go/CLI/commit/df89bfc561515618272d304de20098024a23c3ce))
+- issue check plan
+  ([ed64d10](https://github.com/Cap-go/CLI/commit/ed64d107612cfc58548dca80bf1915e90b98ec33))
+
+### [4.2.2](https://github.com/Cap-go/CLI/compare/v4.2.1...v4.2.2) (2024-03-11)
+
+### [4.2.1](https://github.com/Cap-go/CLI/compare/v4.2.0...v4.2.1) (2024-03-08)
+
+### Bug Fixes
+
+- add better warning for old system
+  ([df89bfc](https://github.com/Cap-go/CLI/commit/df89bfc561515618272d304de20098024a23c3ce))
 
 ### [4.2.2-alpha.0](https://github.com/Cap-go/CLI/compare/v4.2.1...v4.2.2-alpha.0) (2024-03-08)
 

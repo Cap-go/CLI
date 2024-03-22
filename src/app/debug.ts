@@ -6,13 +6,7 @@ import type LogSnag from 'logsnag'
 import type { Database } from '../types/supabase.types'
 import { checkAppExistsAndHasPermissionErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, useLogSnag, verifyUser } from '../utils'
-
-function wait(ms: number) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms)
-  })
-}
+import { convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, useLogSnag, verifyUser, wait } from '../utils'
 
 export interface OptionsBaseDebug {
   apikey: string
