@@ -2,11 +2,12 @@ import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
   OptionsBase,
 } from '../utils'
 import {
+  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
@@ -51,7 +52,7 @@ export async function setChannel(channel: string, appId: string, options: Option
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options
   if (!channel) {

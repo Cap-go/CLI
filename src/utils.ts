@@ -18,6 +18,7 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
+export const EMPTY_UUID = '00000000-0000-0000-0000-000000000000'
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
@@ -192,7 +193,7 @@ export enum OrganizationPerm {
   upload = 2,
   write = 3,
   admin = 4,
-  owner = 5,
+  super_admin = 5,
 }
 
 export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
@@ -234,7 +235,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
         break
       }
       case 'perm_owner': {
-        perm = OrganizationPerm.owner
+        perm = OrganizationPerm.super_admin
         break
       }
       default: {
@@ -406,10 +407,10 @@ export async function updateOrCreateVersion(supabase: SupabaseClient<Database>, 
     .eq('name', update.name)
 }
 
-export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, bucketId: string): Promise<string> {
+export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<string> {
   const data = {
     app_id: appId,
-    bucket_id: bucketId,
+    name,
   }
   try {
     const pathUploadLink = 'private/upload_link'
@@ -433,7 +434,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
     .eq('app_id', update.app_id)
     .eq('name', update.name)
-  // .eq('created_by', update.created_by)
+    // .eq('created_by', update.created_by)
     .single()
 
   if (data && !error) {
@@ -459,7 +460,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
       .update(update)
       .eq('app_id', update.app_id)
       .eq('name', update.name)
-    // .eq('created_by', update.created_by)
+      // .eq('created_by', update.created_by)
       .select()
       .single()
   }

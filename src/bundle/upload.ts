@@ -15,6 +15,7 @@ import type {
   OptionsBase,
 } from '../utils'
 import {
+  EMPTY_UUID,
   OrganizationPerm,
   baseKeyPub,
   checkCompatibility,
@@ -212,9 +213,6 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__')
-  const fileName = `${safeBundle}.zip`
 
   let sessionKey
   let checksum = ''
@@ -318,8 +316,7 @@ It will be also visible in your dashboard\n`)
   const appOwner = await getAppOwner(supabase, appid)
 
   const versionData = {
-    bucket_id: external ? undefined : fileName,
-    user_id: appOwner,
+    // bucket_id: external ? undefined : fileName,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
@@ -327,6 +324,8 @@ It will be also visible in your dashboard\n`)
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
     native_packages: nativePackages,
+    owner_org: EMPTY_UUID,
+    user_id: userId,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
@@ -338,7 +337,7 @@ It will be also visible in your dashboard\n`)
     const spinner = p.spinner()
     spinner.start(`Uploading Bundle`)
 
-    const url = await uploadUrl(supabase, appid, fileName)
+    const url = await uploadUrl(supabase, appid, bundle)
     if (!url) {
       p.log.error(`Cannot get upload url`)
       program.error('')
@@ -372,6 +371,7 @@ It will be also visible in your dashboard\n`)
       app_id: appid,
       created_by: appOwner,
       version: versionId,
+      owner_org: EMPTY_UUID,
     })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)

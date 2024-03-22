@@ -6,12 +6,11 @@ import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { formatError } from '../utils'
 
-export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, userId: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
+export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: channelFound, error: errorChannel } = await supabase
     .from('channels')
     .select()
     .eq('app_id', appid)
-    .eq('created_by', userId)
     .eq('version', versionData.id)
   if (errorChannel) {
     p.log.error(`Cannot check Version ${appid}@${versionData.name}`)
@@ -63,13 +62,12 @@ export function createChannel(supabase: SupabaseClient<Database>, update: Databa
     .single()
 }
 
-export function delChannel(supabase: SupabaseClient<Database>, name: string, appId: string, userId: string) {
+export function delChannel(supabase: SupabaseClient<Database>, name: string, appId: string, _userId: string) {
   return supabase
     .from('channels')
     .delete()
     .eq('name', name)
     .eq('app_id', appId)
-    .eq('created_by', userId)
     .single()
 }
 interface version {
