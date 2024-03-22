@@ -24,7 +24,7 @@ export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid
   }
 }
 
-export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, appid: string, userId: string, bundle: string) {
+export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, appid: string, _userId: string, bundle: string) {
   const versionData = await getVersionData(supabase, appid, bundle)
   await checkVersionNotUsedInChannel(supabase, appid, versionData)
   await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData)

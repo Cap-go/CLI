@@ -47,7 +47,6 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  console.log(options.apikey)
   const userId = await verifyUser(supabase, options.apikey, ['all', 'write'])
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)

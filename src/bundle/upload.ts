@@ -213,9 +213,6 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__')
-  const fileName = `${safeBundle}.zip`
 
   let sessionKey
   let checksum = ''
@@ -350,10 +347,10 @@ It will be also visible in your dashboard\n`)
       body: zipped,
       headers: (!localS3
         ? {
-          'Content-Type': 'application/octet-stream',
-          'Cache-Control': 'public, max-age=456789, immutable',
-          'x-amz-meta-crc32': checksum,
-        }
+            'Content-Type': 'application/octet-stream',
+            'Cache-Control': 'public, max-age=456789, immutable',
+            'x-amz-meta-crc32': checksum,
+          }
         : undefined),
     })
     versionData.storage_provider = 'r2'

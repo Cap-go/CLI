@@ -334,7 +334,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       && !dirent.name.startsWith('.')
       && !dirent.name.startsWith('node_modules')
       && !dirent.name.startsWith('dist'))
-      yield* getFiles(res)
+      yield * getFiles(res)
     else
       yield res
   }
@@ -655,36 +655,36 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
   const finalDepenencies:
-    ({
-      name: string
-      localVersion: string
-      remoteVersion: string
-    } | {
-      name: string
-      localVersion: string
-      remoteVersion: undefined
-    } | {
-      name: string
-      localVersion: undefined
-      remoteVersion: string
-    })[] = dependenciesObject
-      .filter(a => !!a.native)
-      .map((local) => {
-        const remotePackage = mappedRemoteNativePackages.get(local.name)
-        if (remotePackage) {
-          return {
-            name: local.name,
-            localVersion: local.version,
-            remoteVersion: remotePackage.version,
-          }
-        }
-
+  ({
+    name: string
+    localVersion: string
+    remoteVersion: string
+  } | {
+    name: string
+    localVersion: string
+    remoteVersion: undefined
+  } | {
+    name: string
+    localVersion: undefined
+    remoteVersion: string
+  })[] = dependenciesObject
+    .filter(a => !!a.native)
+    .map((local) => {
+      const remotePackage = mappedRemoteNativePackages.get(local.name)
+      if (remotePackage) {
         return {
           name: local.name,
           localVersion: local.version,
-          remoteVersion: undefined,
+          remoteVersion: remotePackage.version,
         }
-      })
+      }
+
+      return {
+        name: local.name,
+        localVersion: local.version,
+        remoteVersion: undefined,
+      }
+    })
 
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
