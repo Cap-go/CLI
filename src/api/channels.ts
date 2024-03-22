@@ -4,7 +4,7 @@ import { program } from 'commander'
 import { Table } from 'console-table-printer'
 import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { formatError, getHumanDate } from '../utils'
+import { formatError } from '../utils'
 
 export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: channelFound, error: errorChannel } = await supabase
@@ -83,11 +83,11 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
   // add rows with color
   data.reverse().forEach((row) => {
     t.addRow({
-      Name: row.name,
-      ... (row.version ? { Version: row.version.name } : undefined),
-      Public: row.public ? '✅' : '❌',
-      iOS: row.ios ? '❌' : '✅',
-      Android: row.android ? '❌' : '✅',
+      'Name': row.name,
+      ...(row.version ? { Version: row.version.name } : undefined),
+      'Public': row.public ? '✅' : '❌',
+      'iOS': row.ios ? '❌' : '✅',
+      'Android': row.android ? '❌' : '✅',
       '⬆️ limit': row.disableAutoUpdate,
       '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
       'Self assign': row.allow_device_self_set ? '✅' : '❌',
@@ -97,8 +97,8 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
       'AB Testing': row.enableAbTesting ? '✅' : '❌',
       ...(row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined),
       ...(row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
-      "Emulator": row.allow_emulator ? '✅' : '❌',
-      "Dev 📱": row.allow_dev ? '✅' : '❌',
+      'Emulator': row.allow_emulator ? '✅' : '❌',
+      'Dev 📱': row.allow_dev ? '✅' : '❌',
     })
   })
 

@@ -290,10 +290,10 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, userId:
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
-      import('open')
-        .then((module) => {
-          module.default(`${config.hostWeb}/dashboard/settings/plans`)
-        })
+    import('open')
+      .then((module) => {
+        module.default(`${config.hostWeb}/dashboard/settings/plans`)
+      })
     wait(500)
     program.error('')
   }
