@@ -128,8 +128,8 @@ Optionally, you can give:
 * `--path [/path/to/my/bundle]` to upload a specific folder.
 * `--channel [test]` to upload to a specific channel.
 * `--external="https://mydomain.com/myapp.zip"` to link to an external URL instead of upload to Capgo cloud, it should be a zip URL in HTTPS.
-* `--key [/path/to/my/private_key]` the path of your private key.
-* `--key-data [privateKey]` the private key data, if you want to use inline.
+* `--key [/path/to/my/public_key]` the path of your public key.
+* `--key-data [publicKey]` the public key data, if you want to use inline.
 * `--no-key` to ignore the signing key and send clear update.
 * `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 * `--iv-session-key [key]` to send a custom session key to the cloud.
@@ -217,9 +217,9 @@ The command will print your `ivSessionKey`y and generate an encrypted zip, to us
 
 Optionally, you can give:
 
-`--key [/path/to/my/private_key]` the path of your private key.
+`--key [/path/to/my/public_key]` the path of your public key.
 
-`--key-data [privateKey]` the private key data, if you want to use inline. This command is mainly used for test purpose, it will decrypt the zip and print the base64 decrypted session key in the console.
+`--key-data [publicKey]` the public key data, if you want to use inline. This command is mainly used for test purpose, it will decrypt the zip and print the base64 decrypted session key in the console.
 
 ### **Zip**
 
@@ -304,9 +304,9 @@ Optionally, you can give: `--force` to overwrite the existing key. This command 
 
 Optionally, you can give:
 
-`--key [/path/to/my/private_key]` the path of your private key.
+`--key [/path/to/my/public_key]` the path of your public key.
 
-`--key-data [privateKey]` the private key data, if you want to use inline. This command is useful if you followed the recommendation and didn't commit the key in your app, and in the config.
+`--key-data [publicKey]` the public key data, if you want to use inline. This command is useful if you followed the recommendation and didn't commit the key in your app, and in the config.
 ## Dev contribution
 
 1. Install development dependencies

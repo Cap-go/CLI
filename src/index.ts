@@ -169,8 +169,8 @@ bundle
   .command('decrypt [zipPath] [sessionKey]')
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
-  .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
+  .option('--key <key>', 'custom path for public signing key')
+  .option('--key-data <keyData>', 'base64 public signing key')
 
 bundle
   .command('encrypt [zipPath]')
@@ -250,11 +250,11 @@ const key = program
 
 key
   .command('save')
-  .description('Save base64 signing key in capacitor config, usefull for CI')
+  .description('Save base64 signing key in capacitor config, useful for CI')
   .action(saveKeyCommand)
   .option('-f, --force', 'force generate a new one')
   .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config')
+  .option('--key-data <keyData>', 'key data to save in capacitor config')
 
 key
   .command('create')

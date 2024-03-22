@@ -3,30 +3,32 @@ import {
   createCipheriv,
   createDecipheriv,
   generateKeyPairSync,
-  privateDecrypt,
-  publicEncrypt,
   randomBytes,
+  publicDecrypt,
+  privateEncrypt
 } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 
 const algorithm = 'aes-128-cbc'
-const oaepHash = 'sha256'
 const formatB64 = 'base64'
-const padding = constants.RSA_PKCS1_OAEP_PADDING
+const padding = constants.RSA_PKCS1_PADDING
 
-export function decryptSource(source: Buffer, ivSessionKey: string, privateKey: string): Buffer {
+export function decryptSource(source: Buffer, ivSessionKey: string, key: string): Buffer {
+  // console.log('decryptKeyType - ', decryptKeyType);
+  // console.log(key);
   // console.log('\nivSessionKey', ivSessionKey)
   const [ivB64, sessionb64Encrypted] = ivSessionKey.split(':')
   // console.log('\nsessionb64Encrypted', sessionb64Encrypted)
   // console.log('\nivB64', ivB64)
-  const sessionKey = privateDecrypt(
+  let sessionKey: Buffer;
+  sessionKey = publicDecrypt(
     {
-      key: privateKey,
-      padding,
-      oaepHash,
+      key,
+      padding
     },
     Buffer.from(sessionb64Encrypted, formatB64),
   )
+
   // ivB64 to uft-8
   const initVector = Buffer.from(ivB64, formatB64)
   // console.log('\nSessionB64', sessionB64)
@@ -41,7 +43,10 @@ export interface Encoded {
   ivSessionKey: string
   encryptedData: Buffer
 }
-export function encryptSource(source: Buffer, publicKey: string): Encoded {
+export function encryptSource(source: Buffer, key: string): Encoded {
+  // console.log('decryptKeyType - ', decryptKeyType);
+  // console.log(key);
+
   // encrypt zip with key
   const initVector = randomBytes(16)
   const sessionKey = randomBytes(16)
@@ -54,14 +59,16 @@ export function encryptSource(source: Buffer, publicKey: string): Encoded {
   // console.log('\nsessionB64', sessionB64)
   const ivB64 = initVector.toString(formatB64)
   // console.log('\nivB64', ivB64)
-  const sessionb64Encrypted = publicEncrypt(
+
+  let sessionb64Encrypted;
+  sessionb64Encrypted = privateEncrypt(
     {
-      key: publicKey,
-      padding,
-      oaepHash,
+      key,
+      padding
     },
     sessionKey,
   ).toString(formatB64)
+
   // console.log('\nsessionb64Encrypted', sessionb64Encrypted)
   const ivSessionKey = `${ivB64}:${sessionb64Encrypted}`
   // console.log('\nivSessionKey', sessionKey)

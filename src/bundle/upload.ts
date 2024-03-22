@@ -16,7 +16,8 @@ import type {
 } from '../utils'
 import {
   OrganizationPerm,
-  baseKeyPub,
+  baseKey,
+  checKOldEncryption,
   checkCompatibility,
   checkPlanValid,
   convertAppName,
@@ -227,12 +228,13 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     s.start(`Calculating checksum`)
     checksum = await getChecksum(zipped, 'crc32')
     s.stop(`Checksum: ${checksum}`)
-    if (key || existsSync(baseKeyPub)) {
-      const publicKey = typeof key === 'string' ? key : baseKeyPub
+    if (key || existsSync(baseKey)) {
+      await checKOldEncryption()
+      const privateKey = typeof key === 'string' ? key : baseKey
       let keyData = options.keyData || ''
-      // check if publicKey exist
-      if (!keyData && !existsSync(publicKey)) {
-        p.log.error(`Cannot find public key ${publicKey}`)
+      // check if privateKey exist
+      if (!keyData && !existsSync(privateKey)) {
+        p.log.error(`Cannot find private key ${privateKey}`)
         if (ciDetect.isCI)
           program.error('')
 
@@ -253,9 +255,9 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
         },
         notify: false,
       }).catch()
-      // open with fs publicKey path
+      // open with fs privateKey path
       if (!keyData) {
-        const keyFile = readFileSync(publicKey)
+        const keyFile = readFileSync(privateKey)
         keyData = keyFile.toString()
       }
       // encrypt
