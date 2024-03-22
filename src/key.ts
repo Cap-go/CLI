@@ -21,7 +21,7 @@ export async function saveKey(options: saveOptions, log = true) {
   const config = await getConfig()
   const { extConfig } = config.app
 
-  //const keyPath = options.key || baseKey
+  // const keyPath = options.key || baseKey
   const keyPath = options.key || baseKeyPub
   // check if publicKey exist
 
@@ -48,8 +48,9 @@ export async function saveKey(options: saveOptions, log = true) {
       if (log) {
         p.log.error(`the public key provided is not a valid RSA Public key`)
         program.error('')
-      } else {
-        return false;
+      }
+      else {
+        return false
       }
     }
   }
@@ -64,8 +65,9 @@ export async function saveKey(options: saveOptions, log = true) {
     if (!extConfig.plugins.CapacitorUpdater)
       extConfig.plugins.CapacitorUpdater = {}
 
-    //TODO: this might be a breaking change if user has other code looking at the specific value in the config file
-    if (extConfig.plugins.CapacitorUpdater.privateKey) delete extConfig.plugins.CapacitorUpdater.privateKey;
+    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
+    if (extConfig.plugins.CapacitorUpdater.privateKey)
+      delete extConfig.plugins.CapacitorUpdater.privateKey
     extConfig.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)
@@ -119,16 +121,16 @@ export async function createKey(options: Options, log = true) {
     if (!extConfig.plugins) {
       extConfig.plugins = {
         extConfig: {},
-        CapacitorUpdater: {}
+        CapacitorUpdater: {},
       }
     }
 
-    if (!extConfig.plugins.CapacitorUpdater) {
+    if (!extConfig.plugins.CapacitorUpdater)
       extConfig.plugins.CapacitorUpdater = {}
-    }
 
-    //TODO: this might be a breaking change if user has other code looking at the specific value in the config file
-    if (extConfig.plugins.CapacitorUpdater.privateKey) delete extConfig.plugins.CapacitorUpdater.privateKey;
+    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
+    if (extConfig.plugins.CapacitorUpdater.privateKey)
+      delete extConfig.plugins.CapacitorUpdater.privateKey
     extConfig.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)

@@ -36,7 +36,7 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
   const keyPath = options.key || baseKeyPub
   // check if private exist
 
-  let publicKey = extConfig?.plugins?.CapacitorUpdater?.publicKey;
+  let publicKey = extConfig?.plugins?.CapacitorUpdater?.publicKey
 
   if (!existsSync(keyPath) && !publicKey) {
     p.log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)

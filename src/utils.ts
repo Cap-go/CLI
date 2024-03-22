@@ -407,13 +407,13 @@ export async function checKOldEncryption() {
   // console.log('localConfig - ', localConfig)
   // console.log('config - ', config)
 
-  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
-  const hasPublicKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.publicKey ? true : false
+  const hasPrivateKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.privateKey
+  const hasPublicKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.publicKey
 
   if (hasPrivateKeyInConfig)
     p.log.warning(`You still have privateKey in the capacitor config, this is deprecated, please remove it`)
-    p.log.warning(`Encryption with private will be ignored`)
-  
+  p.log.warning(`Encryption with private will be ignored`)
+
   if (!hasPublicKeyInConfig) {
     p.log.warning(`publicKey not found in capacitor config, please run npx @capgo/cli key save`)
     program.error('')

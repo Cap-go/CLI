@@ -5,7 +5,7 @@ import ciDetect from 'ci-info'
 import * as p from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
-import { baseKey, getLocalConfig, getConfig, checKOldEncryption } from '../utils'
+import { baseKey, checKOldEncryption, getLocalConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -54,8 +54,8 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
   if (privateKey && !privateKey.startsWith('-----BEGIN RSA PRIVATE KEY-----')) {
-      p.log.error(`the private key provided is not a valid RSA Private key`)
-      program.error('')
+    p.log.error(`the private key provided is not a valid RSA Private key`)
+    program.error('')
   }
 
   const zipFile = readFileSync(zipPath)
