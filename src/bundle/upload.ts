@@ -61,7 +61,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   p.intro(`Uploading`)
   await checkLatest()
   let { bundle, path, channel } = options
-  const { external, key = false, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options
+  const { external, key, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options
   let { minUpdateVersion } = options
   options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
@@ -228,7 +228,10 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     s.start(`Calculating checksum`)
     checksum = await getChecksum(zipped, 'crc32')
     s.stop(`Checksum: ${checksum}`)
-    if (key || existsSync(baseKey)) {
+    if (key === false) {
+      p.log.info(`Encryption ignored`)
+    }
+    else if (key || existsSync(baseKey)) {
       await checKOldEncryption()
       const privateKey = typeof key === 'string' ? key : baseKey
       let keyData = options.keyData || ''
