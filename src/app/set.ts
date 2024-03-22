@@ -66,7 +66,7 @@ export async function setApp(appId: string, options: Options) {
         contentType: iconType,
       })
     if (error) {
-      p.log.error(`Could not add app ${formatError(error)}`)
+      p.log.error(`Could not set app ${formatError(error)}`)
       program.error(``)
     }
     const { data: signedURLData } = await supabase
@@ -86,7 +86,7 @@ export async function setApp(appId: string, options: Options) {
     .eq('app_id', appId)
     .eq('user_id', userId)
   if (dbError) {
-    p.log.error(`Could not add app ${formatError(dbError)}`)
+    p.log.error(`Could not set app ${formatError(dbError)}`)
     program.error(``)
   }
   p.outro(`Done ✅`)

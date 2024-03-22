@@ -27,6 +27,12 @@ export interface OptionsBase {
   apikey: string
 }
 
+export function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 export async function getConfig() {
   let config: Config
   try {
@@ -277,18 +283,19 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
-export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, appId: string, apikey: string, warning = true) {
+export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
-  const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
+
+  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
-    setTimeout(() => {
+    wait(100)
       import('open')
         .then((module) => {
           module.default(`${config.hostWeb}/dashboard/settings/plans`)
         })
-      program.error('')
-    }, 1000)
+    wait(500)
+    program.error('')
   }
   const trialDays = await isTrial(supabase, userId)
   const ispaying = await isPaying(supabase, userId)
@@ -364,16 +371,25 @@ interface Config {
       plugins: {
         extConfig: object
         CapacitorUpdater: {
+          appReadyTimeout?: number
+          responseTimeout?: number
+          autoDeleteFailed?: boolean
+          autoDeletePrevious?: boolean
           autoUpdate?: boolean
+          resetWhenUpdate?: boolean
+          updateUrl?: string
+          statsUrl?: string
+          privateKey?: string
+          version?: string
+          directUpdate?: boolean
+          periodCheckDelay?: number
           localS3?: boolean
           localHost?: string
           localWebHost?: string
           localSupa?: string
           localSupaAnon?: string
-          statsUrl?: string
-          channelUrl?: string
-          updateUrl?: string
-          privateKey?: string
+          allowModifyUrl?: boolean
+          defaultChannel?: string
         }
       }
       server: {

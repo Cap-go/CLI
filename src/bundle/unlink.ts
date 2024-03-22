@@ -57,7 +57,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
     program.error('')
   }
   try {
-    await checkPlanValid(supabase, userId, appId, options.apikey)
+    await checkPlanValid(supabase, userId, options.apikey, appId)
 
     const versionData = await getVersionData(supabase, appId, bundle)
     await checkVersionNotUsedInChannel(supabase, appId, versionData)

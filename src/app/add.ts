@@ -8,6 +8,7 @@ import { checkLatest } from '../api/update'
 import type { Options } from '../api/app'
 import { checkAppExists, newIconPath } from '../api/app'
 import {
+  checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -37,6 +38,9 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   const supabase = await createSupabaseClient(options.apikey)
 
   let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+
+  await checkPlanValid(supabase, userId, options.apikey, undefined, false)
+
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
   if (throwErr && appExist) {

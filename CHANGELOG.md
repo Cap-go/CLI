@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.2.3](https://github.com/Cap-go/CLI/compare/v4.2.2...v4.2.3) (2024-03-12)
+
+
+### Bug Fixes
+
+* issue check plan ([ed64d10](https://github.com/Cap-go/CLI/commit/ed64d107612cfc58548dca80bf1915e90b98ec33))
+
+### [4.2.2](https://github.com/Cap-go/CLI/compare/v4.2.1...v4.2.2) (2024-03-11)
+
+### [4.2.1](https://github.com/Cap-go/CLI/compare/v4.2.0...v4.2.1) (2024-03-08)
+
+
+### Bug Fixes
+
+* test file ([2094dc5](https://github.com/Cap-go/CLI/commit/2094dc58421410130f89965d5ea0c265dc563f54))
+
+## [4.2.0](https://github.com/Cap-go/CLI/compare/v4.1.0...v4.2.0) (2024-03-04)
+
+
+### Features
+
+* allow ussage of version in Capcitor config instead of package.json ([7b2084a](https://github.com/Cap-go/CLI/commit/7b2084ab6a8d1cede375cb393b6718f3a5aa23dc))
+
 ## [4.1.0](https://github.com/Cap-go/CLI/compare/v4.0.14...v4.1.0) (2024-02-27)
 
 

@@ -1220,6 +1220,13 @@ export interface Database {
           count: number
         }[]
       }
+      count_all_plans_v2: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          plan_name: string
+          count: number
+        }[]
+      }
       count_all_trial: {
         Args: Record<PropertyKey, never>
         Returns: number
@@ -2173,4 +2180,3 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof Database["public"]["Enums"]
   ? Database["public"]["Enums"][PublicEnumNameOrOptions]
   : never
-
