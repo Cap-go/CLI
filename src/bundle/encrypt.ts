@@ -5,7 +5,7 @@ import ciDetect from 'ci-info'
 import * as p from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
-import { baseKey, getLocalConfig, getConfig } from '../utils'
+import { baseKey, getLocalConfig, getConfig, checKOldEncryption } from '../utils'
 
 interface Options {
   key?: string
@@ -17,32 +17,19 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   await checkLatest()
   const localConfig = await getLocalConfig()
-  const config = await getConfig()
-  const { extConfig } = config.app
   // console.log('localConfig - ', localConfig)
   // console.log('config - ', config)
 
-  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
-  const hasPublicKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.publicKey ? true : false
-
-  if (hasPrivateKeyInConfig)
-    p.log.warning(`There is still a privateKey in the config`)
-
-  // write in file .capgo the apikey in home directory
+  await checKOldEncryption()
 
   if (!existsSync(zipPath)) {
     p.log.error(`Error: Zip not found at the path ${zipPath}`)
     program.error('')
   }
 
-  if (!hasPublicKeyInConfig) {
-    p.log.warning(`Warning: Missing Public Key in config`)
-  }
-
   const keyPath = options.key || baseKey
-  // check if publicKey exist
+  // check if privateKey exist
 
-  //let publicKey = options.keyData || ''
   let privateKey = options.keyData || ''
 
   if (!existsSync(keyPath) && !privateKey) {

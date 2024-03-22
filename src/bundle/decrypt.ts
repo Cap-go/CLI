@@ -3,7 +3,7 @@ import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { decryptSource } from '../api/crypto'
-import { baseKeyPub, getConfig } from '../utils'
+import { baseKeyPub, checKOldEncryption, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
 
 interface Options {
@@ -26,11 +26,8 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
   // console.log('config - ', config)
   // console.log('extConfig - ', extConfig)
 
-  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
+  await checKOldEncryption()
   // console.log(`There ${hasPrivateKeyInConfig ? 'IS' : 'IS NOT'} a privateKey in the config`);
-
-  if (hasPrivateKeyInConfig)
-    p.log.warning(`There is still a privateKey in the config`)
 
   if (!options.key && !existsSync(baseKeyPub) && !extConfig.plugins?.CapacitorUpdater?.publicKey) {
     p.log.error(`Public key not found at the path ${baseKeyPub} or in ${config.app.extConfigFilePath}`)
