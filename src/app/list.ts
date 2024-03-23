@@ -9,6 +9,10 @@ import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '..
 import { checkLatest } from '../api/update'
 
 function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
+  if (!data.length) {
+    p.log.error('No apps found')
+    process.exit(1)
+  }
   const t = new Table({
     title: 'Apps',
     charLength: { '❌': 2, '✅': 2 },

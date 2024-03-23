@@ -33,6 +33,10 @@ export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, 
 }
 
 export function displayBundles(data: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[]) {
+  if (!data.length) {
+    p.log.error('No bundle found')
+    process.exit(1)
+  }
   const t = new Table({
     title: 'Bundles',
     charLength: { '❌': 2, '✅': 2 },
