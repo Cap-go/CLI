@@ -132,6 +132,7 @@ export async function zipBundle(appId: string, options: Options) {
       checksum,
     }
     // Keep the console log and stringify
+    // eslint-disable-next-line no-console
     console.log(JSON.stringify(output, null, 2))
   }
   process.exit()

@@ -50,7 +50,7 @@ export function displayBundles(data: (Database['public']['Tables']['app_versions
   p.log.success(t.render())
 }
 
-export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string, userId: string) {
+export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string, _userId: string) {
   const { data, error: vError } = await supabase
     .from('app_versions')
     .select()
