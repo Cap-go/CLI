@@ -265,9 +265,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
       const res = encryptSource(zipped, keyData)
       sessionKey = res.ivSessionKey
       if (displayIvSession) {
-        p.log.info(`Your Iv Session key is ${sessionKey},
-keep it safe, you will need it to decrypt your bundle.
-It will be also visible in your dashboard\n`)
+        p.log.info(`Your Iv Session key is ${sessionKey},keep it safe, you will need it to decrypt your bundle.It will be also visible in your dashboard\n`)
       }
       zipped = res.encryptedData
     }
