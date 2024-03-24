@@ -115,7 +115,7 @@ async function checkUserPermissionForAutoDelete(supabase: SupabaseClient<Databas
 
     // Check if the user's role or permissions allow them to trigger auto-deletion
     // This is just an example, you should customize it based on your actual authorization logic
-    if (user.role === 'admin' || (user.permissions && user.permissions.includes('auto-delete'))) {
+    if (user.role === 'admin' || user.permissions?.includes('auto-delete')) {
       return true
     } else {
       return false
