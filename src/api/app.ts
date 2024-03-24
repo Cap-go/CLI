@@ -77,7 +77,7 @@ export const newIconPath = 'assets/icon.png'
 // Auto-delete mechanism for failed upload tasks
 export async function autoDeleteFailedUploads(supabase: SupabaseClient<Database>, userId: string) {
   // Check if the user has permission to trigger auto-deletion
-  const userHasPermission = await checkUserPermissionForAutoDelete(userId)
+  const userHasPermission = await checkUserPermissionForAutoDelete(supabase, userId)
   if (!userHasPermission) {
     console.error('User does not have permission to trigger auto-deletion')
     return
@@ -87,7 +87,7 @@ export async function autoDeleteFailedUploads(supabase: SupabaseClient<Database>
   const failedUploads = await getFailedUploadTasks(supabase)
   for (const upload of failedUploads) {
     // Ensure that the version can be safely deleted
-    const versionCanBeDeleted = await checkVersionDeletionEligibility(upload.versionId)
+    const versionCanBeDeleted = await checkVersionDeletionEligibility(supabase, upload.versionId)
     if (versionCanBeDeleted) {
       // Delete the version
       await deleteVersion(supabase, upload.versionId)
@@ -114,35 +114,30 @@ async function checkUserPermissionForAutoDelete(supabase: SupabaseClient<Databas
     }
 
     // Check if the user's role or permissions allow them to trigger auto-deletion
-    // This is just an example, you should customize it based on your actual authorization logic
     if (user.role === 'admin' || user.permissions?.includes('auto-delete')) {
       return true
     } else {
       return false
     }
-  } catch (error) {
+  } catch (error:any) {
     console.error('Error checking user permissions:', error.message)
     return false
   }
 }
 
 // Retrieve failed upload tasks from the database
-async function getFailedUploadTasks(supabase: SupabaseClient<Database>) {
-  const { data: failedUploads, error } = await supabase
-    .from('upload_tasks')
-    .select('*')
-    .eq('status', 'failed')
-    .catch((error) => {
-      console.error('Error retrieving failed upload tasks:', error.message)
-      return { data: [], error }
-    })
+async function getFailedUploadTasks(supabase: SupabaseClient<Database>): Promise<any[]> {
+  try {
+    const { data } = await supabase
+      .from('upload_tasks')
+      .select('*')
+      .eq('status', 'failed');
 
-  if (error) {
-    console.error('Error retrieving failed upload tasks:', error.message)
-    return []
+    return data || []; // Directly return the data array
+  } catch (error:any) {
+    console.error('Error retrieving failed upload tasks:', error.message);
+    return []; // Return an empty array on error
   }
-
-  return failedUploads
 }
 
 // Check if the version can be safely deleted
@@ -166,23 +161,25 @@ async function checkVersionDeletionEligibility(supabase: SupabaseClient<Database
       return false
     }
 
-    // Additional checks can be added here based on your requirements
-
     // If all checks pass, return true indicating that the version can be deleted
     return true
-  } catch (error) {
+  } catch (error:any) {
     console.error(`Error checking version deletion eligibility for version with ID ${versionId}:`, error.message)
     return false
   }
 }
 
 // Delete a version by its ID
-async function deleteVersion(supabase: SupabaseClient<Database>, versionId: string) {
-  await supabase
-    .from('versions')
-    .delete()
-    .eq('id', versionId)
-    .catch((error) => {
-      console.error(`Error deleting version with ID ${versionId}:`, error.message)
-    })
+async function deleteVersion(supabase: SupabaseClient<Database>, versionId: string): Promise<void> {
+  try {
+    await supabase
+      .from('versions')
+      .delete()
+      .eq('id', versionId);
+
+    console.log(`Version with ID ${versionId} deleted successfully`); // Informative message
+  } catch (error:any) {
+    console.error(`Error deleting version with ID ${versionId}:`, error.message);
+  }
 }
+
