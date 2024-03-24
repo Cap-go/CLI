@@ -27,6 +27,12 @@ export interface OptionsBase {
   apikey: string
 }
 
+export function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
+
 export async function getConfig() {
   let config: Config
   try {
@@ -277,18 +283,19 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
-export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, appId: string, apikey: string, warning = true) {
+export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
-  const validPlan = await isAllowedActionAppIdApiKey(supabase, appId, apikey)
+
+  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
-    setTimeout(() => {
-      import('open')
-        .then((module) => {
-          module.default(`${config.hostWeb}/dashboard/settings/plans`)
-        })
-      program.error('')
-    }, 1000)
+    wait(100)
+    import('open')
+      .then((module) => {
+        module.default(`${config.hostWeb}/dashboard/settings/plans`)
+      })
+    wait(500)
+    program.error('')
   }
   const trialDays = await isTrial(supabase, userId)
   const ispaying = await isPaying(supabase, userId)
@@ -364,15 +371,26 @@ interface Config {
       plugins: {
         extConfig: object
         CapacitorUpdater: {
+          appReadyTimeout?: number
+          responseTimeout?: number
+          autoDeleteFailed?: boolean
+          autoDeletePrevious?: boolean
           autoUpdate?: boolean
+          resetWhenUpdate?: boolean
+          updateUrl?: string
+          statsUrl?: string
+          version?: string
+          directUpdate?: boolean
+          periodCheckDelay?: number
           localS3?: boolean
           localHost?: string
           localWebHost?: string
           localSupa?: string
           localSupaAnon?: string
-          statsUrl?: string
+          allowModifyUrl?: boolean
+          defaultChannel?: string
           channelUrl?: string
-          updateUrl?: string
+          publicKey?: string
           privateKey?: string
         }
       }
@@ -381,6 +399,25 @@ interface Config {
         url: string
       }
     }
+  }
+}
+
+export async function checKOldEncryption() {
+  const config = await getConfig()
+  const { extConfig } = config.app
+  // console.log('localConfig - ', localConfig)
+  // console.log('config - ', config)
+
+  const hasPrivateKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.privateKey
+  const hasPublicKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.publicKey
+
+  if (hasPrivateKeyInConfig)
+    p.log.warning(`You still have privateKey in the capacitor config, this is deprecated, please remove it`)
+  p.log.warning(`Encryption with private will be ignored`)
+
+  if (!hasPublicKeyInConfig) {
+    p.log.warning(`publicKey not found in capacitor config, please run npx @capgo/cli key save`)
+    program.error('')
   }
 }
 

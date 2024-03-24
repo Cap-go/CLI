@@ -3,7 +3,7 @@ import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { decryptSource } from '../api/crypto'
-import { baseKey, getConfig } from '../utils'
+import { baseKeyPub, checKOldEncryption, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
 
 interface Options {
@@ -23,32 +23,43 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
 
   const config = await getConfig()
   const { extConfig } = config.app
+  // console.log('config - ', config)
+  // console.log('extConfig - ', extConfig)
 
-  if (!options.key && !existsSync(baseKey) && !extConfig.plugins?.CapacitorUpdater?.privateKey) {
-    p.log.error(`Private Key not found at the path ${baseKey} or in ${config.app.extConfigFilePath}`)
+  await checKOldEncryption()
+  // console.log(`There ${hasPrivateKeyInConfig ? 'IS' : 'IS NOT'} a privateKey in the config`);
+
+  if (!options.key && !existsSync(baseKeyPub) && !extConfig.plugins?.CapacitorUpdater?.publicKey) {
+    p.log.error(`Public key not found at the path ${baseKeyPub} or in ${config.app.extConfigFilePath}`)
     program.error('')
   }
-  const keyPath = options.key || baseKey
-  // check if publicKey exist
+  const keyPath = options.key || baseKeyPub
+  // check if private exist
 
-  let privateKey = extConfig?.plugins?.CapacitorUpdater?.privateKey
+  let publicKey = extConfig?.plugins?.CapacitorUpdater?.publicKey
 
-  if (!existsSync(keyPath) && !privateKey) {
-    p.log.error(`Cannot find public key ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+  if (!existsSync(keyPath) && !publicKey) {
+    p.log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
     program.error('')
   }
   else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
-    privateKey = keyFile.toString()
+    publicKey = keyFile.toString()
   }
-  // console.log('privateKey', privateKey)
+
+  // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
+  if (publicKey && !publicKey.startsWith('-----BEGIN RSA PUBLIC KEY-----')) {
+    p.log.error(`the public key provided is not a valid RSA Public key`)
+    program.error('')
+  }
 
   const zipFile = readFileSync(zipPath)
 
-  const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? privateKey ?? '')
+  const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? publicKey ?? '')
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
-  p.outro(`Decrypted zip file at ${zipPath}_decrypted.zip`)
+  p.log.success(`Decrypted zip file at ${zipPath}_decrypted.zip`)
+  p.outro(`Done ✅`)
   process.exit()
 }
