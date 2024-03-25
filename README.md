@@ -133,6 +133,10 @@ Optionally, you can give:
 * `--no-key` to ignore the signing key and send clear update.
 * `--bundle [1.0.0]` to set the bundle version number of the file to upload.
 * `--iv-session-key [key]` to send a custom session key to the cloud.
+* `--s3-apikey [key]` API key to upload to an AWS S3 account directly.
+* `--s3-apisecret [secretkey]` API secret necessary for uploading to S3.
+* `--s3-region [region]` to set the region of the AWS S3 account of the two previous API keys.
+* `--s3-bucket-name [bucketName]` to set the name of the AWS S3 bucket to which upload.
 * `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132).
 * `--no-code-check` to ignore the code check and send the bundle anyway.
 

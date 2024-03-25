@@ -8,6 +8,10 @@ import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import ky from 'ky'
+import {
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import { checkLatest } from '../api/update'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
@@ -50,6 +54,10 @@ interface Options extends OptionsBase {
   key?: boolean | string
   keyData?: string
   ivSessionKey?: string
+  s3Region?: string
+  s3Apikey?: string
+  s3Apisecret?: string
+  s3BucketName?: string
   bundleUrl?: boolean
   codeCheck?: boolean
   minUpdateVersion?: string
@@ -63,6 +71,21 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   let { bundle, path, channel } = options
   const { external, key, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options
   let { minUpdateVersion } = options
+  const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
+  let useS3 = false
+  let s3Client
+  if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
+    p.log.info('Uploading to S3')
+    useS3 = true
+    s3Client = new S3Client({
+      region: s3Region,
+      credentials: {
+        accessKeyId: s3Apikey,
+        secretAccessKey: s3Apisecret,
+      },
+    })
+  }
+
   options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -90,6 +113,13 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   if (!appid || !bundle || !path) {
     p.log.error('Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project')
     program.error('')
+  }
+  // if one S3 variable is set, check that all are set
+  if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
+    if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
+      p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
+      program.error('')
+    }
   }
   // check if path exist
   if (!existsSync(path)) {
@@ -217,7 +247,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
-  if (!external) {
+  if (!external && useS3 === false) {
     const zip = new AdmZip()
     zip.addLocalFolder(path)
     zipped = zip.toBuffer()
@@ -292,6 +322,15 @@ It will be also visible in your dashboard\n`)
     program.error('')
   }
   else {
+    if (useS3) {
+      const zip = new AdmZip()
+      zip.addLocalFolder(path)
+      zipped = zip.toBuffer()
+      const s = p.spinner()
+      s.start(`Calculating checksum`)
+      checksum = await getChecksum(zipped, 'crc32')
+      s.stop(`Checksum: ${checksum}`)
+    }
     await snag.track({
       channel: 'app',
       event: 'App external',
@@ -354,6 +393,33 @@ It will be also visible in your dashboard\n`)
         : undefined),
     })
     versionData.storage_provider = 'r2'
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError2) {
+      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+      program.error('')
+    }
+    spinner.stop('Bundle Uploaded 💪')
+  }
+  else if (useS3 && zipped) {
+    const spinner = p.spinner()
+    spinner.start(`Uploading Bundle`)
+
+    const fileName = `${appid}-${bundle}`
+    const encodeFileName = encodeURIComponent(fileName)
+    const command: PutObjectCommand = new PutObjectCommand({
+      Bucket: s3BucketName,
+      Key: fileName,
+      Body: zipped,
+    })
+
+    const response = await s3Client.send(command)
+    if (response.$metadata.httpStatusCode !== 200) {
+      p.log.error(`Cannot upload to S3`)
+      program.error('')
+    }
+
+    versionData.storage_provider = 'external'
+    versionData.external_url = `https://${s3BucketName}.s3.amazonaws.com/${encodeFileName}`
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
