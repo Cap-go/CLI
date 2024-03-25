@@ -1,15 +1,19 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream, existsSync, readFileSync } from 'node:fs'
+import { createHash, randomBytes, randomUUID } from 'node:crypto'
+import { createGzip, gzipSync } from 'node:zlib'
+import { buffer as readBuffer } from 'node:stream/consumers'
+import ciDetect from 'ci-info'
 import * as p from '@clack/prompts'
 import { program } from 'commander'
 import { promiseFiles } from 'node-dir'
 import { z } from 'zod'
+import ky from 'ky'
+import { encryptSource, encryptSourceExpanded } from '../api/crypto'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { EMPTY_UUID, OrganizationPerm, checkPlanValid, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, regexSemver, updateOrCreateVersion, useLogSnag, verifyUser } from '../utils'
+import { EMPTY_UUID, OrganizationPerm, baseKey, checKOldEncryption, checkPlanValid, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, regexSemver, updateOrCreateVersion, useLogSnag, verifyUser } from '../utils'
 import type { Options } from './upload'
 import { checkIndexPosition, searchInDirectory } from './check'
-import ky from 'ky'
 
 // TODO: more validation
 const uploadManifestSchema = z.object({
@@ -22,7 +26,7 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
 
   await checkLatest()
   let { bundle, path, channel } = options
-  const { external } = options
+  const { external, key } = options
   options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -77,7 +81,7 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload'])
 
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
-  await checkPlanValid(supabase, userId, appid, options.apikey, false)
+  await checkPlanValid(supabase, userId, options.apikey, appid, true)
 
   // TODO: compatibility
 
@@ -125,6 +129,36 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
     program.error('')
   }
 
+  // Setup encryption
+  let ivSessionKey = ''
+  let keyData = options.keyData || ''
+  const initVector = randomBytes(16)
+  const sessionKey = randomBytes(16)
+
+  if (key || existsSync(baseKey)) {
+    await checKOldEncryption()
+    const privateKey = typeof key === 'string' ? key : baseKey
+
+    if (!keyData && !existsSync(privateKey)) {
+      p.log.error(`Cannot find private key ${privateKey}`)
+      if (ciDetect.isCI)
+        program.error('')
+
+      const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+      if (!res) {
+        p.log.error(`Error: Missing public key`)
+        program.error('')
+      }
+      keyData = localConfig.signKey || ''
+    }
+
+    // open with fs privateKey path
+    if (!keyData) {
+      const keyFile = readFileSync(privateKey)
+      keyData = keyFile.toString()
+    }
+  }
+
   const spinner2 = p.spinner()
   spinner.start(`Uploading Bundle`)
 
@@ -157,7 +191,17 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
       filePath = `${filePath}${manifestEntry.file}`
 
       // Read the file
-      const fileBuffer = readFileSync(filePath)
+      // It will be slow as the gzip is at max level, i don;t care.
+      // I want all files to be a small as possible. the cli can wait - the user cannot
+      const fileStream = createReadStream(filePath).pipe(createGzip({ level: 9 }))
+      let fileBuffer = await readBuffer(fileStream)
+
+      // Now we encrypt if the key data != null
+      if (keyData) {
+        const encrypted = encryptSourceExpanded(fileBuffer, keyData, initVector, sessionKey)
+        ivSessionKey = encrypted.ivSessionKey
+        fileBuffer = encrypted.encryptedData
+      }
 
       // Upload to S3
       await ky.put(manifestEntry.uploadUrl, {
@@ -180,7 +224,7 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
   }
 
   const { error: updateBundleError } = await supabase.from('app_versions')
-    .update({ storage_provider: 'r2-partial' })
+    .update({ storage_provider: 'r2-partial', session_key: ivSessionKey })
     .eq('name', bundle)
     .eq('app_id', appid)
     .eq('user_id', userId)

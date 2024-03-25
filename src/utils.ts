@@ -286,6 +286,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
 export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
 
+  console.log(appId)
   const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
@@ -411,9 +412,10 @@ export async function checKOldEncryption() {
   const hasPrivateKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.privateKey
   const hasPublicKeyInConfig = !!extConfig?.plugins?.CapacitorUpdater?.publicKey
 
-  if (hasPrivateKeyInConfig)
+  if (hasPrivateKeyInConfig) {
     p.log.warning(`You still have privateKey in the capacitor config, this is deprecated, please remove it`)
-  p.log.warning(`Encryption with private will be ignored`)
+    p.log.warning(`Encryption with private key will be ignored`)
+  }
 
   if (!hasPublicKeyInConfig) {
     p.log.warning(`publicKey not found in capacitor config, please run npx @capgo/cli key save`)

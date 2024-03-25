@@ -49,6 +49,14 @@ export function encryptSource(source: Buffer, key: string): Encoded {
   // encrypt zip with key
   const initVector = randomBytes(16)
   const sessionKey = randomBytes(16)
+
+  return encryptSourceExpanded(source, key, initVector, sessionKey)
+}
+
+export function encryptSourceExpanded(source: Buffer, key: string, initVector: Buffer, sessionKey: Buffer): Encoded {
+  // console.log('decryptKeyType - ', decryptKeyType);
+  // console.log(key);
+
   // encrypt session key with public key
   // console.log('\nencrypted.key', encrypted.key.toString(CryptoJS.enc.Base64))
   const cipher = createCipheriv(algorithm, sessionKey, initVector)
@@ -79,6 +87,7 @@ export function encryptSource(source: Buffer, key: string): Encoded {
     ivSessionKey,
   }
 }
+
 export interface RSAKeys {
   publicKey: string
   privateKey: string

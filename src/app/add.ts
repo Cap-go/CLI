@@ -37,7 +37,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   await checkPlanValid(supabase, userId, options.apikey, undefined, false)
 
