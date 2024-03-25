@@ -121,7 +121,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
   await checkPlanValid(supabase, userId, options.apikey, appid, true)
 
-  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel, appid)
 
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
@@ -347,10 +347,10 @@ It will be also visible in your dashboard\n`)
       body: zipped,
       headers: (!localS3
         ? {
-            'Content-Type': 'application/octet-stream',
-            'Cache-Control': 'public, max-age=456789, immutable',
-            'x-amz-meta-crc32': checksum,
-          }
+          'Content-Type': 'application/octet-stream',
+          'Cache-Control': 'public, max-age=456789, immutable',
+          'x-amz-meta-crc32': checksum,
+        }
         : undefined),
     })
     versionData.storage_provider = 'r2'
