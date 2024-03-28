@@ -43,7 +43,7 @@
   "author": "github.com/riderx",
   "license": "Apache 2.0",
   "dependencies": {
-    "@capacitor/cli": "5.7.0",
+    "@capacitor/cli": "5.7.2",
     "@capgo/find-package-manager": "0.0.10",
     "@clack/prompts": "^0.7.0",
     "@supabase/supabase-js": "^2.39.3",
