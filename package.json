@@ -43,6 +43,7 @@
   "author": "github.com/riderx",
   "license": "Apache 2.0",
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.540.0",
     "@capacitor/cli": "5.7.0",
     "@capgo/find-package-manager": "0.0.10",
     "@clack/prompts": "^0.7.0",
