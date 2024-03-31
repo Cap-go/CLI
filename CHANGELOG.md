@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.3.0](https://github.com/Cap-go/CLI/compare/v4.2.12...v4.3.0) (2024-03-31)
+
+
+### Features
+
+* add S3 upload support ([f0353f5](https://github.com/Cap-go/CLI/commit/f0353f583a265a6d4f3621639384b1b43f60f53e))
+
 ### [4.2.12](https://github.com/Cap-go/CLI/compare/v4.2.11...v4.2.12) (2024-03-29)
 
 
