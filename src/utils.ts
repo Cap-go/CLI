@@ -96,6 +96,7 @@ export async function createSupabaseClient(apikey: string) {
     p.log.error('Cannot connect to server please try again later')
     program.error('')
   }
+  // console.log(config)
   return createClient<Database>(config.supaHost, config.supaKey, {
     auth: {
       persistSession: false,
