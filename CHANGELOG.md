@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0-alpha.5](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.4...v5.0.0-alpha.5) (2024-04-10)
+
+
+### Bug Fixes
+
+* typo text ([08574a4](https://github.com/Cap-go/CLI/commit/08574a429f99bd61212b488290d25455521a0035))
+
 ## [5.0.0-alpha.4](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.3...v5.0.0-alpha.4) (2024-03-22)
 
 
