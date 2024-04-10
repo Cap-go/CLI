@@ -264,6 +264,10 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
         keyData = keyFile.toString()
       }
       // encrypt
+      if (keyData && !keyData.startsWith('-----BEGIN RSA PRIVATE KEY-----')) {
+        p.log.error(`the private key provided is not a valid RSA Private key`)
+        program.error('')
+      }
       p.log.info(`Encrypting your bundle`)
       const res = encryptSource(zipped, keyData)
       sessionKey = res.ivSessionKey
