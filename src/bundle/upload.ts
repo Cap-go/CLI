@@ -241,7 +241,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
         if (ciDetect.isCI)
           program.error('')
 
-        const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+        const res = await p.confirm({ message: 'Do you want to use our private key ?' })
         if (!res) {
           p.log.error(`Error: Missing public key`)
           program.error('')
