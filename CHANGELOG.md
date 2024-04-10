@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0-alpha.6](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2024-04-10)
+
+
+### Bug Fixes
+
+* add check for private key ([aa5c949](https://github.com/Cap-go/CLI/commit/aa5c94905fd4888aafa60d3cf2fc1dc9a6d5c7a7))
+
 ## [5.0.0-alpha.5](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.4...v5.0.0-alpha.5) (2024-04-10)
 
 
