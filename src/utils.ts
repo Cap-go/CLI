@@ -134,29 +134,29 @@ export async function isGoodPlan(supabase: SupabaseClient<Database>, userId: str
   return data || false
 }
 
-export async function isPaying(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+export async function isPayingOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
-    .rpc('is_paying', { userid: userId })
+    .rpc('is_paying_org', { orgid: orgId })
     .single()
   return data || false
 }
 
-export async function isTrial(supabase: SupabaseClient<Database>, userId: string): Promise<number> {
+export async function isTrialOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<number> {
   const { data } = await supabase
-    .rpc('is_trial', { userid: userId })
+    .rpc('is_trial_org', { orgid: orgId })
     .single()
   return data || 0
 }
 
-export async function isAllowedAction(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+export async function isAllowedActionOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
-    .rpc('is_allowed_action_user', { userid: userId })
+    .rpc('is_allowed_action_org', { orgid: orgId })
     .single()
   return !!data
 }
 
 export async function isAllowedActionAppIdApiKey(supabase: SupabaseClient<Database>, appId: string, apikey: string): Promise<boolean> {
-  const { data } = await supabase
+  const { data, error } = await supabase
     .rpc('is_allowed_action', { apikey, appid: appId })
     .single()
 
@@ -283,10 +283,11 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
-export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
+export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
 
-  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
+  // isAllowedActionAppIdApiKey was updated in the orgs_v3 migration to work with the new system
+  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedActionOrg(supabase, orgId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
@@ -297,8 +298,10 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, userId:
     wait(500)
     program.error('')
   }
-  const trialDays = await isTrial(supabase, userId)
-  const ispaying = await isPaying(supabase, userId)
+  const [trialDays, ispaying] = await Promise.all([
+    isTrialOrg(supabase, orgId),
+    isPayingOrg(supabase, orgId)
+  ])
   if (trialDays > 0 && warning && !ispaying)
     p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
 }
@@ -496,6 +499,20 @@ export async function verifyUser(supabase: SupabaseClient<Database>, apikey: str
     program.error('')
   }
   return userId
+}
+
+export async function getOrganizationId(supabase: SupabaseClient<Database>, appId: string) {
+  const { data, error } = await supabase.from('apps')
+    .select('owner_org')
+    .eq('app_id', appId)
+    .single()
+
+  if (!data || error) {
+    p.log.error(`Cannot get organization id for app id ${appId}`)
+    formatError(error)
+    program.error('')
+  }
+  return data.owner_org
 }
 
 export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, channel: string, appId: string): Promise<boolean> {

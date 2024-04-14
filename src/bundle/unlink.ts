@@ -15,6 +15,7 @@ import {
   findSavedKey,
   formatError,
   getConfig,
+  getOrganizationId,
   useLogSnag,
   verifyUser,
 } from '../utils'
@@ -47,7 +48,11 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['all', 'write'])
+  const [userId, orgId] = await Promise.all([
+    verifyUser(supabase, options.apikey, ['all', 'write']),
+    getOrganizationId(supabase, appId)
+  ])
+
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
 
@@ -56,7 +61,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
     program.error('')
   }
   try {
-    await checkPlanValid(supabase, userId, options.apikey, appId)
+    await checkPlanValid(supabase, orgId, options.apikey, appId)
 
     const versionData = await getVersionData(supabase, appId, bundle)
     await checkVersionNotUsedInChannel(supabase, appId, versionData)

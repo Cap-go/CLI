@@ -32,6 +32,7 @@ import {
   getConfig,
   getLocalConfig,
   getLocalDepenencies,
+  getOrganizationId,
   hasOrganizationPerm,
   regexSemver,
   requireUpdateMetadata,
@@ -149,7 +150,13 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
-  await checkPlanValid(supabase, userId, options.apikey, appid, true)
+
+  // Now if it does exist we will fetch the org id
+  const orgId = await getOrganizationId(supabase, appid)
+  await checkPlanValid(supabase, orgId, options.apikey, appid, true)
+  // Now let's fetch the orgs table to get the numeric id
+  const { data: orgNumeric, error: orgNumericId } = await supabase.from('orgs')
+    .select('id')
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel, appid)
 
@@ -227,11 +234,12 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   }
 
   const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial', { userid: userId })
+    .rpc('is_trial_org', { orgid: orgId })
     .single()
   if ((isTrial && isTrial > 0) || isTrialsError) {
+    // TODO: Come back to this to fix for orgs v3
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans`)
+    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
   }
 
   // check if app already exist

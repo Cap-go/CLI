@@ -13,6 +13,7 @@ import {
   findSavedKey,
   formatError,
   getConfig,
+  getOrganizationId,
   updateOrCreateChannel,
   useLogSnag,
   verifyUser,
@@ -53,6 +54,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  const orgId = await getOrganizationId(supabase, appId)
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options
   if (!channel) {
@@ -76,7 +78,7 @@ export async function setChannel(channel: string, appId: string, options: Option
     program.error('')
   }
   try {
-    await checkPlanValid(supabase, userId, options.apikey, appId)
+    await checkPlanValid(supabase, orgId, options.apikey, appId)
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,

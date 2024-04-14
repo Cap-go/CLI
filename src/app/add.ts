@@ -39,8 +39,6 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
 
   let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
-  await checkPlanValid(supabase, userId, options.apikey, undefined, false)
-
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
   if (throwErr && appExist) {
@@ -81,6 +79,8 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   userId = organization.created_by
 
   p.log.info(`Using the organization "${organization.name}" as the app owner`)
+
+  await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
 
   let { name, icon } = options
   appId = appId || config?.app?.appId
