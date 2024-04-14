@@ -154,9 +154,6 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
   await checkPlanValid(supabase, orgId, options.apikey, appid, true)
-  // Now let's fetch the orgs table to get the numeric id
-  const { data: orgNumeric, error: orgNumericId } = await supabase.from('orgs')
-    .select('id')
 
   const updateMetadataRequired = await requireUpdateMetadata(supabase, channel, appid)
 
@@ -394,10 +391,10 @@ It will be also visible in your dashboard\n`)
       body: zipped,
       headers: (!localS3
         ? {
-          'Content-Type': 'application/octet-stream',
-          'Cache-Control': 'public, max-age=456789, immutable',
-          'x-amz-meta-crc32': checksum,
-        }
+            'Content-Type': 'application/octet-stream',
+            'Cache-Control': 'public, max-age=456789, immutable',
+            'x-amz-meta-crc32': checksum,
+          }
         : undefined),
     })
     versionData.storage_provider = 'r2'

@@ -50,7 +50,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
 
   const [userId, orgId] = await Promise.all([
     verifyUser(supabase, options.apikey, ['all', 'write']),
-    getOrganizationId(supabase, appId)
+    getOrganizationId(supabase, appId),
   ])
 
   // Check we have app access to this appId

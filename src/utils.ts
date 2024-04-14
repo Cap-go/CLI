@@ -156,7 +156,7 @@ export async function isAllowedActionOrg(supabase: SupabaseClient<Database>, org
 }
 
 export async function isAllowedActionAppIdApiKey(supabase: SupabaseClient<Database>, appId: string, apikey: string): Promise<boolean> {
-  const { data, error } = await supabase
+  const { data } = await supabase
     .rpc('is_allowed_action', { apikey, appid: appId })
     .single()
 
@@ -300,7 +300,7 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: 
   }
   const [trialDays, ispaying] = await Promise.all([
     isTrialOrg(supabase, orgId),
-    isPayingOrg(supabase, orgId)
+    isPayingOrg(supabase, orgId),
   ])
   if (trialDays > 0 && warning && !ispaying)
     p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
@@ -337,7 +337,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       && !dirent.name.startsWith('.')
       && !dirent.name.startsWith('node_modules')
       && !dirent.name.startsWith('dist'))
-      yield* getFiles(res)
+      yield * getFiles(res)
     else
       yield res
   }
@@ -673,36 +673,36 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
   const finalDepenencies:
-    ({
-      name: string
-      localVersion: string
-      remoteVersion: string
-    } | {
-      name: string
-      localVersion: string
-      remoteVersion: undefined
-    } | {
-      name: string
-      localVersion: undefined
-      remoteVersion: string
-    })[] = dependenciesObject
-      .filter(a => !!a.native)
-      .map((local) => {
-        const remotePackage = mappedRemoteNativePackages.get(local.name)
-        if (remotePackage) {
-          return {
-            name: local.name,
-            localVersion: local.version,
-            remoteVersion: remotePackage.version,
-          }
-        }
-
+  ({
+    name: string
+    localVersion: string
+    remoteVersion: string
+  } | {
+    name: string
+    localVersion: string
+    remoteVersion: undefined
+  } | {
+    name: string
+    localVersion: undefined
+    remoteVersion: string
+  })[] = dependenciesObject
+    .filter(a => !!a.native)
+    .map((local) => {
+      const remotePackage = mappedRemoteNativePackages.get(local.name)
+      if (remotePackage) {
         return {
           name: local.name,
           localVersion: local.version,
-          remoteVersion: undefined,
+          remoteVersion: remotePackage.version,
         }
-      })
+      }
+
+      return {
+        name: local.name,
+        localVersion: local.version,
+        remoteVersion: undefined,
+      }
+    })
 
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
