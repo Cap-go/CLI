@@ -50,7 +50,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   }
 
   const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v4')
+    .rpc('get_orgs_v5')
 
   if (orgError) {
     p.log.error('Cannot get the list of organizations - exiting')
