@@ -32,7 +32,7 @@ interface Options extends OptionsBase {
   channel?: string
 }
 
-const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'none']
+const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
 export async function setChannel(channel: string, appId: string, options: Options) {
   p.intro(`Set channel`)

@@ -247,7 +247,7 @@ channel
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel')
-  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none')
+  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, patch, none')
 
 const key = program
   .command('key')
