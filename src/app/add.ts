@@ -35,6 +35,12 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
+
+  if (appId.includes('--')) {
+    p.log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
+    program.error('')
+  }
+
   const supabase = await createSupabaseClient(options.apikey)
 
   let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
