@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.4.1](https://github.com/Cap-go/CLI/compare/v4.4.0...v4.4.1) (2024-04-21)
+
+
+### Bug Fixes
+
+* lint issue auto delete ([3d343e2](https://github.com/Cap-go/CLI/commit/3d343e29522b4de725836965c9ec2aabcf469171))
+
 ## [4.4.0](https://github.com/Cap-go/CLI/compare/v4.3.6...v4.4.0) (2024-04-21)
 
 
