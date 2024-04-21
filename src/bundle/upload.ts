@@ -26,6 +26,7 @@ import {
   checkPlanValid,
   convertAppName,
   createSupabaseClient,
+  deletedFailedVersion,
   findSavedKey,
   formatError,
   getAppOwner,
@@ -388,7 +389,7 @@ It will be also visible in your dashboard\n`)
     }
     try {
       await ky.put(url, {
-        timeout: 60000,
+        timeout: 20000,
         retry: 5,
         body: zipped,
         headers: (!localS3
@@ -401,6 +402,8 @@ It will be also visible in your dashboard\n`)
       })
     } catch (errorUpload) {
       p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
+      // call delete version on path /delete_failed_version to delete the version
+      await deletedFailedVersion(supabase, appid, bundle)
       program.error('')
     }
     versionData.storage_provider = 'r2'

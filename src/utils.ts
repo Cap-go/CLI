@@ -426,6 +426,22 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
   return ''
 }
 
+export async function deletedFailedVersion(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<void> {
+  const data = {
+    app_id: appId,
+    name,
+  }
+  try {
+    const pathFailed = 'private/delete_failed_version'
+    const res = await supabase.functions.invoke(pathFailed, { body: JSON.stringify(data), method: 'DELETE'})
+    return res.data.url
+  }
+  catch (error) {
+    p.log.error(`Cannot delete failed version ${formatError(error)}`)
+    return Promise.reject('Cannot delete failed version')
+  }
+}
+
 export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {
   // console.log('updateOrCreateChannel', update)
   if (!update.app_id || !update.name || !update.created_by) {
