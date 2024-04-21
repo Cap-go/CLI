@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.4.0](https://github.com/Cap-go/CLI/compare/v4.3.6...v4.4.0) (2024-04-21)
+
+
+### Features
+
+* add auto delete Failed Versions upload ([8ba691c](https://github.com/Cap-go/CLI/commit/8ba691c116b92ababa2870fd5ed9479b9286242d))
+
 ### [4.3.6](https://github.com/Cap-go/CLI/compare/v4.3.5...v4.3.6) (2024-04-21)
 
 
