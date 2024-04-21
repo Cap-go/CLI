@@ -400,7 +400,8 @@ It will be also visible in your dashboard\n`)
             }
           : undefined),
       })
-    } catch (errorUpload) {
+    }
+    catch (errorUpload) {
       p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
       // call delete version on path /delete_failed_version to delete the version
       await deletedFailedVersion(supabase, appid, bundle)
