@@ -386,17 +386,23 @@ It will be also visible in your dashboard\n`)
       p.log.error(`Cannot get upload url`)
       program.error('')
     }
-    await ky.put(url, {
-      timeout: 60000,
-      body: zipped,
-      headers: (!localS3
-        ? {
-            'Content-Type': 'application/octet-stream',
-            'Cache-Control': 'public, max-age=456789, immutable',
-            'x-amz-meta-crc32': checksum,
-          }
-        : undefined),
-    })
+    try {
+      await ky.put(url, {
+        timeout: 60000,
+        retry: 5,
+        body: zipped,
+        headers: (!localS3
+          ? {
+              'Content-Type': 'application/octet-stream',
+              'Cache-Control': 'public, max-age=456789, immutable',
+              'x-amz-meta-crc32': checksum,
+            }
+          : undefined),
+      })
+    } catch (errorUpload) {
+      p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
+      program.error('')
+    }
     versionData.storage_provider = 'r2'
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
