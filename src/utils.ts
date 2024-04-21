@@ -18,6 +18,7 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
+export const EMPTY_UUID = '00000000-0000-0000-0000-000000000000'
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
@@ -133,23 +134,23 @@ export async function isGoodPlan(supabase: SupabaseClient<Database>, userId: str
   return data || false
 }
 
-export async function isPaying(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+export async function isPayingOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
-    .rpc('is_paying', { userid: userId })
+    .rpc('is_paying_org', { orgid: orgId })
     .single()
   return data || false
 }
 
-export async function isTrial(supabase: SupabaseClient<Database>, userId: string): Promise<number> {
+export async function isTrialOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<number> {
   const { data } = await supabase
-    .rpc('is_trial', { userid: userId })
+    .rpc('is_trial_org', { orgid: orgId })
     .single()
   return data || 0
 }
 
-export async function isAllowedAction(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
+export async function isAllowedActionOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
-    .rpc('is_allowed_action_user', { userid: userId })
+    .rpc('is_allowed_action_org', { orgid: orgId })
     .single()
   return !!data
 }
@@ -192,7 +193,7 @@ export enum OrganizationPerm {
   upload = 2,
   write = 3,
   admin = 4,
-  owner = 5,
+  super_admin = 5,
 }
 
 export const hasOrganizationPerm = (perm: OrganizationPerm, required: OrganizationPerm): boolean => (perm as number) >= (required as number)
@@ -234,7 +235,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
         break
       }
       case 'perm_owner': {
-        perm = OrganizationPerm.owner
+        perm = OrganizationPerm.super_admin
         break
       }
       default: {
@@ -282,10 +283,11 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
-export async function checkPlanValid(supabase: SupabaseClient<Database>, userId: string, apikey: string, appId?: string, warning = true) {
+export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
 
-  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedAction(supabase, userId))
+  // isAllowedActionAppIdApiKey was updated in the orgs_v3 migration to work with the new system
+  const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedActionOrg(supabase, orgId))
   if (!validPlan) {
     p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
@@ -296,8 +298,10 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, userId:
     wait(500)
     program.error('')
   }
-  const trialDays = await isTrial(supabase, userId)
-  const ispaying = await isPaying(supabase, userId)
+  const [trialDays, ispaying] = await Promise.all([
+    isTrialOrg(supabase, orgId),
+    isPayingOrg(supabase, orgId),
+  ])
   if (trialDays > 0 && warning && !ispaying)
     p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
 }
@@ -427,10 +431,10 @@ export async function updateOrCreateVersion(supabase: SupabaseClient<Database>, 
     .eq('name', update.name)
 }
 
-export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, bucketId: string): Promise<string> {
+export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<string> {
   const data = {
     app_id: appId,
-    bucket_id: bucketId,
+    name,
   }
   try {
     const pathUploadLink = 'private/upload_link'
@@ -454,7 +458,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
     .eq('app_id', update.app_id)
     .eq('name', update.name)
-  // .eq('created_by', update.created_by)
+    // .eq('created_by', update.created_by)
     .single()
 
   if (data && !error) {
@@ -480,7 +484,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
       .update(update)
       .eq('app_id', update.app_id)
       .eq('name', update.name)
-    // .eq('created_by', update.created_by)
+      // .eq('created_by', update.created_by)
       .select()
       .single()
   }
@@ -518,11 +522,26 @@ export async function verifyUser(supabase: SupabaseClient<Database>, apikey: str
   return userId
 }
 
-export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, channel: string): Promise<boolean> {
+export async function getOrganizationId(supabase: SupabaseClient<Database>, appId: string) {
+  const { data, error } = await supabase.from('apps')
+    .select('owner_org')
+    .eq('app_id', appId)
+    .single()
+
+  if (!data || error) {
+    p.log.error(`Cannot get organization id for app id ${appId}`)
+    formatError(error)
+    program.error('')
+  }
+  return data.owner_org
+}
+
+export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, channel: string, appId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('channels')
     .select('disableAutoUpdate')
     .eq('name', channel)
+    .eq('app_id', appId)
     .limit(1)
 
   if (error) {

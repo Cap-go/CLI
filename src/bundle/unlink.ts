@@ -4,16 +4,18 @@ import * as p from '@clack/prompts'
 import { getVersionData } from '../api/versions'
 import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
 import { checkVersionNotUsedInChannel } from '../api/channels'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
   OptionsBase,
 } from '../utils'
 import {
+  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
+  getOrganizationId,
   useLogSnag,
   verifyUser,
 } from '../utils'
@@ -23,7 +25,7 @@ interface Options extends OptionsBase {
 }
 
 export async function unlinkDevice(channel: string, appId: string, options: Options) {
-  p.intro(`Unlink bundle`)
+  p.intro(`Unlink bundle ${options.apikey}`)
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig()
   appId = appId || config?.app?.appId
@@ -46,19 +48,23 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const [userId, orgId] = await Promise.all([
+    verifyUser(supabase, options.apikey, ['all', 'write']),
+    getOrganizationId(supabase, appId),
+  ])
+
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
 
   if (!channel) {
     p.log.error('Missing argument, you need to provide a channel')
     program.error('')
   }
   try {
-    await checkPlanValid(supabase, userId, options.apikey, appId)
+    await checkPlanValid(supabase, orgId, options.apikey, appId)
 
-    const versionData = await getVersionData(supabase, appId, userId, bundle)
-    await checkVersionNotUsedInChannel(supabase, appId, userId, versionData)
+    const versionData = await getVersionData(supabase, appId, bundle)
+    await checkVersionNotUsedInChannel(supabase, appId, versionData)
     await checkVersionNotUsedInDeviceOverride(supabase, appId, versionData)
     await snag.track({
       channel: 'bundle',

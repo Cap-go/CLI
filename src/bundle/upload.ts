@@ -8,6 +8,10 @@ import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import ky from 'ky'
+import {
+  PutObjectCommand,
+  S3Client,
+} from '@aws-sdk/client-s3'
 import { checkLatest } from '../api/update'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
@@ -15,6 +19,7 @@ import type {
   OptionsBase,
 } from '../utils'
 import {
+  EMPTY_UUID,
   OrganizationPerm,
   baseKey,
   checKOldEncryption,
@@ -28,6 +33,7 @@ import {
   getConfig,
   getLocalConfig,
   getLocalDepenencies,
+  getOrganizationId,
   hasOrganizationPerm,
   regexSemver,
   requireUpdateMetadata,
@@ -50,6 +56,10 @@ interface Options extends OptionsBase {
   key?: boolean | string
   keyData?: string
   ivSessionKey?: string
+  s3Region?: string
+  s3Apikey?: string
+  s3Apisecret?: string
+  s3BucketName?: string
   bundleUrl?: boolean
   codeCheck?: boolean
   minUpdateVersion?: string
@@ -63,6 +73,21 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   let { bundle, path, channel } = options
   const { external, key, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options
   let { minUpdateVersion } = options
+  const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
+  let useS3 = false
+  let s3Client
+  if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
+    p.log.info('Uploading to S3')
+    useS3 = true
+    s3Client = new S3Client({
+      region: s3Region,
+      credentials: {
+        accessKeyId: s3Apikey,
+        secretAccessKey: s3Apisecret,
+      },
+    })
+  }
+
   options.apikey = options.apikey || findSavedKey()
   const snag = useLogSnag()
 
@@ -90,6 +115,13 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   if (!appid || !bundle || !path) {
     p.log.error('Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project')
     program.error('')
+  }
+  // if one S3 variable is set, check that all are set
+  if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
+    if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
+      p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
+      program.error('')
+    }
   }
   // check if path exist
   if (!existsSync(path)) {
@@ -119,9 +151,12 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
 
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
-  await checkPlanValid(supabase, userId, options.apikey, appid, true)
 
-  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
+  // Now if it does exist we will fetch the org id
+  const orgId = await getOrganizationId(supabase, appid)
+  await checkPlanValid(supabase, orgId, options.apikey, appid, true)
+
+  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel, appid)
 
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
@@ -197,11 +232,12 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   }
 
   const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial', { userid: userId })
+    .rpc('is_trial_org', { orgid: orgId })
     .single()
   if ((isTrial && isTrial > 0) || isTrialsError) {
+    // TODO: Come back to this to fix for orgs v3
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans`)
+    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
   }
 
   // check if app already exist
@@ -213,14 +249,11 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     p.log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__')
-  const fileName = `${safeBundle}.zip`
 
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
-  if (!external) {
+  if (!external && useS3 === false) {
     const zip = new AdmZip()
     zip.addLocalFolder(path)
     zipped = zip.toBuffer()
@@ -299,6 +332,15 @@ It will be also visible in your dashboard\n`)
     program.error('')
   }
   else {
+    if (useS3) {
+      const zip = new AdmZip()
+      zip.addLocalFolder(path)
+      zipped = zip.toBuffer()
+      const s = p.spinner()
+      s.start(`Calculating checksum`)
+      checksum = await getChecksum(zipped, 'crc32')
+      s.stop(`Checksum: ${checksum}`)
+    }
     await snag.track({
       channel: 'app',
       event: 'App external',
@@ -323,8 +365,7 @@ It will be also visible in your dashboard\n`)
   const appOwner = await getAppOwner(supabase, appid)
 
   const versionData = {
-    bucket_id: external ? undefined : fileName,
-    user_id: appOwner,
+    // bucket_id: external ? undefined : fileName,
     name: bundle,
     app_id: appid,
     session_key: sessionKey,
@@ -332,6 +373,8 @@ It will be also visible in your dashboard\n`)
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
     native_packages: nativePackages,
+    owner_org: EMPTY_UUID,
+    user_id: userId,
     checksum,
   }
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
@@ -343,23 +386,56 @@ It will be also visible in your dashboard\n`)
     const spinner = p.spinner()
     spinner.start(`Uploading Bundle`)
 
-    const url = await uploadUrl(supabase, appid, fileName)
+    const url = await uploadUrl(supabase, appid, bundle)
     if (!url) {
       p.log.error(`Cannot get upload url`)
       program.error('')
     }
-    await ky.put(url, {
-      timeout: 60000,
-      body: zipped,
-      headers: (!localS3
-        ? {
-            'Content-Type': 'application/octet-stream',
-            'Cache-Control': 'public, max-age=456789, immutable',
-            'x-amz-meta-crc32': checksum,
-          }
-        : undefined),
-    })
+    try {
+      await ky.put(url, {
+        timeout: 60000,
+        retry: 5,
+        body: zipped,
+        headers: (!localS3
+          ? {
+              'Content-Type': 'application/octet-stream',
+              'Cache-Control': 'public, max-age=456789, immutable',
+              'x-amz-meta-crc32': checksum,
+            }
+          : undefined),
+      })
+    } catch (errorUpload) {
+      p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
+      program.error('')
+    }
     versionData.storage_provider = 'r2'
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError2) {
+      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+      program.error('')
+    }
+    spinner.stop('Bundle Uploaded 💪')
+  }
+  else if (useS3 && zipped) {
+    const spinner = p.spinner()
+    spinner.start(`Uploading Bundle`)
+
+    const fileName = `${appid}-${bundle}`
+    const encodeFileName = encodeURIComponent(fileName)
+    const command: PutObjectCommand = new PutObjectCommand({
+      Bucket: s3BucketName,
+      Key: fileName,
+      Body: zipped,
+    })
+
+    const response = await s3Client.send(command)
+    if (response.$metadata.httpStatusCode !== 200) {
+      p.log.error(`Cannot upload to S3`)
+      program.error('')
+    }
+
+    versionData.storage_provider = 'external'
+    versionData.external_url = `https://${s3BucketName}.s3.amazonaws.com/${encodeFileName}`
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
@@ -377,6 +453,7 @@ It will be also visible in your dashboard\n`)
       app_id: appid,
       created_by: appOwner,
       version: versionId,
+      owner_org: EMPTY_UUID,
     })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)

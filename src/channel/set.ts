@@ -2,16 +2,18 @@ import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
   OptionsBase,
 } from '../utils'
 import {
+  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
+  getOrganizationId,
   updateOrCreateChannel,
   useLogSnag,
   verifyUser,
@@ -30,7 +32,7 @@ interface Options extends OptionsBase {
   channel?: string
 }
 
-const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'none']
+const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
 export async function setChannel(channel: string, appId: string, options: Options) {
   p.intro(`Set channel`)
@@ -51,7 +53,8 @@ export async function setChannel(channel: string, appId: string, options: Option
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  const orgId = await getOrganizationId(supabase, appId)
 
   const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options
   if (!channel) {
@@ -75,7 +78,7 @@ export async function setChannel(channel: string, appId: string, options: Option
     program.error('')
   }
   try {
-    await checkPlanValid(supabase, userId, options.apikey, appId)
+    await checkPlanValid(supabase, orgId, options.apikey, appId)
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
       app_id: appId,

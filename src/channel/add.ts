@@ -1,10 +1,10 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { createChannel, findUnknownVersion } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { EMPTY_UUID, OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   default?: boolean
@@ -29,7 +29,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
   p.log.info(`Creating channel ${appId}#${channelId} to Capgo`)
   try {
@@ -42,7 +42,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       name: channelId,
       app_id: appId,
       version: data.id,
-      created_by: userId,
+      owner_org: EMPTY_UUID,
     })
     p.log.success(`Channel created ✅`)
     await snag.track({

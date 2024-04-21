@@ -6,9 +6,9 @@ import promptSync from 'prompt-sync'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils'
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 
 interface Options extends OptionsBase {
@@ -57,15 +57,14 @@ export async function cleanupBundle(appid: string, options: Options) {
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey)
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.write)
   p.log.info(`Querying all available versions in Capgo`)
 
   // Get all active app versions we might possibly be able to cleanup
-  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await
-  getActiveAppVersions(supabase, appid, userId)
+  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await getActiveAppVersions(supabase, appid, userId)
 
   const versionInUse = await getChannelsVersion(supabase, appid)
 

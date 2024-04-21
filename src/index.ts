@@ -113,6 +113,10 @@ bundle
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--iv-session-key <key>', 'Set the iv and session key for bundle url external')
+  .option('--s3-region <region>', 'Region for your AWS S3 bucket')
+  .option('--s3-apikey <apikey>', 'apikey for your AWS S3 account')
+  .option('--s3-apisecret <apisecret>', 'api secret for your AWS S3 account')
+  .option('--s3-bucket-name <bucketName>', 'Name for your AWS S3 bucket')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
@@ -148,12 +152,13 @@ bundle
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
-bundle
-  .command('unlink [appId]')
-  .description('Unlink a bundle in Capgo Cloud')
-  .action(listBundle)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
+// TODO: Fix this command!
+// bundle
+//   .command('unlink [appId]')
+//   .description('Unlink a bundle in Capgo Cloud')
+//   .action(listBundle)
+//   .option('-a, --apikey <apikey>', 'apikey to link to your account')
+//   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
 
 bundle
   .command('cleanup [appId]')
@@ -242,7 +247,7 @@ channel
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel')
-  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none')
+  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, patch, none')
 
 const key = program
   .command('key')

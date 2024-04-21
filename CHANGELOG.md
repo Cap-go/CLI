@@ -1,27 +1,91 @@
 # Changelog
 
-All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
+All notable changes to this project will be documented in this file. See
+[standard-version](https://github.com/conventional-changelog/standard-version)
+for commit guidelines.
 
 ## [5.0.0-alpha.6](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2024-04-10)
 
+### [4.3.5](https://github.com/Cap-go/CLI/compare/v4.3.4...v4.3.5) (2024-04-18)
+
+### [4.3.4](https://github.com/Cap-go/CLI/compare/v4.3.3...v4.3.4) (2024-04-17)
+
+### [4.3.3](https://github.com/Cap-go/CLI/compare/v4.3.2...v4.3.3) (2024-04-16)
+
+### [4.3.2](https://github.com/Cap-go/CLI/compare/v4.3.1...v4.3.2) (2024-04-14)
+
+### [4.3.1](https://github.com/Cap-go/CLI/compare/v4.3.0...v4.3.1) (2024-04-14)
+
+## [4.3.0](https://github.com/Cap-go/CLI/compare/v4.2.12...v4.3.0) (2024-03-31)
+
+### Features
+
+- add S3 upload support
+  ([f0353f5](https://github.com/Cap-go/CLI/commit/f0353f583a265a6d4f3621639384b1b43f60f53e))
+
+### [4.2.12](https://github.com/Cap-go/CLI/compare/v4.2.11...v4.2.12) (2024-03-29)
 
 ### Bug Fixes
 
-* add check for private key ([aa5c949](https://github.com/Cap-go/CLI/commit/aa5c94905fd4888aafa60d3cf2fc1dc9a6d5c7a7))
+- types issue
+  ([ad9afa1](https://github.com/Cap-go/CLI/commit/ad9afa184f35863ba0d9f942bed133ee68e9661a))
+
+### [4.2.11](https://github.com/Cap-go/CLI/compare/v4.2.10...v4.2.11) (2024-03-25)
+
+### [4.2.10](https://github.com/Cap-go/CLI/compare/v4.2.9...v4.2.10) (2024-03-25)
+
+### [4.2.9](https://github.com/Cap-go/CLI/compare/v4.2.8...v4.2.9) (2024-03-23)
+
+### Bug Fixes
+
+- empty list issue
+  ([dac8617](https://github.com/Cap-go/CLI/commit/dac86177c55c71bd3ad3bbbca7833ba30d461c33))
+
+### [4.2.8](https://github.com/Cap-go/CLI/compare/v4.2.7...v4.2.8) (2024-03-23)
+
+### [4.2.7](https://github.com/Cap-go/CLI/compare/v4.2.6...v4.2.7) (2024-03-23)
+
+### Bug Fixes
+
+- lint issue
+  ([a836b3c](https://github.com/Cap-go/CLI/commit/a836b3cf59a6396f2200a3a5383d5dd10e19ad07))
+
+### [4.2.6](https://github.com/Cap-go/CLI/compare/v4.2.5...v4.2.6) (2024-03-23)
+
+### Bug Fixes
+
+- lint
+  ([92b0e46](https://github.com/Cap-go/CLI/commit/92b0e462b7cc3d2c77b585d6596aba746df16b71))
+- upload
+  ([394b2ce](https://github.com/Cap-go/CLI/commit/394b2ceb1947de2e86870f1f3d57e9efe646b40a))
+
+### [4.2.5](https://github.com/Cap-go/CLI/compare/v4.2.4...v4.2.5) (2024-03-22)
+
+### Bug Fixes
+
+- zip json output
+  ([4028f9b](https://github.com/Cap-go/CLI/commit/4028f9b79b3c53a7967a137784918f4ac614d011))
+
+### [4.2.4](https://github.com/Cap-go/CLI/compare/v4.2.3...v4.2.4) (2024-03-22)
+
+### Bug Fixes
+
+- add check for private key
+  ([aa5c949](https://github.com/Cap-go/CLI/commit/aa5c94905fd4888aafa60d3cf2fc1dc9a6d5c7a7))
 
 ## [5.0.0-alpha.5](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.4...v5.0.0-alpha.5) (2024-04-10)
 
-
 ### Bug Fixes
 
-* typo text ([08574a4](https://github.com/Cap-go/CLI/commit/08574a429f99bd61212b488290d25455521a0035))
+- typo text
+  ([08574a4](https://github.com/Cap-go/CLI/commit/08574a429f99bd61212b488290d25455521a0035))
 
 ## [5.0.0-alpha.4](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.3...v5.0.0-alpha.4) (2024-03-22)
 
-
 ### Bug Fixes
 
-* zip json output ([4028f9b](https://github.com/Cap-go/CLI/commit/4028f9b79b3c53a7967a137784918f4ac614d011))
+- zip json output
+  ([4028f9b](https://github.com/Cap-go/CLI/commit/4028f9b79b3c53a7967a137784918f4ac614d011))
 
 ### [4.2.4](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.1...v4.2.4) (2024-03-22)
 

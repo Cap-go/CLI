@@ -4,9 +4,15 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import { program } from 'commander'
 import type LogSnag from 'logsnag'
 import type { Database } from '../types/supabase.types'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, useLogSnag, verifyUser, wait } from '../utils'
+import { OrganizationPerm, convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, useLogSnag, verifyUser } from '../utils'
+
+function wait(ms: number) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms)
+  })
+}
 
 export interface OptionsBaseDebug {
   apikey: string
@@ -194,7 +200,7 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   p.log.info(`Getting active bundle in Capgo`)
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, userId, snag)

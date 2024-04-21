@@ -1,10 +1,10 @@
 import process from 'node:process'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
 
 export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
   p.intro(`Delete channel`)
@@ -25,7 +25,7 @@ export async function deleteChannel(channelId: string, appId: string, options: O
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
   p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
   try {

@@ -35,11 +35,15 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
+
+  if (appId.includes('--')) {
+    p.log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
+    program.error('')
+  }
+
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-
-  await checkPlanValid(supabase, userId, options.apikey, undefined, false)
+  let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
@@ -50,6 +54,39 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   else if (appExist) {
     return true
   }
+
+  const { error: orgError, data: allOrganizations } = await supabase
+    .rpc('get_orgs_v5')
+
+  if (orgError) {
+    p.log.error('Cannot get the list of organizations - exiting')
+    p.log.error(`Error ${JSON.stringify(orgError)}`)
+    program.error('')
+  }
+
+  const adminOrgs = allOrganizations.filter(org => org.role === 'admin' || org.role === 'super_admin')
+
+  const organizationUidRaw = (adminOrgs.length > 1)
+    ? await p.select({
+      message: 'Please pick the organization that you want to insert to',
+      options: adminOrgs.map((org) => {
+        return { value: org.gid, label: org.name }
+      }),
+    })
+    : adminOrgs[0].gid
+
+  if (p.isCancel(organizationUidRaw)) {
+    p.log.error('Canceled organization selection, exiting')
+    program.error('')
+  }
+
+  const organizationUid = organizationUidRaw as string
+  const organization = allOrganizations.find(org => org.gid === organizationUid)!
+  userId = organization.created_by
+
+  p.log.info(`Using the organization "${organization.name}" as the app owner`)
+
+  await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
 
   let { name, icon } = options
   appId = appId || config?.app?.appId
@@ -106,7 +143,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     .from('apps')
     .insert({
       icon_url: signedURL,
-      user_id: userId,
+      owner_org: organizationUid,
       name,
       app_id: appId,
     })
@@ -117,12 +154,12 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   const { error: dbVersionError } = await supabase
     .from('app_versions')
     .insert([{
-      user_id: userId,
+      owner_org: organizationUid,
       deleted: true,
       name: 'unknown',
       app_id: appId,
     }, {
-      user_id: userId,
+      owner_org: organizationUid,
       deleted: true,
       name: 'builtin',
       app_id: appId,
