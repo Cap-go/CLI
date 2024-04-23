@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.4.2](https://github.com/Cap-go/CLI/compare/v4.4.1...v4.4.2) (2024-04-23)
+
+
+### Bug Fixes
+
+* downgrade min version to node 18 ([b2da10b](https://github.com/Cap-go/CLI/commit/b2da10bd3fdc54a43d01c1700cfa08937ea278fa))
+
 ### [4.4.1](https://github.com/Cap-go/CLI/compare/v4.4.0...v4.4.1) (2024-04-21)
 
 
