@@ -16,7 +16,7 @@
   "homepage": "https://github.com/Cap-go/CLIl#readme",
   "engines": {
     "npm": ">=8.0.0",
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   },
   "keywords": [
     "appflow alternative",
