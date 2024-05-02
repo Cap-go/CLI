@@ -13,7 +13,7 @@ jobs:
       - name: Check out
         uses: actions/checkout@v4
       - name: Setup bun
-        uses: oven-sh/setup-bun@v1.1.1
+        uses: oven-sh/setup-bun@v1.2.1
         with:
           bun-version: latest
       - name: Install dependencies
