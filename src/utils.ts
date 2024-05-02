@@ -18,7 +18,6 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
-export const EMPTY_UUID = '00000000-0000-0000-0000-000000000000'
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
@@ -161,23 +160,6 @@ export async function isAllowedActionAppIdApiKey(supabase: SupabaseClient<Databa
     .single()
 
   return !!data
-}
-
-export async function getAppOwner(supabase: SupabaseClient<Database>, appId: string): Promise<string> {
-  const { data, error } = await supabase
-    .from('apps')
-    .select('user_id')
-    .eq('app_id', appId)
-    .single()
-
-  if (error) {
-    p.log.error('Cannot get app owner, exiting')
-    p.log.error('Please report the following error to capgo\'s staff')
-    console.error(error)
-    process.exit(1)
-  }
-
-  return data.user_id
 }
 
 export async function isAllowedApp(supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<boolean> {

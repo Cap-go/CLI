@@ -83,6 +83,7 @@ export async function setChannel(channel: string, appId: string, options: Option
       created_by: userId,
       app_id: appId,
       name: channel,
+      owner_org: orgId,
       version: undefined as any,
     }
     const bundleVersion = latest ? config?.app?.package?.version : bundle

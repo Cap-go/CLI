@@ -19,7 +19,6 @@ import type {
   OptionsBase,
 } from '../utils'
 import {
-  EMPTY_UUID,
   OrganizationPerm,
   baseKeyPub,
   checkCompatibility,
@@ -29,7 +28,6 @@ import {
   deletedFailedVersion,
   findSavedKey,
   formatError,
-  getAppOwner,
   getConfig,
   getLocalConfig,
   getLocalDepenencies,
@@ -358,8 +356,6 @@ It will be also visible in your dashboard\n`)
 
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
 
-  const appOwner = await getAppOwner(supabase, appid)
-
   const versionData = {
     // bucket_id: external ? undefined : fileName,
     name: bundle,
@@ -369,7 +365,7 @@ It will be also visible in your dashboard\n`)
     storage_provider: external ? 'external' : 'r2-direct',
     minUpdateVersion,
     native_packages: nativePackages,
-    owner_org: EMPTY_UUID,
+    owner_org: orgId,
     user_id: userId,
     checksum,
   }
@@ -415,7 +411,7 @@ It will be also visible in your dashboard\n`)
     }
     spinner.stop('Bundle Uploaded 💪')
   }
-  else if (useS3 && zipped) {
+  else if (useS3 && zipped && s3Client) {
     const spinner = p.spinner()
     spinner.start(`Uploading Bundle`)
 
@@ -450,9 +446,9 @@ It will be also visible in your dashboard\n`)
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
-      created_by: appOwner,
+      created_by: userId,
       version: versionId,
-      owner_org: EMPTY_UUID,
+      owner_org: orgId,
     })
     if (dbError3) {
       p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)

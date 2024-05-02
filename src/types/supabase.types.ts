@@ -7,31 +7,6 @@ export type Json =
   | Json[]
 
 export interface Database {
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          operationName?: string
-          query?: string
-          variables?: Json
-          extensions?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
-  }
   public: {
     Tables: {
       apikeys: {
@@ -69,47 +44,71 @@ export interface Database {
           },
         ]
       }
-      app_usage: {
+      app_stats: {
         Row: {
           app_id: string
           bandwidth: number
-          date: string | null
-          fail: number
-          get: number
-          id: string
-          install: number
-          mau: number
-          storage_added: number
-          storage_deleted: number
-          uninstall: number
+          channels: number
+          created_at: string | null
+          date_id: string
+          devices: number
+          devices_real: number
+          mlu: number
+          mlu_real: number
+          shared: number
+          updated_at: string | null
+          user_id: string
+          version_size: number
+          versions: number
         }
         Insert: {
           app_id: string
           bandwidth?: number
-          date?: string | null
-          fail?: number
-          get?: number
-          id?: string
-          install?: number
-          mau?: number
-          storage_added?: number
-          storage_deleted?: number
-          uninstall?: number
+          channels?: number
+          created_at?: string | null
+          date_id?: string
+          devices?: number
+          devices_real?: number
+          mlu?: number
+          mlu_real?: number
+          shared?: number
+          updated_at?: string | null
+          user_id: string
+          version_size?: number
+          versions?: number
         }
         Update: {
           app_id?: string
           bandwidth?: number
-          date?: string | null
-          fail?: number
-          get?: number
-          id?: string
-          install?: number
-          mau?: number
-          storage_added?: number
-          storage_deleted?: number
-          uninstall?: number
+          channels?: number
+          created_at?: string | null
+          date_id?: string
+          devices?: number
+          devices_real?: number
+          mlu?: number
+          mlu_real?: number
+          shared?: number
+          updated_at?: string | null
+          user_id?: string
+          version_size?: number
+          versions?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: 'app_stats_app_id_fkey'
+            columns: ['app_id']
+            isOneToOne: false
+            referencedRelation: 'apps'
+            referencedColumns: ['app_id']
+          },
+          {
+            foreignKeyName: 'app_stats_user_id_fkey'
+            columns: ['user_id']
+            isOneToOne: false
+            referencedRelation: 'users'
+            referencedColumns: ['id']
+          },
+        ]
       }
       app_versions: {
         Row: {
@@ -252,12 +251,11 @@ export interface Database {
           app_id: string
           created_at: string | null
           icon_url: string
-          id: number
+          id: string | null
           last_version: string | null
           name: string | null
           owner_org: string
           retention: number
-          tmp_id: string | null
           updated_at: string | null
           user_id: string | null
         }
@@ -265,12 +263,11 @@ export interface Database {
           app_id: string
           created_at?: string | null
           icon_url: string
-          id?: number
+          id?: string | null
           last_version?: string | null
           name?: string | null
           owner_org: string
           retention?: number
-          tmp_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -278,12 +275,11 @@ export interface Database {
           app_id?: string
           created_at?: string | null
           icon_url?: string
-          id?: number
+          id?: string | null
           last_version?: string | null
           name?: string | null
           owner_org?: string
           retention?: number
-          tmp_id?: string | null
           updated_at?: string | null
           user_id?: string | null
         }
@@ -303,6 +299,30 @@ export interface Database {
             referencedColumns: ['id']
           },
         ]
+      }
+      bandwidth_usage: {
+        Row: {
+          app_id: string
+          device_id: string
+          file_size: number
+          id: number
+          timestamp: string
+        }
+        Insert: {
+          app_id: string
+          device_id: string
+          file_size: number
+          id?: number
+          timestamp?: string
+        }
+        Update: {
+          app_id?: string
+          device_id?: string
+          file_size?: number
+          id?: number
+          timestamp?: string
+        }
+        Relationships: []
       }
       channel_devices: {
         Row: {
@@ -457,6 +477,222 @@ export interface Database {
           },
         ]
       }
+      clickhouse_app_usage_parm: {
+        Row: {
+          _app_list: string | null
+          _end_date: string | null
+          _start_date: string | null
+          app_id: string | null
+          bandwidth: number | null
+          date: string | null
+          fail: number | null
+          get: number | null
+          install: number | null
+          mau: number | null
+          storage_added: number | null
+          storage_deleted: number | null
+          uninstall: number | null
+        }
+        Insert: {
+          _app_list?: string | null
+          _end_date?: string | null
+          _start_date?: string | null
+          app_id?: string | null
+          bandwidth?: number | null
+          date?: string | null
+          fail?: number | null
+          get?: number | null
+          install?: number | null
+          mau?: number | null
+          storage_added?: number | null
+          storage_deleted?: number | null
+          uninstall?: number | null
+        }
+        Update: {
+          _app_list?: string | null
+          _end_date?: string | null
+          _start_date?: string | null
+          app_id?: string | null
+          bandwidth?: number | null
+          date?: string | null
+          fail?: number | null
+          get?: number | null
+          install?: number | null
+          mau?: number | null
+          storage_added?: number | null
+          storage_deleted?: number | null
+          uninstall?: number | null
+        }
+        Relationships: []
+      }
+      clickhouse_devices: {
+        Row: {
+          app_id: string | null
+          created_at: string | null
+          custom_id: string | null
+          device_id: string | null
+          is_emulator: boolean | null
+          is_prod: boolean | null
+          os_version: string | null
+          platform: string | null
+          plugin_version: string | null
+          updated_at: string | null
+          version: number | null
+          version_build: string | null
+        }
+        Insert: {
+          app_id?: string | null
+          created_at?: string | null
+          custom_id?: string | null
+          device_id?: string | null
+          is_emulator?: boolean | null
+          is_prod?: boolean | null
+          os_version?: string | null
+          platform?: string | null
+          plugin_version?: string | null
+          updated_at?: string | null
+          version?: number | null
+          version_build?: string | null
+        }
+        Update: {
+          app_id?: string | null
+          created_at?: string | null
+          custom_id?: string | null
+          device_id?: string | null
+          is_emulator?: boolean | null
+          is_prod?: boolean | null
+          os_version?: string | null
+          platform?: string | null
+          plugin_version?: string | null
+          updated_at?: string | null
+          version?: number | null
+          version_build?: string | null
+        }
+        Relationships: []
+      }
+      clickhouse_logs: {
+        Row: {
+          action: string | null
+          app_id: string | null
+          created_at: string | null
+          device_id: string | null
+          platform: string | null
+          version: number | null
+          version_build: string | null
+        }
+        Insert: {
+          action?: string | null
+          app_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          platform?: string | null
+          version?: number | null
+          version_build?: string | null
+        }
+        Update: {
+          action?: string | null
+          app_id?: string | null
+          created_at?: string | null
+          device_id?: string | null
+          platform?: string | null
+          version?: number | null
+          version_build?: string | null
+        }
+        Relationships: []
+      }
+      daily_bandwidth: {
+        Row: {
+          app_id: string
+          bandwidth: number
+          date: string
+          id: number
+        }
+        Insert: {
+          app_id: string
+          bandwidth: number
+          date: string
+          id?: number
+        }
+        Update: {
+          app_id?: string
+          bandwidth?: number
+          date?: string
+          id?: number
+        }
+        Relationships: []
+      }
+      daily_mau: {
+        Row: {
+          app_id: string
+          date: string
+          id: number
+          mau: number
+        }
+        Insert: {
+          app_id: string
+          date: string
+          id?: number
+          mau: number
+        }
+        Update: {
+          app_id?: string
+          date?: string
+          id?: number
+          mau?: number
+        }
+        Relationships: []
+      }
+      daily_storage: {
+        Row: {
+          app_id: string
+          date: string
+          id: number
+          storage: number
+        }
+        Insert: {
+          app_id: string
+          date: string
+          id?: number
+          storage: number
+        }
+        Update: {
+          app_id?: string
+          date?: string
+          id?: number
+          storage?: number
+        }
+        Relationships: []
+      }
+      daily_version: {
+        Row: {
+          app_id: string
+          date: string
+          fail: number | null
+          get: number | null
+          install: number | null
+          uninstall: number | null
+          version_id: number
+        }
+        Insert: {
+          app_id: string
+          date: string
+          fail?: number | null
+          get?: number | null
+          install?: number | null
+          uninstall?: number | null
+          version_id: number
+        }
+        Update: {
+          app_id?: string
+          date?: string
+          fail?: number | null
+          get?: number | null
+          install?: number | null
+          uninstall?: number | null
+          version_id?: number
+        }
+        Relationships: []
+      }
       deleted_account: {
         Row: {
           created_at: string | null
@@ -465,13 +701,34 @@ export interface Database {
         }
         Insert: {
           created_at?: string | null
-          email: string
+          email?: string
           id?: string
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
+        }
+        Relationships: []
+      }
+      device_usage: {
+        Row: {
+          app_id: string
+          device_id: string
+          id: number
+          timestamp: string
+        }
+        Insert: {
+          app_id: string
+          device_id: string
+          id?: number
+          timestamp?: string
+        }
+        Update: {
+          app_id?: string
+          device_id?: string
+          id?: number
+          timestamp?: string
         }
         Relationships: []
       }
@@ -665,34 +922,37 @@ export interface Database {
       notifications: {
         Row: {
           created_at: string | null
-          id: string
+          event: string
           last_send_at: string
+          owner_org: string
           total_send: number
+          uniq_id: string
           updated_at: string | null
-          user_id: string
         }
         Insert: {
           created_at?: string | null
-          id: string
+          event: string
           last_send_at?: string
+          owner_org: string
           total_send?: number
+          uniq_id: string
           updated_at?: string | null
-          user_id: string
         }
         Update: {
           created_at?: string | null
-          id?: string
+          event?: string
           last_send_at?: string
+          owner_org?: string
           total_send?: number
+          uniq_id?: string
           updated_at?: string | null
-          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: 'notifications_user_id_fkey'
-            columns: ['user_id']
+            foreignKeyName: 'owner_org_id_fkey'
+            columns: ['owner_org']
             isOneToOne: false
-            referencedRelation: 'users'
+            referencedRelation: 'orgs'
             referencedColumns: ['id']
           },
         ]
@@ -809,11 +1069,8 @@ export interface Database {
       }
       plans: {
         Row: {
-          abtest: boolean
-          app: number
           bandwidth: number
           bandwidth_unit: number | null
-          channel: number
           created_at: string
           description: string
           id: string
@@ -828,21 +1085,14 @@ export interface Database {
           price_m_storage_id: string | null
           price_y: number
           price_y_id: string
-          progressive_deploy: boolean
-          shared: number
           storage: number
           storage_unit: number | null
           stripe_id: string
-          update: number
           updated_at: string
-          version: number
         }
         Insert: {
-          abtest?: boolean
-          app?: number
           bandwidth: number
           bandwidth_unit?: number | null
-          channel?: number
           created_at?: string
           description?: string
           id?: string
@@ -857,21 +1107,14 @@ export interface Database {
           price_m_storage_id?: string | null
           price_y?: number
           price_y_id: string
-          progressive_deploy?: boolean
-          shared?: number
           storage: number
           storage_unit?: number | null
           stripe_id?: string
-          update?: number
           updated_at?: string
-          version?: number
         }
         Update: {
-          abtest?: boolean
-          app?: number
           bandwidth?: number
           bandwidth_unit?: number | null
-          channel?: number
           created_at?: string
           description?: string
           id?: string
@@ -886,14 +1129,10 @@ export interface Database {
           price_m_storage_id?: string | null
           price_y?: number
           price_y_id?: string
-          progressive_deploy?: boolean
-          shared?: number
           storage?: number
           storage_unit?: number | null
           stripe_id?: string
-          update?: number
           updated_at?: string
-          version?: number
         }
         Relationships: []
       }
@@ -924,6 +1163,30 @@ export interface Database {
           platform?: Database['public']['Enums']['platform_os']
           version?: number
           version_build?: string
+        }
+        Relationships: []
+      }
+      storage_usage: {
+        Row: {
+          app_id: string
+          device_id: string
+          file_size: number
+          id: number
+          timestamp: string
+        }
+        Insert: {
+          app_id: string
+          device_id: string
+          file_size: number
+          id?: number
+          timestamp?: string
+        }
+        Update: {
+          app_id?: string
+          device_id?: string
+          file_size?: number
+          id?: number
+          timestamp?: string
         }
         Relationships: []
       }
@@ -1046,6 +1309,48 @@ export interface Database {
           },
         ]
       }
+      version_meta: {
+        Row: {
+          app_id: string
+          size: number
+          timestamp: string
+          version_id: number
+        }
+        Insert: {
+          app_id: string
+          size: number
+          timestamp?: string
+          version_id: number
+        }
+        Update: {
+          app_id?: string
+          size?: number
+          timestamp?: string
+          version_id?: number
+        }
+        Relationships: []
+      }
+      version_usage: {
+        Row: {
+          action: string
+          app_id: string
+          timestamp: string
+          version_id: number
+        }
+        Insert: {
+          action: string
+          app_id: string
+          timestamp?: string
+          version_id: number
+        }
+        Update: {
+          action?: string
+          app_id?: string
+          timestamp?: string
+          version_id?: number
+        }
+        Relationships: []
+      }
       workers: {
         Row: {
           id: number
@@ -1071,6 +1376,14 @@ export interface Database {
           org_id: string
         }
         Returns: string
+      }
+      calculate_cycle_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      calculate_daily_app_usage: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       check_min_rights:
         | {
@@ -1137,6 +1450,10 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: number
       }
+      count_all_paying: {
+        Args: Record<PropertyKey, never>
+        Returns: number
+      }
       count_all_plans: {
         Args: Record<PropertyKey, never>
         Returns: {
@@ -1154,6 +1471,17 @@ export interface Database {
       count_all_trial: {
         Args: Record<PropertyKey, never>
         Returns: number
+      }
+      create_partitions: {
+        Args: {
+          start_date: string
+          num_years: number
+        }
+        Returns: undefined
+      }
+      delete_failed_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       delete_user: {
         Args: Record<PropertyKey, never>
@@ -1201,6 +1529,41 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_app_metrics:
+        | {
+          Args: {
+            org_id: string
+          }
+          Returns: {
+            app_id: string
+            date: string
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
+        | {
+          Args: {
+            org_id: string
+            start_date: string
+            end_date: string
+          }
+          Returns: {
+            app_id: string
+            date: string
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
       get_app_versions: {
         Args: {
           appid: string
@@ -1208,6 +1571,10 @@ export interface Database {
           apikey: string
         }
         Returns: number
+      }
+      get_cloudflare_function_url: {
+        Args: Record<PropertyKey, never>
+        Returns: string
       }
       get_current_plan_max:
         | {
@@ -1288,10 +1655,39 @@ export interface Database {
         }
         Returns: number
       }
-      get_external_function_url: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      get_global_metrics:
+        | {
+          Args: {
+            org_id: string
+          }
+          Returns: {
+            date: string
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
+        | {
+          Args: {
+            org_id: string
+            start_date: string
+            end_date: string
+          }
+          Returns: {
+            date: string
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
       get_identity:
         | {
           Args: Record<PropertyKey, never>
@@ -1309,13 +1705,25 @@ export interface Database {
         }
         Returns: string
       }
+      get_infos: {
+        Args: {
+          appid: string
+          deviceid: string
+          versionname: string
+        }
+        Returns: {
+          current_version_id: number
+          versiondata: Json
+          channel: Json
+        }[]
+      }
       get_max_plan:
         | {
           Args: Record<PropertyKey, never>
           Returns: {
             mau: number
-            storage: number
             bandwidth: number
+            storage: number
           }[]
         }
         | {
@@ -1335,10 +1743,14 @@ export interface Database {
         }
         | {
           Args: {
-            userid: string
+            orgid: string
           }
           Returns: Database['public']['CompositeTypes']['stats_table']
         }
+      get_netlify_function_url: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       get_org_members: {
         Args: {
           guild_id: string
@@ -1357,18 +1769,6 @@ export interface Database {
           app_id: string
         }
         Returns: string
-      }
-      get_orgs_v2: {
-        Args: {
-          userid: string
-        }
-        Returns: {
-          gid: string
-          created_by: string
-          logo: string
-          name: string
-          role: string
-        }[]
       }
       get_orgs_v3: {
         Args: {
@@ -1462,16 +1862,36 @@ export interface Database {
             management_email: string
           }[]
         }
-      get_plan_usage_percent:
+      get_plan_usage_percent: {
+        Args: {
+          userid: string
+        }
+        Returns: number
+      }
+      get_plan_usage_percent_detailed:
         | {
-          Args: Record<PropertyKey, never>
-          Returns: number
+          Args: {
+            orgid: string
+          }
+          Returns: {
+            total_percent: number
+            mau_percent: number
+            bandwidth_percent: number
+            storage_percent: number
+          }[]
         }
         | {
           Args: {
-            userid: string
+            orgid: string
+            cycle_start: string
+            cycle_end: string
           }
-          Returns: number
+          Returns: {
+            total_percent: number
+            mau_percent: number
+            bandwidth_percent: number
+            storage_percent: number
+          }[]
         }
       get_plan_usage_percent_org: {
         Args: {
@@ -1500,6 +1920,37 @@ export interface Database {
         }
         Returns: number
       }
+      get_total_metrics:
+        | {
+          Args: {
+            org_id: string
+          }
+          Returns: {
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
+        | {
+          Args: {
+            org_id: string
+            start_date: string
+            end_date: string
+          }
+          Returns: {
+            mau: number
+            storage: number
+            bandwidth: number
+            get: number
+            fail: number
+            install: number
+            uninstall: number
+          }[]
+        }
       get_total_stats_v5: {
         Args: {
           userid: string
@@ -1527,7 +1978,20 @@ export interface Database {
         }
         | {
           Args: {
+            appid: string
+          }
+          Returns: number
+        }
+        | {
+          Args: {
             userid: string
+          }
+          Returns: number
+        }
+        | {
+          Args: {
+            userid: string
+            appid: string
           }
           Returns: number
         }
@@ -1744,20 +2208,15 @@ export interface Database {
         }
         Returns: boolean
       }
-      is_free_usage:
-        | {
-          Args: Record<PropertyKey, never>
-          Returns: boolean
-        }
-        | {
-          Args: {
-            userid: string
-          }
-          Returns: boolean
-        }
       is_good_plan_v5: {
         Args: {
           userid: string
+        }
+        Returns: boolean
+      }
+      is_good_plan_v5_org: {
+        Args: {
+          orgid: string
         }
         Returns: boolean
       }
@@ -1785,6 +2244,12 @@ export interface Database {
           }
           Returns: boolean
         }
+      is_onboarded_org: {
+        Args: {
+          orgid: string
+        }
+        Returns: boolean
+      }
       is_onboarding_needed:
         | {
           Args: Record<PropertyKey, never>
@@ -1858,22 +2323,97 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      post_replication_sql:
+        | {
+          Args: {
+            sql_query: string
+          }
+          Returns: undefined
+        }
+        | {
+          Args: {
+            sql_query: string
+            params: string[]
+          }
+          Returns: undefined
+        }
+      process_cron_stats_jobs: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       process_current_jobs_if_unlocked: {
         Args: Record<PropertyKey, never>
         Returns: number[]
+      }
+      process_free_trial_expired: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
       }
       process_requested_jobs: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      remove_enum_value: {
-        Args: {
-          enum_type: unknown
-          enum_value: string
-        }
+      process_subscribed_orgs: {
+        Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      read_bandwidth_usage: {
+        Args: {
+          p_app_id: string
+          p_period_start: string
+          p_period_end: string
+        }
+        Returns: {
+          date: string
+          bandwidth: number
+          app_id: string
+        }[]
+      }
+      read_device_usage: {
+        Args: {
+          p_app_id: string
+          p_period_start: string
+          p_period_end: string
+        }
+        Returns: {
+          date: string
+          mau: number
+          app_id: string
+        }[]
+      }
+      read_storage_usage: {
+        Args: {
+          p_app_id: string
+          p_period_start: string
+          p_period_end: string
+        }
+        Returns: {
+          app_id: string
+          date: string
+          storage: number
+        }[]
+      }
+      read_version_usage: {
+        Args: {
+          p_app_id: string
+          p_period_start: string
+          p_period_end: string
+        }
+        Returns: {
+          app_id: string
+          version_id: number
+          date: string
+          get: number
+          fail: number
+          install: number
+          uninstall: number
+        }[]
+      }
       reset_and_seed_data: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
+      reset_and_seed_stats_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
@@ -1881,18 +2421,27 @@ export interface Database {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
-      schedule_jobs: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
+      update_app_usage:
+        | {
+          Args: Record<PropertyKey, never>
+          Returns: undefined
+        }
+        | {
+          Args: {
+            minutes_interval: number
+          }
+          Returns: undefined
+        }
       verify_mfa: {
         Args: Record<PropertyKey, never>
         Returns: boolean
       }
     }
     Enums: {
-      disable_update: 'major' | 'minor' | 'version_number' | 'none'
+      app_mode: 'prod' | 'dev' | 'livereload'
+      disable_update: 'major' | 'minor' | 'patch' | 'version_number' | 'none'
       key_mode: 'read' | 'write' | 'all' | 'upload'
+      pay_as_you_go_type: 'base' | 'units'
       platform_os: 'ios' | 'android'
       queue_job_status: 'inserted' | 'requested' | 'failed'
       stripe_status:
@@ -1902,7 +2451,7 @@ export interface Database {
         | 'failed'
         | 'deleted'
         | 'canceled'
-      usage_mode: 'last_saved' | '5min' | 'day' | 'cycle'
+      usage_mode: '5min' | 'day' | 'month' | 'cycle' | 'last_saved'
       user_min_right:
         | 'invite_read'
         | 'invite_upload'
@@ -1917,6 +2466,9 @@ export interface Database {
       user_role: 'read' | 'upload' | 'write' | 'admin'
     }
     CompositeTypes: {
+      match_plan: {
+        name: string | null
+      }
       orgs_table: {
         id: string | null
         created_by: string | null
@@ -1937,185 +2489,6 @@ export interface Database {
         bandwidth: number | null
         storage: number | null
       }
-    }
-  }
-  storage: {
-    Tables: {
-      buckets: {
-        Row: {
-          allowed_mime_types: string[] | null
-          avif_autodetection: boolean | null
-          created_at: string | null
-          file_size_limit: number | null
-          id: string
-          name: string
-          owner: string | null
-          owner_id: string | null
-          public: boolean | null
-          updated_at: string | null
-        }
-        Insert: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id: string
-          name: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          updated_at?: string | null
-        }
-        Update: {
-          allowed_mime_types?: string[] | null
-          avif_autodetection?: boolean | null
-          created_at?: string | null
-          file_size_limit?: number | null
-          id?: string
-          name?: string
-          owner?: string | null
-          owner_id?: string | null
-          public?: boolean | null
-          updated_at?: string | null
-        }
-        Relationships: []
-      }
-      migrations: {
-        Row: {
-          executed_at: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Insert: {
-          executed_at?: string | null
-          hash: string
-          id: number
-          name: string
-        }
-        Update: {
-          executed_at?: string | null
-          hash?: string
-          id?: number
-          name?: string
-        }
-        Relationships: []
-      }
-      objects: {
-        Row: {
-          bucket_id: string | null
-          created_at: string | null
-          id: string
-          last_accessed_at: string | null
-          metadata: Json | null
-          name: string | null
-          owner: string | null
-          owner_id: string | null
-          path_tokens: string[] | null
-          updated_at: string | null
-          version: string | null
-        }
-        Insert: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          version?: string | null
-        }
-        Update: {
-          bucket_id?: string | null
-          created_at?: string | null
-          id?: string
-          last_accessed_at?: string | null
-          metadata?: Json | null
-          name?: string | null
-          owner?: string | null
-          owner_id?: string | null
-          path_tokens?: string[] | null
-          updated_at?: string | null
-          version?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: 'objects_bucketId_fkey'
-            columns: ['bucket_id']
-            isOneToOne: false
-            referencedRelation: 'buckets'
-            referencedColumns: ['id']
-          },
-        ]
-      }
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      can_insert_object: {
-        Args: {
-          bucketid: string
-          name: string
-          owner: string
-          metadata: Json
-        }
-        Returns: undefined
-      }
-      extension: {
-        Args: {
-          name: string
-        }
-        Returns: string
-      }
-      filename: {
-        Args: {
-          name: string
-        }
-        Returns: string
-      }
-      foldername: {
-        Args: {
-          name: string
-        }
-        Returns: string[]
-      }
-      get_size_by_bucket: {
-        Args: Record<PropertyKey, never>
-        Returns: {
-          size: number
-          bucket_id: string
-        }[]
-      }
-      search: {
-        Args: {
-          prefix: string
-          bucketname: string
-          limits?: number
-          levels?: number
-          offsets?: number
-          search?: string
-          sortcolumn?: string
-          sortorder?: string
-        }
-        Returns: {
-          name: string
-          id: string
-          updated_at: string
-          created_at: string
-          last_accessed_at: string
-          metadata: Json
-        }[]
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
     }
   }
 }
