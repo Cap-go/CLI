@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.5.0](https://github.com/Cap-go/CLI/compare/v4.4.5...v4.5.0) (2024-05-02)
+
+
+### Features
+
+* remove old code and cleanup eslint ([963a50d](https://github.com/Cap-go/CLI/commit/963a50dc23b7f8244cfaabfe437881817c9617b4))
+
 ### [4.4.5](https://github.com/Cap-go/CLI/compare/v4.4.4...v4.4.5) (2024-04-25)
 
 
