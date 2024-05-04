@@ -194,14 +194,7 @@ export async function uploadBundle(appid: string, options: Options, _shouldExit 
       // It will be slow as the gzip is at max level, i don;t care.
       // I want all files to be a small as possible. the cli can wait - the user cannot
       const fileStream = createReadStream(filePath).pipe(createGzip({ level: 9 }))
-      let fileBuffer = await readBuffer(fileStream)
-
-      // Now we encrypt if the key data != null
-      if (keyData) {
-        const encrypted = encryptSourceExpanded(fileBuffer, keyData, initVector, sessionKey)
-        ivSessionKey = encrypted.ivSessionKey
-        fileBuffer = encrypted.encryptedData
-      }
+      const fileBuffer = await readBuffer(fileStream)
 
       // Upload to S3
       await ky.put(manifestEntry.uploadUrl, {
