@@ -67,7 +67,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^2.16.1",
     "@types/adm-zip": "0.5.5",
-    "@types/mime": "^3.0.4",
+    "@types/mime": "^4.0.0",
     "@types/node": "^20.12.7",
     "@types/node-dir": "^0.0.37",
     "@types/npmcli__ci-detect": "^2.0.3",
