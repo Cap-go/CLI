@@ -248,6 +248,10 @@ channel
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel')
   .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, patch, none')
+  .option('--dev', 'Allow sending update to development devices')
+  .option('--no-dev', 'Disable sending update to development devices')
+  .option('--emulator', 'Allow sending update to emulator devices')
+  .option('--no-emulator', 'Disable sending update to emulator devices')
 
 const key = program
   .command('key')

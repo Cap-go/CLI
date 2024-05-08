@@ -29,7 +29,8 @@ interface Options extends OptionsBase {
   android?: boolean
   selfAssign?: boolean
   disableAutoUpdate: string
-  channel?: string
+  dev?: boolean
+  emulator?: boolean
 }
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
@@ -56,7 +57,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
   const orgId = await getOrganizationId(supabase, appId)
 
-  const { bundle, latest, downgrade, upgrade, ios, android, selfAssign, state, disableAutoUpdate } = options
+  const { bundle, state, downgrade, latest, upgrade, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
   if (!channel) {
     p.log.error('Missing argument, you need to provide a channel')
     program.error('')
@@ -73,6 +74,8 @@ export async function setChannel(channel: string, appId: string, options: Option
     && ios == null
     && android == null
     && selfAssign == null
+    && dev == null
+    && emulator == null
     && disableAutoUpdate == null) {
     p.log.error('Missing argument, you need to provide a option to set')
     program.error('')
