@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.6.2](https://github.com/Cap-go/CLI/compare/v4.6.1...v4.6.2) (2024-05-08)
+
+
+### Bug Fixes
+
+* better handle nuxt and nextjs ([7f9c0a0](https://github.com/Cap-go/CLI/commit/7f9c0a04ac5097b5ea7b9b9edb0dc815e43ca2e7))
+
 ### [4.6.1](https://github.com/Cap-go/CLI/compare/v4.6.0...v4.6.1) (2024-05-08)
 
 
