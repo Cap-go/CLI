@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.6.0](https://github.com/Cap-go/CLI/compare/v4.5.0...v4.6.0) (2024-05-08)
+
+
+### Features
+
+* allow set dev device and emulators ([bdb3517](https://github.com/Cap-go/CLI/commit/bdb3517586c34b6a980727f4037540c5d48bda1b))
+* Show migration for v5 apps, but allow work ([df4de91](https://github.com/Cap-go/CLI/commit/df4de915b8805f560137364e5764325a8da5e7ef))
+
 ## [4.5.0](https://github.com/Cap-go/CLI/compare/v4.4.5...v4.5.0) (2024-05-02)
 
 
