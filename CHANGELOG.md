@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.6.1](https://github.com/Cap-go/CLI/compare/v4.6.0...v4.6.1) (2024-05-08)
+
+
+### Bug Fixes
+
+* force encryption when init and exist ([f6be928](https://github.com/Cap-go/CLI/commit/f6be9281dc8e978fc1a7e80174a884c50d46c495))
+
 ## [4.6.0](https://github.com/Cap-go/CLI/compare/v4.5.0...v4.6.0) (2024-05-08)
 
 
