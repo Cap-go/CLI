@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
@@ -16,7 +16,7 @@ import { login } from './login'
 import { addApp } from './app/add'
 import { checkLatest } from './api/update'
 import type { Options } from './api/app'
-import { convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils'
+import { baseKeyPub, convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -169,7 +169,7 @@ async function step6(userId: string, snag: LogSnag, apikey: string, appId: strin
   if (doEncrypt) {
     const s = p.spinner()
     s.start(`Running: npx @capgo/cli@latest key create`)
-    const keyRes = await createKey({}, false)
+    const keyRes = await createKey({ force: true }, false)
     if (!keyRes) {
       s.stop(`Cannot create key ❌`)
       process.exit(1)
