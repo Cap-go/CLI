@@ -79,6 +79,7 @@ async function step3(userId: string, snag: LogSnag, apikey: string, appId: strin
   await markStep(userId, snag, 3)
 }
 
+const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 async function step4(userId: string, snag: LogSnag, apikey: string, appId: string) {
   const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
@@ -86,6 +87,7 @@ async function step4(userId: string, snag: LogSnag, apikey: string, appId: strin
   if (doInstall) {
     const s = p.spinner()
     s.start(`Checking if @capgo/capacitor-updater is installed`)
+    let versionToInstall = 'latest'
     const pack = JSON.parse(readFileSync('package.json').toString())
     let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
     coreVersion = coreVersion?.replace('^', '').replace('~', '')
@@ -96,6 +98,10 @@ async function step4(userId: string, snag: LogSnag, apikey: string, appId: strin
     else if (semver.lt(coreVersion, '5.0.0')) {
       s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
       process.exit()
+    }
+    else if (semver.lt(coreVersion, '6.0.0')) {
+      s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
+      versionToInstall = '^5.0.0'
     }
     const pm = findPackageManagerType()
     if (pm === 'unknown') {
@@ -110,7 +116,7 @@ async function step4(userId: string, snag: LogSnag, apikey: string, appId: strin
       s.stop(`Capgo already installed ✅`)
     }
     else {
-      await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@latest`, execOption as ExecSyncOptions)
+      await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@${versionToInstall}`, execOption as ExecSyncOptions)
       s.stop(`Install Done ✅`)
     }
   }
