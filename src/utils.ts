@@ -324,6 +324,91 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       yield res
   }
 }
+
+export async function findProjectType() {
+  // for nuxtjs check if nuxt.config.js exists
+  // for nextjs check if next.config.js exists
+  // for angular check if angular.json exists
+  // for sveltekit check if svelte.config.js exists
+  const pwd = process.cwd()
+  for await (const f of getFiles(pwd)) {
+    // find number of folder in path after pwd
+    if (f.includes('angular.json')) {
+      p.log.info('Found angular project')
+      return 'angular'
+    }
+    if (f.includes('nuxt.config.js')) {
+      p.log.info('Found nuxtjs project')
+      return 'nuxtjs'
+    }
+    if (f.includes('next.config.js')) {
+      p.log.info('Found nextjs project')
+      return 'nextjs'
+    }
+    if (f.includes('svelte.config.js')) {
+      p.log.info('Found sveltekit project')
+      return 'sveltekit'
+    }
+  }
+  return 'unknown'
+}
+
+export async function findMainFileForProjectType(projectType: string) {
+  if (projectType === 'angular')
+    return 'src/main.ts'
+
+  if (projectType === 'nuxtjs')
+    return 'src/main.ts'
+
+  if (projectType === 'nextjs')
+    return 'pages/_app.tsx'
+
+  if (projectType === 'sveltekit')
+    return 'src/main.ts'
+
+  return null
+}
+
+// create a function to find the right command to build the project in static mode depending on the project type
+
+export async function findBuildCommandForProjectType(projectType: string) {
+  if (projectType === 'angular') {
+    p.log.info('Angular project detected')
+    return 'build'
+  }
+
+  if (projectType === 'nuxtjs') {
+    p.log.info('Nuxtjs project detected')
+    return 'generate'
+  }
+
+  if (projectType === 'nextjs') {
+    p.log.info('Nextjs project detected')
+    p.log.warn('Please make sure you have configured static export in your next.config.js: https://nextjs.org/docs/pages/building-your-application/deploying/static-exports')
+    p.log.warn('Please make sure you have the output: \'export\' and distDir: \'dist\' in your next.config.js')
+    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    if (!doContinue) {
+      p.log.error('Aborted')
+      program.error('')
+    }
+    return 'build'
+  }
+
+  if (projectType === 'sveltekit') {
+    p.log.info('Sveltekit project detected')
+    p.log.warn('Please make sure you have the adapter-static installed: https://kit.svelte.dev/docs/adapter-static')
+    p.log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
+    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    if (!doContinue) {
+      p.log.error('Aborted')
+      program.error('')
+    }
+    return 'build'
+  }
+
+  return 'build'
+}
+
 export async function findMainFile() {
   const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
   // search for main.ts or main.js in local dir and subdirs

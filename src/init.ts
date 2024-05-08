@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
@@ -16,7 +16,7 @@ import { login } from './login'
 import { addApp } from './app/add'
 import { checkLatest } from './api/update'
 import type { Options } from './api/app'
-import { baseKeyPub, convertAppName, createSupabaseClient, findMainFile, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -92,11 +92,15 @@ async function step4(userId: string, snag: LogSnag, apikey: string, appId: strin
     let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
     coreVersion = coreVersion?.replace('^', '').replace('~', '')
     if (!coreVersion) {
-      s.stop(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
+      s.stop('Error')
+      p.log.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
     else if (semver.lt(coreVersion, '5.0.0')) {
-      s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
+      s.stop('Error')
+      p.log.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
     else if (semver.lt(coreVersion, '6.0.0')) {
@@ -105,7 +109,9 @@ async function step4(userId: string, snag: LogSnag, apikey: string, appId: strin
     }
     const pm = findPackageManagerType()
     if (pm === 'unknown') {
-      s.stop(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm or yarn`)
+      s.stop('Error')
+      p.log.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm or yarn`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
     // // use pm to install capgo
@@ -132,9 +138,17 @@ async function step5(userId: string, snag: LogSnag, apikey: string, appId: strin
   if (doAddCode) {
     const s = p.spinner()
     s.start(`Adding @capacitor-updater to your main file`)
-    const mainFilePath = await findMainFile()
+    const projectType = await findProjectType()
+    let mainFilePath
+    if (projectType === 'unknown')
+      mainFilePath = await findMainFile()
+    else
+      mainFilePath = await findMainFileForProjectType(projectType)
+
     if (!mainFilePath) {
-      s.stop('No main.ts, main.js, index.ts or index.js file found, You need to add @capgo/capacitor-updater manually')
+      s.stop('Error')
+      p.log.warn('Cannot find main file, You need to add @capgo/capacitor-updater manually')
+      p.outro(`Bye 👋`)
       process.exit()
     }
     // open main file and inject codeInject
@@ -144,7 +158,9 @@ async function step5(userId: string, snag: LogSnag, apikey: string, appId: strin
     const matches = mainFileContent.match(regexImport)
     const last = matches?.pop()
     if (!last) {
-      s.stop(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
+      s.stop('Error')
+      p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
 
@@ -171,7 +187,9 @@ async function step6(userId: string, snag: LogSnag, apikey: string, appId: strin
     s.start(`Running: npx @capgo/cli@latest key create`)
     const keyRes = await createKey({ force: true }, false)
     if (!keyRes) {
-      s.stop(`Cannot create key ❌`)
+      s.stop('Error')
+      p.log.warn(`Cannot create key ❌`)
+      p.outro(`Bye 👋`)
       process.exit(1)
     }
     else {
@@ -187,14 +205,18 @@ async function step7(userId: string, snag: LogSnag, apikey: string, appId: strin
   await cancelCommand(doBuild, userId, snag)
   if (doBuild) {
     const s = p.spinner()
-    s.start(`Running: npm run build && npx cap sync`)
+    const projectType = await findProjectType()
+    const buildCommand = await findBuildCommandForProjectType(projectType)
+    s.start(`Running: npm run ${buildCommand} && npx cap sync`)
     const pack = JSON.parse(readFileSync('package.json').toString())
     // check in script build exist
-    if (!pack.scripts?.build) {
-      s.stop(`Cannot find build script in package.json, please add it and run \`capgo init\` again`)
+    if (!pack.scripts[buildCommand]) {
+      s.stop('Error')
+      p.log.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
-    execSync(`npm run build && npx cap sync`, execOption as ExecSyncOptions)
+    execSync(`npm run ${buildCommand} && npx cap sync`, execOption as ExecSyncOptions)
     s.stop(`Build & Sync Done ✅`)
   }
   else {
@@ -214,7 +236,9 @@ async function step8(userId: string, snag: LogSnag, apikey: string, appId: strin
       apikey,
     }, false)
     if (!uploadRes) {
-      s.stop(`Upload failed ❌`)
+      s.stop('Error')
+      p.log.warn(`Upload failed ❌`)
+      p.outro(`Bye 👋`)
       process.exit()
     }
     else {
@@ -238,8 +262,10 @@ async function step9(userId: string, snag: LogSnag) {
         { value: 'android', label: 'Android' },
       ],
     })
-    if (p.isCancel(plaformType))
+    if (p.isCancel(plaformType)) {
+      p.outro(`Bye 👋`)
       process.exit()
+    }
 
     const platform = plaformType as 'ios' | 'android'
     const s = p.spinner()
