@@ -19,6 +19,10 @@ export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
 
+export type ArrayElement<ArrayType extends readonly unknown[]> =
+  ArrayType extends readonly (infer ElementType)[] ? ElementType : never
+export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v5']['Returns']>
+
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
 
@@ -560,10 +564,43 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
 
 export function useLogSnag(): LogSnag {
   const logsnag = new LogSnag({
-    token: 'c124f5e9d0ce5bdd14bbb48f815d5583',
-    project: 'capgo',
+    token: process.env.CAPGO_LOGSNAG ?? 'c124f5e9d0ce5bdd14bbb48f815d5583',
+    project: process.env.CAPGO_LOGSNAG_PROJECT ?? 'capgo',
   })
   return logsnag
+}
+
+export async function getOrganization(supabase: SupabaseClient<Database>, roles: string[]): Promise<Organization> {
+  const { error: orgError, data: allOrganizations } = await supabase
+    .rpc('get_orgs_v5')
+
+  if (orgError) {
+    p.log.error('Cannot get the list of organizations - exiting')
+    p.log.error(`Error ${JSON.stringify(orgError)}`)
+    program.error('')
+  }
+
+  const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
+
+  const organizationUidRaw = (adminOrgs.length > 1)
+    ? await p.select({
+      message: 'Please pick the organization that you want to insert to',
+      options: adminOrgs.map((org) => {
+        return { value: org.gid, label: org.name }
+      }),
+    })
+    : adminOrgs[0].gid
+
+  if (p.isCancel(organizationUidRaw)) {
+    p.log.error('Canceled organization selection, exiting')
+    program.error('')
+  }
+
+  const organizationUid = organizationUidRaw as string
+  const organization = allOrganizations.find(org => org.gid === organizationUid)!
+
+  p.log.info(`Using the organization "${organization.name}" as the app owner`)
+  return organization
 }
 
 export const convertAppName = (appName: string) => appName.replace(/\./g, '--')
