@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.7.0](https://github.com/Cap-go/CLI/compare/v4.6.3...v4.7.0) (2024-05-10)
+
+
+### Features
+
+* add upload time + correct PM name ([af61757](https://github.com/Cap-go/CLI/commit/af6175751d92070088d4569b892a333a3e1a1063))
+
 ### [4.6.3](https://github.com/Cap-go/CLI/compare/v4.6.2...v4.6.3) (2024-05-10)
 
 
