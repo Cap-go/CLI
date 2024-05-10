@@ -11,6 +11,7 @@ import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
 import { promiseFiles } from 'node-dir'
+import { findInstallCommand, findPackageManagerType } from '@capgo/find-package-manager'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -654,7 +655,9 @@ export async function getLocalDepenencies() {
   }
 
   if (!existsSync('./node_modules/')) {
-    p.log.error('Missing node_modules folder, please run npm install')
+    const pm = findPackageManagerType('.', 'npm')
+    const installCmd = findInstallCommand(pm)
+    p.log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
     program.error('')
   }
 
@@ -667,7 +670,9 @@ export async function getLocalDepenencies() {
 
       if (!dependencyFolderExists) {
         anyInvalid = true
-        p.log.error(`Missing dependency ${key}, please run npm install`)
+        const pm = findPackageManagerType('.', 'npm')
+        const installCmd = findInstallCommand(pm)
+        p.log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
         return { name: key, version: value }
       }
 

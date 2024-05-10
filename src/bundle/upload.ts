@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
+import { performance } from 'node:perf_hooks'
 import AdmZip from 'adm-zip'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
@@ -65,6 +66,8 @@ interface Options extends OptionsBase {
   ignoreMetadataCheck?: boolean
   timeout?: number
 }
+
+const UPLOAD_TIMEOUT = 120000
 
 export async function uploadBundle(appid: string, options: Options, shouldExit = true) {
   p.intro(`Uploading`)
@@ -384,9 +387,10 @@ It will be also visible in your dashboard\n`)
       p.log.error(`Cannot get upload url`)
       program.error('')
     }
+    const startTime = performance.now()
     try {
       await ky.put(url, {
-        timeout: options.timeout || 120000,
+        timeout: options.timeout || UPLOAD_TIMEOUT,
         retry: 5,
         body: zipped,
         headers: (!localS3
@@ -399,7 +403,9 @@ It will be also visible in your dashboard\n`)
       })
     }
     catch (errorUpload) {
-      spinner.stop('Failed to upload bundle')
+      const endTime = performance.now()
+      const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+      spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
       p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
       // call delete version on path /delete_failed_version to delete the version
       await deletedFailedVersion(supabase, appid, bundle)
@@ -411,7 +417,9 @@ It will be also visible in your dashboard\n`)
       p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
       program.error('')
     }
-    spinner.stop('Bundle Uploaded 💪')
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
   }
   else if (useS3 && zipped && s3Client) {
     const spinner = p.spinner()
@@ -424,7 +432,7 @@ It will be also visible in your dashboard\n`)
       Key: fileName,
       Body: zipped,
     })
-
+    const startTime = performance.now()
     const response = await s3Client.send(command)
     if (response.$metadata.httpStatusCode !== 200) {
       p.log.error(`Cannot upload to S3`)
@@ -438,7 +446,9 @@ It will be also visible in your dashboard\n`)
       p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
       program.error('')
     }
-    spinner.stop('Bundle Uploaded 💪')
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
   }
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
