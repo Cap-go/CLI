@@ -63,6 +63,7 @@ interface Options extends OptionsBase {
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
+  timeout?: number
 }
 
 export async function uploadBundle(appid: string, options: Options, shouldExit = true) {
@@ -385,7 +386,7 @@ It will be also visible in your dashboard\n`)
     }
     try {
       await ky.put(url, {
-        timeout: 20000,
+        timeout: options.timeout || 120000,
         retry: 5,
         body: zipped,
         headers: (!localS3
@@ -398,6 +399,7 @@ It will be also visible in your dashboard\n`)
       })
     }
     catch (errorUpload) {
+      spinner.stop('Failed to upload bundle')
       p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
       // call delete version on path /delete_failed_version to delete the version
       await deletedFailedVersion(supabase, appid, bundle)
