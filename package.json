@@ -45,7 +45,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "^3.563.0",
     "@capacitor/cli": "6.0.0",
-    "@capgo/find-package-manager": "^0.0.13",
+    "@capgo/find-package-manager": "^0.0.16",
     "@clack/prompts": "^0.7.0",
     "@supabase/supabase-js": "^2.42.7",
     "@tomasklaen/checksum": "^1.1.0",

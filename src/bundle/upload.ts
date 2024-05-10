@@ -33,6 +33,7 @@ import {
   getLocalConfig,
   getLocalDepenencies,
   getOrganizationId,
+  getPMAndCommand,
   hasOrganizationPerm,
   regexSemver,
   requireUpdateMetadata,
@@ -70,6 +71,7 @@ interface Options extends OptionsBase {
 const UPLOAD_TIMEOUT = 120000
 
 export async function uploadBundle(appid: string, options: Options, shouldExit = true) {
+  const pm = getPMAndCommand()
   p.intro(`Uploading`)
   await checkLatest()
   let { bundle, path, channel } = options
@@ -96,8 +98,8 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   channel = channel || 'dev'
 
   const config = await getConfig()
-  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
-    && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true
+  const localS3: boolean = (config?.app?.extConfig?.plugins && config?.app?.extConfig?.plugins?.CapacitorUpdater
+    && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localS3) === true
 
   const checkNotifyAppReady = options.codeCheck
   appid = appid || config?.app?.appId
@@ -114,8 +116,8 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
     program.error('')
   }
-  if (!appid || !bundle || !path) {
-    p.log.error('Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project')
+  if (!appid || !path) {
+    p.log.error('Missing argument, you need to provide a appid and a path (--path), or be in a capacitor project')
     program.error('')
   }
   // if one S3 variable is set, check that all are set
@@ -150,8 +152,6 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   const supabase = await createSupabaseClient(options.apikey)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload'])
   // Check we have app access to this appId
-  // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
-
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
 
   // Now if it does exist we will fetch the org id
@@ -186,7 +186,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
 
     if (finalCompatibility.find(x => x.localVersion !== x.remoteVersion)) {
       p.log.error(`Your bundle is not compatible with the channel ${channel}`)
-      p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`)
+      p.log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
       if (autoMinUpdateVersion) {
         minUpdateVersion = bundle
@@ -511,7 +511,8 @@ export async function uploadCommand(apikey: string, options: Options) {
 }
 
 export async function uploadDeprecatedCommand(apikey: string, options: Options) {
-  p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
+  const pm = getPMAndCommand()
+  p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
     await uploadBundle(apikey, options, true)
   }

@@ -11,7 +11,8 @@ import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
 import { promiseFiles } from 'node-dir'
-import { findInstallCommand, findPackageManagerType } from '@capgo/find-package-manager'
+import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
+import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -39,7 +40,7 @@ export async function getConfig() {
     config = await loadConfig()
   }
   catch (err) {
-    p.log.error('No capacitor config file found, run `cap init` first')
+    p.log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
     program.error('')
   }
   return config
@@ -306,7 +307,7 @@ export function findSavedKey(quiet = false) {
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
-    p.log.error(`Cannot find API key in local folder or global, please login first with npx @capacitor/cli login`)
+    p.log.error(`Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`)
     program.error('')
   }
   return key
@@ -623,6 +624,20 @@ export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, 
 export function getHumanDate(createdA: string | null) {
   const date = new Date(createdA || '')
   return date.toLocaleString()
+}
+
+let pmFetched = false
+let pm: PackageManagerType = 'npm'
+let pmCommand: InstallCommand = 'install'
+let pmRunner: PackageManagerRunner = 'npx'
+export function getPMAndCommand() {
+  if (pmFetched)
+    return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
+  pm = findPackageManagerType('.', 'npm')
+  pmCommand = findInstallCommand(pm)
+  pmFetched = true
+  pmRunner = findPackageManagerRunner()
+  return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
 export async function getLocalDepenencies() {

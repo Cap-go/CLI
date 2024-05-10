@@ -52,7 +52,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     program.error('')
   }
   else if (appExist) {
-    return true
+    return false
   }
 
   const { error: orgError, data: allOrganizations } = await supabase
