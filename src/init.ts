@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
-import { findPackageManagerType } from '@capgo/find-package-manager'
+import { findInstallCommand, findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type LogSnag from 'logsnag'
@@ -117,7 +117,7 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
     }
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
-    const installCmd = pm === 'yarn' ? 'add' : 'install'
+    const installCmd = findInstallCommand(pm)
     //  check if capgo is already installed in package.json
     if (pack.dependencies['@capgo/capacitor-updater']) {
       s.stop(`Capgo already installed ✅`)

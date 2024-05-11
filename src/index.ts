@@ -130,6 +130,7 @@ bundle
   )
   .option('--auto-min-update-version', 'Set the min update version based on native packages')
   .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
+  .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
 
 bundle
   .command('compatibility [appId]')
