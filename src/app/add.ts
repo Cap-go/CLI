@@ -7,17 +7,24 @@ import * as p from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import type { Options } from '../api/app'
 import { checkAppExists, newIconPath } from '../api/app'
+import type {
+  Organization,
+} from '../utils'
 import {
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
-  useLogSnag,
+  getOrganization,
   verifyUser,
 } from '../utils'
 
 export async function addApp(appId: string, options: Options, throwErr = true) {
+  await addAppInternal(appId, options, undefined, throwErr)
+}
+
+export async function addAppInternal(appId: string, options: Options, organization?: Organization, throwErr = true) {
   if (throwErr)
     p.intro(`Adding`)
 
@@ -25,7 +32,6 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig()
   appId = appId || config?.app?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey) {
     p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
@@ -43,7 +49,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
 
   const supabase = await createSupabaseClient(options.apikey)
 
-  let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
@@ -55,36 +61,10 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     return false
   }
 
-  const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v5')
+  if (!organization)
+    organization = await getOrganization(supabase, ['admin', 'super_admin'])
 
-  if (orgError) {
-    p.log.error('Cannot get the list of organizations - exiting')
-    p.log.error(`Error ${JSON.stringify(orgError)}`)
-    program.error('')
-  }
-
-  const adminOrgs = allOrganizations.filter(org => org.role === 'admin' || org.role === 'super_admin')
-
-  const organizationUidRaw = (adminOrgs.length > 1)
-    ? await p.select({
-      message: 'Please pick the organization that you want to insert to',
-      options: adminOrgs.map((org) => {
-        return { value: org.gid, label: org.name }
-      }),
-    })
-    : adminOrgs[0].gid
-
-  if (p.isCancel(organizationUidRaw)) {
-    p.log.error('Canceled organization selection, exiting')
-    program.error('')
-  }
-
-  const organizationUid = organizationUidRaw as string
-  const organization = allOrganizations.find(org => org.gid === organizationUid)!
-  userId = organization.created_by
-
-  p.log.info(`Using the organization "${organization.name}" as the app owner`)
+  const organizationUid = organization.gid
 
   await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
 
@@ -168,16 +148,6 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
     p.log.error(`Could not add app ${formatError(dbVersionError)}`)
     program.error('')
   }
-  await snag.track({
-    channel: 'app',
-    event: 'App Added',
-    icon: '🎉',
-    user_id: userId,
-    tags: {
-      'app-id': appId,
-    },
-    notify: false,
-  }).catch()
   p.log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
   if (throwErr) {
     p.outro(`Done ✅`)

@@ -6,7 +6,7 @@ import type LogSnag from 'logsnag'
 import type { Database } from '../types/supabase.types'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { OrganizationPerm, convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -19,19 +19,19 @@ export interface OptionsBaseDebug {
   device?: string
 }
 
-export async function markSnag(channel: string, userId: string, snag: LogSnag, event: string, icon = '✅') {
+export async function markSnag(channel: string, orgId: string, snag: LogSnag, event: string, icon = '✅') {
   await snag.track({
     channel,
     event,
     icon,
-    user_id: userId,
+    user_id: orgId,
     notify: false,
   }).catch()
 }
 
-export async function cancelCommand(channel: string, command: boolean | symbol, userId: string, snag: LogSnag) {
+export async function cancelCommand(channel: string, command: boolean | symbol, orgId: string, snag: LogSnag) {
   if (p.isCancel(command)) {
-    await markSnag(channel, userId, snag, 'canceled', '🤷')
+    await markSnag(channel, orgId, snag, 'canceled', '🤷')
     process.exit()
   }
 }
@@ -65,13 +65,13 @@ export async function getStats(supabase: SupabaseClient<Database>, query: QueryS
   return null
 }
 
-export async function waitLog(channel: string, supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, userId: string, deviceId?: string) {
+export async function waitLog(channel: string, supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, orgId: string, deviceId?: string) {
   let loop = true
   let now = new Date().toISOString()
   const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
   const baseUrl = `${config.hostWeb}/app/p/${appIdUrl}`
-  await markSnag(channel, userId, snag, 'Use waitlog')
+  await markSnag(channel, orgId, snag, 'Use waitlog')
   const query: QueryStats = {
     appId,
     devicesId: deviceId ? [deviceId] : undefined,
@@ -90,13 +90,13 @@ export async function waitLog(channel: string, supabase: SupabaseClient<Database
       p.log.info(`Log from Device: ${data.device_id}`)
       if (data.action === 'get') {
         p.log.info('Update Sent your your device, wait until event download complete')
-        await markSnag(channel, userId, snag, 'done')
+        await markSnag(channel, orgId, snag, 'done')
       }
       else if (data.action.startsWith('download_')) {
         const action = data.action.split('_')[1]
         if (action === 'complete') {
           p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-          await markSnag(channel, userId, snag, 'downloaded')
+          await markSnag(channel, orgId, snag, 'downloaded')
         }
         else if (action === 'fail') {
           p.log.error('Your bundle has failed to download on your device.')
@@ -109,7 +109,7 @@ export async function waitLog(channel: string, supabase: SupabaseClient<Database
       else if (data.action === 'set') {
         p.log.info('Your bundle has been set on your device ❤️')
         loop = false
-        await markSnag(channel, userId, snag, 'set')
+        await markSnag(channel, orgId, snag, 'set')
         return Promise.resolve(data)
       }
       else if (data.action === 'NoChannelOrOverride') {
@@ -202,12 +202,14 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
+  const orgId = await getOrganizationId(supabase, appId)
+
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, userId, snag)
   if (doRun) {
     p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
     p.log.info('Waiting...')
-    await waitLog('debug', supabase, appId, snag, userId, deviceId)
+    await waitLog('debug', supabase, appId, snag, orgId, deviceId)
     p.outro(`Done ✅`)
   }
   else {
