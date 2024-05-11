@@ -2,6 +2,7 @@ import { existsSync, readFileSync, readdirSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import process from 'node:process'
+import type { Buffer } from 'node:buffer'
 import { loadConfig } from '@capacitor/cli/dist/config'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -11,7 +12,8 @@ import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
 import { promiseFiles } from 'node-dir'
-import { findInstallCommand, findPackageManagerType } from '@capgo/find-package-manager'
+import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
+import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -43,7 +45,7 @@ export async function getConfig() {
     config = await loadConfig()
   }
   catch (err) {
-    p.log.error('No capacitor config file found, run `cap init` first')
+    p.log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
     program.error('')
   }
   return config
@@ -310,7 +312,7 @@ export function findSavedKey(quiet = false) {
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
-    p.log.error(`Cannot find API key in local folder or global, please login first with npx @capacitor/cli login`)
+    p.log.error(`Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`)
     program.error('')
   }
   return key
@@ -486,6 +488,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
   const data = {
     app_id: appId,
     name,
+    version: 0,
   }
   try {
     const pathUploadLink = 'private/upload_link'
@@ -496,6 +499,67 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     p.log.error(`Cannot get upload url ${formatError(error)}`)
   }
   return ''
+}
+
+async function prepareMultipart(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<{ key: string, uploadId: string, url: string } | null> {
+  const data = {
+    app_id: appId,
+    name,
+    version: 1,
+  }
+  try {
+    const pathUploadLink = 'private/upload_link'
+    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    return res.data as any
+  }
+  catch (error) {
+    p.log.error(`Cannot get upload url ${formatError(error)}`)
+    return null
+  }
+}
+
+async function finishMultipartDownload(key: string, uploadId: string, url: string, parts: any[]) {
+  const metadata = {
+    action: 'mpu-complete',
+    uploadId,
+    key,
+  }
+
+  await ky.post(url, {
+    json: {
+      parts,
+    },
+    searchParams: new URLSearchParams({ body: btoa(JSON.stringify(metadata)) }),
+  })
+
+  // console.log(await response.json())
+}
+
+const PART_SIZE = 10 * 1024 * 1024
+export async function uploadMultipart(supabase: SupabaseClient<Database>, appId: string, name: string, data: Buffer): Promise<boolean> {
+  try {
+    const multipartPrep = await prepareMultipart(supabase, appId, name)
+    if (!multipartPrep) {
+      // Just pass the error
+      return false
+    }
+
+    const fileSize = data.length
+    const partCount = Math.ceil(fileSize / PART_SIZE)
+
+    const uploadPromises = Array.from({ length: partCount }, (_, index) =>
+      uploadPart(data, PART_SIZE, multipartPrep.url, multipartPrep.key, multipartPrep.uploadId, index))
+
+    const parts = await Promise.all(uploadPromises)
+
+    await finishMultipartDownload(multipartPrep.key, multipartPrep.uploadId, multipartPrep.url, parts)
+
+    return true
+  }
+  catch (e) {
+    p.log.error(`Could not upload via multipart ${formatError(e)}`)
+    return false
+  }
 }
 
 export async function deletedFailedVersion(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<void> {
@@ -512,6 +576,34 @@ export async function deletedFailedVersion(supabase: SupabaseClient<Database>, a
     p.log.error(`Cannot delete failed version ${formatError(error)}`)
     return Promise.reject(new Error('Cannot delete failed version'))
   }
+}
+
+async function uploadPart(
+  data: Buffer,
+  partsize: number,
+  url: string,
+  key: string,
+  uploadId: string,
+  index: number,
+) {
+  const dataToUpload = data.subarray(
+    partsize * index,
+    partsize * (index + 1),
+  )
+
+  const metadata = {
+    action: 'mpu-uploadpart',
+    uploadId,
+    partNumber: index + 1,
+    key,
+  }
+
+  const response = await ky.put(url, {
+    body: dataToUpload,
+    searchParams: new URLSearchParams({ body: btoa(JSON.stringify(metadata)) }),
+  })
+
+  return await response.json()
 }
 
 export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {
@@ -665,6 +757,20 @@ export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, 
 export function getHumanDate(createdA: string | null) {
   const date = new Date(createdA || '')
   return date.toLocaleString()
+}
+
+let pmFetched = false
+let pm: PackageManagerType = 'npm'
+let pmCommand: InstallCommand = 'install'
+let pmRunner: PackageManagerRunner = 'npx'
+export function getPMAndCommand() {
+  if (pmFetched)
+    return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
+  pm = findPackageManagerType('.', 'npm')
+  pmCommand = findInstallCommand(pm)
+  pmFetched = true
+  pmRunner = findPackageManagerRunner()
+  return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
 export async function getLocalDepenencies() {

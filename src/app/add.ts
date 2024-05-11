@@ -19,7 +19,6 @@ import {
   getOrganization,
   verifyUser,
 } from '../utils'
-import type { Database } from '../types/supabase.types'
 
 export async function addApp(appId: string, options: Options, throwErr = true) {
   await addAppInternal(appId, options, undefined, throwErr)
@@ -59,7 +58,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
     program.error('')
   }
   else if (appExist) {
-    return true
+    return false
   }
 
   if (!organization)

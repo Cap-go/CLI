@@ -2,7 +2,6 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
-import { findInstallCommand, findPackageManagerType } from '@capgo/find-package-manager'
 import * as p from '@clack/prompts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type LogSnag from 'logsnag'
@@ -12,12 +11,12 @@ import { markSnag, waitLog } from './app/debug'
 import { createKey } from './key'
 import { addChannel } from './channel/add'
 import { uploadBundle } from './bundle/upload'
-import { login } from './login'
+import { doLoginExists, login } from './login'
 import { addAppInternal } from './app/add'
 import { checkLatest } from './api/update'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, useLogSnag, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -41,11 +40,12 @@ async function markStep(orgId: string, snag: LogSnag, step: number | string) {
 }
 
 async function step2(organization: Organization, snag: LogSnag, appId: string, options: SuperOptions) {
+  const pm = getPMAndCommand()
   const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` })
   await cancelCommand(doAdd, organization.gid, snag)
   if (doAdd) {
     const s = p.spinner()
-    s.start(`Running: npx @capgo/cli@latest app add ${appId}`)
+    s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${appId}`)
     const addRes = await addAppInternal(appId, options, organization, false)
     if (!addRes)
       s.stop(`App already add ✅`)
@@ -53,18 +53,19 @@ async function step2(organization: Organization, snag: LogSnag, appId: string, o
       s.stop(`App add Done ✅`)
   }
   else {
-    p.log.info(`Run yourself "npx @capgo/cli@latest app add ${appId}"`)
+    p.log.info(`Run yourself "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
   await markStep(organization.gid, snag, 2)
 }
 
 async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+  const pm = getPMAndCommand()
   const doChannel = await p.confirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
   await cancelCommand(doChannel, orgId, snag)
   if (doChannel) {
     const s = p.spinner()
     // create production channel public
-    s.start(`Running: npx @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
+    s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
     const addChannelRes = await addChannel(defaultChannel, appId, {
       default: true,
       apikey,
@@ -75,7 +76,7 @@ async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop(`Channel add Done ✅`)
   }
   else {
-    p.log.info(`Run yourself "npx @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
+    p.log.info(`Run yourself "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
   await markStep(orgId, snag, 3)
 }
@@ -83,6 +84,7 @@ async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+  const pm = getPMAndCommand()
   const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
   await cancelCommand(doInstall, orgId, snag)
   if (doInstall) {
@@ -108,27 +110,25 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
       versionToInstall = '^5.0.0'
     }
-    const pm = findPackageManagerType()
-    if (pm === 'unknown') {
+    if (pm.pm === 'unknown') {
       s.stop('Error')
-      p.log.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm or yarn`)
+      p.log.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
       p.outro(`Bye 👋`)
       process.exit()
     }
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
-    const installCmd = findInstallCommand(pm)
     //  check if capgo is already installed in package.json
     if (pack.dependencies['@capgo/capacitor-updater']) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
-      await execSync(`${pm} ${installCmd} @capgo/capacitor-updater@${versionToInstall}`, execOption as ExecSyncOptions)
+      await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, execOption as ExecSyncOptions)
       s.stop(`Install Done ✅`)
     }
   }
   else {
-    p.log.info(`Run yourself "npm i @capgo/capacitor-updater@latest"`)
+    p.log.info(`Run yourself "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
   await markStep(orgId, snag, 4)
 }
@@ -181,11 +181,12 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
 }
 
 async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+  const pm = getPMAndCommand()
   const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, snag)
   if (doEncrypt) {
     const s = p.spinner()
-    s.start(`Running: npx @capgo/cli@latest key create`)
+    s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
     const keyRes = await createKey({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
@@ -202,13 +203,14 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
 }
 
 async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string) {
-  const doBuild = await p.confirm({ message: `Automatic build ${appId} with "npm run build" ?` })
+  const pm = getPMAndCommand()
+  const doBuild = await p.confirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, snag)
   if (doBuild) {
     const s = p.spinner()
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.start(`Running: npm run ${buildCommand} && npx cap sync`)
+    s.start(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
     const pack = JSON.parse(readFileSync('package.json').toString())
     // check in script build exist
     if (!pack.scripts[buildCommand]) {
@@ -217,21 +219,22 @@ async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string
       p.outro(`Bye 👋`)
       process.exit()
     }
-    execSync(`npm run ${buildCommand} && npx cap sync`, execOption as ExecSyncOptions)
+    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
     s.stop(`Build & Sync Done ✅`)
   }
   else {
-    p.log.info(`Build yourself with command: npm run build && npx cap sync`)
+    p.log.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
   await markStep(orgId, snag, 7)
 }
 
 async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+  const pm = getPMAndCommand()
   const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
   await cancelCommand(doBundle, orgId, snag)
   if (doBundle) {
     const s = p.spinner()
-    s.start(`Running: npx @capgo/cli@latest bundle upload`)
+    s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
     const uploadRes = await uploadBundle(appId, {
       channel: defaultChannel,
       apikey,
@@ -247,12 +250,13 @@ async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string
     }
   }
   else {
-    p.log.info(`Upload yourself with command: npx @capgo/cli@latest bundle upload`)
+    p.log.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
   }
   await markStep(orgId, snag, 8)
 }
 
 async function step9(orgId: string, snag: LogSnag) {
+  const pm = getPMAndCommand()
   const doRun = await p.confirm({ message: `Run in device now ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
@@ -270,17 +274,17 @@ async function step9(orgId: string, snag: LogSnag) {
 
     const platform = plaformType as 'ios' | 'android'
     const s = p.spinner()
-    s.start(`Running: npx cap run ${platform}`)
-    await spawnSync('npx', ['cap', 'run', platform], { stdio: 'inherit' })
+    s.start(`Running: ${pm.runner} cap run ${platform}`)
+    await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
     s.stop(`Started Done ✅`)
   }
   else {
-    p.log.info(`Run yourself with command: npx cap run <ios|android>`)
+    p.log.info(`Run yourself with command: ${pm.runner} cap run <ios|android>`)
   }
   await markStep(orgId, snag, 9)
 }
 
-async function step10(orgId: string, snag: LogSnag, supabase: SupabaseClient<Database>, appId: string) {
+async function _step10(orgId: string, snag: LogSnag, supabase: SupabaseClient<Database>, appId: string) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
@@ -295,21 +299,21 @@ async function step10(orgId: string, snag: LogSnag, supabase: SupabaseClient<Dat
   await markStep(orgId, snag, 10)
 }
 
-export async function initApp(apikey: string, appId: string, options: SuperOptions) {
+export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
+  const pm = getPMAndCommand()
   p.intro(`Capgo onboarding 🛫`)
   await checkLatest()
   const snag = useLogSnag()
   const config = await getConfig()
   appId = appId || config?.app?.appId
-  apikey = apikey || findSavedKey()
+  const apikey = apikeyCommand || findSavedKey()
 
   const log = p.spinner()
-  log.start('Running: npx @capgo/cli@latest login ***')
-  const loginRes = await login(apikey, options, false)
-  if (!loginRes)
-    log.stop('Login already done ✅')
-  else
+  if (!doLoginExists() || apikeyCommand) {
+    log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
+    await login(apikey, options, false)
     log.stop('Login Done ✅')
+  }
 
   const supabase = await createSupabaseClient(apikey)
   await verifyUser(supabase, apikey, ['upload', 'all', 'read', 'write'])
@@ -332,7 +336,7 @@ export async function initApp(apikey: string, appId: string, options: SuperOptio
   await markStep(orgId, snag, 0)
   p.log.info(`Welcome onboard ✈️!`)
   p.log.info(`Your Capgo update system is setup`)
-  p.log.info(`Next time use \`npx @capgo/cli@latest bundle upload\` to only upload your bundle`)
+  p.log.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
   p.outro(`Bye 👋`)
   process.exit()
 }

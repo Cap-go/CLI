@@ -9,6 +9,10 @@ import { checkLatest } from './api/update'
 interface Options {
   local: boolean
 }
+export async function doLoginExists() {
+  const userHomeDir = homedir()
+  return existsSync(`${userHomeDir}/.capgo`) || existsSync('.capgo')
+}
 
 export async function login(apikey: string, options: Options, shouldExit = true) {
   if (shouldExit)
