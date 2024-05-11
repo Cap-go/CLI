@@ -38,6 +38,7 @@ import {
   requireUpdateMetadata,
   updateOrCreateChannel,
   updateOrCreateVersion,
+  uploadMultipart,
   uploadUrl,
   useLogSnag,
   verifyUser,
@@ -65,6 +66,7 @@ interface Options extends OptionsBase {
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
   timeout?: number
+  multipart?: boolean
 }
 
 const UPLOAD_TIMEOUT = 120000
@@ -381,26 +383,32 @@ It will be also visible in your dashboard\n`)
   if (!external && zipped) {
     const spinner = p.spinner()
     spinner.start(`Uploading Bundle`)
-
-    const url = await uploadUrl(supabase, appid, bundle)
-    if (!url) {
-      p.log.error(`Cannot get upload url`)
-      program.error('')
-    }
     const startTime = performance.now()
+
     try {
-      await ky.put(url, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: zipped,
-        headers: (!localS3
-          ? {
-              'Content-Type': 'application/octet-stream',
-              'Cache-Control': 'public, max-age=456789, immutable',
-              'x-amz-meta-crc32': checksum,
-            }
-          : undefined),
-      })
+      if (options.multipart !== undefined && options.multipart) {
+        await uploadMultipart(supabase, appid, bundle, zipped)
+      }
+      else {
+        const url = await uploadUrl(supabase, appid, bundle)
+        if (!url) {
+          p.log.error(`Cannot get upload url`)
+          program.error('')
+        }
+
+        await ky.put(url, {
+          timeout: options.timeout || UPLOAD_TIMEOUT,
+          retry: 5,
+          body: zipped,
+          headers: (!localS3
+            ? {
+                'Content-Type': 'application/octet-stream',
+                'Cache-Control': 'public, max-age=456789, immutable',
+                'x-amz-meta-crc32': checksum,
+              }
+            : undefined),
+        })
+      }
     }
     catch (errorUpload) {
       const endTime = performance.now()
@@ -411,6 +419,7 @@ It will be also visible in your dashboard\n`)
       await deletedFailedVersion(supabase, appid, bundle)
       program.error('')
     }
+
     versionData.storage_provider = 'r2'
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
