@@ -582,6 +582,11 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
 
+  if (adminOrgs.length === 0) {
+    p.log.error(`Could not get organization with roles: ${roles.join(' or ')} because the user does not have any org`)
+    program.error('')
+  }
+
   const organizationUidRaw = (adminOrgs.length > 1)
     ? await p.select({
       message: 'Please pick the organization that you want to insert to',

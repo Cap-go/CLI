@@ -17,7 +17,6 @@ import {
   formatError,
   getConfig,
   getOrganization,
-  useLogSnag,
   verifyUser,
 } from '../utils'
 import type { Database } from '../types/supabase.types'
@@ -34,7 +33,6 @@ export async function addAppInternal(appId: string, options: Options, organizati
   options.apikey = options.apikey || findSavedKey()
   const config = await getConfig()
   appId = appId || config?.app?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey) {
     p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
@@ -151,16 +149,6 @@ export async function addAppInternal(appId: string, options: Options, organizati
     p.log.error(`Could not add app ${formatError(dbVersionError)}`)
     program.error('')
   }
-  await snag.track({
-    channel: 'app',
-    event: 'App Added',
-    icon: '🎉',
-    user_id: organizationUid,
-    tags: {
-      'app-id': appId,
-    },
-    notify: false,
-  }).catch()
   p.log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
   if (throwErr) {
     p.outro(`Done ✅`)
