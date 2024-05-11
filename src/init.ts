@@ -327,7 +327,7 @@ export async function initApp(apikey: string, appId: string, options: SuperOptio
   await step7(orgId, snag, apikey, appId)
   await step8(orgId, snag, apikey, appId)
   await step9(orgId, snag)
-  await step10(orgId, snag, supabase, appId)
+  // await step10(orgId, snag, supabase, appId)
 
   await markStep(orgId, snag, 0)
   p.log.info(`Welcome onboard ✈️!`)
