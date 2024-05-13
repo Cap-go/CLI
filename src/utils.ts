@@ -12,6 +12,7 @@ import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
 import { promiseFiles } from 'node-dir'
+import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import type { Database } from './types/supabase.types'
@@ -766,14 +767,16 @@ let pmRunner: PackageManagerRunner = 'npx'
 export function getPMAndCommand() {
   if (pmFetched)
     return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
-  pm = findPackageManagerType('.', 'npm')
+  const dir = findRootSync(process.cwd())
+  pm = findPackageManagerType(dir.rootDir, 'npm')
   pmCommand = findInstallCommand(pm)
   pmFetched = true
-  pmRunner = findPackageManagerRunner()
+  pmRunner = findPackageManagerRunner(dir.rootDir)
   return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
 export async function getLocalDepenencies() {
+  const dir = findRootSync(process.cwd())
   if (!existsSync('./package.json')) {
     p.log.error('Missing package.json, you need to be in a capacitor project')
     program.error('')
@@ -803,7 +806,7 @@ export async function getLocalDepenencies() {
   }
 
   if (!existsSync('./node_modules/')) {
-    const pm = findPackageManagerType('.', 'npm')
+    const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
     p.log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
     program.error('')
@@ -818,7 +821,7 @@ export async function getLocalDepenencies() {
 
       if (!dependencyFolderExists) {
         anyInvalid = true
-        const pm = findPackageManagerType('.', 'npm')
+        const pm = findPackageManagerType(dir.rootDir, 'npm')
         const installCmd = findInstallCommand(pm)
         p.log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
         return { name: key, version: value }
