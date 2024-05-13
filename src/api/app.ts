@@ -3,7 +3,7 @@ import * as p from '@clack/prompts'
 import { program } from 'commander'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, getPMAndCommand, isAllowedApp, isAllowedAppOrg } from '../utils'
+import { OrganizationPerm, getPMAndCommand, isAllowedAppOrg } from '../utils'
 
 export async function checkAppExists(supabase: SupabaseClient<Database>, appid: string) {
   const { data: app } = await supabase
