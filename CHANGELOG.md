@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.8.3](https://github.com/Cap-go/CLI/compare/v4.8.2...v4.8.3) (2024-05-13)
+
+
+### Bug Fixes
+
+* issue find-package-manager ([66667cf](https://github.com/Cap-go/CLI/commit/66667cf3af6fdd417620573c91c4df3f2be10ebb))
+
 ### [4.8.2](https://github.com/Cap-go/CLI/compare/v4.8.1...v4.8.2) (2024-05-11)
 
 ### [4.8.1](https://github.com/Cap-go/CLI/compare/v4.8.0...v4.8.1) (2024-05-11)
