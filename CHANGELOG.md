@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.9.0](https://github.com/Cap-go/CLI/compare/v4.8.3...v4.9.0) (2024-05-13)
+
+
+### Features
+
+* search for root dir for mono repo ([1581130](https://github.com/Cap-go/CLI/commit/1581130b168b95012b8f36aed67ddeb5ecaa2c66))
+
 ### [4.8.3](https://github.com/Cap-go/CLI/compare/v4.8.2...v4.8.3) (2024-05-13)
 
 
