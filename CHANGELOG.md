@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.1](https://github.com/Cap-go/CLI/compare/v4.10.0...v4.10.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* add missing new userID in logsnag ([0dcf806](https://github.com/Cap-go/CLI/commit/0dcf8063e8819fc3cd0c623f7f761025216d7558))
+
 ## [4.10.0](https://github.com/Cap-go/CLI/compare/v4.9.3...v4.10.0) (2024-05-14)
 
 
