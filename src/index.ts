@@ -1,4 +1,5 @@
 import { program } from 'commander'
+import { getUserId } from 'user/account'
 import pack from '../package.json'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
@@ -292,5 +293,15 @@ program
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
+
+const user = program
+  .command('user')
+  .description('Manage user')
+
+user.command('account')
+  .alias('a')
+  .description('Get your account ID')
+  .action(getUserId)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 program.parseAsync()
