@@ -53,12 +53,9 @@ export async function addAppInternal(appId: string, options: Options, organizati
 
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
-  if (throwErr && appExist) {
+  if (appExist) {
     p.log.error(`App ${appId} already exist`)
     program.error('')
-  }
-  else if (appExist) {
-    return false
   }
 
   if (!organization)
