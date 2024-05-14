@@ -39,7 +39,10 @@ async function getInstalledDependencies() {
     '@capgo/cli': pack.version,
   }
   for (const dependency in dependencies) {
-    if (Object.prototype.hasOwnProperty.call(dependencies, dependency) && dependency.startsWith('@capgo/')) {
+    if (Object.prototype.hasOwnProperty.call(dependencies, dependency)
+      && dependency.startsWith('@capgo/')
+      && dependency.startsWith('@capawesome/')
+      && dependency.startsWith('capacitor')) {
       // remove ^ or ~ from version
       const version = dependencies[dependency].replace('^', '').replace('~', '')
       installedDependencies[dependency] = version
