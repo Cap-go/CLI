@@ -35,6 +35,7 @@ export async function deleteChannel(channelId: string, appId: string, options: O
       channel: 'channel',
       event: 'Delete channel',
       icon: '✅',
+      user_id: userId,
       tags: {
         'user-id': userId,
         'app-id': appId,
