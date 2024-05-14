@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.10.0](https://github.com/Cap-go/CLI/compare/v4.9.3...v4.10.0) (2024-05-14)
+
+
+### Features
+
+* allow get userId from CLI ([2f3857e](https://github.com/Cap-go/CLI/commit/2f3857ec23a946f137eded6f94b8a235be18b666))
+
 ### [4.9.3](https://github.com/Cap-go/CLI/compare/v4.9.2...v4.9.3) (2024-05-14)
 
 ### [4.9.2](https://github.com/Cap-go/CLI/compare/v4.9.1...v4.9.2) (2024-05-13)
