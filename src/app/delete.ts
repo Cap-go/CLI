@@ -27,11 +27,11 @@ export async function deleteApp(appId: string, options: OptionsBase) {
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.super_admin)
 
   const { data: appOwnerRaw, error: appOwnerError } = await supabase.from('apps')
-    .select(`owner_org ( created_by )`)
+    .select(`owner_org ( created_by, id )`)
     .eq('app_id', appId)
     .single()
 
-  const appOwner = appOwnerRaw as { owner_org: { created_by: string } } | null
+  const appOwner = appOwnerRaw as { owner_org: { created_by: string, id: string } } | null
 
   if (!appOwnerError && (appOwner?.owner_org.created_by ?? '') !== userId) {
     // We are dealing with a member user that is not the owner
@@ -66,10 +66,12 @@ export async function deleteApp(appId: string, options: OptionsBase) {
 
   const { error } = await supabase
     .storage
-    .from(`images/${userId}`)
-    .remove([appId])
-  if (error)
+    .from(`images`)
+    .remove([`org/${appOwner?.owner_org.id}/${appId}/icon`])
+  if (error) {
+    console.error(error, `images/org/${appOwner?.owner_org.id}/${appId}`)
     p.log.error('Could not delete app logo')
+  }
 
   const { error: delError } = await supabase
     .storage
@@ -84,7 +86,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     .from('apps')
     .delete()
     .eq('app_id', appId)
-    .eq('user_id', userId)
+    // .eq('user_id', userId)
 
   if (dbError) {
     p.log.error('Could not delete app')
