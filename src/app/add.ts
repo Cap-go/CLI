@@ -95,17 +95,18 @@ export async function addAppInternal(appId: string, options: Options, organizati
     p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
 
-  const fileName = `icon_${randomUUID()}`
+  const fileName = `icon`
   let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
 
   // upload image if available
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/${userId}/${appId}`)
+      .from(`images/org/${organizationUid}/${appId}`)
       .upload(fileName, iconBuff, {
         contentType: iconType,
       })
     if (error) {
+      console.log(error)
       p.log.error(`Could not add app ${formatError(error)}`)
       program.error('')
     }
