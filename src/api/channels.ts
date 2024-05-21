@@ -74,7 +74,24 @@ interface version {
   id: string
   name: string
 }
-export function displayChannels(data: (Database['public']['Tables']['channels']['Row'] & { version?: version, secondVersion?: version })[]) {
+interface Channel {
+  id: number
+  name: string
+  public: boolean
+  ios: boolean
+  android: boolean
+  disableAutoUpdate: string
+  disableAutoUpdateUnderNative: boolean
+  allow_device_self_set: boolean
+  enable_progressive_deploy: boolean
+  secondaryVersionPercentage: number
+  secondVersion?: version
+  enableAbTesting: boolean
+  allow_emulator: boolean
+  allow_dev: boolean
+  version?: version
+}
+export function displayChannels(data: Channel[]) {
   const t = new Table({
     title: 'Channels',
     charLength: { '❌': 2, '✅': 2 },
@@ -86,8 +103,8 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
       'Name': row.name,
       ...(row.version ? { Version: row.version.name } : undefined),
       'Public': row.public ? '✅' : '❌',
-      'iOS': row.ios ? '❌' : '✅',
-      'Android': row.android ? '❌' : '✅',
+      'iOS': row.ios ? '✅' : '❌',
+      'Android': row.android ? '✅' : '❌',
       '⬆️ limit': row.disableAutoUpdate,
       '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
       'Self assign': row.allow_device_self_set ? '✅' : '❌',
@@ -136,5 +153,5 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
     p.log.error(`App ${appid} not found in database`)
     program.error('')
   }
-  return data
+  return data as any as Channel[]
 }
