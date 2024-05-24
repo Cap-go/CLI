@@ -3,7 +3,7 @@ import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 export async function deleteApp(appId: string, options: OptionsBase) {
   p.intro(`Deleting`)
@@ -92,11 +92,12 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     p.log.error('Could not delete app')
     program.error('')
   }
+  const orgId = await getOrganizationId(supabase, appId)
   await snag.track({
     channel: 'app',
     event: 'App Deleted',
     icon: '🗑️',
-    user_id: userId,
+    user_id: orgId,
     tags: {
       'app-id': appId,
     },

@@ -161,9 +161,8 @@ export async function setChannel(channel: string, appId: string, options: Option
       channel: 'channel',
       event: 'Set channel',
       icon: '✅',
-      user_id: userId,
+      user_id: orgId,
       tags: {
-        'user-id': userId,
         'app-id': appId,
       },
       notify: false,

@@ -289,7 +289,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
         channel: 'app',
         event: 'App encryption',
         icon: '🔑',
-        user_id: userId,
+        user_id: orgId,
         tags: {
           'app-id': appid,
         },
@@ -319,7 +319,7 @@ It will be also visible in your dashboard\n`)
         channel: 'app-error',
         event: 'App Too Large',
         icon: '🚛',
-        user_id: userId,
+        user_id: orgId,
         tags: {
           'app-id': appid,
         },
@@ -345,7 +345,7 @@ It will be also visible in your dashboard\n`)
       channel: 'app',
       event: 'App external',
       icon: '📤',
-      user_id: userId,
+      user_id: orgId,
       tags: {
         'app-id': appid,
       },
@@ -496,7 +496,7 @@ It will be also visible in your dashboard\n`)
     channel: 'app',
     event: 'App Uploaded',
     icon: '⏫',
-    user_id: userId,
+    user_id: orgId,
     tags: {
       'app-id': appid,
     },

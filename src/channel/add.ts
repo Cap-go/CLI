@@ -27,7 +27,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
@@ -50,7 +50,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       channel: 'channel',
       event: 'Create channel',
       icon: '✅',
-      user_id: userId,
+      user_id: orgId,
       tags: {
         'app-id': appId,
         'channel': channelId,
