@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.7](https://github.com/Cap-go/CLI/compare/v4.10.6...v4.10.7) (2024-05-27)
+
+
+### Bug Fixes
+
+* add snag for multipart upload ([eef8d38](https://github.com/Cap-go/CLI/commit/eef8d38d01bc7b25def9d5e9995ec3ae5acfc8cf))
+
 ### [4.10.6](https://github.com/Cap-go/CLI/compare/v4.10.5...v4.10.6) (2024-05-24)
 
 
