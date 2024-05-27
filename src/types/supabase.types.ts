@@ -411,129 +411,6 @@ export interface Database {
           },
         ]
       }
-      clickhouse_app_usage_parm: {
-        Row: {
-          _app_list: string | null
-          _end_date: string | null
-          _start_date: string | null
-          app_id: string | null
-          bandwidth: number | null
-          date: string | null
-          fail: number | null
-          get: number | null
-          install: number | null
-          mau: number | null
-          storage_added: number | null
-          storage_deleted: number | null
-          uninstall: number | null
-        }
-        Insert: {
-          _app_list?: string | null
-          _end_date?: string | null
-          _start_date?: string | null
-          app_id?: string | null
-          bandwidth?: number | null
-          date?: string | null
-          fail?: number | null
-          get?: number | null
-          install?: number | null
-          mau?: number | null
-          storage_added?: number | null
-          storage_deleted?: number | null
-          uninstall?: number | null
-        }
-        Update: {
-          _app_list?: string | null
-          _end_date?: string | null
-          _start_date?: string | null
-          app_id?: string | null
-          bandwidth?: number | null
-          date?: string | null
-          fail?: number | null
-          get?: number | null
-          install?: number | null
-          mau?: number | null
-          storage_added?: number | null
-          storage_deleted?: number | null
-          uninstall?: number | null
-        }
-        Relationships: []
-      }
-      clickhouse_devices: {
-        Row: {
-          app_id: string | null
-          created_at: string | null
-          custom_id: string | null
-          device_id: string | null
-          is_emulator: boolean | null
-          is_prod: boolean | null
-          os_version: string | null
-          platform: string | null
-          plugin_version: string | null
-          updated_at: string | null
-          version: number | null
-          version_build: string | null
-        }
-        Insert: {
-          app_id?: string | null
-          created_at?: string | null
-          custom_id?: string | null
-          device_id?: string | null
-          is_emulator?: boolean | null
-          is_prod?: boolean | null
-          os_version?: string | null
-          platform?: string | null
-          plugin_version?: string | null
-          updated_at?: string | null
-          version?: number | null
-          version_build?: string | null
-        }
-        Update: {
-          app_id?: string | null
-          created_at?: string | null
-          custom_id?: string | null
-          device_id?: string | null
-          is_emulator?: boolean | null
-          is_prod?: boolean | null
-          os_version?: string | null
-          platform?: string | null
-          plugin_version?: string | null
-          updated_at?: string | null
-          version?: number | null
-          version_build?: string | null
-        }
-        Relationships: []
-      }
-      clickhouse_logs: {
-        Row: {
-          action: string | null
-          app_id: string | null
-          created_at: string | null
-          device_id: string | null
-          platform: string | null
-          version: number | null
-          version_build: string | null
-        }
-        Insert: {
-          action?: string | null
-          app_id?: string | null
-          created_at?: string | null
-          device_id?: string | null
-          platform?: string | null
-          version?: number | null
-          version_build?: string | null
-        }
-        Update: {
-          action?: string | null
-          app_id?: string | null
-          created_at?: string | null
-          device_id?: string | null
-          platform?: string | null
-          version?: number | null
-          version_build?: string | null
-        }
-        Relationships: []
-      }
       daily_bandwidth: {
         Row: {
           app_id: string
@@ -669,13 +546,12 @@ export interface Database {
       devices: {
         Row: {
           app_id: string
-          created_at: string
           custom_id: string
           device_id: string
           is_emulator: boolean | null
           is_prod: boolean | null
           os_version: string | null
-          platform: Database['public']['Enums']['platform_os'] | null
+          platform: Database['public']['Enums']['platform_os']
           plugin_version: string
           updated_at: string
           version: number
@@ -683,13 +559,12 @@ export interface Database {
         }
         Insert: {
           app_id: string
-          created_at: string
           custom_id?: string
           device_id: string
           is_emulator?: boolean | null
           is_prod?: boolean | null
           os_version?: string | null
-          platform?: Database['public']['Enums']['platform_os'] | null
+          platform: Database['public']['Enums']['platform_os']
           plugin_version?: string
           updated_at: string
           version: number
@@ -697,13 +572,12 @@ export interface Database {
         }
         Update: {
           app_id?: string
-          created_at?: string
           custom_id?: string
           device_id?: string
           is_emulator?: boolean | null
           is_prod?: boolean | null
           os_version?: string | null
-          platform?: Database['public']['Enums']['platform_os'] | null
+          platform?: Database['public']['Enums']['platform_os']
           plugin_version?: string
           updated_at?: string
           version?: number
@@ -1072,31 +946,25 @@ export interface Database {
       }
       stats: {
         Row: {
-          action: string
+          action: Database['public']['Enums']['stats_action']
           app_id: string
           created_at: string
           device_id: string
-          platform: Database['public']['Enums']['platform_os']
           version: number
-          version_build: string
         }
         Insert: {
-          action: string
+          action: Database['public']['Enums']['stats_action']
           app_id: string
           created_at: string
           device_id: string
-          platform: Database['public']['Enums']['platform_os']
           version: number
-          version_build: string
         }
         Update: {
-          action?: string
+          action?: Database['public']['Enums']['stats_action']
           app_id?: string
           created_at?: string
           device_id?: string
-          platform?: Database['public']['Enums']['platform_os']
           version?: number
-          version_build?: string
         }
         Relationships: []
       }
@@ -1266,19 +1134,19 @@ export interface Database {
       }
       version_usage: {
         Row: {
-          action: string
+          action: Database['public']['Enums']['version_action']
           app_id: string
           timestamp: string
           version_id: number
         }
         Insert: {
-          action: string
+          action: Database['public']['Enums']['version_action']
           app_id: string
           timestamp?: string
           version_id: number
         }
         Update: {
-          action?: string
+          action?: Database['public']['Enums']['version_action']
           app_id?: string
           timestamp?: string
           version_id?: number
@@ -1608,6 +1476,13 @@ export interface Database {
           role: Database['public']['Enums']['user_min_right']
         }[]
       }
+      get_org_owner_id: {
+        Args: {
+          apikey: string
+          app_id: string
+        }
+        Returns: string
+      }
       get_org_perm_for_apikey: {
         Args: {
           apikey: string
@@ -1717,16 +1592,6 @@ export interface Database {
             uninstall: number
           }[]
         }
-      get_total_stats_v5_org: {
-        Args: {
-          orgid: string
-        }
-        Returns: {
-          mau: number
-          bandwidth: number
-          storage: number
-        }[]
-      }
       get_total_storage_size:
         | {
           Args: {
@@ -1798,6 +1663,14 @@ export interface Database {
         }
         Returns: boolean
       }
+      http_post_helper: {
+        Args: {
+          function_name: string
+          function_type: string
+          body: Json
+        }
+        Returns: number
+      }
       invite_user_to_org: {
         Args: {
           email: string
@@ -1843,27 +1716,6 @@ export interface Database {
             apikey: string
             keymode: Database['public']['Enums']['key_mode'][]
             app_id: string
-          }
-          Returns: boolean
-        }
-        | {
-          Args: {
-            apikey: string
-            keymode: Database['public']['Enums']['key_mode'][]
-            app_id: string
-            channel_id: number
-            right: Database['public']['Enums']['user_min_right']
-            user_id: string
-          }
-          Returns: boolean
-        }
-        | {
-          Args: {
-            apikey: string
-            keymode: Database['public']['Enums']['key_mode'][]
-            app_id: string
-            right: Database['public']['Enums']['user_min_right']
-            user_id: string
           }
           Returns: boolean
         }
@@ -2061,6 +1913,32 @@ export interface Database {
       pay_as_you_go_type: 'base' | 'units'
       platform_os: 'ios' | 'android'
       queue_job_status: 'inserted' | 'requested' | 'failed'
+      stats_action:
+        | 'delete'
+        | 'reset'
+        | 'set'
+        | 'get'
+        | 'set_fail'
+        | 'update_fail'
+        | 'download_fail'
+        | 'windows_path_fail'
+        | 'canonical_path_fail'
+        | 'directory_path_fail'
+        | 'unzip_fail'
+        | 'low_mem_fail'
+        | 'download_10'
+        | 'download_20'
+        | 'download_30'
+        | 'download_40'
+        | 'download_50'
+        | 'download_60'
+        | 'download_70'
+        | 'download_80'
+        | 'download_90'
+        | 'download_complete'
+        | 'decrypt_fail'
+        | 'app_moved_to_foreground'
+        | 'app_moved_to_background'
       stripe_status:
         | 'created'
         | 'succeeded'
@@ -2081,6 +1959,7 @@ export interface Database {
         | 'admin'
         | 'super_admin'
       user_role: 'read' | 'upload' | 'write' | 'admin'
+      version_action: 'get' | 'fail' | 'install' | 'uninstall'
     }
     CompositeTypes: {
       match_plan: {

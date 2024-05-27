@@ -134,13 +134,6 @@ export async function checkKey(supabase: SupabaseClient<Database>, apikey: strin
   }
 }
 
-export async function isGoodPlan(supabase: SupabaseClient<Database>, userId: string): Promise<boolean> {
-  const { data } = await supabase
-    .rpc('is_good_plan_v5', { userid: userId })
-    .single()
-  return data || false
-}
-
 export async function isPayingOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
     .rpc('is_paying_org', { orgid: orgId })
