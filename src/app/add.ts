@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 import mime from 'mime'
@@ -106,7 +105,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
         contentType: iconType,
       })
     if (error) {
-      console.log(error)
+      console.error(error)
       p.log.error(`Could not add app ${formatError(error)}`)
       program.error('')
     }

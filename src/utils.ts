@@ -537,8 +537,19 @@ async function finishMultipartDownload(key: string, uploadId: string, url: strin
 }
 
 const PART_SIZE = 10 * 1024 * 1024
-export async function uploadMultipart(supabase: SupabaseClient<Database>, appId: string, name: string, data: Buffer): Promise<boolean> {
+export async function uploadMultipart(supabase: SupabaseClient<Database>, appId: string, name: string, data: Buffer, orgId: string): Promise<boolean> {
   try {
+    const snag = useLogSnag()
+    await snag.track({
+      channel: 'app',
+      event: 'App Multipart Prepare',
+      icon: '⏫',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+      },
+      notify: false,
+    }).catch()
     const multipartPrep = await prepareMultipart(supabase, appId, name)
     if (!multipartPrep) {
       // Just pass the error
@@ -555,6 +566,16 @@ export async function uploadMultipart(supabase: SupabaseClient<Database>, appId:
 
     await finishMultipartDownload(multipartPrep.key, multipartPrep.uploadId, multipartPrep.url, parts)
 
+    await snag.track({
+      channel: 'app',
+      event: 'App Multipart done',
+      icon: '⏫',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+      },
+      notify: false,
+    }).catch()
     return true
   }
   catch (e) {

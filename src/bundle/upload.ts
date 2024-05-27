@@ -387,7 +387,7 @@ It will be also visible in your dashboard\n`)
 
     try {
       if (options.multipart !== undefined && options.multipart) {
-        await uploadMultipart(supabase, appid, bundle, zipped)
+        await uploadMultipart(supabase, appid, bundle, zipped, orgId)
       }
       else {
         const url = await uploadUrl(supabase, appid, bundle)
