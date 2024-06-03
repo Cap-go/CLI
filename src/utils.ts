@@ -27,7 +27,7 @@ export type ArrayElement<ArrayType extends readonly unknown[]> =
   ArrayType extends readonly (infer ElementType)[] ? ElementType : never
 export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v5']['Returns']>
 
-export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/
+export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
 
 export interface OptionsBase {
@@ -74,7 +74,7 @@ export async function getLocalConfig() {
     }
   }
 }
-
+// eslint-disable-next-line regexp/no-unused-capturing-group
 const nativeFileRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
 
 interface CapgoConfig {
@@ -319,10 +319,13 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
     if (dirent.isDirectory()
       && !dirent.name.startsWith('.')
       && !dirent.name.startsWith('node_modules')
-      && !dirent.name.startsWith('dist'))
+      && !dirent.name.startsWith('dist')) {
       yield * getFiles(res)
-    else
+    }
+
+    else {
       yield res
+    }
   }
 }
 
@@ -411,6 +414,7 @@ export async function findBuildCommandForProjectType(projectType: string) {
 }
 
 export async function findMainFile() {
+  // eslint-disable-next-line regexp/no-unused-capturing-group
   const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
   // search for main.ts or main.js in local dir and subdirs
   let mainFile = ''

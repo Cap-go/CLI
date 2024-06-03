@@ -395,7 +395,6 @@ It will be also visible in your dashboard\n`)
           p.log.error(`Cannot get upload url`)
           program.error('')
         }
-        console.log('url', url)
         await ky.put(url, {
           timeout: options.timeout || UPLOAD_TIMEOUT,
           retry: 5,
