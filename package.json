@@ -78,7 +78,7 @@
     "@typescript-eslint/eslint-plugin": "^7.8.0",
     "@typescript-eslint/parser": "^7.8.0",
     "esbuild": "^0.21.2",
-    "eslint": "9.1.1",
+    "eslint": "9.4.0",
     "git-format-staged": "3.1.1",
     "husky": "^9.0.11",
     "pkg": "5.8.1",
