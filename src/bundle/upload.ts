@@ -8,7 +8,7 @@ import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
-import ky from 'ky'
+import ky, { HTTPError } from 'ky'
 import {
   PutObjectCommand,
   S3Client,
@@ -395,7 +395,7 @@ It will be also visible in your dashboard\n`)
           p.log.error(`Cannot get upload url`)
           program.error('')
         }
-
+        console.log('url', url)
         await ky.put(url, {
           timeout: options.timeout || UPLOAD_TIMEOUT,
           retry: 5,
@@ -415,6 +415,11 @@ It will be also visible in your dashboard\n`)
       const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
       spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
       p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
+      if (errorUpload instanceof HTTPError) {
+        const body = await errorUpload.response.text()
+        p.log.error(`Response: ${formatError(body)}`)
+        program.error('')
+      }
       // call delete version on path /delete_failed_version to delete the version
       await deletedFailedVersion(supabase, appid, bundle)
       program.error('')
