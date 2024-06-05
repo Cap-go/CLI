@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.11](https://github.com/Cap-go/CLI/compare/v4.10.10...v4.10.11) (2024-06-05)
+
+
+### Bug Fixes
+
+* rename method to get id ([60fa77b](https://github.com/Cap-go/CLI/commit/60fa77b69ceb5f540357856ed9f3a886e0641337))
+
 ### [4.10.10](https://github.com/Cap-go/CLI/compare/v4.10.9...v4.10.10) (2024-06-03)
 
 
