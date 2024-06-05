@@ -294,12 +294,11 @@ program
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
 
-const user = program
-  .command('user')
-  .description('Manage user')
+const account = program
+  .command('account')
+  .description('Manage account')
 
-user.command('account')
-  .alias('a')
+account.command('id')
   .description('Get your account ID')
   .action(getUserId)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
