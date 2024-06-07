@@ -284,13 +284,13 @@ async function step9(orgId: string, snag: LogSnag) {
   await markStep(orgId, snag, 9)
 }
 
-async function _step10(orgId: string, snag: LogSnag, supabase: SupabaseClient<Database>, appId: string) {
+async function step10(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
     p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
-    p.log.info('Waiting...')
-    await waitLog('onboarding-v2', supabase, appId, snag, orgId)
+    p.log.info('Waiting... (there is a usual delay of 15 seconds until the backend process the logs)')
+    await waitLog('onboarding-v2', apikey, appId, snag, orgId)
   }
   else {
     const appIdUrl = convertAppName(appId)
@@ -331,7 +331,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   await step7(orgId, snag, apikey, appId)
   await step8(orgId, snag, apikey, appId)
   await step9(orgId, snag)
-  // await step10(orgId, snag, supabase, appId)
+  await step10(orgId, snag, apikey, appId)
 
   await markStep(orgId, snag, 0)
   p.log.info(`Welcome onboard ✈️!`)

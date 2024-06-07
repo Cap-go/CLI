@@ -1,4 +1,5 @@
 import process from 'node:process'
+import ky from 'ky'
 import * as p from '@clack/prompts'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { program } from 'commander'
@@ -6,7 +7,7 @@ import type LogSnag from 'logsnag'
 import type { Database } from '../types/supabase.types'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { OrganizationPerm, convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -46,18 +47,36 @@ interface QueryStats {
   devicesId?: string[]
   search?: string
   order?: Order[]
-  rangeStart?: number
-  rangeEnd?: number
-  after?: string
+  rangeStart?: string
+  rangeEnd?: string
+  limit?: number
 }
-
-export async function getStats(supabase: SupabaseClient<Database>, query: QueryStats): Promise<Database['public']['Tables']['stats']['Row'] | null> {
+interface LogData {
+  app_id: string
+  device_id: string
+  action: Database['public']['Enums']['stats_action']
+  version_id: number
+  version?: number
+  created_at: string
+}
+export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData | null> {
   try {
-    const pathStats = 'private/stats'
-    const res = await supabase.functions.invoke(pathStats, { body: JSON.stringify(query) })
-    const listData = res.data.data as Database['public']['Tables']['stats']['Row'][]
-    if (listData?.length > 0)
-      return listData[0]
+    const defaultApiHostPreprod = 'https://api-preprod.capgo.app'
+    const dataD = await ky
+      .post(`${defaultApiHostPreprod}/private/stats`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': apikey,
+        },
+        body: JSON.stringify(query),
+      })
+      .then(res => res.json<LogData[]>())
+      .catch((err) => {
+        console.error('Cannot get devices', err)
+        return [] as LogData[]
+      })
+    if (dataD?.length > 0 && (after === null || after !== dataD[0].created_at))
+      return dataD[0]
   }
   catch (error) {
     p.log.error(`Cannot get stats ${formatError(error)}`)
@@ -65,9 +84,8 @@ export async function getStats(supabase: SupabaseClient<Database>, query: QueryS
   return null
 }
 
-export async function waitLog(channel: string, supabase: SupabaseClient<Database>, appId: string, snag: LogSnag, orgId: string, deviceId?: string) {
+export async function waitLog(channel: string, apikey: string, appId: string, snag: LogSnag, orgId: string, deviceId?: string) {
   let loop = true
-  let now = new Date().toISOString()
   const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
   const baseUrl = `${config.hostWeb}/app/p/${appIdUrl}`
@@ -79,14 +97,14 @@ export async function waitLog(channel: string, supabase: SupabaseClient<Database
       key: 'created_at',
       sortable: 'desc',
     }],
-    rangeStart: 0,
-    rangeEnd: 1,
-    after: now,
+    limit: 1,
+    rangeStart: new Date().toISOString(),
   }
+  let after: string | null = null
   while (loop) {
-    const data = await getStats(supabase, query)
-    //   console.log('data', data)
+    const data = await getStats(apikey, query, after)
     if (data) {
+      after = data.created_at
       p.log.info(`Log from Device: ${data.device_id}`)
       if (data.action === 'get') {
         p.log.info('Update Sent your your device, wait until event download complete')
@@ -122,7 +140,7 @@ export async function waitLog(channel: string, supabase: SupabaseClient<Database
         p.log.error('Your bundle is missing, please check how you build your app ')
       }
       else if (data.action === 'noNew') {
-        p.log.error(`Your version in ${data.platform} is the same as your version uploaded, change it to see the update`)
+        p.log.error(`Your version in ${data.device_id} is the same as your version uploaded, change it to see the update`)
       }
       else if (data.action === 'disablePlatformIos') {
         p.log.error(`iOS is disabled  in the default channel and your device is an iOS device ${baseUrl}`)
@@ -166,10 +184,8 @@ export async function waitLog(channel: string, supabase: SupabaseClient<Database
       else {
         p.log.error(`Log from Capgo ${data.action}`)
       }
-      now = new Date().toISOString()
-      query.after = now
     }
-    await wait(1000)
+    await wait(5000)
   }
   return Promise.resolve()
 }
@@ -208,8 +224,8 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   await cancelCommand('debug', doRun, userId, snag)
   if (doRun) {
     p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
-    p.log.info('Waiting...')
-    await waitLog('debug', supabase, appId, snag, orgId, deviceId)
+    p.log.info('Waiting... (there is a usual delay of 15 seconds until the backend process the logs)')
+    await waitLog('debug', options.apikey, appId, snag, orgId, deviceId)
     p.outro(`Done ✅`)
   }
   else {
