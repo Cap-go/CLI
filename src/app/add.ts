@@ -48,7 +48,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
 
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
@@ -111,7 +111,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
     }
     const { data: signedURLData } = await supabase
       .storage
-      .from(`images/${userId}/${appId}`)
+      .from(`images/org/${organizationUid}/${appId}`)
       .getPublicUrl(fileName)
     signedURL = signedURLData?.publicUrl || signedURL
   }

@@ -73,6 +73,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     p.log.error('Could not delete app logo')
   }
 
+  // TODO: make the version delete in R2 too
   const { error: delError } = await supabase
     .storage
     .from(`apps/${appId}/${userId}`)

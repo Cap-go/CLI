@@ -6,7 +6,7 @@ import { program } from 'commander'
 import * as p from '@clack/prompts'
 import type { Options } from '../api/app'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganization, verifyUser } from '../utils'
 
 export async function setApp(appId: string, options: Options) {
   p.intro(`Set app`)
@@ -23,6 +23,8 @@ export async function setApp(appId: string, options: Options) {
     program.error(``)
   }
   const supabase = await createSupabaseClient(options.apikey)
+  const organization = await getOrganization(supabase, ['admin', 'super_admin'])
+  const organizationUid = organization.gid
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
   // Check we have app access to this appId
@@ -61,7 +63,7 @@ export async function setApp(appId: string, options: Options) {
   }
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/${userId}/${appId}`)
+      .from(`images/org/${organizationUid}/${appId}`)
       .upload(fileName, iconBuff, {
         contentType: iconType,
       })
@@ -71,7 +73,7 @@ export async function setApp(appId: string, options: Options) {
     }
     const { data: signedURLData } = await supabase
       .storage
-      .from(`images/${userId}/${appId}`)
+      .from(`images/org/${organizationUid}/${appId}`)
       .getPublicUrl(fileName)
     signedURL = signedURLData?.publicUrl || signedURL
   }
