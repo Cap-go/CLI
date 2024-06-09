@@ -319,19 +319,27 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
 
-  await markStep(orgId, snag, 1)
+  try {
+    await markStep(orgId, snag, 1)
 
-  await step2(organization, snag, appId, options)
-  await step3(orgId, snag, apikey, appId)
-  await step4(orgId, snag, apikey, appId)
-  await step5(orgId, snag, apikey, appId)
-  await step6(orgId, snag, apikey, appId)
-  await step7(orgId, snag, apikey, appId)
-  await step8(orgId, snag, apikey, appId)
-  await step9(orgId, snag)
-  await step10(orgId, snag, apikey, appId)
+    await step2(organization, snag, appId, options)
+    await step3(orgId, snag, apikey, appId)
+    await step4(orgId, snag, apikey, appId)
+    await step5(orgId, snag, apikey, appId)
+    await step6(orgId, snag, apikey, appId)
+    await step7(orgId, snag, apikey, appId)
+    await step8(orgId, snag, apikey, appId)
+    await step9(orgId, snag)
+    await step10(orgId, snag, apikey, appId)
 
-  await markStep(orgId, snag, 0)
+    await markStep(orgId, snag, 0)
+  }
+  catch (e) {
+    console.error(e)
+    p.log.error(`Error during onboarding, please try again later`)
+    process.exit(1)
+  }
+
   p.log.info(`Welcome onboard ✈️!`)
   p.log.info(`Your Capgo update system is setup`)
   p.log.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
