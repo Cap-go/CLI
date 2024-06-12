@@ -403,7 +403,6 @@ It will be also visible in your dashboard\n`)
             ? {
                 'Content-Type': 'application/octet-stream',
                 'Cache-Control': 'public, max-age=456789, immutable',
-                'x-amz-meta-crc32': checksum,
               }
             : undefined),
         })
