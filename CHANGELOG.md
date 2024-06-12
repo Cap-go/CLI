@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.15](https://github.com/Cap-go/CLI/compare/v4.10.14...v4.10.15) (2024-06-12)
+
+
+### Bug Fixes
+
+* remove crc32 from presigned ([fb1c6b6](https://github.com/Cap-go/CLI/commit/fb1c6b62571c47f204f05b4dbf5d903fc2fc9d65))
+
 ### [4.10.14](https://github.com/Cap-go/CLI/compare/v4.10.13...v4.10.14) (2024-06-09)
 
 
