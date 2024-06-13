@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.17](https://github.com/Cap-go/CLI/compare/v4.10.16...v4.10.17) (2024-06-13)
+
+
+### Bug Fixes
+
+* remove old userId ([b263deb](https://github.com/Cap-go/CLI/commit/b263debe9b13fd68841c3a176f660863160a3872))
+
 ### [4.10.16](https://github.com/Cap-go/CLI/compare/v4.10.15...v4.10.16) (2024-06-13)
 
 
