@@ -416,7 +416,6 @@ It will be also visible in your dashboard\n`)
       if (errorUpload instanceof HTTPError) {
         const body = await errorUpload.response.text()
         p.log.error(`Response: ${formatError(body)}`)
-        program.error('')
       }
       // call delete version on path /delete_failed_version to delete the version
       await deletedFailedVersion(supabase, appid, bundle)
