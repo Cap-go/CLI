@@ -20,11 +20,11 @@ interface Options extends OptionsBase {
 
 const prompt = promptSync()
 
-async function removeVersions(toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient<Database>, appid: string, userId: string) {
+async function removeVersions(toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient<Database>, appid: string) {
   // call deleteSpecificVersion one by one from toRemove sync
   for await (const row of toRemove) {
     p.log.warn(`Removing ${row.name} created on ${(getHumanDate(row.created_at))}`)
-    await deleteSpecificVersion(supabase, appid, userId, row.name)
+    await deleteSpecificVersion(supabase, appid, row.name)
   }
 }
 
@@ -57,14 +57,14 @@ export async function cleanupBundle(appid: string, options: Options) {
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.write)
   p.log.info(`Querying all available versions in Capgo`)
 
   // Get all active app versions we might possibly be able to cleanup
-  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await getActiveAppVersions(supabase, appid, userId)
+  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await getActiveAppVersions(supabase, appid)
 
   const versionInUse = await getChannelsVersion(supabase, appid)
 
@@ -121,7 +121,7 @@ export async function cleanupBundle(appid: string, options: Options) {
 
   // Yes, lets clean it up
   p.log.success('You have confirmed removal, removing versions now')
-  await removeVersions(toRemove, supabase, appid, userId)
+  await removeVersions(toRemove, supabase, appid)
   p.outro(`Done ✅`)
   process.exit()
 }

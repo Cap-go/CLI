@@ -24,7 +24,7 @@ export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid
   }
 }
 
-export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, appid: string, _userId: string, bundle: string) {
+export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, appid: string, bundle: string) {
   const versionData = await getVersionData(supabase, appid, bundle)
   await checkVersionNotUsedInChannel(supabase, appid, versionData)
   await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData)
@@ -55,12 +55,11 @@ export function displayBundles(data: (Database['public']['Tables']['app_versions
   p.log.success(t.render())
 }
 
-export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string, _userId: string) {
+export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string) {
   const { data, error: vError } = await supabase
     .from('app_versions')
     .select()
     .eq('app_id', appid)
-    // .eq('user_id', userId)
     .eq('deleted', false)
     .order('created_at', { ascending: false })
 

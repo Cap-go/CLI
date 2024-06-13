@@ -25,7 +25,7 @@ export async function listBundle(appId: string, options: OptionsBase) {
 
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
+  await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
   p.log.info(`Querying available versions of: ${appId} in Capgo`)
 
@@ -33,7 +33,7 @@ export async function listBundle(appId: string, options: OptionsBase) {
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   // Get all active app versions we might possibly be able to cleanup
-  const allVersions = await getActiveAppVersions(supabase, appId, userId)
+  const allVersions = await getActiveAppVersions(supabase, appId)
 
   p.log.info(`Active versions in Capgo: ${allVersions?.length}`)
 

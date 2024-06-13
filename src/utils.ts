@@ -589,7 +589,7 @@ export async function deletedFailedVersion(supabase: SupabaseClient<Database>, a
   try {
     const pathFailed = 'private/delete_failed_version'
     const res = await supabase.functions.invoke(pathFailed, { body: JSON.stringify(data), method: 'DELETE' })
-    return res.data.url
+    return res.data.status
   }
   catch (error) {
     p.log.error(`Cannot delete failed version ${formatError(error)}`)
