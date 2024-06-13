@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.16](https://github.com/Cap-go/CLI/compare/v4.10.15...v4.10.16) (2024-06-13)
+
+
+### Bug Fixes
+
+* issue auto delete failed ([62fef1d](https://github.com/Cap-go/CLI/commit/62fef1dd5816c9c9781002d68f9566bbcace8e0f))
+
 ### [4.10.15](https://github.com/Cap-go/CLI/compare/v4.10.14...v4.10.15) (2024-06-12)
 
 
