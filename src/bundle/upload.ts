@@ -387,6 +387,7 @@ It will be also visible in your dashboard\n`)
 
     try {
       if (options.multipart !== undefined && options.multipart) {
+        p.log.info(`Uploading bundle as multipart`)
         await uploadMultipart(supabase, appid, bundle, zipped, orgId)
       }
       else {
@@ -399,12 +400,13 @@ It will be also visible in your dashboard\n`)
           timeout: options.timeout || UPLOAD_TIMEOUT,
           retry: 5,
           body: zipped,
-          headers: (!localS3
-            ? {
-                'Content-Type': 'application/octet-stream',
-                'Cache-Control': 'public, max-age=456789, immutable',
-              }
-            : undefined),
+          // TODO: add back when r2 is working again
+          // headers: (!localS3
+          //   ? {
+          //       'Content-Type': 'application/octet-stream',
+          //       'Cache-Control': 'public, max-age=456789, immutable',
+          //     }
+          //   : undefined),
         })
       }
     }
