@@ -2,6 +2,8 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.19](https://github.com/Cap-go/CLI/compare/v4.10.18...v4.10.19) (2024-06-18)
+
 ### [4.10.18](https://github.com/Cap-go/CLI/compare/v4.10.17...v4.10.18) (2024-06-17)
 
 
