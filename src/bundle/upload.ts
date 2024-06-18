@@ -400,13 +400,12 @@ It will be also visible in your dashboard\n`)
           timeout: options.timeout || UPLOAD_TIMEOUT,
           retry: 5,
           body: zipped,
-          // TODO: add back when r2 is working again
-          // headers: (!localS3
-          //   ? {
-          //       'Content-Type': 'application/octet-stream',
-          //       'Cache-Control': 'public, max-age=456789, immutable',
-          //     }
-          //   : undefined),
+          headers: (!localS3
+            ? {
+                'Content-Type': 'application/octet-stream',
+                'Cache-Control': 'public, max-age=456789, immutable',
+              }
+            : undefined),
         })
       }
     }
