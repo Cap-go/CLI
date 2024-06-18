@@ -100,8 +100,6 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   channel = channel || 'dev'
 
   const config = await getConfig()
-  const localS3: boolean = (config?.app?.extConfig?.plugins && config?.app?.extConfig?.plugins?.CapacitorUpdater
-    && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localS3) === true
 
   const checkNotifyAppReady = options.codeCheck
   appid = appid || config?.app?.appId
@@ -400,12 +398,6 @@ It will be also visible in your dashboard\n`)
           timeout: options.timeout || UPLOAD_TIMEOUT,
           retry: 5,
           body: zipped,
-          headers: (!localS3
-            ? {
-                'Content-Type': 'application/octet-stream',
-                'Cache-Control': 'public, max-age=456789, immutable',
-              }
-            : undefined),
         })
       }
     }
