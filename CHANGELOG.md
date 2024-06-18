@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.20](https://github.com/Cap-go/CLI/compare/v4.10.19...v4.10.20) (2024-06-18)
+
+
+### Bug Fixes
+
+* lint issue ([df7867b](https://github.com/Cap-go/CLI/commit/df7867ba88b1c87a2a123caae68b5b9c4505487e))
+
 ### [4.10.19](https://github.com/Cap-go/CLI/compare/v4.10.18...v4.10.19) (2024-06-18)
 
 ### [4.10.18](https://github.com/Cap-go/CLI/compare/v4.10.17...v4.10.18) (2024-06-17)
