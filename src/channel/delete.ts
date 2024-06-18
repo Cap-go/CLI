@@ -4,7 +4,7 @@ import * as p from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
   p.intro(`Delete channel`)
@@ -29,7 +29,11 @@ export async function deleteChannel(channelId: string, appId: string, options: O
 
   p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
   try {
-    await delChannel(supabase, channelId, appId, userId)
+    const deleteStatus = await delChannel(supabase, channelId, appId, userId)
+    if (deleteStatus.error) {
+      p.log.error(`Cannot delete Channel 🙀 ${formatError(deleteStatus.error)}`)
+      program.error('')
+    }
     const orgId = await getOrganizationId(supabase, appId)
     p.log.success(`Channel deleted`)
     await snag.track({
