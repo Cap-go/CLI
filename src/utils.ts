@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import { homedir } from 'node:os'
+import os, { homedir } from 'node:os'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
@@ -15,6 +15,8 @@ import { promiseFiles } from 'node-dir'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
+import AdmZip from 'adm-zip'
+import isWsl from 'is-wsl'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -514,6 +516,17 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
     p.log.error(`Cannot get upload url ${formatError(error)}`)
     return null
   }
+}
+
+export function zipFile(filePath: string) {
+  //  if windows and not wsl then do error
+  if (os.release().toLowerCase().includes('microsoft') && !isWsl) {
+    p.log.error(`Windows powershell is not supported, please use WSL or a Linux distribution`)
+    program.error('')
+  }
+  const zip = new AdmZip()
+  zip.addLocalFolder(filePath)
+  return zip.toBuffer()
 }
 
 async function finishMultipartDownload(key: string, uploadId: string, url: string, parts: any[]) {

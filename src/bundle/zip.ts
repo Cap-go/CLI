@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { writeFileSync } from 'node:fs'
 import process from 'node:process'
-import AdmZip from 'adm-zip'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
@@ -14,6 +13,7 @@ import {
   getConfig,
   regexSemver,
   useLogSnag,
+  zipFile,
 } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 
@@ -78,9 +78,7 @@ export async function zipBundle(appId: string, options: Options) {
       program.error('')
     }
   }
-  const zip = new AdmZip()
-  zip.addLocalFolder(path)
-  const zipped = zip.toBuffer()
+  const zipped = zipFile(path)
   if (!json)
     p.log.info(`Zipped ${zipped.byteLength} bytes`)
   const s = p.spinner()

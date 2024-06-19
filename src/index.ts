@@ -1,6 +1,6 @@
 import { program } from 'commander'
-import { getUserId } from 'user/account'
 import pack from '../package.json'
+import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
 import { listBundle } from './bundle/list'

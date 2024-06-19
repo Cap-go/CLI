@@ -3,7 +3,6 @@ import { existsSync, readFileSync } from 'node:fs'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { performance } from 'node:perf_hooks'
-import AdmZip from 'adm-zip'
 import { program } from 'commander'
 import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
@@ -43,6 +42,7 @@ import {
   uploadUrl,
   useLogSnag,
   verifyUser,
+  zipFile,
 } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 
@@ -256,9 +256,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   let checksum = ''
   let zipped: Buffer | null = null
   if (!external && useS3 === false) {
-    const zip = new AdmZip()
-    zip.addLocalFolder(path)
-    zipped = zip.toBuffer()
+    zipped = zipFile(path)
     const s = p.spinner()
     s.start(`Calculating checksum`)
     checksum = await getChecksum(zipped, 'crc32')
@@ -331,9 +329,7 @@ It will be also visible in your dashboard\n`)
   }
   else {
     if (useS3) {
-      const zip = new AdmZip()
-      zip.addLocalFolder(path)
-      zipped = zip.toBuffer()
+      zipped = zipFile(path)
       const s = p.spinner()
       s.start(`Calculating checksum`)
       checksum = await getChecksum(zipped, 'crc32')
