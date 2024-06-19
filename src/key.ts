@@ -76,8 +76,8 @@ export async function createKey(options: Options, log = true) {
 
   // check if baseName already exist
   if (existsSync(baseKeyPub) && !options.force) {
+    p.log.error('Public Key already exists, use --force to overwrite')
     if (log) {
-      p.log.error('Public Key already exists, use --force to overwrite')
       program.error('')
     }
     else {
@@ -86,8 +86,8 @@ export async function createKey(options: Options, log = true) {
   }
   writeFileSync(baseKeyPub, publicKey)
   if (existsSync(baseKey) && !options.force) {
+    p.log.error('Private Key already exists, use --force to overwrite')
     if (log) {
-      p.log.error('Private Key already exists, use --force to overwrite')
       program.error('')
     }
     else {
