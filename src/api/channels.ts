@@ -51,7 +51,13 @@ export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: st
     .eq('app_id', appId)
     .eq('name', 'unknown')
     .throwOnError()
-    .single().then(({ data }) => data)
+    .single().then(({ data, error }) => {
+      if (error) {
+        p.log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
+        program.error('')
+      }
+      return data
+    })
 }
 
 export function createChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {

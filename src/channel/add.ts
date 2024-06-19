@@ -4,7 +4,7 @@ import * as p from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { createChannel, findUnknownVersion } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   default?: boolean
@@ -39,12 +39,18 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       p.log.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`)
       program.error('')
     }
-    await createChannel(supabase, {
+    const res = await createChannel(supabase, {
       name: channelId,
       app_id: appId,
       version: data.id,
       owner_org: orgId,
     })
+
+    if (res.error) {
+      p.log.error(`Cannot create Channel 🙀\n${formatError(res.error)}`)
+      program.error('')
+    }
+
     p.log.success(`Channel created ✅`)
     await snag.track({
       channel: 'channel',

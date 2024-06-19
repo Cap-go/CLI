@@ -51,7 +51,7 @@ async function step2(organization: Organization, snag: LogSnag, appId: string, o
       s.stop(`App add Done ✅`)
   }
   else {
-    p.log.info(`Run yourself "${pm.runner} @capgo/cli@latest app add ${appId}"`)
+    p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
   await markStep(organization.gid, snag, 2)
 }
@@ -74,7 +74,7 @@ async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop(`Channel add Done ✅`)
   }
   else {
-    p.log.info(`Run yourself "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
+    p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
   await markStep(orgId, snag, 3)
 }
@@ -126,7 +126,7 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
     }
   }
   else {
-    p.log.info(`Run yourself "${pm.installCommand} @capgo/capacitor-updater@latest"`)
+    p.log.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
   await markStep(orgId, snag, 4)
 }
@@ -277,7 +277,7 @@ async function step9(orgId: string, snag: LogSnag) {
     s.stop(`Started Done ✅`)
   }
   else {
-    p.log.info(`Run yourself with command: ${pm.runner} cap run <ios|android>`)
+    p.log.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
   await markStep(orgId, snag, 9)
 }
