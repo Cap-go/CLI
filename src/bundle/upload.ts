@@ -401,7 +401,7 @@ It will be also visible in your dashboard\n`)
       const endTime = performance.now()
       const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
       spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-      p.log.error(`Cannot upload bundle ${formatError(errorUpload)}`)
+      p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
       if (errorUpload instanceof HTTPError) {
         const body = await errorUpload.response.text()
         p.log.error(`Response: ${formatError(body)}`)
