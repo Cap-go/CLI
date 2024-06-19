@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.22](https://github.com/Cap-go/CLI/compare/v4.10.21...v4.10.22) (2024-06-19)
+
+
+### Bug Fixes
+
+* disable windows powershell ([83d0c6a](https://github.com/Cap-go/CLI/commit/83d0c6a61c5085aefc3a1a7f5567cda2fd629469))
+
 ### [4.10.21](https://github.com/Cap-go/CLI/compare/v4.10.20...v4.10.21) (2024-06-18)
 
 
