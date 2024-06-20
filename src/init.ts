@@ -1,10 +1,12 @@
-import { readFileSync, writeFileSync } from 'node:fs'
+import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
+import { tmpdir } from 'node:os'
 import * as p from '@clack/prompts'
 import type LogSnag from 'logsnag'
 import semver from 'semver'
+import tmp from 'tmp'
 import { markSnag, waitLog } from './app/debug'
 import { createKey } from './key'
 import { addChannel } from './channel/add'
@@ -25,6 +27,63 @@ const codeInject = 'CapacitorUpdater.notifyAppReady()'
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
+
+let tmpObject: tmp.FileResult['name'] | undefined
+
+function readTmpObj() {
+  if (!tmpObject) {
+    tmpObject = readdirSync(tmp.tmpdir)
+      .map((name) => { return { name, full: `${tmp.tmpdir}/${name}` } })
+      .find(obj => obj.name.startsWith('capgocli'))?.full
+      ?? tmp.fileSync({ prefix: 'capgocli' }).name
+  }
+}
+
+function markStepDone(step: number) {
+  try {
+    readTmpObj()
+    writeFileSync(tmpObject!, JSON.stringify({ step_done: step }))
+  }
+  catch (err) {
+    p.log.error(`Cannot mark step as done in the CLI, error:\n${err}`)
+    p.log.warn('Onboarding will continue but please report it to the capgo team!')
+  }
+}
+
+async function readStepsDone(orgId: string, snag: LogSnag): Promise<number | undefined> {
+  try {
+    readTmpObj()
+    const rawData = readFileSync(tmpObject!, 'utf-8')
+    if (!rawData || rawData.length === 0)
+      return undefined
+
+    const { step_done } = JSON.parse(rawData)
+    p.log.info(`You have already got to the step ${step_done}/10 in the previous session`)
+    const skipSteps = await p.confirm({ message: 'Would you like to continue from where you left off?' })
+    await cancelCommand(skipSteps, orgId, snag)
+    if (skipSteps)
+      return step_done
+    return undefined
+  }
+  catch (err) {
+    p.log.error(`Cannot read which steps have been compleated, error:\n${err}`)
+    p.log.warn('Onboarding will continue but please report it to the capgo team!')
+    return undefined
+  }
+}
+
+function cleanupStepsDone() {
+  if (!tmpObject) {
+    return
+  }
+
+  try {
+    rmSync(tmpObject)
+  }
+  catch (err) {
+    p.log.error(`Cannot delete the tmp steps file.\nError: ${err}`)
+  }
+}
 
 async function cancelCommand(command: boolean | symbol, orgId: string, snag: LogSnag) {
   if (p.isCancel(command)) {
@@ -319,20 +378,55 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
 
+  const stepToSkip = await readStepsDone(orgId, snag) ?? 0
+
   try {
-    await markStep(orgId, snag, 1)
+    if (stepToSkip < 1)
+      await markStep(orgId, snag, 1)
 
-    await step2(organization, snag, appId, options)
-    await step3(orgId, snag, apikey, appId)
-    await step4(orgId, snag, apikey, appId)
-    await step5(orgId, snag, apikey, appId)
-    await step6(orgId, snag, apikey, appId)
-    await step7(orgId, snag, apikey, appId)
-    await step8(orgId, snag, apikey, appId)
-    await step9(orgId, snag)
+    if (stepToSkip < 2) {
+      await step2(organization, snag, appId, options)
+      markStepDone(2)
+    }
+
+    if (stepToSkip < 3) {
+      await step3(orgId, snag, apikey, appId)
+      markStepDone(3)
+    }
+
+    if (stepToSkip < 4) {
+      await step4(orgId, snag, apikey, appId)
+      markStepDone(4)
+    }
+
+    if (stepToSkip < 5) {
+      await step5(orgId, snag, apikey, appId)
+      markStepDone(5)
+    }
+
+    if (stepToSkip < 6) {
+      await step6(orgId, snag, apikey, appId)
+      markStepDone(6)
+    }
+
+    if (stepToSkip < 7) {
+      await step7(orgId, snag, apikey, appId)
+      markStepDone(7)
+    }
+
+    if (stepToSkip < 8) {
+      await step8(orgId, snag, apikey, appId)
+      markStepDone(8)
+    }
+
+    if (stepToSkip < 9) {
+      await step9(orgId, snag)
+      markStepDone(9)
+    }
+
     await step10(orgId, snag, apikey, appId)
-
     await markStep(orgId, snag, 0)
+    cleanupStepsDone()
   }
   catch (e) {
     console.error(e)
