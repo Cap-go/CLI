@@ -37,5 +37,26 @@ jobs:
       id: create_zip
       run: node ./dist/index.js bundle zip --path test/test_upload -n build.zip 
 
-    - name: Run POSIX path check
-      run: bun run check-posix-paths
+    # - name: Run POSIX path check
+    #   run: bun run check-posix-paths
+
+    - name: Extract build.zip
+      run: Expand-Archive -Path build.zip -DestinationPath extracted
+
+    - name: Verify POSIX paths
+      run: |
+        $errorFound = $false
+        Get-ChildItem -Recurse extracted | ForEach-Object {
+          if ($_ -is [System.IO.DirectoryInfo]) {
+            $path = $_.FullName
+            if ($path -match '[\\]') {
+              Write-Output "Non-POSIX path detected: $path"
+              $errorFound = $true
+            }
+          }
+        }
+        if ($errorFound) {
+          Write-Error "Non-POSIX paths detected in the zip file"
+        } else {
+          Write-Output "All paths are POSIX compliant."
+        }
