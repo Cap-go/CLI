@@ -10,7 +10,11 @@ on:
 
 jobs:
   check-posix-paths:
-    runs-on: windows-latest
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      matrix:
+        os: [windows-2016, windows-2019, windows-2022]
 
     steps:
     - name: Checkout repository
