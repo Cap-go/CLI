@@ -1,0 +1,37 @@
+name: Check POSIX Paths in Zip File
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  check-posix-paths:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup bun
+      uses: oven-sh/setup-bun@v1.1.1
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      id: install_code
+      run: bun install --frozen-lockfile
+
+    - name: build code
+      id: build_code
+      run: bun run build
+
+    - name: Create a zip test
+      id: create_zip
+      run: node ./dist/index.js bundle zip --path test/test_upload -n build.zip 
+
+    - name: Run POSIX path check
+      run: bun run check-posix-paths
