@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.38](https://github.com/Cap-go/CLI/compare/v4.10.37...v4.10.38) (2024-06-21)
+
+
+### Bug Fixes
+
+* try artifact v4 and add java command ([1ba8907](https://github.com/Cap-go/CLI/commit/1ba8907eaf82f16f61eec4c5b8c5d1beacd7dbd2))
+
 ### [4.10.37](https://github.com/Cap-go/CLI/compare/v4.10.36...v4.10.37) (2024-06-21)
 
 ### [4.10.36](https://github.com/Cap-go/CLI/compare/v4.10.35...v4.10.36) (2024-06-21)
