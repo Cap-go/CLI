@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join as joinPath, resolve } from 'node:path'
+import { join, normalize, resolve } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { join as posixJoin } from 'node:path/posix'
@@ -527,17 +527,18 @@ export function zipFile(filePath: string) {
     const items = readdirSync(folderPath)
 
     for (const item of items) {
-      const itemPath = posixJoin(folderPath, item) // Always use posixJoin
+      const itemPath = join(folderPath, item)
       const stats = statSync(itemPath)
 
       if (stats.isFile()) {
         const fileContent = readFileSync(itemPath)
-        const posixPath = posixJoin(zipPath, item) // Always use posixJoin
+        // Normalize the item path and then use posixJoin to ensure POSIX paths
+        const posixPath = posixJoin(zipPath, normalize(item).replace(/\\/g, '/'))
         zip.addFile(posixPath, fileContent)
       }
       else if (stats.isDirectory()) {
         // Recursively add subdirectories and their contents to the ZIP archive
-        const subZipPath = posixJoin(zipPath, item) // Always use posixJoin
+        const subZipPath = posixJoin(zipPath, normalize(item).replace(/\\/g, '/'))
         addToZip(itemPath, subZipPath)
       }
     }
