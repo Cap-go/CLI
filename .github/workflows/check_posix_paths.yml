@@ -65,7 +65,7 @@ jobs:
 
     - name: Verify POSIX paths for Windows 2019 build
       run: |
-        unzip build-windows-2019.zip -d extracted-2019
+        unzip build-windows-2019 -d extracted-2019
         error_found=false
         find extracted-2019 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
@@ -82,7 +82,7 @@ jobs:
 
     - name: Verify POSIX paths for Windows 2022 build
       run: |
-        unzip build-windows-2022.zip -d extracted-2022
+        unzip build-windows-2022 -d extracted-2022
         error_found=false
         find extracted-2022 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
