@@ -256,7 +256,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   let checksum = ''
   let zipped: Buffer | null = null
   if (!external && useS3 === false) {
-    zipped = zipFile(path)
+    zipped = await zipFile(path)
     const s = p.spinner()
     s.start(`Calculating checksum`)
     checksum = await getChecksum(zipped, 'crc32')
@@ -329,7 +329,7 @@ It will be also visible in your dashboard\n`)
   }
   else {
     if (useS3) {
-      zipped = zipFile(path)
+      zipped = await zipFile(path)
       const s = p.spinner()
       s.start(`Calculating checksum`)
       checksum = await getChecksum(zipped, 'crc32')

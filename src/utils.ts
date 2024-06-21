@@ -18,6 +18,7 @@ import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
 // import isWsl from 'is-wsl'
+import JSZip from 'jszip'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -519,11 +520,11 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
   }
 }
 
-export function zipFile(filePath: string) {
-  const zip = new AdmZip()
+export async function zipFile(filePath: string): Promise<Buffer> {
+  const zip = new JSZip()
 
   // Helper function to recursively add files and folders to the ZIP archive
-  const addToZip = (folderPath: string, zipPath: string) => {
+  const addToZip = async (folderPath: string, zipPath: string) => {
     const items = readdirSync(folderPath)
 
     for (const item of items) {
@@ -531,28 +532,23 @@ export function zipFile(filePath: string) {
       const stats = statSync(itemPath)
 
       if (stats.isFile()) {
-        const fileContent = readFileSync(itemPath)
-        // Normalize the item path and then use posixJoin to ensure POSIX paths
-        const posixPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
-        // eslint-disable-next-line no-console
-        console.log('posixPath', posixPath)
-        zip.addFile(posixPath, fileContent)
+        const fileContent = await readFileSync(itemPath)
+        zip.file(join(zipPath, item), fileContent)
       }
       else if (stats.isDirectory()) {
-        // Recursively add subdirectories and their contents to the ZIP archive
-        const subZipPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
-        // eslint-disable-next-line no-console
-        console.log('subZipPath', subZipPath)
-        addToZip(itemPath, subZipPath)
+        await addToZip(itemPath, join(zipPath, item))
       }
     }
   }
 
   // Start adding files and folders to the ZIP archive
-  addToZip(filePath, '')
+  await addToZip(filePath, '')
 
-  return zip.toBuffer()
+  // Generate the ZIP file as a Buffer
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+  return zipBuffer
 }
+
 // export function zipFile(filePath: string) {
 //   //  if windows and not wsl then do error
 //   if (os.release().toLowerCase().includes('microsoft') && !isWsl) {
