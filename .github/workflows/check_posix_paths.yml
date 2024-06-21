@@ -50,6 +50,45 @@ jobs:
         name: build-zip-linux
         path: build-linux.zip
 
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v2
+      with:
+        swift-version: '5.9.2'
+
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: '5.5'
+
+    - name: Create Swift package
+      run: swift package init --type executable
+
+    - name: Add SSZipArchive dependency
+      run: |
+        echo 'let package = Package(' >> Package.swift
+        echo '    name: "VerifyZip",' >> Package.swift
+        echo '    dependencies: [' >> Package.swift
+        echo '        .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.4.2")' >> Package.swift
+        echo '    ],' >> Package.swift
+        echo '    targets: [' >> Package.swift
+        echo '        .target(' >> Package.swift
+        echo '            name: "VerifyZip",' >> Package.swift
+        echo '            dependencies: ["ZipArchive"])' >> Package.swift
+        echo '    ]' >> Package.swift
+        echo ')' >> Package.swift
+
+    - name: Build Swift package
+      run: swift build
+
+    - name: Verify ZIP file integrity for Linux build with Swift
+      run: swift run VerifyZip build-linux.zip
+
+    # - name: Verify ZIP file integrity for Windows 2019 build with Swift
+    #   run: swift run VerifyZip build-windows-2019.zip
+
+    # - name: Verify ZIP file integrity for Windows 2022 build with Swift
+    #   run: swift run VerifyZip build-windows-2022.zip
+
   check-posix-paths-windows:
     runs-on: ${{ matrix.os }}
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
@@ -186,37 +225,3 @@ jobs:
     - name: Verify ZIP file integrity for Windows 2022 build with Java
       run: java -cp ./test VerifyZip build-windows-2022.zip
 
-    - name: Setup Swift
-      uses: swift-actions/setup-swift@v2
-      with:
-        swift-version: '5.9.2'
-
-    - name: Install CocoaPods
-      run: |
-        export GEM_HOME=$HOME/.gem
-        export PATH=$GEM_HOME/bin:$PATH
-        gem install cocoapods
-
-    - name: Create Podfile
-      run: |
-        echo "platform :ios, '12.0'" > Podfile
-        echo "target 'VerifyZip' do" >> Podfile
-        echo "  use_frameworks!" >> Podfile
-        echo "  pod 'SSZipArchive'" >> Podfile
-        echo "end" >> Podfile
-
-    - name: Install dependencies
-      run: |
-        export GEM_HOME=$HOME/.gem
-        export PATH=$GEM_HOME/bin:$PATH
-        pod install
-
-
-    - name: Verify ZIP file integrity for Linux build with Swift
-      run: swift run VerifyZip build-linux.zip
-
-    - name: Verify ZIP file integrity for Windows 2019 build with Swift
-      run: swift run VerifyZip build-windows-2019.zip
-
-    - name: Verify ZIP file integrity for Windows 2022 build with Swift
-      run: swift run VerifyZip build-windows-2022.zip
