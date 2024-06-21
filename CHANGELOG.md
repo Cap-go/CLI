@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.51](https://github.com/Cap-go/CLI/compare/v4.10.50...v4.10.51) (2024-06-21)
+
+
+### Bug Fixes
+
+* add missing checkout ([5428a4f](https://github.com/Cap-go/CLI/commit/5428a4f6f4ccf92391433cc6b48eca75e1f92fa9))
+
 ### [4.10.50](https://github.com/Cap-go/CLI/compare/v4.10.49...v4.10.50) (2024-06-21)
 
 
