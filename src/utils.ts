@@ -531,8 +531,8 @@ export function zipFile(filePath: string) {
 
       if (stats.isFile()) {
         const fileContent = readFileSync(itemPath)
-        const relativePath = join(zipPath, item)
-        const posixPath = relativePath.split(sep).join('/')
+        // Use path.posix.join for consistent POSIX paths
+        const posixPath = join(zipPath, item)
         zip.addFile(posixPath, fileContent)
       }
       else if (stats.isDirectory()) {
