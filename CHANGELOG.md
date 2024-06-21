@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.75](https://github.com/Cap-go/CLI/compare/v4.10.74...v4.10.75) (2024-06-21)
+
+
+### Bug Fixes
+
+* delete ios setup for now as we cannot manage to make it work easy ([cadec4e](https://github.com/Cap-go/CLI/commit/cadec4ef73d19f85c511239d0155687256d7321e))
+
 ### [4.10.74](https://github.com/Cap-go/CLI/compare/v4.10.73...v4.10.74) (2024-06-21)
 
 
