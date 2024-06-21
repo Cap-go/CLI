@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.63](https://github.com/Cap-go/CLI/compare/v4.10.62...v4.10.63) (2024-06-21)
+
+
+### Bug Fixes
+
+* try to force posix ([5d0b446](https://github.com/Cap-go/CLI/commit/5d0b4465d0d49988c95d85b465efd88d3966077a))
+
 ### [4.10.62](https://github.com/Cap-go/CLI/compare/v4.10.61...v4.10.62) (2024-06-21)
 
 
