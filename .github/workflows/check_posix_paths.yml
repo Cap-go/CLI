@@ -55,11 +55,6 @@ jobs:
       with:
         swift-version: '5.9.2'
 
-    - name: Setup Swift
-      uses: swift-actions/setup-swift@v1
-      with:
-        swift-version: '5.5'
-
     - name: Create Swift package
       run: swift package init --type executable
 
