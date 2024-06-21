@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.28](https://github.com/Cap-go/CLI/compare/v4.10.27...v4.10.28) (2024-06-20)
+
+
+### Bug Fixes
+
+* lockfile issue ([a63b4eb](https://github.com/Cap-go/CLI/commit/a63b4eb53bf8959e3c839aa6297f5d181d2da576))
+* try another way to test posix ([9e7574d](https://github.com/Cap-go/CLI/commit/9e7574d24e54339b8f41de7958d5562682466088))
+
 ### [4.10.27](https://github.com/Cap-go/CLI/compare/v4.10.26...v4.10.27) (2024-06-20)
 
 
