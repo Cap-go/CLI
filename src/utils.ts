@@ -533,12 +533,12 @@ export function zipFile(filePath: string) {
       if (stats.isFile()) {
         const fileContent = readFileSync(itemPath)
         // Normalize the item path and then use posixJoin to ensure POSIX paths
-        const posixPath = posixJoin(zipPath, normalize(item).replace(/\\/g, '/'))
+        const posixPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
         zip.addFile(posixPath, fileContent)
       }
       else if (stats.isDirectory()) {
         // Recursively add subdirectories and their contents to the ZIP archive
-        const subZipPath = posixJoin(zipPath, normalize(item).replace(/\\/g, '/'))
+        const subZipPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
         addToZip(itemPath, subZipPath)
       }
     }
