@@ -9,7 +9,7 @@ on:
       - main
 
 jobs:
-  check-posix-paths:
+  check-posix-paths-windows:
     runs-on: ${{ matrix.os }}
 
     strategy:
@@ -45,6 +45,7 @@ jobs:
 
   check-posix-paths-unix:
     runs-on: ubuntu-latest
+    needs: check-posix-paths-windows
 
     steps:
     - name: Download build.zip artifact
