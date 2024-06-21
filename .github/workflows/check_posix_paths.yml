@@ -92,7 +92,6 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-zip-linux
-        path: build-linux.zip
 
     - name: List the files
       run: ls -lh
@@ -138,13 +137,14 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-zip-windows-2019
-        path: build-windows-2019.zip
 
     - name: Download build-windows-2022.zip artifact
       uses: actions/download-artifact@v4
       with:
         name: build-zip-windows-2022
-        path: build-windows-2022.zip
+
+    - name: List the files
+      run: ls -lh
 
     - name: Check file sizes of Windows builds
       run: |
