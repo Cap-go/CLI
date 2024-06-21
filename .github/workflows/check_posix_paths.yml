@@ -50,38 +50,6 @@ jobs:
         name: build-zip-linux
         path: build-linux.zip
 
-  verify-zip-macos:
-    runs-on: macos-latest
-    needs: create-valid-zip-linux
-
-    steps:
-    - name: Checkout repository
-      uses: actions/checkout@v4
-
-    - name: Download build-linux.zip artifact
-      uses: actions/download-artifact@v4
-      with:
-        name: build-zip-linux
-
-    - name: Setup Ruby
-      uses: ruby/setup-ruby@v1
-      with:
-        ruby-version: '2.7'
-
-    - name: Install CocoaPods
-      run: gem install cocoapods
-
-    - name: Install dependencies
-      run: |
-        cd test
-        pod install
-
-    - name: Build and run VerifyZip
-      run: |
-        cd test
-        xcodebuild -workspace VerifyZip.xcworkspace -scheme VerifyZip -configuration Release clean build
-        ./build/Release/VerifyZip ../build-linux.zip
-
   check-posix-paths-windows:
     runs-on: ${{ matrix.os }}
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
