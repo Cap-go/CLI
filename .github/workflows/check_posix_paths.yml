@@ -33,6 +33,16 @@ jobs:
       id: create_zip
       run: node ./dist/index.js bundle zip --path test/test_upload -n build-linux.zip
 
+    - name: Check build directory contents
+      run: |
+        echo "Listing contents of the build directory..."
+        ls -R ./dist
+
+    - name: Check ZIP file contents
+      run: |
+        echo "Listing contents of the ZIP file..."
+        unzip -l build-linux.zip
+
     - name: Upload build-linux.zip artifact
       uses: actions/upload-artifact@v4
       with:
