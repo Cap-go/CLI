@@ -68,17 +68,13 @@ jobs:
 
     - name: Verify ZIP file integrity for Windows 2019 build
       run: |
-        if ! unzip -tq /home/runner/work/CLI/CLI/build-windows-2019.zip; then
-          echo "ZIP file is corrupted: build-windows-2019.zip"
-          exit 1
-        fi
+        echo "Verifying ZIP file integrity for Windows 2019 build..."
+        zipinfo /home/runner/work/CLI/CLI/build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
 
     - name: Verify ZIP file integrity for Windows 2022 build
       run: |
-        if ! unzip -tq /home/runner/work/CLI/CLI/build-windows-2022.zip; then
-          echo "ZIP file is corrupted: build-windows-2022.zip"
-          exit 1
-        fi
+        echo "Verifying ZIP file integrity for Windows 2022 build..."
+        zipinfo /home/runner/work/CLI/CLI/build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
 
     - name: Verify POSIX paths for Windows 2019 build
       run: |
