@@ -37,26 +37,34 @@ jobs:
       id: create_zip
       run: node ./dist/index.js bundle zip --path test/test_upload -n build.zip 
 
-    # - name: Run POSIX path check
-    #   run: bun run check-posix-paths
+    - name: Upload build.zip artifact
+      uses: actions/upload-artifact@v2
+      with:
+        name: build-zip
+        path: build.zip
 
-    - name: Extract build.zip
-      run: Expand-Archive -Path build.zip -DestinationPath extracted
+  check-posix-paths-unix:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download build.zip artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: build-zip
 
     - name: Verify POSIX paths
       run: |
-        $errorFound = $false
-        Get-ChildItem -Recurse extracted | ForEach-Object {
-          if ($_ -is [System.IO.DirectoryInfo]) {
-            $path = $_.FullName
-            if ($path -match '[\\]') {
-              Write-Output "Non-POSIX path detected: $path"
-              $errorFound = $true
-            }
-          }
-        }
-        if ($errorFound) {
-          Write-Error "Non-POSIX paths detected in the zip file"
-        } else {
-          Write-Output "All paths are POSIX compliant."
-        }
+        unzip build.zip -d extracted
+        error_found=false
+        find extracted -type f | while read -r file; do
+          if [[ "$file" =~ "\\" ]]; then
+            echo "Non-POSIX path detected: $file"
+            error_found=true
+          fi
+        done
+        if [ "$error_found" = true ]; then
+          echo "Non-POSIX paths detected in the zip file"
+          exit 1
+        else
+          echo "All paths are POSIX compliant."
+        fi
