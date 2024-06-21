@@ -111,7 +111,7 @@ jobs:
         java-version: '11'
 
     - name: Compile VerifyZip.java
-      run: javac VerifyZip.java
+      run: javac test/VerifyZip.java
 
     - name: Verify ZIP file integrity for Linux build with Java
       run: java VerifyZip build-linux.zip
