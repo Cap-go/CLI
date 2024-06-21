@@ -1,6 +1,6 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs'
-import os, { homedir } from 'node:os'
-import { resolve } from 'node:path'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, relative, resolve, sep } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { loadConfig } from '@capacitor/cli/dist/config'
@@ -16,7 +16,7 @@ import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
-import isWsl from 'is-wsl'
+// import isWsl from 'is-wsl'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -519,15 +519,45 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export function zipFile(filePath: string) {
-  //  if windows and not wsl then do error
-  if (os.release().toLowerCase().includes('microsoft') && !isWsl) {
-    p.log.error(`Windows powershell is not supported, please use WSL or a Linux distribution`)
-    program.error('')
-  }
   const zip = new AdmZip()
-  zip.addLocalFolder(filePath)
+
+  // Helper function to recursively add files and folders to the ZIP archive
+  const addToZip = (folderPath: string, zipPath: string) => {
+    const items = readdirSync(folderPath)
+
+    for (const item of items) {
+      const itemPath = join(folderPath, item)
+      const stats = statSync(itemPath)
+
+      if (stats.isFile()) {
+        const fileContent = readFileSync(itemPath)
+        const relativePath = join(zipPath, item)
+        const posixPath = relativePath.split(sep).join('/')
+        zip.addFile(posixPath, fileContent)
+      }
+      else if (stats.isDirectory()) {
+        // Recursively add subdirectories and their contents to the ZIP archive
+        const subZipPath = join(zipPath, item)
+        addToZip(itemPath, subZipPath)
+      }
+    }
+  }
+
+  // Start adding files and folders to the ZIP archive
+  addToZip(filePath, '')
+
   return zip.toBuffer()
 }
+// export function zipFile(filePath: string) {
+//   //  if windows and not wsl then do error
+//   if (os.release().toLowerCase().includes('microsoft') && !isWsl) {
+//     p.log.error(`Windows powershell is not supported, please use WSL or a Linux distribution`)
+//     program.error('')
+//   }
+//   const zip = new AdmZip()
+//   zip.addLocalFolder(filePath)
+//   return zip.toBuffer()
+// }
 
 async function finishMultipartDownload(key: string, uploadId: string, url: string, parts: any[]) {
   const metadata = {
