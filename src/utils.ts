@@ -534,11 +534,15 @@ export function zipFile(filePath: string) {
         const fileContent = readFileSync(itemPath)
         // Normalize the item path and then use posixJoin to ensure POSIX paths
         const posixPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
+        // eslint-disable-next-line no-console
+        console.log('posixPath', posixPath)
         zip.addFile(posixPath, fileContent)
       }
       else if (stats.isDirectory()) {
         // Recursively add subdirectories and their contents to the ZIP archive
         const subZipPath = posixJoin(normalize(zipPath).replace(/\\/g, '/'), normalize(item).replace(/\\/g, '/'))
+        // eslint-disable-next-line no-console
+        console.log('subZipPath', subZipPath)
         addToZip(itemPath, subZipPath)
       }
     }
