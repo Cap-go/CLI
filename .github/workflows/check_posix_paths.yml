@@ -50,6 +50,19 @@ jobs:
         name: build-zip-linux
         path: build-linux.zip
 
+  verify-zip-macos:
+    runs-on: macos-latest
+    needs: create-valid-zip-linux
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download build-linux.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-linux
+
     - name: Setup Swift
       uses: swift-actions/setup-swift@v2
       with:
@@ -61,13 +74,9 @@ jobs:
         swift build
 
     - name: Verify ZIP file integrity for Linux build with Swift
-      run: swift run VerifyZip build-linux.zip
-
-    # - name: Verify ZIP file integrity for Windows 2019 build with Swift
-    #   run: swift run VerifyZip build-windows-2019.zip
-
-    # - name: Verify ZIP file integrity for Windows 2022 build with Swift
-    #   run: swift run VerifyZip build-windows-2022.zip
+      run: |
+        cd test
+        swift run --package-path . VerifyZip ../build-linux.zip
 
   check-posix-paths-windows:
     runs-on: ${{ matrix.os }}
