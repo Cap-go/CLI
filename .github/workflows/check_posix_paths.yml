@@ -71,7 +71,7 @@ jobs:
     - name: Build Swift package
       run: |
         cd test
-        swift build
+        swift build --disable-minimum-deployment-target-check
 
     - name: Verify ZIP file integrity for Linux build with Swift
       run: |
