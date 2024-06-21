@@ -1,9 +1,8 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, normalize, resolve } from 'node:path'
+import { join, resolve, sep } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
-import { join as posixJoin } from 'node:path/posix'
 import { loadConfig } from '@capacitor/cli/dist/config'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -16,7 +15,7 @@ import { promiseFiles } from 'node-dir'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-import AdmZip from 'adm-zip'
+// import AdmZip from 'adm-zip'
 // import isWsl from 'is-wsl'
 import JSZip from 'jszip'
 import type { Database } from './types/supabase.types'
@@ -533,7 +532,7 @@ export async function zipFile(filePath: string): Promise<Buffer> {
 
       if (stats.isFile()) {
         const fileContent = await readFileSync(itemPath)
-        zip.file(join(zipPath, item), fileContent)
+        zip.file(join(zipPath, item).split(sep).join('/'), fileContent)
       }
       else if (stats.isDirectory()) {
         await addToZip(itemPath, join(zipPath, item))
@@ -545,7 +544,7 @@ export async function zipFile(filePath: string): Promise<Buffer> {
   await addToZip(filePath, '')
 
   // Generate the ZIP file as a Buffer
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer' })
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX' })
   return zipBuffer
 }
 
