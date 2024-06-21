@@ -48,16 +48,13 @@ jobs:
     needs: check-posix-paths-windows
 
     steps:
-    - name: Checkout repository
-      uses: actions/checkout@v3
-
-    - name: Download build.zip artifacts
+    - name: Download build-windows-2019.zip artifact
       uses: actions/download-artifact@v2
       with:
         name: build-zip-windows-2019
         path: build-windows-2019.zip
 
-    - name: Download build.zip artifacts
+    - name: Download build-windows-2022.zip artifact
       uses: actions/download-artifact@v2
       with:
         name: build-zip-windows-2022
@@ -69,9 +66,23 @@ jobs:
         ls -lh /home/runner/work/CLI/CLI/build-windows-2019.zip
         ls -lh /home/runner/work/CLI/CLI/build-windows-2022.zip
 
+    - name: Verify ZIP file integrity for Windows 2019 build
+      run: |
+        if ! unzip -tq /home/runner/work/CLI/CLI/build-windows-2019.zip; then
+          echo "ZIP file is corrupted: build-windows-2019.zip"
+          exit 1
+        fi
+
+    - name: Verify ZIP file integrity for Windows 2022 build
+      run: |
+        if ! unzip -tq /home/runner/work/CLI/CLI/build-windows-2022.zip; then
+          echo "ZIP file is corrupted: build-windows-2022.zip"
+          exit 1
+        fi
+
     - name: Verify POSIX paths for Windows 2019 build
       run: |
-        unzip /home/runner/work/CLI/CLI/build-windows-2019 -d extracted-2019
+        unzip /home/runner/work/CLI/CLI/build-windows-2019.zip -d extracted-2019
         error_found=false
         find extracted-2019 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
@@ -88,7 +99,7 @@ jobs:
 
     - name: Verify POSIX paths for Windows 2022 build
       run: |
-        unzip /home/runner/work/CLI/CLI/build-windows-2022 -d extracted-2022
+        unzip /home/runner/work/CLI/CLI/build-windows-2022.zip -d extracted-2022
         error_found=false
         find extracted-2022 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
