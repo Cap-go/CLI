@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.46](https://github.com/Cap-go/CLI/compare/v4.10.45...v4.10.46) (2024-06-21)
+
+
+### Bug Fixes
+
+* path javac ([e323cef](https://github.com/Cap-go/CLI/commit/e323cef1aa48ed164e1d503edc86ac6133abe0ca))
+* remove double check ([5752085](https://github.com/Cap-go/CLI/commit/57520855f066cb3dc7ed78358b3e53628402c55d))
+
 ### [4.10.45](https://github.com/Cap-go/CLI/compare/v4.10.44...v4.10.45) (2024-06-21)
 
 
