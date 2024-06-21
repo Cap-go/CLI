@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.53](https://github.com/Cap-go/CLI/compare/v4.10.52...v4.10.53) (2024-06-21)
+
+
+### Bug Fixes
+
+* update test to fail like updater ([4a9a75d](https://github.com/Cap-go/CLI/commit/4a9a75d3d98bdb594b17a9a2149a73fae75b6ffa))
+
 ### [4.10.52](https://github.com/Cap-go/CLI/compare/v4.10.51...v4.10.52) (2024-06-21)
 
 
