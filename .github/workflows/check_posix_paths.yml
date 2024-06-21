@@ -105,18 +105,6 @@ jobs:
         echo "Verifying ZIP file integrity for Linux build with zipinfo..."
         zipinfo ./build-linux.zip || (echo "ZIP file is corrupted: build-linux.zip" && exit 1)
 
-    - name: Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: '11'
-
-    - name: Compile VerifyZip.java
-      run: javac ./test/VerifyZip.java
-
-    - name: Verify ZIP file integrity for Linux build with Java
-      run: java VerifyZip build-linux.zip
-
     - name: Verify POSIX paths for Linux build
       run: |
         unzip build-linux.zip -d extracted-linux
@@ -133,6 +121,18 @@ jobs:
         else
           echo "All paths are POSIX compliant in build-linux.zip."
         fi
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '11'
+
+    - name: Compile VerifyZip.java
+      run: javac ./test/VerifyZip.java
+
+    - name: Verify ZIP file integrity for Linux build with Java
+      run: java VerifyZip build-linux.zip
 
     - name: Download build-windows-2019.zip artifact
       uses: actions/download-artifact@v4
@@ -162,12 +162,6 @@ jobs:
       run: |
         echo "Verifying ZIP file integrity for Windows 2022 build with zipinfo..."
         zipinfo ./build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
-
-    - name: Verify ZIP file integrity for Windows 2019 build with Java
-      run: java VerifyZip build-windows-2019.zip
-
-    - name: Verify ZIP file integrity for Windows 2022 build with Java
-      run: java VerifyZip build-windows-2022.zip
 
     - name: Verify POSIX paths for Windows 2019 build
       run: |
@@ -202,3 +196,10 @@ jobs:
         else
           echo "All paths are POSIX compliant in build-windows-2022.zip."
         fi
+
+    - name: Verify ZIP file integrity for Windows 2019 build with Java
+      run: java VerifyZip build-windows-2019.zip
+
+    - name: Verify ZIP file integrity for Windows 2022 build with Java
+      run: java VerifyZip build-windows-2022.zip
+  
