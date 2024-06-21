@@ -1,8 +1,9 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, relative, resolve, sep } from 'node:path'
+import { join as joinPath, resolve } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
+import { join as posixJoin } from 'node:path/posix'
 import { loadConfig } from '@capacitor/cli/dist/config'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
@@ -526,18 +527,18 @@ export function zipFile(filePath: string) {
     const items = readdirSync(folderPath)
 
     for (const item of items) {
-      const itemPath = join(folderPath, item)
+      const itemPath = joinPath(folderPath, item)
       const stats = statSync(itemPath)
 
       if (stats.isFile()) {
         const fileContent = readFileSync(itemPath)
-        // Use path.posix.join for consistent POSIX paths
-        const posixPath = join(zipPath, item)
+        // Use posixJoin for consistent POSIX paths
+        const posixPath = posixJoin(zipPath, item)
         zip.addFile(posixPath, fileContent)
       }
       else if (stats.isDirectory()) {
         // Recursively add subdirectories and their contents to the ZIP archive
-        const subZipPath = join(zipPath, item)
+        const subZipPath = posixJoin(zipPath, item)
         addToZip(itemPath, subZipPath)
       }
     }
