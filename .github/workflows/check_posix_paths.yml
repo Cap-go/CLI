@@ -9,6 +9,36 @@ on:
       - main
 
 jobs:
+  create-valid-zip-linux:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup bun
+      uses: oven-sh/setup-bun@v1.2.2
+      with:
+        bun-version: latest
+
+    - name: Install dependencies
+      id: install_code
+      run: bun install --frozen-lockfile
+
+    - name: Build code
+      id: build_code
+      run: bun run build
+
+    - name: Create a valid zip test
+      id: create_zip
+      run: node ./dist/index.js bundle zip --path test/test_upload -n build-linux.zip
+
+    - name: Upload build-linux.zip artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: build-zip-linux
+        path: build-linux.zip
+
   check-posix-paths-windows:
     runs-on: ${{ matrix.os }}
 
@@ -45,9 +75,52 @@ jobs:
 
   check-posix-paths-unix:
     runs-on: ubuntu-latest
-    needs: check-posix-paths-windows
+    needs: [create-valid-zip-linux, check-posix-paths-windows]
 
     steps:
+    - name: Download build-linux.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-linux
+        path: build-linux.zip
+
+    - name: Check file size of Linux build
+      run: ls -lh build-linux.zip
+
+    - name: Verify ZIP file integrity for Linux build with zipinfo
+      run: |
+        echo "Verifying ZIP file integrity for Linux build with zipinfo..."
+        zipinfo build-linux.zip || (echo "ZIP file is corrupted: build-linux.zip" && exit 1)
+
+    - name: Setup Java
+      uses: actions/setup-java@v3
+      with:
+        distribution: 'adopt'
+        java-version: '11'
+
+    - name: Compile VerifyZip.java
+      run: javac VerifyZip.java
+
+    - name: Verify ZIP file integrity for Linux build with Java
+      run: java VerifyZip build-linux.zip
+
+    - name: Verify POSIX paths for Linux build
+      run: |
+        unzip build-linux.zip -d extracted-linux
+        error_found=false
+        find extracted-linux -type f | while read -r file; do
+          if [[ "$file" =~ "\\" ]]; then
+            echo "Non-POSIX path detected: $file"
+            error_found=true
+          fi
+        done
+        if [ "$error_found" = true ]; then
+          echo "Non-POSIX paths detected in the zip file (Linux)"
+          exit 1
+        else
+          echo "All paths are POSIX compliant in build-linux.zip."
+        fi
+
     - name: Download build-windows-2019.zip artifact
       uses: actions/download-artifact@v4
       with:
@@ -60,25 +133,31 @@ jobs:
         name: build-zip-windows-2022
         path: build-windows-2022.zip
 
-    - name: Check file sizes
+    - name: Check file sizes of Windows builds
       run: |
         echo "Checking file sizes..."
-        ls -lh /home/runner/work/CLI/CLI/build-windows-2019.zip
-        ls -lh /home/runner/work/CLI/CLI/build-windows-2022.zip
+        ls -lh build-windows-2019.zip
+        ls -lh build-windows-2022.zip
 
     - name: Verify ZIP file integrity for Windows 2019 build with zipinfo
       run: |
         echo "Verifying ZIP file integrity for Windows 2019 build with zipinfo..."
-        zipinfo /home/runner/work/CLI/CLI/build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
+        zipinfo build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
 
     - name: Verify ZIP file integrity for Windows 2022 build with zipinfo
       run: |
         echo "Verifying ZIP file integrity for Windows 2022 build with zipinfo..."
-        zipinfo /home/runner/work/CLI/CLI/build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
+        zipinfo build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
+
+    - name: Verify ZIP file integrity for Windows 2019 build with Java
+      run: java VerifyZip build-windows-2019.zip
+
+    - name: Verify ZIP file integrity for Windows 2022 build with Java
+      run: java VerifyZip build-windows-2022.zip
 
     - name: Verify POSIX paths for Windows 2019 build
       run: |
-        unzip /home/runner/work/CLI/CLI/build-windows-2019.zip -d extracted-2019
+        unzip build-windows-2019.zip -d extracted-2019
         error_found=false
         find extracted-2019 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
@@ -95,7 +174,7 @@ jobs:
 
     - name: Verify POSIX paths for Windows 2022 build
       run: |
-        unzip /home/runner/work/CLI/CLI/build-windows-2022.zip -d extracted-2022
+        unzip build-windows-2022.zip -d extracted-2022
         error_found=false
         find extracted-2022 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
@@ -109,20 +188,3 @@ jobs:
         else
           echo "All paths are POSIX compliant in build-windows-2022.zip."
         fi
-
-
-    - name: Setup Java
-      uses: actions/setup-java@v3
-      with:
-        distribution: 'adopt'
-        java-version: '11'
-
-    - name: Compile VerifyZip.java
-      run: javac test/VerifyZip.java
-
-    - name: Verify ZIP file integrity for Windows 2019 build with Java
-      run: java VerifyZip /home/runner/work/CLI/CLI/build-windows-2019.zip
-
-    - name: Verify ZIP file integrity for Windows 2022 build with Java
-      run: java VerifyZip /home/runner/work/CLI/CLI/build-windows-2022.zip
-  
