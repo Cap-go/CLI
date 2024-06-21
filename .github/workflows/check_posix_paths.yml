@@ -10,6 +10,7 @@ on:
 
 jobs:
   create-valid-zip-linux:
+    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
 
     steps:
