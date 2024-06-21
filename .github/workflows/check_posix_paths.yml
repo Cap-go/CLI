@@ -63,19 +63,9 @@ jobs:
     - name: Create Swift package
       run: swift package init --type executable
 
-    - name: Add SSZipArchive dependency
+    - name: Add ZipArchive dependency
       run: |
-        echo 'let package = Package(' >> Package.swift
-        echo '    name: "VerifyZip",' >> Package.swift
-        echo '    dependencies: [' >> Package.swift
-        echo '        .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.4.2")' >> Package.swift
-        echo '    ],' >> Package.swift
-        echo '    targets: [' >> Package.swift
-        echo '        .target(' >> Package.swift
-        echo '            name: "VerifyZip",' >> Package.swift
-        echo '            dependencies: ["ZipArchive"])' >> Package.swift
-        echo '    ]' >> Package.swift
-        echo ')' >> Package.swift
+        swift package add-package --url https://github.com/ZipArchive/ZipArchive.git --version 2.5.0
 
     - name: Build Swift package
       run: swift build
