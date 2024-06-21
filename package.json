@@ -45,7 +45,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.588.0",
-    "@capacitor/cli": "6.0.0",
+    "@capacitor/cli": "6.1.0",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
     "@manypkg/find-root": "^2.2.1",
