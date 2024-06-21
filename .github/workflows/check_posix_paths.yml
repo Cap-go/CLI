@@ -112,15 +112,8 @@ jobs:
     - name: Verify POSIX paths for Linux build
       run: |
         unzip build-linux.zip -d extracted-linux
-        error_found=false
-        find extracted-linux -type f | while read -r file; do
-          if [[ "$file" =~ "\\" ]]; then
-            echo "Non-POSIX path detected: $file"
-            error_found=true
-          fi
-        done
-        if [ "$error_found" = true ]; then
-          echo "Non-POSIX paths detected in the zip file (Linux)"
+        if find extracted-linux -type f | grep -qE '\\\\'; then
+          echo "Non-POSIX paths detected in build-linux.zip."
           exit 1
         else
           echo "All paths are POSIX compliant in build-linux.zip."
@@ -170,32 +163,18 @@ jobs:
     - name: Verify POSIX paths for Windows 2019 build
       run: |
         unzip build-windows-2019.zip -d extracted-2019
-        error_found=false
-        find extracted-2019 -type f | while read -r file; do
-          if [[ "$file" =~ "\\" ]]; then
-            echo "Non-POSIX path detected: $file"
-            error_found=true
-          fi
-        done
-        if [ "$error_found" = true ]; then
-          echo "Non-POSIX paths detected in the zip file (Windows 2019)"
+        if find extracted-2019 -type f | grep -qE '\\\\'; then
+          echo "Non-POSIX paths detected in build-windows-2019.zip."
           exit 1
         else
           echo "All paths are POSIX compliant in build-windows-2019.zip."
         fi
-
+    
     - name: Verify POSIX paths for Windows 2022 build
       run: |
         unzip build-windows-2022.zip -d extracted-2022
-        error_found=false
-        find extracted-2022 -type f | while read -r file; do
-          if [[ "$file" =~ "\\" ]]; then
-            echo "Non-POSIX path detected: $file"
-            error_found=true
-          fi
-        done
-        if [ "$error_found" = true ]; then
-          echo "Non-POSIX paths detected in the zip file (Windows 2022)"
+        if find extracted-2022 -type f | grep -qE '\\\\'; then
+          echo "Non-POSIX paths detected in build-windows-2022.zip."
           exit 1
         else
           echo "All paths are POSIX compliant in build-windows-2022.zip."
