@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.10.66](https://github.com/Cap-go/CLI/compare/v4.10.65...v4.10.66) (2024-06-21)
+
+
+### Bug Fixes
+
+* try different way to init swift and do it first step to test ([26d32ea](https://github.com/Cap-go/CLI/commit/26d32ea5d66097cde1b9b24378884a0f9561a79e))
+
 ### [4.10.65](https://github.com/Cap-go/CLI/compare/v4.10.64...v4.10.65) (2024-06-21)
 
 
