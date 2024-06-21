@@ -100,7 +100,7 @@ jobs:
     - name: Verify ZIP file integrity for Linux build with zipinfo
       run: |
         echo "Verifying ZIP file integrity for Linux build with zipinfo..."
-        zipinfo build-linux.zip || (echo "ZIP file is corrupted: build-linux.zip" && exit 1)
+        zipinfo ./build-linux.zip || (echo "ZIP file is corrupted: build-linux.zip" && exit 1)
 
     - name: Setup Java
       uses: actions/setup-java@v3
@@ -152,12 +152,12 @@ jobs:
     - name: Verify ZIP file integrity for Windows 2019 build with zipinfo
       run: |
         echo "Verifying ZIP file integrity for Windows 2019 build with zipinfo..."
-        zipinfo build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
+        zipinfo ./build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
 
     - name: Verify ZIP file integrity for Windows 2022 build with zipinfo
       run: |
         echo "Verifying ZIP file integrity for Windows 2022 build with zipinfo..."
-        zipinfo build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
+        zipinfo ./build-windows-2022.zip || (echo "ZIP file is corrupted: build-windows-2022.zip" && exit 1)
 
     - name: Verify ZIP file integrity for Windows 2019 build with Java
       run: java VerifyZip build-windows-2019.zip
