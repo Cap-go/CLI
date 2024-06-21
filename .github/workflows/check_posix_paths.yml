@@ -60,7 +60,8 @@ jobs:
 
     - name: Add ZipArchive dependency
       run: |
-        swift package add-package --url https://github.com/ZipArchive/ZipArchive.git --version 2.5.0
+        sed -i'' -e '/dependencies: \[/a \        .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.5.0"),' Package.swift
+        sed -i'' -e '/targets: \[/a \            dependencies: \["ZipArchive"\],' Package.swift
 
     - name: Build Swift package
       run: swift build
