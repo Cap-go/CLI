@@ -63,6 +63,12 @@ jobs:
         name: build-zip-windows-2022
         path: build-windows-2022.zip
 
+    - name: Check file sizes
+      run: |
+        echo "Checking file sizes..."
+        ls -lh /home/runner/work/CLI/CLI/build-windows-2019.zip
+        ls -lh /home/runner/work/CLI/CLI/build-windows-2022.zip
+
     - name: Verify POSIX paths for Windows 2019 build
       run: |
         unzip /home/runner/work/CLI/CLI/build-windows-2019 -d extracted-2019
