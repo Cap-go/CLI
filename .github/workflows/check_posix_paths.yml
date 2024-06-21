@@ -192,7 +192,10 @@ jobs:
         swift-version: '5.9.2'
 
     - name: Install CocoaPods
-      run: gem install cocoapods
+      run: |
+        export GEM_HOME=$HOME/.gem
+        export PATH=$GEM_HOME/bin:$PATH
+        gem install cocoapods
 
     - name: Create Podfile
       run: |
@@ -203,7 +206,11 @@ jobs:
         echo "end" >> Podfile
 
     - name: Install dependencies
-      run: pod install
+      run: |
+        export GEM_HOME=$HOME/.gem
+        export PATH=$GEM_HOME/bin:$PATH
+        pod install
+
 
     - name: Verify ZIP file integrity for Linux build with Swift
       run: swift run VerifyZip build-linux.zip
