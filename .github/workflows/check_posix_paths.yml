@@ -29,43 +29,70 @@ jobs:
       id: install_code
       run: bun install --frozen-lockfile
 
-    - name: build code
+    - name: Build code
       id: build_code
       run: bun run build
 
     - name: Create a zip test
       id: create_zip
-      run: node ./dist/index.js bundle zip --path test/test_upload -n build.zip 
+      run: node ./dist/index.js bundle zip --path test/test_upload -n build-${{ matrix.os }}.zip
 
     - name: Upload build.zip artifact
       uses: actions/upload-artifact@v2
       with:
-        name: build-zip
-        path: build.zip
+        name: build-zip-${{ matrix.os }}
+        path: build-${{ matrix.os }}.zip
 
   check-posix-paths-unix:
     runs-on: ubuntu-latest
     needs: check-posix-paths-windows
 
     steps:
-    - name: Download build.zip artifact
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Download build.zip artifacts
       uses: actions/download-artifact@v2
       with:
-        name: build-zip
+        name: build-zip-windows-2019
+        path: build-windows-2019.zip
 
-    - name: Verify POSIX paths
+    - name: Download build.zip artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: build-zip-windows-2022
+        path: build-windows-2022.zip
+
+    - name: Verify POSIX paths for Windows 2019 build
       run: |
-        unzip build.zip -d extracted
+        unzip build-windows-2019.zip -d extracted-2019
         error_found=false
-        find extracted -type f | while read -r file; do
+        find extracted-2019 -type f | while read -r file; do
           if [[ "$file" =~ "\\" ]]; then
             echo "Non-POSIX path detected: $file"
             error_found=true
           fi
         done
         if [ "$error_found" = true ]; then
-          echo "Non-POSIX paths detected in the zip file"
+          echo "Non-POSIX paths detected in the zip file (Windows 2019)"
           exit 1
         else
-          echo "All paths are POSIX compliant."
+          echo "All paths are POSIX compliant in build-windows-2019.zip."
+        fi
+
+    - name: Verify POSIX paths for Windows 2022 build
+      run: |
+        unzip build-windows-2022.zip -d extracted-2022
+        error_found=false
+        find extracted-2022 -type f | while read -r file; do
+          if [[ "$file" =~ "\\" ]]; then
+            echo "Non-POSIX path detected: $file"
+            error_found=true
+          fi
+        done
+        if [ "$error_found" = true ]; then
+          echo "Non-POSIX paths detected in the zip file (Windows 2022)"
+          exit 1
+        else
+          echo "All paths are POSIX compliant in build-windows-2022.zip."
         fi
