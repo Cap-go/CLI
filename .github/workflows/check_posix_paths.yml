@@ -55,16 +55,10 @@ jobs:
       with:
         swift-version: '5.9.2'
 
-    - name: Create Swift package
-      run: swift package init --type executable
-
-    - name: Add ZipArchive dependency
-      run: |
-        sed -i'' -e '/dependencies: \[/a \        .package(url: "https://github.com/ZipArchive/ZipArchive.git", from: "2.5.0"),' Package.swift
-        sed -i'' -e '/targets: \[/a \            dependencies: \["ZipArchive"\],' Package.swift
-
     - name: Build Swift package
-      run: swift build
+      run: |
+        cd test
+        swift build
 
     - name: Verify ZIP file integrity for Linux build with Swift
       run: swift run VerifyZip build-linux.zip
