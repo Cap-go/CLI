@@ -94,6 +94,9 @@ jobs:
         name: build-zip-linux
         path: build-linux.zip
 
+    - name: List the files
+      run: ls -lh
+
     - name: Check file size of Linux build
       run: ls -lh build-linux.zip
 
