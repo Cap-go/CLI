@@ -133,10 +133,10 @@ jobs:
         java-version: '17'
 
     - name: Compile VerifyZip.java
-      run: javac VerifyZip.java
+      run: javac ./test/VerifyZip.java
 
     - name: Verify ZIP file integrity for Linux build with Java
-      run: java VerifyZip build-linux.zip
+      run: java -cp ./test VerifyZip build-linux.zip
 
     - name: Download build-windows-2019.zip artifact
       uses: actions/download-artifact@v4
@@ -202,7 +202,7 @@ jobs:
         fi
 
     - name: Verify ZIP file integrity for Windows 2019 build with Java
-      run: java VerifyZip build-windows-2019.zip
+      run: java -cp ./test VerifyZip build-windows-2019.zip
 
     - name: Verify ZIP file integrity for Windows 2022 build with Java
-      run: java VerifyZip build-windows-2022.zip
+      run: java -cp ./test VerifyZip build-windows-2022.zip
