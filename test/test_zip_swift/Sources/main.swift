@@ -16,7 +16,7 @@ extension URL {
 }
 
 
-func verifyZipFile(zipFilePath: String) -> Bool {
+func verifyZipFile(zipFilePath: String) {
     let destUnZip = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent("extracted")
 
     var unzipError: NSError?
@@ -48,15 +48,14 @@ func verifyZipFile(zipFilePath: String) -> Bool {
     if !success || unzipError != nil {
         print("Failed to unzip file: \(zipFilePath)")
         print("Error: \(unzipError?.localizedDescription ?? "")")
-        return false
+        exit(1)
     }
 
     print("ZIP file is valid: \(zipFilePath)")
-    return true
 }
 
 @main
-struct CapgoCLiTest: ParsableCommand {
+struct CapgoCliTest: ParsableCommand {
   @Option(help: "Specify the files to test")
   public var zipFiles: [String]
 
@@ -74,9 +73,8 @@ struct CapgoCLiTest: ParsableCommand {
               Darwin.exit(1)
           }
           
-          
-          
         print("Testing file \(file)")
+        verifyZipFile(zipFilePath: file)
       }
   }
 }

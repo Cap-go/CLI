@@ -216,4 +216,4 @@ jobs:
       working-directory: ./test/test_zip_swift/
 
     - name: Run the swift test
-      run: bash -c ./test/test_zip_swift/.build/release/MyCLI build-linux.zip
+      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip
