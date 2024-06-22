@@ -544,7 +544,7 @@ export async function zipFile(filePath: string): Promise<Buffer> {
   await addToZip(filePath, '')
 
   // Generate the ZIP file as a Buffer
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX' })
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE' })
   return zipBuffer
 }
 
