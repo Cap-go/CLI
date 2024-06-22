@@ -198,6 +198,16 @@ jobs:
       uses: actions/download-artifact@v4
       with:
         name: build-zip-linux
+   
+    - name: Download build-windows-2019.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-windows-2019
+
+    - name: Download build-windows-2022.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-windows-2022
 
     - name: List the files
       run: ls -lh
@@ -205,7 +215,7 @@ jobs:
     - name: Check file size of Linux build
       run: ls -lh build-linux.zip
 
-    - name: Setup Java
+    - name: Setup Swift
       uses: swift-actions/setup-swift@v2
 
     - name: Get swift version
@@ -216,4 +226,4 @@ jobs:
       working-directory: ./test/test_zip_swift/
 
     - name: Run the swift test
-      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip
+      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-zip-windows-2019 build-zip-windows-2022
