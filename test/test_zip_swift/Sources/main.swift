@@ -56,7 +56,7 @@ func verifyZipFile(zipFilePath: String) {
 
 @main
 struct CapgoCliTest: ParsableCommand {
-  @Option(help: "Specify the files to test")
+    @Option(parsing: .upToNextOption, help: "Specify the files to test")
   public var zipFiles: [String]
 
   public func run() throws {
