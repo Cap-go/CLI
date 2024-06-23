@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.11.3](https://github.com/Cap-go/CLI/compare/v4.11.2...v4.11.3) (2024-06-23)
+
+
+### Bug Fixes
+
+* use better win detection ([2020dc1](https://github.com/Cap-go/CLI/commit/2020dc1dc3daa4d020d700edb6e15c7bf1d847a0))
+
 ### [4.11.2](https://github.com/Cap-go/CLI/compare/v4.11.1...v4.11.2) (2024-06-23)
 
 
