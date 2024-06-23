@@ -16,7 +16,6 @@ import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
-import isWsl from 'is-wsl'
 import JSZip from 'jszip'
 import type { Database } from './types/supabase.types'
 
@@ -520,7 +519,7 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export async function zipFile(filePath: string): Promise<Buffer> {
-  if (osRelease().toLowerCase().includes('microsoft') && !isWsl) {
+  if (osRelease().toLowerCase().includes('microsoft')) {
     return zipFileWindows(filePath)
   }
   else {
