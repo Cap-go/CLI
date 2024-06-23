@@ -534,6 +534,7 @@ export function zipFileUnix(filePath: string) {
 }
 
 export async function zipFileWindows(filePath: string): Promise<Buffer> {
+  p.log.info('Zipping file windows mode')
   const zip = new JSZip()
 
   // Helper function to recursively add files and folders to the ZIP archive
