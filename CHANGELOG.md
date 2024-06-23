@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.11.5](https://github.com/Cap-go/CLI/compare/v4.11.4...v4.11.5) (2024-06-23)
+
+
+### Bug Fixes
+
+* remove old package and use only clack ([f243b9e](https://github.com/Cap-go/CLI/commit/f243b9e8b3ac79415d181b28308120ceb7e6f252))
+
 ### [4.11.4](https://github.com/Cap-go/CLI/compare/v4.11.3...v4.11.4) (2024-06-23)
 
 
