@@ -2,7 +2,6 @@ import process from 'node:process'
 import { program } from 'commander'
 import semver from 'semver/preload'
 import * as p from '@clack/prompts'
-import promptSync from 'prompt-sync'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
@@ -17,8 +16,6 @@ interface Options extends OptionsBase {
   keep: number
   force: boolean
 }
-
-const prompt = promptSync()
 
 async function removeVersions(toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient<Database>, appid: string) {
   // call deleteSpecificVersion one by one from toRemove sync
@@ -109,13 +106,12 @@ export async function cleanupBundle(appid: string, options: Options) {
     return
   }
   displayBundles(allVersions)
-
   // Check user wants to clean that all up
   if (!force) {
-    const result = prompt('Do you want to continue removing the versions specified? Type yes to confirm: ')
-    if (result !== 'yes') {
+    const doDelete = await p.confirm({ message: 'Do you want to continue removing the versions specified?' })
+    if (p.isCancel(doDelete) || !doDelete) {
       p.log.warn('Not confirmed, aborting removal...')
-      return
+      process.exit()
     }
   }
 

@@ -51,7 +51,6 @@
     "@manypkg/find-root": "^2.2.1",
     "@supabase/supabase-js": "^2.43.5",
     "@tomasklaen/checksum": "^1.1.0",
-    "@trufflesuite/spinnies": "^0.1.1",
     "adm-zip": "^0.5.14",
     "ci-info": "^4.0.0",
     "commander": "12.1.0",
@@ -65,7 +64,6 @@
     "node-dir": "^0.1.17",
     "open": "^10.1.0",
     "prettyjson": "^1.2.5",
-    "prompt-sync": "^4.2.0",
     "semver": "^7.6.2",
     "tmp": "^0.2.3"
   },

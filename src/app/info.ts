@@ -3,7 +3,6 @@ import { join } from 'node:path'
 import os from 'node:os'
 import process from 'node:process'
 import getLatest from 'get-latest-version'
-import Spinnies from '@trufflesuite/spinnies'
 import * as p from '@clack/prompts'
 import pack from '../../package.json'
 
@@ -69,10 +68,10 @@ export async function getInfo() {
     }
   }
   p.log.info('\n')
-  const spinnies = new Spinnies()
-  spinnies.add('loading', { text: '  Loading latest dependencies' })
+  const s = p.spinner()
+  s.start(`Running: Loading latest dependencies`)
   const latestDependencies = await getLatestDependencies(installedDependencies)
-  spinnies.succeed('loading', { text: '  Latest Dependencies:' })
+  s.stop(`Latest Dependencies:`)
   for (const dependency in latestDependencies) {
     if (Object.prototype.hasOwnProperty.call(latestDependencies, dependency)) {
       const latestVersion = (latestDependencies as any)[dependency]
