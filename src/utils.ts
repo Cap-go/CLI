@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, release as osRelease } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
@@ -15,8 +15,8 @@ import { promiseFiles } from 'node-dir'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-// import AdmZip from 'adm-zip'
-// import isWsl from 'is-wsl'
+import AdmZip from 'adm-zip'
+import isWsl from 'is-wsl'
 import JSZip from 'jszip'
 import type { Database } from './types/supabase.types'
 
@@ -520,6 +520,21 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export async function zipFile(filePath: string): Promise<Buffer> {
+  if (osRelease().toLowerCase().includes('microsoft') && !isWsl) {
+    return zipFileWindows(filePath)
+  }
+  else {
+    return zipFileUnix(filePath)
+  }
+}
+
+export function zipFileUnix(filePath: string) {
+  const zip = new AdmZip()
+  zip.addLocalFolder(filePath)
+  return zip.toBuffer()
+}
+
+export async function zipFileWindows(filePath: string): Promise<Buffer> {
   const zip = new JSZip()
 
   // Helper function to recursively add files and folders to the ZIP archive
@@ -547,17 +562,6 @@ export async function zipFile(filePath: string): Promise<Buffer> {
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE' })
   return zipBuffer
 }
-
-// export function zipFile(filePath: string) {
-//   //  if windows and not wsl then do error
-//   if (os.release().toLowerCase().includes('microsoft') && !isWsl) {
-//     p.log.error(`Windows powershell is not supported, please use WSL or a Linux distribution`)
-//     program.error('')
-//   }
-//   const zip = new AdmZip()
-//   zip.addLocalFolder(filePath)
-//   return zip.toBuffer()
-// }
 
 async function finishMultipartDownload(key: string, uploadId: string, url: string, parts: any[]) {
   const metadata = {
