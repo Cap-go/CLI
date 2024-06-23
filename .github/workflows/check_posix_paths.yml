@@ -186,3 +186,44 @@ jobs:
     - name: Verify ZIP file integrity for Windows 2022 build with Java
       run: java -cp ./test VerifyZip build-windows-2022.zip
 
+  check-posix-paths-macos:
+    runs-on: macos-latest
+    needs: [create-valid-zip-linux, check-posix-paths-windows]
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+
+    - name: Download build-linux.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-linux
+   
+    - name: Download build-windows-2019.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-windows-2019
+
+    - name: Download build-windows-2022.zip artifact
+      uses: actions/download-artifact@v4
+      with:
+        name: build-zip-windows-2022
+
+    - name: List the files
+      run: ls -lh
+
+    - name: Check file size of Linux build
+      run: ls -lh build-linux.zip
+
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v2
+
+    - name: Get swift version
+      run: swift --version # Swift 5.10
+
+    - name: Compile test executable
+      run: swift build -c release
+      working-directory: ./test/test_zip_swift/
+
+    - name: Run the swift test
+      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-windows-2019.zip build-windows-2022.zip
