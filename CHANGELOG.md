@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.11.1](https://github.com/Cap-go/CLI/compare/v4.11.0...v4.11.1) (2024-06-23)
+
+
+### Bug Fixes
+
+* use JSZip for all windows ([c5bff16](https://github.com/Cap-go/CLI/commit/c5bff169cb401dc50167214c886cba375c99c986))
+
 ## [4.11.0](https://github.com/Cap-go/CLI/compare/v4.10.77...v4.11.0) (2024-06-23)
 
 
