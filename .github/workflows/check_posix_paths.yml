@@ -226,4 +226,4 @@ jobs:
       working-directory: ./test/test_zip_swift/
 
     - name: Run the swift test
-      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-zip-windows-2019.zip build-zip-windows-2022.zip
+      run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-windows-2019.zip build-windows-2022.zip
