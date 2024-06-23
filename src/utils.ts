@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { homedir, release as osRelease } from 'node:os'
+import { homedir, platform as osPlatform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
@@ -519,7 +519,7 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export async function zipFile(filePath: string): Promise<Buffer> {
-  if (osRelease().toLowerCase().includes('microsoft')) {
+  if (osPlatform() === 'win32') {
     return zipFileWindows(filePath)
   }
   else {
