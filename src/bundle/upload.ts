@@ -277,7 +277,7 @@ It will be also visible in your dashboard\n`)
     }
     zipped = res.encryptedData
   }
-  const mbSize = Math.floor(zipped?.byteLength ?? 0 / 1024 / 1024)
+  const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
   if (mbSize > alertMb) {
     p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
     p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
@@ -498,4 +498,26 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     process.exit()
   }
   return true
+}
+
+export async function uploadCommand(apikey: string, options: Options) {
+  try {
+    await uploadBundle(apikey, options, true)
+  }
+  catch (error) {
+    p.log.error(formatError(error))
+    program.error('')
+  }
+}
+
+export async function uploadDeprecatedCommand(apikey: string, options: Options) {
+  const pm = getPMAndCommand()
+  p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
+  try {
+    await uploadBundle(apikey, options, true)
+  }
+  catch (error) {
+    p.log.error(formatError(error))
+    program.error('')
+  }
 }
