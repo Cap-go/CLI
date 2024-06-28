@@ -105,6 +105,11 @@ export async function createKey(options: Options, log = true) {
         CapacitorUpdater: {},
       }
     }
+
+    if (!extConfig.plugins.CapacitorUpdater) {
+      extConfig.plugins.CapacitorUpdater = {}
+    }
+
     extConfig.plugins.CapacitorUpdater.privateKey = privateKey
     // console.log('extConfig', extConfig)
     writeConfig(extConfig, config.app.extConfigFilePath)
