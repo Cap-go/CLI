@@ -163,7 +163,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
   // Check compatibility here
   const { data: channelData, error: channelError } = await supabase
     .from('channels')
-    .select('version ( min_update_version, native_packages )')
+    .select('version ( minUpdateVersion, native_packages )')
     .eq('name', channel)
     .eq('app_id', appid)
     .single()
@@ -363,7 +363,7 @@ It will be also visible in your dashboard\n`)
     session_key: sessionKey,
     external_url: external,
     storage_provider: external ? 'external' : 'r2-direct',
-    min_update_version: minUpdateVersion,
+    minUpdateVersion,
     native_packages: nativePackages,
     owner_org: orgId,
     user_id: userId,
