@@ -1,17 +1,22 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream, existsSync, readFileSync } from 'node:fs'
 import type { Buffer } from 'node:buffer'
 import process from 'node:process'
+import { createGzip } from 'node:zlib'
+import { buffer as readBuffer } from 'node:stream/consumers'
 import * as p from '@clack/prompts'
 import { Option, program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import ky, { HTTPError } from 'ky'
+import { promiseFiles } from 'node-dir'
+import type { AppRouter } from '../types/partial_upload_trpc'
 import { encryptSource } from '../api/crypto'
 import { type OptionsBase, OrganizationPerm, baseKeyPub, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, requireUpdateMetadata, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
+import type { Database } from '../types/supabase.types'
 import { checkIndexPosition, searchInDirectory } from './check'
 
 interface Options extends OptionsBase {
@@ -34,6 +39,7 @@ interface Options extends OptionsBase {
   ignoreMetadataCheck?: boolean
   timeout?: number
   multipart?: boolean
+  partial?: boolean
 }
 
 const alertMb = 20
@@ -43,6 +49,7 @@ type ConfigType = Awaited<ReturnType<typeof getConfig>>
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
+type manifestType = Awaited<ReturnType<typeof generateManifest>>
 
 function getBundle(config: ConfigType, options: Options) {
   // create bundle name format : 1.0.0-beta.x where x is a uuid
@@ -216,6 +223,91 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     p.log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
+}
+
+async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
+  const allFiles = (await promiseFiles(path))
+    .map((file) => {
+      const buffer = readFileSync(file)
+      const hash = createHash('sha-256').update(buffer).digest('hex')
+      let filePath = file.replace(path, '')
+      if (filePath.startsWith('/'))
+        filePath = filePath.substring(1, filePath.length)
+      return { file: filePath, hash }
+    })
+  return allFiles
+}
+
+async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
+  const spinner = p.spinner()
+  spinner.start('Generating the update manifest')
+  const manifest = await generateManifest(path)
+  spinner.stop('Manifest generated successfully')
+
+  await snag.track({
+    channel: 'partial-update',
+    event: 'Generate manifest',
+    icon: '📂',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+    },
+    notify: false,
+  }).catch()
+
+  return manifest
+}
+
+async function uploadPartial(supabase: SupabaseType, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
+  const data = {
+    app_id: appId,
+    name,
+    version: 2,
+    manifest,
+  }
+  let uploadResponse: { path: string, hash: string, uploadLink: string, finalPath: string }[]
+  try {
+    const pathUploadLink = 'private/upload_link'
+    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    uploadResponse = res.data as any
+  }
+  catch (error) {
+    p.log.error(`Cannot get upload url ${formatError(error)}`)
+    program.error('')
+  }
+
+  for (const manifestEntry of uploadResponse) {
+    const finalFilePath = `${path}/${manifestEntry.path}`
+
+    const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
+    const fileBuffer = await readBuffer(fileStream)
+
+    try {
+      await ky.put(manifestEntry.uploadLink, {
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        retry: 5,
+        body: fileBuffer,
+      })
+    }
+    catch (errorUpload) {
+      if (errorUpload instanceof HTTPError) {
+        const body = await errorUpload.response.text()
+        p.log.error(`Response: ${formatError(body)}`)
+      }
+      else {
+        console.error(errorUpload)
+      }
+    }
+  }
+
+  p.log.info('Uploaded all files successfully')
+  return uploadResponse.map((entry) => {
+    return {
+      file_name: entry.path,
+      s3_path: entry.finalPath,
+      file_hash: entry.hash,
+    }
+  })
 }
 
 async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, snag: LogSnag, orgId: string, appid: string) {
@@ -392,6 +484,11 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
 
+  if (options.external && options.partial) {
+    p.log.error('External + partial is not yet supported')
+    program.error('')
+  }
+
   if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
     if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
       p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
@@ -454,33 +551,53 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     owner_org: orgId,
     user_id: userId,
     checksum: undefined as undefined | string,
+  } as Database['public']['Tables']['app_versions']['Insert']
+
+  if (!options.partial) {
+    let zipped: Buffer | null = null
+    if (!options.external) {
+      const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
+      versionData.session_key = sessionKey
+      versionData.checksum = checksum
+      zipped = _zipped
+    }
+
+    const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError) {
+      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
+      program.error('')
+    }
+
+    if (zipped) {
+      await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
+
+      versionData.storage_provider = 'r2'
+      const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+      if (dbError2) {
+        p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+        program.error('')
+      }
+    }
   }
+  else {
+    const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
 
-  let zipped: Buffer | null = null
-  if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
-    versionData.session_key = sessionKey
-    versionData.checksum = checksum
-    zipped = _zipped
-  }
+    versionData.storage_provider = 'r2-direct-partial'
+    const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError) {
+      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
+      program.error('')
+    }
 
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-  if (dbError) {
-    p.log.error(`Cannot add bundle ${formatError(dbError)}`)
-    program.error('')
-  }
-
-  if (zipped) {
-    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
-
-    versionData.storage_provider = 'r2'
+    const finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+    versionData.storage_provider = 'r2-partial'
+    versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
-      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
       program.error('')
     }
   }
-
   await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
 
   await snag.track({
