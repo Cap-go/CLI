@@ -553,51 +553,35 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     checksum: undefined as undefined | string,
   } as Database['public']['Tables']['app_versions']['Insert']
 
-  if (!options.partial) {
-    let zipped: Buffer | null = null
-    if (!options.external) {
-      const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
-      versionData.session_key = sessionKey
-      versionData.checksum = checksum
-      zipped = _zipped
-    }
-
-    const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-    if (dbError) {
-      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
-      program.error('')
-    }
-
-    if (zipped) {
-      await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
-
-      versionData.storage_provider = 'r2'
-      const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
-      if (dbError2) {
-        p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
-        program.error('')
-      }
-    }
+  let zipped: Buffer | null = null
+  if (!options.external) {
+    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
+    versionData.session_key = sessionKey
+    versionData.checksum = checksum
+    zipped = _zipped
   }
-  else {
-    const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
 
-    versionData.storage_provider = 'r2-direct-partial'
-    const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-    if (dbError) {
-      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
-      program.error('')
-    }
+  const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
 
+  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+  if (dbError) {
+    p.log.error(`Cannot add bundle ${formatError(dbError)}`)
+    program.error('')
+  }
+
+  if (zipped) {
+    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
     const finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
-    versionData.storage_provider = 'r2-partial'
+
+    versionData.storage_provider = 'r2'
     versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
-      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
+      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
       program.error('')
     }
   }
+
   await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
 
   await snag.track({
