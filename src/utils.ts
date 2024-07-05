@@ -412,6 +412,28 @@ export async function findBuildCommandForProjectType(projectType: string) {
     return 'build'
   }
 
+  if (projectType === 'astro') {
+    p.log.info('Astro project detected')
+    p.log.warn('Please make sure you have the output: \'dist\' in your astro config')
+    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    if (!doContinue) {
+      p.log.error('Aborted')
+      program.error('')
+    }
+    return 'build'
+  }
+
+  if (projectType === 'remix') {
+    p.log.info('Remix project detected')
+    p.log.warn('Please make sure you have the output: \'dist\' in your remix.config.js')
+    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    if (!doContinue) {
+      p.log.error('Aborted')
+      program.error('')
+    }
+    return 'build'
+  }
+
   return 'build'
 }
 
