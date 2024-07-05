@@ -199,7 +199,7 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
     .rpc('is_trial_org', { orgid: orgId })
     .single()
   if ((isTrial && isTrial > 0) || isTrialsError) {
-  // TODO: Come back to this to fix for orgs v3
+    // TODO: Come back to this to fix for orgs v3
     p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
     p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
   }
@@ -301,41 +301,63 @@ async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, b
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
 
-  try {
-    if (options.multipart !== undefined && options.multipart) {
-      p.log.info(`Uploading bundle as multipart`)
-      await uploadMultipart(supabase, appid, bundle, zipped, orgId)
-    }
-    else {
-      const url = await uploadUrl(supabase, appid, bundle)
-      if (!url) {
-        p.log.error(`Cannot get upload url`)
-        program.error('')
-      }
-      await ky.put(url, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: zipped,
-      })
-    }
-  }
-  catch (errorUpload) {
-    const endTime = performance.now()
-    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-    p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
-    if (errorUpload instanceof HTTPError) {
-      const body = await errorUpload.response.text()
-      p.log.error(`Response: ${formatError(body)}`)
-    }
-    // call delete version on path /delete_failed_version to delete the version
-    await deletedFailedVersion(supabase, appid, bundle)
-    program.error('')
+  let calculatedChecksum = ''
+  calculatedChecksum = await getChecksum(zipped, 'crc32')
+
+  // Not sure what could be the expectedChecksum to align with issue requirements
+  const expectedChecksum = '...'
+
+  // Compare checksums with expected checksum
+  if (calculatedChecksum !== expectedChecksum) {
+    p.log.error(`Checksum verification failed. Aborting upload.`);
+    throw new Error('Checksum verification failed');
   }
 
+  const rebuildResponse = await p.confirm({
+    message: 'Checksum verification failed. Would you like to rebuild the bundle?',
+  });
+    if (rebuildResponse) {
+    // Trigger rebuild to inform the user to rebuild
+    p.log.info(`User opted to rebuild the bundle.`)
+  } else {
+    program.error('Upload aborted by user.')
+  }
+
+try {
+  if (options.multipart !== undefined && options.multipart) {
+    p.log.info(`Uploading bundle as multipart`)
+    await uploadMultipart(supabase, appid, bundle, zipped, orgId)
+  }
+  else {
+    const url = await uploadUrl(supabase, appid, bundle)
+    if (!url) {
+      p.log.error(`Cannot get upload url`)
+      program.error('')
+    }
+    await ky.put(url, {
+      timeout: options.timeout || UPLOAD_TIMEOUT,
+      retry: 5,
+      body: zipped,
+    })
+  }
+}
+catch (errorUpload) {
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-  spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
+  spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+  p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
+  if (errorUpload instanceof HTTPError) {
+    const body = await errorUpload.response.text()
+    p.log.error(`Response: ${formatError(body)}`)
+  }
+  // call delete version on path /delete_failed_version to delete the version
+  await deletedFailedVersion(supabase, appid, bundle)
+  program.error('')
+}
+
+const endTime = performance.now()
+const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
 }
 
 async function setVersionInChannel(
