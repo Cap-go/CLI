@@ -199,9 +199,10 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
     let mainFilePath
     if (projectType === 'unknown')
       mainFilePath = await findMainFile()
-    else
-      mainFilePath = await findMainFileForProjectType(projectType)
-
+    else {
+    const isTypeScript = projectType.endsWith('-ts');
+    mainFilePath = await findMainFileForProjectType(projectType, isTypeScript);
+    }
     if (!mainFilePath) {
       s.stop('Error')
       p.log.warn('Cannot find main file, You need to add @capgo/capacitor-updater manually')

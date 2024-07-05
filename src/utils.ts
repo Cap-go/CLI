@@ -315,66 +315,97 @@ export function findSavedKey(quiet = false) {
 }
 
 async function* getFiles(dir: string): AsyncGenerator<string> {
-  const dirents = await readdirSync(dir, { withFileTypes: true })
+  const dirents = await readdirSync(dir, { withFileTypes: true });
   for (const dirent of dirents) {
-    const res = resolve(dir, dirent.name)
-    if (dirent.isDirectory()
-      && !dirent.name.startsWith('.')
-      && !dirent.name.startsWith('node_modules')
-      && !dirent.name.startsWith('dist')) {
-      yield * getFiles(res)
-    }
-
-    else {
-      yield res
+    const res = resolve(dir, dirent.name);
+    if (
+      dirent.isDirectory() &&
+      !dirent.name.startsWith('.') &&
+      !dirent.name.startsWith('node_modules') &&
+      !dirent.name.startsWith('dist')
+    ) {
+      yield* getFiles(res);
+    } else {
+      yield res;
     }
   }
 }
 
 export async function findProjectType() {
-  // for nuxtjs check if nuxt.config.js exists
-  // for nextjs check if next.config.js exists
-  // for angular check if angular.json exists
-  // for sveltekit check if svelte.config.js exists
-  const pwd = process.cwd()
+  const pwd = process.cwd();
+  let isTypeScript = false;
+
+  // Check for TypeScript configuration file
+  const tsConfigPath = resolve(pwd, 'tsconfig.json');
+  if (existsSync(tsConfigPath)) {
+    isTypeScript = true;
+  }
+
   for await (const f of getFiles(pwd)) {
-    // find number of folder in path after pwd
+    // Detect project types based on configuration files
     if (f.includes('angular.json')) {
-      p.log.info('Found angular project')
-      return 'angular'
+      console.log('Found Angular project');
+      return isTypeScript ? 'angular-ts' : 'angular-js';
     }
     if (f.includes('nuxt.config.js')) {
-      p.log.info('Found nuxtjs project')
-      return 'nuxtjs'
+      console.log('Found Nuxt.js project');
+      return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js';
     }
     if (f.includes('next.config.js')) {
-      p.log.info('Found nextjs project')
-      return 'nextjs'
+      console.log('Found Next.js project');
+      return isTypeScript ? 'nextjs-ts' : 'nextjs-js';
     }
     if (f.includes('svelte.config.js')) {
-      p.log.info('Found sveltekit project')
-      return 'sveltekit'
+      console.log('Found SvelteKit project');
+      return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js';
+    }
+    if (f.includes('vue.config.js')) {
+      console.log('Found Vue project');
+      return isTypeScript ? 'vue-ts' : 'vue-js';
+    }
+    if (f.includes('package.json')) {
+      const packageJson = require(f);
+      if (packageJson.dependencies) {
+        if (packageJson.dependencies.react) {
+          console.log('Found React project');
+          return isTypeScript ? 'react-ts' : 'react-js';
+        }
+        if (packageJson.dependencies.vue) {
+          console.log('Found Vue project');
+          return isTypeScript ? 'vue-ts' : 'vue-js';
+        }
+        if (packageJson.dependencies.svelte) {
+          console.log('Found Svelte project');
+          return isTypeScript ? 'svelte-ts' : 'svelte-js';
+        }
+      }
     }
   }
-  return 'unknown'
+
+  return 'unknown';
 }
 
-export async function findMainFileForProjectType(projectType: string) {
-  if (projectType === 'angular')
-    return 'src/main.ts'
-
-  if (projectType === 'nuxtjs')
-    return 'src/main.ts'
-
-  if (projectType === 'nextjs')
-    return 'pages/_app.tsx'
-
-  if (projectType === 'sveltekit')
-    return 'src/main.ts'
-
-  return null
+export function findMainFileForProjectType(projectType: string, isTypeScript: boolean): string | null {
+  if (projectType === 'angular') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js';
+  }
+  if (projectType === 'nuxtjs') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js';
+  }
+  if (projectType === 'nextjs') {
+    return isTypeScript ? 'pages/_app.tsx' : 'pages/_app.js';
+  }
+  if (projectType === 'sveltekit') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js';
+  }
+  if (projectType === 'vue') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js';
+  }
+  if (projectType === 'react') {
+    return isTypeScript ? 'src/index.tsx' : 'src/index.js';
+  }
+  return null;
 }
-
 // create a function to find the right command to build the project in static mode depending on the project type
 
 export async function findBuildCommandForProjectType(projectType: string) {
