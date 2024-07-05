@@ -316,48 +316,48 @@ async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, b
   const rebuildResponse = await p.confirm({
     message: 'Checksum verification failed. Would you like to rebuild the bundle?',
   });
-    if (rebuildResponse) {
+  if (rebuildResponse) {
     // Trigger rebuild to inform the user to rebuild
     p.log.info(`User opted to rebuild the bundle.`)
   } else {
     program.error('Upload aborted by user.')
   }
 
-try {
-  if (options.multipart !== undefined && options.multipart) {
-    p.log.info(`Uploading bundle as multipart`)
-    await uploadMultipart(supabase, appid, bundle, zipped, orgId)
-  }
-  else {
-    const url = await uploadUrl(supabase, appid, bundle)
-    if (!url) {
-      p.log.error(`Cannot get upload url`)
-      program.error('')
+  try {
+    if (options.multipart !== undefined && options.multipart) {
+      p.log.info(`Uploading bundle as multipart`)
+      await uploadMultipart(supabase, appid, bundle, zipped, orgId)
     }
-    await ky.put(url, {
-      timeout: options.timeout || UPLOAD_TIMEOUT,
-      retry: 5,
-      body: zipped,
-    })
+    else {
+      const url = await uploadUrl(supabase, appid, bundle)
+      if (!url) {
+        p.log.error(`Cannot get upload url`)
+        program.error('')
+      }
+      await ky.put(url, {
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        retry: 5,
+        body: zipped,
+      })
+    }
   }
-}
-catch (errorUpload) {
+  catch (errorUpload) {
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+    p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
+    if (errorUpload instanceof HTTPError) {
+      const body = await errorUpload.response.text()
+      p.log.error(`Response: ${formatError(body)}`)
+    }
+    // call delete version on path /delete_failed_version to delete the version
+    await deletedFailedVersion(supabase, appid, bundle)
+    program.error('')
+  }
+
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-  spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-  p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
-  if (errorUpload instanceof HTTPError) {
-    const body = await errorUpload.response.text()
-    p.log.error(`Response: ${formatError(body)}`)
-  }
-  // call delete version on path /delete_failed_version to delete the version
-  await deletedFailedVersion(supabase, appid, bundle)
-  program.error('')
-}
-
-const endTime = performance.now()
-const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
+  spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
 }
 
 async function setVersionInChannel(
