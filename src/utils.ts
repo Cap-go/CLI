@@ -315,14 +315,14 @@ export function findSavedKey(quiet = false) {
 }
 
 async function* getFiles(dir: string): AsyncGenerator<string> {
-  const dirents = await readdirSync(dir, { withFileTypes: true });
+  const dirents = await readdirSync(dir, { withFileTypes: true })
   for (const dirent of dirents) {
     const res = resolve(dir, dirent.name);
     if (
-      dirent.isDirectory() &&
-      !dirent.name.startsWith('.') &&
-      !dirent.name.startsWith('node_modules') &&
-      !dirent.name.startsWith('dist')
+      dirent.isDirectory() 
+      && !dirent.name.startsWith('.')
+      && !dirent.name.startsWith('node_modules')
+      && !dirent.name.startsWith('dist')
     ) {
       yield* getFiles(res);
     } else {
@@ -332,6 +332,12 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
 }
 
 export async function findProjectType() {
+  // for nuxtjs check if nuxt.config.js exists
+  // for nextjs check if next.config.js exists
+  // for angular check if angular.json exists
+  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
+  // for vue check if vue.config.js exists or vue is in package.json dependancies
+  // for react check if package.json exists and react is in dependencies
   const pwd = process.cwd();
   let isTypeScript = false;
 
@@ -342,40 +348,41 @@ export async function findProjectType() {
   }
 
   for await (const f of getFiles(pwd)) {
-    // Detect project types based on configuration files
+    // find number of folder in path after pwd
     if (f.includes('angular.json')) {
-      console.log('Found Angular project');
+      p.log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js';
     }
     if (f.includes('nuxt.config.js')) {
-      console.log('Found Nuxt.js project');
+      p.log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js';
     }
     if (f.includes('next.config.js')) {
-      console.log('Found Next.js project');
+      p.log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js';
     }
     if (f.includes('svelte.config.js')) {
-      console.log('Found SvelteKit project');
+      p.log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js';
     }
     if (f.includes('vue.config.js')) {
-      console.log('Found Vue project');
+      p.log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js';
     }
     if (f.includes('package.json')) {
       const packageJson = require(f);
       if (packageJson.dependencies) {
         if (packageJson.dependencies.react) {
-          console.log('Found React project');
+          p.log.info('Found react project');
           return isTypeScript ? 'react-ts' : 'react-js';
         }
         if (packageJson.dependencies.vue) {
           console.log('Found Vue project');
+          p.log.info('Found vue project');
           return isTypeScript ? 'vue-ts' : 'vue-js';
         }
         if (packageJson.dependencies.svelte) {
-          console.log('Found Svelte project');
+          p.log.info('Found svelte project');
           return isTypeScript ? 'svelte-ts' : 'svelte-js';
         }
       }
