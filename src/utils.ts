@@ -1019,3 +1019,19 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     localDependencies: dependenciesObject,
   }
 }
+
+// Function to get the remote checksum
+export async function getRemoteChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+  const { data, error } = await supabase
+    .from('channels')
+    .select('checksum')
+    .eq('name', channel)
+    .eq('appId', appId)
+    .single();
+
+  if (error) {
+    p.log.error(`Failed to fetch remote checksum`);
+  }
+
+  return data?.checksum;
+}
