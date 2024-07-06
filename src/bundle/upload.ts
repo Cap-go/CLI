@@ -9,7 +9,7 @@ import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import ky, { HTTPError } from 'ky'
 import { encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, requireUpdateMetadata, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { type OptionsBase, OrganizationPerm, getRemoteChecksum, baseKeyPub, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, requireUpdateMetadata, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -34,6 +34,7 @@ interface Options extends OptionsBase {
   ignoreMetadataCheck?: boolean
   timeout?: number
   multipart?: boolean
+  disableChecksumVerification?: boolean;
 }
 
 const alertMb = 20
@@ -301,245 +302,248 @@ async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, b
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
 
-  let calculatedChecksum = ''
-  calculatedChecksum = await getChecksum(zipped, 'crc32')
+  const calculatedChecksum = await getChecksum(zipped, 'crc32')
 
-  // Not sure what could be the expectedChecksum to align with issue requirements
-  const expectedChecksum = '...'
+  // Option to disable checksum verification
+  if (!options.disableChecksumVerification) {
+    const remoteChecksum = await getRemoteChecksum(supabase, appid, bundle);
 
-  // Compare checksums with expected checksum
-  if (calculatedChecksum !== expectedChecksum) {
-    p.log.error(`Checksum verification failed. Aborting upload.`);
-    throw new Error('Checksum verification failed');
-  }
-
-  const rebuildResponse = await p.confirm({
-    message: 'Checksum verification failed. Would you like to rebuild the bundle?',
-  });
-  if (rebuildResponse) {
-    // Trigger rebuild to inform the user to rebuild
-    p.log.info(`User opted to rebuild the bundle.`)
-  } else {
-    program.error('Upload aborted by user.')
-  }
-
-  try {
-    if (options.multipart !== undefined && options.multipart) {
-      p.log.info(`Uploading bundle as multipart`)
-      await uploadMultipart(supabase, appid, bundle, zipped, orgId)
+    if (!remoteChecksum) {
+      p.log.error('Remote checksum not found');
     }
-    else {
-      const url = await uploadUrl(supabase, appid, bundle)
-      if (!url) {
-        p.log.error(`Cannot get upload url`)
-        program.error('')
+
+    // Compare checksums with expected checksum
+    if (calculatedChecksum == getRemoteChecksum) {
+      p.log.error(`Checksum verification failed. Aborting upload.`);
+    }
+
+    const rebuildResponse = await p.confirm({
+      message: 'Checksum verification failed. Would you like to rebuild the bundle?',
+    });
+    if (rebuildResponse) {
+      // Trigger rebuild to inform the user to rebuild
+      p.log.info(`User opted to rebuild the bundle.`)
+    } else {
+      program.error('Upload aborted by user.')
+    }
+
+    try {
+      if (options.multipart !== undefined && options.multipart) {
+        p.log.info(`Uploading bundle as multipart`)
+        await uploadMultipart(supabase, appid, bundle, zipped, orgId)
       }
-      await ky.put(url, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: zipped,
-      })
+      else {
+        const url = await uploadUrl(supabase, appid, bundle)
+        if (!url) {
+          p.log.error(`Cannot get upload url`)
+          program.error('')
+        }
+        await ky.put(url, {
+          timeout: options.timeout || UPLOAD_TIMEOUT,
+          retry: 5,
+          body: zipped,
+        })
+      }
     }
-  }
-  catch (errorUpload) {
+    catch (errorUpload) {
+      const endTime = performance.now()
+      const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+      spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+      p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
+      if (errorUpload instanceof HTTPError) {
+        const body = await errorUpload.response.text()
+        p.log.error(`Response: ${formatError(body)}`)
+      }
+      // call delete version on path /delete_failed_version to delete the version
+      await deletedFailedVersion(supabase, appid, bundle)
+      program.error('')
+    }
+
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-    p.log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
-    if (errorUpload instanceof HTTPError) {
-      const body = await errorUpload.response.text()
-      p.log.error(`Response: ${formatError(body)}`)
-    }
-    // call delete version on path /delete_failed_version to delete the version
-    await deletedFailedVersion(supabase, appid, bundle)
-    program.error('')
+    spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
   }
 
-  const endTime = performance.now()
-  const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-  spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
-}
+  async function setVersionInChannel(
+    supabase: SupabaseType,
+    options: Options,
+    bundle: string,
+    channel: string,
+    userId: string,
+    orgId: string,
+    appid: string,
+    localConfig: localConfigType,
+    permissions: OrganizationPerm,
+  ) {
+    const { data: versionId } = await supabase
+      .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
+      .single()
 
-async function setVersionInChannel(
-  supabase: SupabaseType,
-  options: Options,
-  bundle: string,
-  channel: string,
-  userId: string,
-  orgId: string,
-  appid: string,
-  localConfig: localConfigType,
-  permissions: OrganizationPerm,
-) {
-  const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
-    .single()
+    if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+      const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
+        name: channel,
+        app_id: appid,
+        created_by: userId,
+        version: versionId,
+        owner_org: orgId,
+      })
+      if (dbError3) {
+        p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
+        program.error('')
+      }
+      const appidWeb = convertAppName(appid)
+      const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
+      if (data?.public)
+        p.log.info('Your update is now available in your public channel 🎉')
+      else if (data?.id)
+        p.log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-  if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-    const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
-      name: channel,
+      if (options.bundleUrl) {
+        p.log.info(`Bundle url: ${bundleUrl}`)
+      }
+      else if (!versionId) {
+        p.log.warn('Cannot set bundle with upload key, use key with more rights for that')
+        program.error('')
+      }
+      else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+        p.log.warn('Cannot set channel as a upload organization member')
+      }
+    }
+  }
+
+  export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
+    p.intro(`Uploading`)
+    const pm = getPMAndCommand()
+    await checkLatest()
+
+    const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
+
+    if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
+      if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
+        p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
+        program.error('')
+      }
+    }
+
+    if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
+      p.log.info('Uploading to S3')
+      const s3Client = new S3Client({
+        region: s3Region,
+        credentials: {
+          accessKeyId: s3Apikey,
+          secretAccessKey: s3Apisecret,
+        },
+      })
+
+      // todo: figure out s3 upload
+      return
+    }
+
+    const apikey = getApikey(options)
+    const config = await getConfig()
+    const { appid, path } = getAppIdAndPath(preAppid, options, config)
+    const bundle = getBundle(config, options)
+    const channel = options.channel || 'dev'
+    const snag = useLogSnag()
+
+    checkNotifyAppReady(options, path)
+
+    p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
+
+    const localConfig = await getLocalConfig()
+    const supabase = await createSupabaseClient(apikey)
+    const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
+    // Check we have app access to this appId
+    const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
+
+    // Now if it does exist we will fetch the org id
+    const orgId = await getOrganizationId(supabase, appid)
+    await checkPlanValid(supabase, orgId, options.apikey, appid, true)
+    await checkTrial(supabase, orgId, localConfig)
+    const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
+    await checkVersionExists(supabase, appid, bundle)
+
+    if (options.external && !options.external.startsWith('https://')) {
+      p.log.error(`External link should should start with "https://" current is "${external}"`)
+      program.error('')
+    }
+
+    const versionData = {
+      // bucket_id: external ? undefined : fileName,
+      name: bundle,
       app_id: appid,
-      created_by: userId,
-      version: versionId,
+      session_key: undefined as undefined | string,
+      external_url: options.external,
+      storage_provider: options.external ? 'external' : 'r2-direct',
+      minUpdateVersion,
+      native_packages: nativePackages,
       owner_org: orgId,
-    })
-    if (dbError3) {
-      p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
+      user_id: userId,
+      checksum: undefined as undefined | string,
+    }
+
+    let zipped: Buffer | null = null
+    if (!options.external) {
+      const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
+      versionData.session_key = sessionKey
+      versionData.checksum = checksum
+      zipped = _zipped
+    }
+
+    const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError) {
+      p.log.error(`Cannot add bundle ${formatError(dbError)}`)
       program.error('')
     }
-    const appidWeb = convertAppName(appid)
-    const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
-    if (data?.public)
-      p.log.info('Your update is now available in your public channel 🎉')
-    else if (data?.id)
-      p.log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (options.bundleUrl) {
-      p.log.info(`Bundle url: ${bundleUrl}`)
+    if (zipped) {
+      await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
+
+      versionData.storage_provider = 'r2'
+      const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+      if (dbError2) {
+        p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+        program.error('')
+      }
     }
-    else if (!versionId) {
-      p.log.warn('Cannot set bundle with upload key, use key with more rights for that')
-      program.error('')
-    }
-    else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-      p.log.warn('Cannot set channel as a upload organization member')
-    }
-  }
-}
 
-export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
-  p.intro(`Uploading`)
-  const pm = getPMAndCommand()
-  await checkLatest()
+    await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
 
-  const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
-
-  if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
-    if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
-      p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
-      program.error('')
-    }
-  }
-
-  if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
-    p.log.info('Uploading to S3')
-    const s3Client = new S3Client({
-      region: s3Region,
-      credentials: {
-        accessKeyId: s3Apikey,
-        secretAccessKey: s3Apisecret,
+    await snag.track({
+      channel: 'app',
+      event: 'App Uploaded',
+      icon: '⏫',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
       },
-    })
-
-    // todo: figure out s3 upload
-    return
+      notify: false,
+    }).catch()
+    if (shouldExit) {
+      p.outro('Time to share your update to the world 🌍')
+      process.exit()
+    }
+    return true
   }
 
-  const apikey = getApikey(options)
-  const config = await getConfig()
-  const { appid, path } = getAppIdAndPath(preAppid, options, config)
-  const bundle = getBundle(config, options)
-  const channel = options.channel || 'dev'
-  const snag = useLogSnag()
-
-  checkNotifyAppReady(options, path)
-
-  p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
-
-  const localConfig = await getLocalConfig()
-  const supabase = await createSupabaseClient(apikey)
-  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
-  // Check we have app access to this appId
-  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
-
-  // Now if it does exist we will fetch the org id
-  const orgId = await getOrganizationId(supabase, appid)
-  await checkPlanValid(supabase, orgId, options.apikey, appid, true)
-  await checkTrial(supabase, orgId, localConfig)
-  const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
-  await checkVersionExists(supabase, appid, bundle)
-
-  if (options.external && !options.external.startsWith('https://')) {
-    p.log.error(`External link should should start with "https://" current is "${external}"`)
-    program.error('')
-  }
-
-  const versionData = {
-    // bucket_id: external ? undefined : fileName,
-    name: bundle,
-    app_id: appid,
-    session_key: undefined as undefined | string,
-    external_url: options.external,
-    storage_provider: options.external ? 'external' : 'r2-direct',
-    minUpdateVersion,
-    native_packages: nativePackages,
-    owner_org: orgId,
-    user_id: userId,
-    checksum: undefined as undefined | string,
-  }
-
-  let zipped: Buffer | null = null
-  if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
-    versionData.session_key = sessionKey
-    versionData.checksum = checksum
-    zipped = _zipped
-  }
-
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-  if (dbError) {
-    p.log.error(`Cannot add bundle ${formatError(dbError)}`)
-    program.error('')
-  }
-
-  if (zipped) {
-    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
-
-    versionData.storage_provider = 'r2'
-    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
-    if (dbError2) {
-      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
+  export async function uploadCommand(apikey: string, options: Options) {
+    try {
+      await uploadBundle(apikey, options, true)
+    }
+    catch (error) {
+      p.log.error(formatError(error))
       program.error('')
     }
   }
 
-  await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
-
-  await snag.track({
-    channel: 'app',
-    event: 'App Uploaded',
-    icon: '⏫',
-    user_id: orgId,
-    tags: {
-      'app-id': appid,
-    },
-    notify: false,
-  }).catch()
-  if (shouldExit) {
-    p.outro('Time to share your update to the world 🌍')
-    process.exit()
+  export async function uploadDeprecatedCommand(apikey: string, options: Options) {
+    const pm = getPMAndCommand()
+    p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
+    try {
+      await uploadBundle(apikey, options, true)
+    }
+    catch (error) {
+      p.log.error(formatError(error))
+      program.error('')
+    }
   }
-  return true
-}
-
-export async function uploadCommand(apikey: string, options: Options) {
-  try {
-    await uploadBundle(apikey, options, true)
-  }
-  catch (error) {
-    p.log.error(formatError(error))
-    program.error('')
-  }
-}
-
-export async function uploadDeprecatedCommand(apikey: string, options: Options) {
-  const pm = getPMAndCommand()
-  p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
-  try {
-    await uploadBundle(apikey, options, true)
-  }
-  catch (error) {
-    p.log.error(formatError(error))
-    program.error('')
-  }
-}
