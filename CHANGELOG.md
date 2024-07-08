@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.12.0](https://github.com/Cap-go/CLI/compare/v4.11.7...v4.12.0) (2024-07-08)
+
+
+### Features
+
+* add check for duplicated checksum ([0204005](https://github.com/Cap-go/CLI/commit/0204005b7fffd097f4f46eeb58bce3029c5edb54))
+
 ### [4.11.7](https://github.com/Cap-go/CLI/compare/v4.11.6...v4.11.7) (2024-07-01)
 
 ### [4.11.6](https://github.com/Cap-go/CLI/compare/v4.11.5...v4.11.6) (2024-06-28)
