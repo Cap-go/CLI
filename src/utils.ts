@@ -842,14 +842,16 @@ export function getPMAndCommand() {
 
 export async function getLocalDepenencies() {
   const dir = findRootSync(process.cwd())
-  if (!existsSync('./package.json')) {
+  const packageJsonPath = join(process.cwd(), 'package.json')
+
+  if (!existsSync(packageJsonPath)) {
     p.log.error('Missing package.json, you need to be in a capacitor project')
     program.error('')
   }
 
   let packageJson
   try {
-    packageJson = JSON.parse(readFileSync('./package.json', 'utf8'))
+    packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
   }
   catch (err) {
     p.log.error('Invalid package.json, JSON parsing failed')
@@ -870,7 +872,8 @@ export async function getLocalDepenencies() {
     }
   }
 
-  if (!existsSync('./node_modules/')) {
+  const nodeModulesPath = join(process.cwd(), 'node_modules')
+  if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
     p.log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
@@ -880,9 +883,9 @@ export async function getLocalDepenencies() {
   let anyInvalid = false
 
   const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
-
     .map(async ([key, value]) => {
-      const dependencyFolderExists = existsSync(`./node_modules/${key}`)
+      const dependencyFolderPath = join(nodeModulesPath, key)
+      const dependencyFolderExists = existsSync(dependencyFolderPath)
 
       if (!dependencyFolderExists) {
         anyInvalid = true
@@ -893,16 +896,15 @@ export async function getLocalDepenencies() {
       }
 
       let hasNativeFiles = false
-      await promiseFiles(`./node_modules/${key}`)
-        .then((files) => {
-          if (files.find(fileName => nativeFileRegex.test(fileName)))
-            hasNativeFiles = true
-        })
-        .catch((error) => {
-          p.log.error(`Error reading node_modulses files for ${key} package`)
-          console.error(error)
-          program.error('')
-        })
+      try {
+        const files = await promiseFiles(dependencyFolderPath)
+        hasNativeFiles = files.some(fileName => nativeFileRegex.test(fileName))
+      }
+      catch (error) {
+        p.log.error(`Error reading node_modules files for ${key} package`)
+        console.error(error)
+        program.error('')
+      }
 
       return {
         name: key,
