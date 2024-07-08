@@ -343,7 +343,8 @@ async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, b
 
 async function setVersionInChannel(
   supabase: SupabaseType,
-  options: Options,
+  apikey: string,
+  displayBundleUrl: boolean,
   bundle: string,
   channel: string,
   userId: string,
@@ -353,7 +354,7 @@ async function setVersionInChannel(
   permissions: OrganizationPerm,
 ) {
   const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
+    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
 
   if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
@@ -375,7 +376,7 @@ async function setVersionInChannel(
     else if (data?.id)
       p.log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (options.bundleUrl) {
+    if (displayBundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`)
     }
     else if (!versionId) {
@@ -436,7 +437,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
-  await checkPlanValid(supabase, orgId, options.apikey, appid, true)
+  await checkPlanValid(supabase, orgId, apikey, appid, true)
   await checkTrial(supabase, orgId, localConfig)
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
   await checkVersionExists(supabase, appid, bundle)
@@ -488,7 +489,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }
   }
 
-  await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
+  await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, permissions)
 
   await snag.track({
     channel: 'app',
@@ -507,9 +508,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   return true
 }
 
-export async function uploadCommand(apikey: string, options: Options) {
+export async function uploadCommand(appid: string, options: Options) {
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
     p.log.error(formatError(error))
@@ -517,11 +518,11 @@ export async function uploadCommand(apikey: string, options: Options) {
   }
 }
 
-export async function uploadDeprecatedCommand(apikey: string, options: Options) {
+export async function uploadDeprecatedCommand(appid: string, options: Options) {
   const pm = getPMAndCommand()
   p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
     p.log.error(formatError(error))
