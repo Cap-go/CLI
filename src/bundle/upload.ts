@@ -3,13 +3,13 @@ import { existsSync, readFileSync } from 'node:fs'
 import type { Buffer } from 'node:buffer'
 import process from 'node:process'
 import * as p from '@clack/prompts'
-import { Option, program } from 'commander'
+import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import ky, { HTTPError } from 'ky'
 import { encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, requireUpdateMetadata, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -32,6 +32,7 @@ interface Options extends OptionsBase {
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
+  ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
 }
@@ -135,7 +136,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     localDependencies = localDependenciesWithChannel
 
     if (finalCompatibility.find(x => x.localVersion !== x.remoteVersion)) {
-      p.log.error(`Your bundle is not compatible with the channel ${channel}`)
+      spinner.stop(`Bundle NOT compatible with ${channel} channel`)
       p.log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
       if (autoMinUpdateVersion) {
@@ -152,14 +153,16 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
         }
 
         minUpdateVersion = lastMinUpdateVersion
-        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`)
+        spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
       catch (error) {
         p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
         program.error('')
       }
     }
-    spinner.stop(`Bundle compatible with ${channel} channel`)
+    else {
+      spinner.stop(`Bundle compatible with ${channel} channel`)
+    }
   }
   else if (!ignoreMetadataCheck) {
     p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
@@ -401,14 +404,15 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
     p.log.info('Uploading to S3')
-    const s3Client = new S3Client({
-      region: s3Region,
-      credentials: {
-        accessKeyId: s3Apikey,
-        secretAccessKey: s3Apisecret,
-      },
-    })
-
+    // const s3Client = new S3Client({
+    //   region: s3Region,
+    //   credentials: {
+    //     accessKeyId: s3Apikey,
+    //     secretAccessKey: s3Apisecret,
+    //   },
+    // })
+    p.log.error('S3 upload is not available we have currenly an issue with it')
+    program.error('')
     // todo: figure out s3 upload
     return
   }
@@ -462,6 +466,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = sessionKey
     versionData.checksum = checksum
     zipped = _zipped
+    if (!options.ignoreChecksumCheck) {
+      await checkChecksum(supabase, appid, channel, checksum)
+    }
   }
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)

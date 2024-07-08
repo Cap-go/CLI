@@ -917,6 +917,29 @@ export async function getLocalDepenencies() {
   return dependenciesObject as { name: string, version: string, native: boolean }[]
 }
 
+export async function getRemoteChecksums(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+  const { data, error } = await supabase
+    .from('channels')
+    .select(`version ( checksum )`)
+    .eq('name', channel)
+    .eq('app_id', appId)
+    .single()
+
+  if (error
+    || data === null
+    || !data.version
+    || !data.version.checksum
+  ) {
+    p.log.error(`Cannot get remote checksum for channel ${channel}`)
+    p.log.error(`Error: ${error?.message}`)
+
+    program.error('')
+    return null
+  }
+
+  return data.version.checksum
+}
+
 export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data: remoteNativePackages, error } = await supabase
     .from('channels')
@@ -970,6 +993,19 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
     .map(a => [a.name, a]))
 
   return mappedRemoteNativePackages
+}
+
+export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
+  const s = p.spinner()
+  s.start(`Checking bundle checksum compatibility with channel ${channel}`)
+  const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
+
+  if (remoteChecksum === currentChecksum) {
+    // cannot upload the same bundle
+    p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
+    program.error('')
+  }
+  s.stop(`Checksum compatible with ${channel} channel`)
 }
 
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {
