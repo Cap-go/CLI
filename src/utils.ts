@@ -920,7 +920,9 @@ export async function getLocalDepenencies() {
 export async function getRemoteChecksums(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data, error } = await supabase
     .from('channels')
-    .select(`version ( checksum )`)
+    .select(`version ( 
+            checksum 
+        )`)
     .eq('name', channel)
     .eq('app_id', appId)
     .single()
