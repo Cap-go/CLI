@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.3](https://github.com/Cap-go/CLI/compare/v4.12.2...v4.12.3) (2024-07-08)
+
+
+### Bug Fixes
+
+* getLocalDepenencies for windows ([ca7bf4e](https://github.com/Cap-go/CLI/commit/ca7bf4e97c6a2ff766978ed61089fd805126dde1))
+
 ### [4.12.2](https://github.com/Cap-go/CLI/compare/v4.12.1...v4.12.2) (2024-07-08)
 
 
