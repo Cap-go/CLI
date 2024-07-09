@@ -948,10 +948,6 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
     || !data.version
     || !data.version.checksum
   ) {
-    p.log.error(`Cannot get remote checksum for channel ${channel}`)
-    p.log.error(`Error: ${error?.message}`)
-
-    program.error('')
     return null
   }
 
@@ -1018,7 +1014,7 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.start(`Checking bundle checksum compatibility with channel ${channel}`)
   const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
 
-  if (remoteChecksum === currentChecksum) {
+  if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
     p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
     program.error('')
