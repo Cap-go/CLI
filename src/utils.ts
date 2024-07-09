@@ -558,7 +558,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   await addToZip(filePath, '')
 
   // Generate the ZIP file as a Buffer
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE' })
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE', compressionOptions: { level: 6 } })
   return zipBuffer
 }
 
