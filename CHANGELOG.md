@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.5](https://github.com/Cap-go/CLI/compare/v4.12.4...v4.12.5) (2024-07-09)
+
+
+### Bug Fixes
+
+* lint ([01e0f31](https://github.com/Cap-go/CLI/commit/01e0f31b20232578e47cc886be729e7e4e4885ed))
+* remove preprod url ([0d8672a](https://github.com/Cap-go/CLI/commit/0d8672a1534a5e88260cbbad7eb10821d07e6cba))
+
 ### [4.12.4](https://github.com/Cap-go/CLI/compare/v4.12.3...v4.12.4) (2024-07-09)
 
 
