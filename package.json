@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "4.12.3",
+  "version": "4.12.3-beta.0",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -61,7 +61,6 @@
     "ky": "^1.3.0",
     "logsnag": "1.0.0",
     "mime": "^4.0.3",
-    "node-dir": "^0.1.17",
     "open": "^10.1.0",
     "prettyjson": "^1.2.5",
     "semver": "^7.6.2",
@@ -72,7 +71,6 @@
     "@types/adm-zip": "0.5.5",
     "@types/mime": "^4.0.0",
     "@types/node": "^20.14.7",
-    "@types/node-dir": "^0.0.37",
     "@types/npmcli__ci-detect": "^2.0.3",
     "@types/prettyjson": "^0.0.33",
     "@types/prompt-sync": "^4.2.3",

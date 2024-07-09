@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdir, readdirSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import process from 'node:process'
@@ -11,7 +11,6 @@ import prettyjson from 'prettyjson'
 import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
-import { promiseFiles } from 'node-dir'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
@@ -840,6 +839,21 @@ export function getPMAndCommand() {
   return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
+function readDirRecursively(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  const files = entries.flatMap((entry) => {
+    const fullPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      return readDirRecursively(fullPath)
+    }
+    else {
+      // Use relative path to avoid issues with long paths on Windows
+      return fullPath.split(`node_modules${sep}`)[1] || fullPath
+    }
+  })
+  return files
+}
+
 export async function getLocalDepenencies() {
   const dir = findRootSync(process.cwd())
   const packageJsonPath = join(process.cwd(), 'package.json')
@@ -897,7 +911,7 @@ export async function getLocalDepenencies() {
 
       let hasNativeFiles = false
       try {
-        const files = await promiseFiles(dependencyFolderPath)
+        const files = readDirRecursively(dependencyFolderPath)
         hasNativeFiles = files.some(fileName => nativeFileRegex.test(fileName))
       }
       catch (error) {
