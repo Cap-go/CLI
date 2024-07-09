@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdir, readdirSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import process from 'node:process'
