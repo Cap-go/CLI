@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.6](https://github.com/Cap-go/CLI/compare/v4.12.5...v4.12.6) (2024-07-09)
+
+
+### Bug Fixes
+
+* remove error if no checksum found it's normal ([41c211a](https://github.com/Cap-go/CLI/commit/41c211a87bc6a69f6847288bf89efb598d155b50))
+
 ### [4.12.5](https://github.com/Cap-go/CLI/compare/v4.12.4...v4.12.5) (2024-07-09)
 
 
