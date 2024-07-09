@@ -353,17 +353,21 @@ export async function findProjectType() {
       p.log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js';
     }
-    if (f.includes('nuxt.config.js')) {
+    if (f.includes('nuxt.config.js' || f.includes('nuxt.config.ts'))) {
       p.log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js';
     }
-    if (f.includes('next.config.js')) {
+    if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
       p.log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js';
     }
     if (f.includes('svelte.config.js')) {
       p.log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js';
+    }
+    if (f.includes("rollup.config.js")) {
+      p.log.info('Found svelte project')
+      return isTypeScript ? 'svelte-ts' : 'svelte-js';
     }
     if (f.includes('vue.config.js')) {
       p.log.info('Found vue project')
@@ -373,17 +377,13 @@ export async function findProjectType() {
       const packageJson = require(f);
       if (packageJson.dependencies) {
         if (packageJson.dependencies.react) {
-          p.log.info('Found react project');
+          p.log.info('Found react project test');
           return isTypeScript ? 'react-ts' : 'react-js';
         }
         if (packageJson.dependencies.vue) {
           console.log('Found Vue project');
           p.log.info('Found vue project');
           return isTypeScript ? 'vue-ts' : 'vue-js';
-        }
-        if (packageJson.dependencies.svelte) {
-          p.log.info('Found svelte project');
-          return isTypeScript ? 'svelte-ts' : 'svelte-js';
         }
       }
     }
@@ -396,19 +396,16 @@ export function findMainFileForProjectType(projectType: string, isTypeScript: bo
   if (projectType === 'angular') {
     return isTypeScript ? 'src/main.ts' : 'src/main.js';
   }
-  if (projectType === 'nuxtjs') {
+  if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
+    return isTypeScript ? 'src/app/layout.tsx' : 'src/app/layout.js';
+  }
+  if (projectType === 'svelte-js' || projectType === 'svelte-ts') {
     return isTypeScript ? 'src/main.ts' : 'src/main.js';
   }
-  if (projectType === 'nextjs') {
-    return isTypeScript ? 'pages/_app.tsx' : 'pages/_app.js';
-  }
-  if (projectType === 'sveltekit') {
+  if (projectType === 'vue-js' || projectType === 'vue-ts') {
     return isTypeScript ? 'src/main.ts' : 'src/main.js';
   }
-  if (projectType === 'vue') {
-    return isTypeScript ? 'src/main.ts' : 'src/main.js';
-  }
-  if (projectType === 'react') {
+  if (projectType === 'react-js' || projectType === 'react-ts') {
     return isTypeScript ? 'src/index.tsx' : 'src/index.js';
   }
   return null;
