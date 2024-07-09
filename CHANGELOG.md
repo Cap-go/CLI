@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.4](https://github.com/Cap-go/CLI/compare/v4.12.3...v4.12.4) (2024-07-09)
+
+
+### Bug Fixes
+
+* make better compression on windows ([dc93876](https://github.com/Cap-go/CLI/commit/dc9387649ae6cdfa09172e2e806d834787cb2fd0))
+* use custom function to read recurst dir to fix windows issue ([cbd2217](https://github.com/Cap-go/CLI/commit/cbd2217ab877a40179f65be217e915fcbf7d0be1))
+* version error ([6ec20c7](https://github.com/Cap-go/CLI/commit/6ec20c7195cfe454ef5bfa258163088c14231647))
+
 ### [4.12.3](https://github.com/Cap-go/CLI/compare/v4.12.2...v4.12.3) (2024-07-08)
 
 
