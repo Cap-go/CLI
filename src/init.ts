@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'node:fs'
-import path from 'node:path';
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import path from 'node:path'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
 import process from 'node:process'
@@ -191,27 +191,26 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
 }
 
 async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string) {
-  const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` });
-  await cancelCommand(doAddCode, orgId, snag);
+  const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
+  await cancelCommand(doAddCode, orgId, snag)
 
   if (doAddCode) {
-    const s = p.spinner();
-    s.start(`Adding @capacitor-updater to your main file`);
+    const s = p.spinner()
+    s.start(`Adding @capacitor-updater to your main file`)
 
-    const projectType = await findProjectType();
+    const projectType = await findProjectType()
     if (projectType === 'nuxtjs-js' || projectType === 'nuxtjs-ts') {
       // Nuxt.js specific logic
-      const nuxtDir = path.join('plugins');
+      const nuxtDir = path.join('plugins')
       if (!existsSync(nuxtDir)) {
-        mkdirSync(nuxtDir, { recursive: true });
+        mkdirSync(nuxtDir, { recursive: true })
       }
-      let nuxtFilePath;
-      if(projectType === 'nuxtjs-ts') {
-       nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.ts');
+      let nuxtFilePath
+      if (projectType === 'nuxtjs-ts') {
+        nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.ts')
       }
-      else
-      {
-        nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.js');
+      else {
+        nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.js')
       }
       const nuxtFileContent = `
         import { CapacitorUpdater } from '@capgo/capacitor-updater'
@@ -219,68 +218,75 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
         export default defineNuxtPlugin(() => {
           CapacitorUpdater.notifyAppReady()
         })
-      `;
+      `
       if (existsSync(nuxtFilePath)) {
-        const currentContent = readFileSync(nuxtFilePath, 'utf8');
+        const currentContent = readFileSync(nuxtFilePath, 'utf8')
         if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
-          s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅');
-          p.log.info("Plugins directory and capacitorUpdater.client.ts file already exist with required code");
-        } else {
-          writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8');
-          s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅');
-          p.log.info("Updated capacitorUpdater.client.ts file with required code");
+          s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅')
+          p.log.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
         }
-      } else {
-        writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8');
-        s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅');
-        p.log.info("Created plugins directory and capacitorUpdater.client.ts file");
+        else {
+          writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
+          s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
+          p.log.info('Updated capacitorUpdater.client.ts file with required code')
+        }
       }
-    } else {
+      else {
+        writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
+        s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
+        p.log.info('Created plugins directory and capacitorUpdater.client.ts file')
+      }
+    }
+    else {
       // Handle other project types
-      let mainFilePath;
+      let mainFilePath
       if (projectType === 'unknown') {
-        mainFilePath = await findMainFile();
-      } else {
-        const isTypeScript = projectType.endsWith('-ts');
-        mainFilePath = await findMainFileForProjectType(projectType, isTypeScript);
+        mainFilePath = await findMainFile()
+      }
+      else {
+        const isTypeScript = projectType.endsWith('-ts')
+        mainFilePath = await findMainFileForProjectType(projectType, isTypeScript)
       }
 
       if (!mainFilePath) {
-        s.stop('Error');
+        s.stop('Error')
         if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
-          p.log.warn(`You might not be using app router configuration or the latest version of Next.js`);
-        } else {
-          p.log.warn(`Cannot find the latest version of ${projectType}, you might need to upgrade to the latest version of ${projectType}`);
+          p.log.warn(`You might not be using app router configuration or the latest version of Next.js`)
         }
-        p.outro(`Bye 👋`);
-        process.exit();
+        else {
+          p.log.warn(`Cannot find the latest version of ${projectType}, you might need to upgrade to the latest version of ${projectType}`)
+        }
+        p.outro(`Bye 👋`)
+        process.exit()
       }
 
       // Open main file and inject codeInject
-      const mainFile = readFileSync(mainFilePath, 'utf8');
-      const mainFileContent = mainFile.toString();
-      const matches = mainFileContent.match(regexImport);
-      const last = matches?.pop();
+      const mainFile = readFileSync(mainFilePath, 'utf8')
+      const mainFileContent = mainFile.toString()
+      const matches = mainFileContent.match(regexImport)
+      const last = matches?.pop()
 
       if (!last) {
-        s.stop('Error');
-        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`);
-        p.outro(`Bye 👋`);
-        process.exit();
+        s.stop('Error')
+        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
+        p.outro(`Bye 👋`)
+        process.exit()
       }
 
       if (mainFileContent.includes(codeInject)) {
-        s.stop(`Code already added to ${mainFilePath} ✅`);
-      } else {
-        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`);
-        writeFileSync(mainFilePath, newMainFileContent, 'utf8');
-        s.stop(`Code added to ${mainFilePath} ✅`);
+        s.stop(`Code already added to ${mainFilePath} ✅`)
+      }
+      else {
+        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
+        writeFileSync(mainFilePath, newMainFileContent, 'utf8')
+        s.stop(`Code added to ${mainFilePath} ✅`)
       }
     }
 
-    await markStep(orgId, snag, 5);
-  } else {
-    p.log.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`);
+    await markStep(orgId, snag, 5)
+  }
+  else {
+    p.log.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
   }
 }
 
