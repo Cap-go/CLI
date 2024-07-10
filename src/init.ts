@@ -205,7 +205,14 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
       if (!existsSync(nuxtDir)) {
         mkdirSync(nuxtDir, { recursive: true });
       }
-      const nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.ts');
+      let nuxtFilePath;
+      if(projectType === 'nuxtjs-ts') {
+       nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.ts');
+      }
+      else
+      {
+        nuxtFilePath = path.join(nuxtDir, 'capacitorUpdater.client.js');
+      }
       const nuxtFileContent = `
         import { CapacitorUpdater } from '@capgo/capacitor-updater'
 
