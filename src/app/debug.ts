@@ -6,7 +6,7 @@ import type LogSnag from 'logsnag'
 import type { Database } from '../types/supabase.types'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { OrganizationPerm, convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { OrganizationPerm, convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -60,9 +60,8 @@ interface LogData {
 }
 export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData | null> {
   try {
-    const defaultApiHostPreprod = 'https://api-preprod.capgo.app'
     const dataD = await ky
-      .post(`${defaultApiHostPreprod}/private/stats`, {
+      .post(`${defaultApiHost}/private/stats`, {
         headers: {
           'Content-Type': 'application/json',
           'capgkey': apikey,

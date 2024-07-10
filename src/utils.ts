@@ -11,7 +11,6 @@ import prettyjson from 'prettyjson'
 import { LogSnag } from 'logsnag'
 import * as p from '@clack/prompts'
 import ky from 'ky'
-import { promiseFiles } from 'node-dir'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
@@ -595,7 +594,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   await addToZip(filePath, '')
 
   // Generate the ZIP file as a Buffer
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE' })
+  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE', compressionOptions: { level: 6 } })
   return zipBuffer
 }
 
@@ -876,16 +875,33 @@ export function getPMAndCommand() {
   return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
+function readDirRecursively(dir: string): string[] {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  const files = entries.flatMap((entry) => {
+    const fullPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      return readDirRecursively(fullPath)
+    }
+    else {
+      // Use relative path to avoid issues with long paths on Windows
+      return fullPath.split(`node_modules${sep}`)[1] || fullPath
+    }
+  })
+  return files
+}
+
 export async function getLocalDepenencies() {
   const dir = findRootSync(process.cwd())
-  if (!existsSync('./package.json')) {
+  const packageJsonPath = join(process.cwd(), 'package.json')
+
+  if (!existsSync(packageJsonPath)) {
     p.log.error('Missing package.json, you need to be in a capacitor project')
     program.error('')
   }
 
   let packageJson
   try {
-    packageJson = JSON.parse(readFileSync('./package.json', 'utf8'))
+    packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
   }
   catch (err) {
     p.log.error('Invalid package.json, JSON parsing failed')
@@ -906,7 +922,8 @@ export async function getLocalDepenencies() {
     }
   }
 
-  if (!existsSync('./node_modules/')) {
+  const nodeModulesPath = join(process.cwd(), 'node_modules')
+  if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
     p.log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
@@ -916,9 +933,9 @@ export async function getLocalDepenencies() {
   let anyInvalid = false
 
   const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
-
     .map(async ([key, value]) => {
-      const dependencyFolderExists = existsSync(`./node_modules/${key}`)
+      const dependencyFolderPath = join(nodeModulesPath, key)
+      const dependencyFolderExists = existsSync(dependencyFolderPath)
 
       if (!dependencyFolderExists) {
         anyInvalid = true
@@ -929,16 +946,15 @@ export async function getLocalDepenencies() {
       }
 
       let hasNativeFiles = false
-      await promiseFiles(`./node_modules/${key}`)
-        .then((files) => {
-          if (files.find(fileName => nativeFileRegex.test(fileName)))
-            hasNativeFiles = true
-        })
-        .catch((error) => {
-          p.log.error(`Error reading node_modulses files for ${key} package`)
-          console.error(error)
-          program.error('')
-        })
+      try {
+        const files = readDirRecursively(dependencyFolderPath)
+        hasNativeFiles = files.some(fileName => nativeFileRegex.test(fileName))
+      }
+      catch (error) {
+        p.log.error(`Error reading node_modules files for ${key} package`)
+        console.error(error)
+        program.error('')
+      }
 
       return {
         name: key,
@@ -951,6 +967,27 @@ export async function getLocalDepenencies() {
     program.error('')
 
   return dependenciesObject as { name: string, version: string, native: boolean }[]
+}
+
+export async function getRemoteChecksums(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+  const { data, error } = await supabase
+    .from('channels')
+    .select(`version ( 
+            checksum 
+        )`)
+    .eq('name', channel)
+    .eq('app_id', appId)
+    .single()
+
+  if (error
+    || data === null
+    || !data.version
+    || !data.version.checksum
+  ) {
+    return null
+  }
+
+  return data.version.checksum
 }
 
 export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
@@ -1006,6 +1043,19 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
     .map(a => [a.name, a]))
 
   return mappedRemoteNativePackages
+}
+
+export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
+  const s = p.spinner()
+  s.start(`Checking bundle checksum compatibility with channel ${channel}`)
+  const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
+
+  if (remoteChecksum && remoteChecksum === currentChecksum) {
+    // cannot upload the same bundle
+    p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
+    program.error('')
+  }
+  s.stop(`Checksum compatible with ${channel} channel`)
 }
 
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {

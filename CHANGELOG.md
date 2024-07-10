@@ -2,6 +2,58 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.6](https://github.com/Cap-go/CLI/compare/v4.12.5...v4.12.6) (2024-07-09)
+
+
+### Bug Fixes
+
+* remove error if no checksum found it's normal ([41c211a](https://github.com/Cap-go/CLI/commit/41c211a87bc6a69f6847288bf89efb598d155b50))
+
+### [4.12.5](https://github.com/Cap-go/CLI/compare/v4.12.4...v4.12.5) (2024-07-09)
+
+
+### Bug Fixes
+
+* lint ([01e0f31](https://github.com/Cap-go/CLI/commit/01e0f31b20232578e47cc886be729e7e4e4885ed))
+* remove preprod url ([0d8672a](https://github.com/Cap-go/CLI/commit/0d8672a1534a5e88260cbbad7eb10821d07e6cba))
+
+### [4.12.4](https://github.com/Cap-go/CLI/compare/v4.12.3...v4.12.4) (2024-07-09)
+
+
+### Bug Fixes
+
+* make better compression on windows ([dc93876](https://github.com/Cap-go/CLI/commit/dc9387649ae6cdfa09172e2e806d834787cb2fd0))
+* use custom function to read recurst dir to fix windows issue ([cbd2217](https://github.com/Cap-go/CLI/commit/cbd2217ab877a40179f65be217e915fcbf7d0be1))
+* version error ([6ec20c7](https://github.com/Cap-go/CLI/commit/6ec20c7195cfe454ef5bfa258163088c14231647))
+
+### [4.12.3](https://github.com/Cap-go/CLI/compare/v4.12.2...v4.12.3) (2024-07-08)
+
+
+### Bug Fixes
+
+* getLocalDepenencies for windows ([ca7bf4e](https://github.com/Cap-go/CLI/commit/ca7bf4e97c6a2ff766978ed61089fd805126dde1))
+
+### [4.12.2](https://github.com/Cap-go/CLI/compare/v4.12.1...v4.12.2) (2024-07-08)
+
+
+### Bug Fixes
+
+* issue with upload ([ca08aec](https://github.com/Cap-go/CLI/commit/ca08aec7f38e1ae9c431ba35764f8659b23692e1))
+
+### [4.12.1](https://github.com/Cap-go/CLI/compare/v4.12.0...v4.12.1) (2024-07-08)
+
+
+### Bug Fixes
+
+* types ([3ee5a38](https://github.com/Cap-go/CLI/commit/3ee5a3872d2b74894e42b26c492a572edae2baa3))
+
+## [4.12.0](https://github.com/Cap-go/CLI/compare/v4.11.7...v4.12.0) (2024-07-08)
+
+
+### Features
+
+* add check for duplicated checksum ([0204005](https://github.com/Cap-go/CLI/commit/0204005b7fffd097f4f46eeb58bce3029c5edb54))
+
 ### [4.11.7](https://github.com/Cap-go/CLI/compare/v4.11.6...v4.11.7) (2024-07-01)
 
 ### [4.11.6](https://github.com/Cap-go/CLI/compare/v4.11.5...v4.11.6) (2024-06-28)
