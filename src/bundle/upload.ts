@@ -9,7 +9,7 @@ import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import ky, { HTTPError } from 'ky'
 import { encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -32,6 +32,7 @@ interface Options extends OptionsBase {
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
+  ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
 }
@@ -135,7 +136,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     localDependencies = localDependenciesWithChannel
 
     if (finalCompatibility.find(x => x.localVersion !== x.remoteVersion)) {
-      p.log.error(`Your bundle is not compatible with the channel ${channel}`)
+      spinner.stop(`Bundle NOT compatible with ${channel} channel`)
       p.log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
       if (autoMinUpdateVersion) {
@@ -152,14 +153,16 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
         }
 
         minUpdateVersion = lastMinUpdateVersion
-        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`)
+        spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
       catch (error) {
         p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
         program.error('')
       }
     }
-    spinner.stop(`Bundle compatible with ${channel} channel`)
+    else {
+      spinner.stop(`Bundle compatible with ${channel} channel`)
+    }
   }
   else if (!ignoreMetadataCheck) {
     p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
@@ -340,7 +343,8 @@ async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, b
 
 async function setVersionInChannel(
   supabase: SupabaseType,
-  options: Options,
+  apikey: string,
+  displayBundleUrl: boolean,
   bundle: string,
   channel: string,
   userId: string,
@@ -350,7 +354,7 @@ async function setVersionInChannel(
   permissions: OrganizationPerm,
 ) {
   const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
+    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
 
   if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
@@ -372,7 +376,7 @@ async function setVersionInChannel(
     else if (data?.id)
       p.log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (options.bundleUrl) {
+    if (displayBundleUrl) {
       p.log.info(`Bundle url: ${bundleUrl}`)
     }
     else if (!versionId) {
@@ -401,14 +405,15 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
     p.log.info('Uploading to S3')
-    const s3Client = new S3Client({
-      region: s3Region,
-      credentials: {
-        accessKeyId: s3Apikey,
-        secretAccessKey: s3Apisecret,
-      },
-    })
-
+    // const s3Client = new S3Client({
+    //   region: s3Region,
+    //   credentials: {
+    //     accessKeyId: s3Apikey,
+    //     secretAccessKey: s3Apisecret,
+    //   },
+    // })
+    p.log.error('S3 upload is not available we have currenly an issue with it')
+    program.error('')
     // todo: figure out s3 upload
     return
   }
@@ -432,7 +437,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
-  await checkPlanValid(supabase, orgId, options.apikey, appid, true)
+  await checkPlanValid(supabase, orgId, apikey, appid, true)
   await checkTrial(supabase, orgId, localConfig)
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
   await checkVersionExists(supabase, appid, bundle)
@@ -462,6 +467,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = sessionKey
     versionData.checksum = checksum
     zipped = _zipped
+    if (!options.ignoreChecksumCheck) {
+      await checkChecksum(supabase, appid, channel, checksum)
+    }
   }
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
@@ -481,7 +489,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }
   }
 
-  await setVersionInChannel(supabase, options, bundle, channel, userId, orgId, appid, localConfig, permissions)
+  await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, permissions)
 
   await snag.track({
     channel: 'app',
@@ -500,9 +508,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   return true
 }
 
-export async function uploadCommand(apikey: string, options: Options) {
+export async function uploadCommand(appid: string, options: Options) {
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
     p.log.error(formatError(error))
@@ -510,11 +518,11 @@ export async function uploadCommand(apikey: string, options: Options) {
   }
 }
 
-export async function uploadDeprecatedCommand(apikey: string, options: Options) {
+export async function uploadDeprecatedCommand(appid: string, options: Options) {
   const pm = getPMAndCommand()
   p.log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
     p.log.error(formatError(error))
