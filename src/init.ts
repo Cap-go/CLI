@@ -344,8 +344,7 @@ async function step10(orgId: string, snag: LogSnag, apikey: string, appId: strin
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
-    p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
-    p.log.info('Waiting... (there is a usual delay of 15 seconds until the backend process the logs)')
+    p.log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
     await waitLog('onboarding-v2', apikey, appId, snag, orgId)
   }
   else {
@@ -436,6 +435,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   p.log.info(`Welcome onboard ✈️!`)
   p.log.info(`Your Capgo update system is setup`)
   p.log.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
+  p.log.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
   p.outro(`Bye 👋`)
   process.exit()
 }

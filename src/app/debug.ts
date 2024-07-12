@@ -58,7 +58,7 @@ interface LogData {
   version?: number
   created_at: string
 }
-export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData | null> {
+export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData[]> {
   try {
     const dataD = await ky
       .post(`${defaultApiHost}/private/stats`, {
@@ -74,12 +74,108 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
         return [] as LogData[]
       })
     if (dataD?.length > 0 && (after === null || after !== dataD[0].created_at))
-      return dataD[0]
+      return dataD
   }
   catch (error) {
     p.log.error(`Cannot get stats ${formatError(error)}`)
   }
-  return null
+  return []
+}
+
+async function displayError(data: LogData, channel: string, orgId: string, snag: LogSnag, baseUrl: string) {
+  p.log.info(`Log from Device: ${data.device_id}`)
+  if (data.action === 'get') {
+    p.log.info('Update Sent your your device, wait until event download complete')
+    await markSnag(channel, orgId, snag, 'done')
+  }
+  else if (data.action.startsWith('download_')) {
+    const action = data.action.split('_')[1]
+    if (action === 'complete') {
+      p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
+      await markSnag(channel, orgId, snag, 'downloaded')
+    }
+    else if (action === 'fail') {
+      p.log.error('Your bundle has failed to download on your device.')
+      p.log.error('Please check if you have network connection and try again')
+    }
+    else {
+      p.log.info(`Your bundle is downloading ${action}% ...`)
+    }
+  }
+  else if (data.action === 'set') {
+    p.log.info('Your bundle has been set on your device ❤️')
+    await markSnag(channel, orgId, snag, 'set')
+    return false
+  }
+  else if (data.action === 'NoChannelOrOverride') {
+    p.log.error(`No default channel or override (channel/device) found, please create it here ${baseUrl}`)
+  }
+  else if (data.action === 'needPlanUpgrade') {
+    p.log.error('Your are out of quota, please upgrade your plan here https://web.capgo.app/dashboard/settings/plans')
+  }
+  else if (data.action === 'missingBundle') {
+    p.log.error('Your bundle is missing, please check how you build your app')
+  }
+  else if (data.action === 'noNew') {
+    p.log.error(`The version number you uploaded to your default channel in Capgo, is the same as the present in the device ${data.device_id}.`)
+    p.log.error(`To fix it, ensure the variable:
+      - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
+      - Android: versionName
+    Are lower than the version number you uploaded to Capgo.`)
+    p.log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
+  }
+  else if (data.action === 'disablePlatformIos') {
+    p.log.error(`iOS is disabled in the default channel and your device ${data.device_id} is an iOS device ${baseUrl}`)
+  }
+  else if (data.action === 'disablePlatformAndroid') {
+    p.log.error(`Android is disabled in the default channel and your device ${data.device_id} is an Android device ${baseUrl}`)
+  }
+  else if (data.action === 'disableAutoUpdateToMajor') {
+    p.log.error(`The version number you uploaded to your default channel in Capgo, is a major version higher (ex: 1.0.0 in device to 2.0.0 in Capgo) than the present in the device ${data.device_id}.`)
+    p.log.error('Capgo is set by default to protect you from this, and avoid sending breaking changes incompatible with the native code present in the device.')
+    p.log.error(`To fix it, ensure the variable:
+  - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
+  - Android: versionName
+Are lower than the version number you uploaded to Capgo.`)
+    p.log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
+  }
+  else if (data.action === 'disableAutoUpdateUnderNative') {
+    p.log.error(`The version number you uploaded to your default channel in Capgo, is lower than the present in the device ${data.device_id}.`)
+    p.log.error(`To fix it, ensure the variable:
+      - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
+      - Android: versionName
+    Are lower than the version number you uploaded to Capgo.`)
+    p.log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
+  }
+  else if (data.action === 'disableDevBuild') {
+    p.log.error(`Dev build is disabled in the default channel. ${baseUrl}`)
+    p.log.error('Set your channel to allow it if you wanna test your app')
+  }
+  else if (data.action === 'disableEmulator') {
+    p.log.error(`Emulator is disabled in the default channel. ${baseUrl}`)
+    p.log.error('Set your channel to allow it if you wanna test your app')
+  }
+  else if (data.action === 'cannotGetBundle') {
+    p.log.error(`We cannot get your bundle from the default channel. ${baseUrl}`)
+    p.log.error('Are you sure your default channel has a bundle set?')
+  }
+  else if (data.action === 'set_fail') {
+    p.log.error(`Your bundle seems to be corrupted, try to download from ${baseUrl} to identify the issue`)
+  }
+  else if (data.action === 'reset') {
+    p.log.error('Your device has been reset to the builtin bundle, did notifyAppReady() is present in the code builded and uploaded to Capgo ?')
+  }
+  else if (data.action === 'update_fail') {
+    p.log.error('Your bundle has been installed but failed to call notifyAppReady()')
+    p.log.error('Please check if you have network connection and try again')
+  }
+  else if (data.action === 'checksum_fail') {
+    p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
+  }
+  else {
+    p.log.error(`Log from Capgo ${data.action}`)
+  }
+  return true
 }
 
 export async function waitLog(channel: string, apikey: string, appId: string, snag: LogSnag, orgId: string, deviceId?: string) {
@@ -95,96 +191,24 @@ export async function waitLog(channel: string, apikey: string, appId: string, sn
       key: 'created_at',
       sortable: 'desc',
     }],
-    limit: 1,
     rangeStart: new Date().toISOString(),
   }
   let after: string | null = null
+  const s = p.spinner()
+  s.start(`Waiting for logs (Expect delay of 30 sec)`)
   while (loop) {
+    await wait(5000)
     const data = await getStats(apikey, query, after)
-    if (data) {
-      after = data.created_at
-      p.log.info(`Log from Device: ${data.device_id}`)
-      if (data.action === 'get') {
-        p.log.info('Update Sent your your device, wait until event download complete')
-        await markSnag(channel, orgId, snag, 'done')
-      }
-      else if (data.action.startsWith('download_')) {
-        const action = data.action.split('_')[1]
-        if (action === 'complete') {
-          p.log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-          await markSnag(channel, orgId, snag, 'downloaded')
-        }
-        else if (action === 'fail') {
-          p.log.error('Your bundle has failed to download on your device.')
-          p.log.error('Please check if you have network connection and try again')
-        }
-        else {
-          p.log.info(`Your bundle is downloading ${action}% ...`)
-        }
-      }
-      else if (data.action === 'set') {
-        p.log.info('Your bundle has been set on your device ❤️')
-        loop = false
-        await markSnag(channel, orgId, snag, 'set')
-        return Promise.resolve(data)
-      }
-      else if (data.action === 'NoChannelOrOverride') {
-        p.log.error(`No default channel or override (channel/device) found, please create it here ${baseUrl}`)
-      }
-      else if (data.action === 'needPlanUpgrade') {
-        p.log.error('Your are out of quota, please upgrade your plan here https://web.capgo.app/dashboard/settings/plans')
-      }
-      else if (data.action === 'missingBundle') {
-        p.log.error('Your bundle is missing, please check how you build your app ')
-      }
-      else if (data.action === 'noNew') {
-        p.log.error(`Your version in ${data.device_id} is the same as your version uploaded, change it to see the update`)
-      }
-      else if (data.action === 'disablePlatformIos') {
-        p.log.error(`iOS is disabled  in the default channel and your device is an iOS device ${baseUrl}`)
-      }
-      else if (data.action === 'disablePlatformAndroid') {
-        p.log.error(`Android is disabled  in the default channel and your device is an Android device ${baseUrl}`)
-      }
-      else if (data.action === 'disableAutoUpdateToMajor') {
-        p.log.error('Auto update to major version is disabled in the default channel.')
-        p.log.error('Set your app to the same major version as the default channel')
-      }
-      else if (data.action === 'disableAutoUpdateUnderNative') {
-        p.log.error('Auto update under native version is disabled in the default channel.')
-        p.log.error('Set your app to the same native version as the default channel.')
-      }
-      else if (data.action === 'disableDevBuild') {
-        p.log.error(`Dev build is disabled in the default channel. ${baseUrl}`)
-        p.log.error('Set your channel to allow it if you wanna test your app')
-      }
-      else if (data.action === 'disableEmulator') {
-        p.log.error(`Emulator is disabled in the default channel. ${baseUrl}`)
-        p.log.error('Set your channel to allow it if you wanna test your app')
-      }
-      else if (data.action === 'cannotGetBundle') {
-        p.log.error(`We cannot get your bundle from the default channel. ${baseUrl}`)
-        p.log.error('Are you sure your default channel has a bundle set?')
-      }
-      else if (data.action === 'set_fail') {
-        p.log.error(`Your bundle seems to be corrupted, try to download from ${baseUrl} to identify the issue`)
-      }
-      else if (data.action === 'reset') {
-        p.log.error('Your device has been reset to the builtin bundle, did you added  notifyAppReady in your code?')
-      }
-      else if (data.action === 'update_fail') {
-        p.log.error('Your bundle has been installed but failed to call notifyAppReady')
-        p.log.error('Please check if you have network connection and try again')
-      }
-      else if (data.action === 'checksum_fail') {
-        p.log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
-      }
-      else {
-        p.log.error(`Log from Capgo ${data.action}`)
+    if (data.length > 0) {
+      after = data[0].created_at
+      for (const d of data) {
+        loop = await displayError(d, channel, orgId, snag, baseUrl)
+        if (!loop)
+          break
       }
     }
-    await wait(5000)
   }
+  s.stop(`Stop watching logs`)
   return Promise.resolve()
 }
 
@@ -221,8 +245,7 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, userId, snag)
   if (doRun) {
-    p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
-    p.log.info('Waiting... (there is a usual delay of 15 seconds until the backend process the logs)')
+    p.log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
     await waitLog('debug', options.apikey, appId, snag, orgId, deviceId)
     p.outro(`Done ✅`)
   }
