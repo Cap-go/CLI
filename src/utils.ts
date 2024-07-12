@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
-import { join, resolve, sep } from 'node:path'
+import path, { join, resolve, sep } from 'node:path'
 import process from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { loadConfig } from '@capacitor/cli/dist/config'
@@ -317,13 +317,14 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
   const dirents = await readdirSync(dir, { withFileTypes: true })
   for (const dirent of dirents) {
     const res = resolve(dir, dirent.name)
-    if (dirent.isDirectory()
+    if (
+      dirent.isDirectory()
       && !dirent.name.startsWith('.')
       && !dirent.name.startsWith('node_modules')
-      && !dirent.name.startsWith('dist')) {
+      && !dirent.name.startsWith('dist')
+    ) {
       yield * getFiles(res)
     }
-
     else {
       yield res
     }
@@ -334,46 +335,81 @@ export async function findProjectType() {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
   // for angular check if angular.json exists
-  // for sveltekit check if svelte.config.js exists
+  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
+  // for vue check if vue.config.js exists or vue is in package.json dependancies
+  // for react check if package.json exists and react is in dependencies
   const pwd = process.cwd()
+  let isTypeScript = false
+
+  // Check for TypeScript configuration file
+  const tsConfigPath = resolve(pwd, 'tsconfig.json')
+  if (existsSync(tsConfigPath)) {
+    isTypeScript = true
+  }
+
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     if (f.includes('angular.json')) {
       p.log.info('Found angular project')
-      return 'angular'
+      return isTypeScript ? 'angular-ts' : 'angular-js'
     }
-    if (f.includes('nuxt.config.js')) {
+    if (f.includes('nuxt.config.js' || f.includes('nuxt.config.ts'))) {
       p.log.info('Found nuxtjs project')
-      return 'nuxtjs'
+      return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
-    if (f.includes('next.config.js')) {
+    if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
       p.log.info('Found nextjs project')
-      return 'nextjs'
+      return isTypeScript ? 'nextjs-ts' : 'nextjs-js'
     }
     if (f.includes('svelte.config.js')) {
       p.log.info('Found sveltekit project')
-      return 'sveltekit'
+      return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js'
+    }
+    if (f.includes('rollup.config.js')) {
+      p.log.info('Found svelte project')
+      return isTypeScript ? 'svelte-ts' : 'svelte-js'
+    }
+    if (f.includes('vue.config.js')) {
+      p.log.info('Found vue project')
+      return isTypeScript ? 'vue-ts' : 'vue-js'
+    }
+    if (f.includes('package.json')) {
+      const packageJsonPath = path.resolve(f)
+      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+      if (packageJson.dependencies) {
+        if (packageJson.dependencies.react) {
+          p.log.info('Found react project test')
+          return isTypeScript ? 'react-ts' : 'react-js'
+        }
+        if (packageJson.dependencies.vue) {
+          p.log.info('Found vue project')
+          return isTypeScript ? 'vue-ts' : 'vue-js'
+        }
+      }
     }
   }
+
   return 'unknown'
 }
 
-export async function findMainFileForProjectType(projectType: string) {
-  if (projectType === 'angular')
-    return 'src/main.ts'
-
-  if (projectType === 'nuxtjs')
-    return 'src/main.ts'
-
-  if (projectType === 'nextjs')
-    return 'pages/_app.tsx'
-
-  if (projectType === 'sveltekit')
-    return 'src/main.ts'
-
+export function findMainFileForProjectType(projectType: string, isTypeScript: boolean): string | null {
+  if (projectType === 'angular') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js'
+  }
+  if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
+    return isTypeScript ? 'src/app/layout.tsx' : 'src/app/layout.js'
+  }
+  if (projectType === 'svelte-js' || projectType === 'svelte-ts') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js'
+  }
+  if (projectType === 'vue-js' || projectType === 'vue-ts') {
+    return isTypeScript ? 'src/main.ts' : 'src/main.js'
+  }
+  if (projectType === 'react-js' || projectType === 'react-ts') {
+    return isTypeScript ? 'src/index.tsx' : 'src/index.js'
+  }
   return null
 }
-
 // create a function to find the right command to build the project in static mode depending on the project type
 
 export async function findBuildCommandForProjectType(projectType: string) {
