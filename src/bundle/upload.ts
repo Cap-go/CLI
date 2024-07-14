@@ -211,6 +211,7 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
 async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string) {
   // check if app already exist
   // apikey is sooo legacy code, current prod does not use it
+  // TODO: remove apikey and create a new function who not need it
   const { data: appVersion, error: appVersionError } = await supabase
     .rpc('exist_app_versions', { appid, apikey: '', name_version: bundle })
     .single()
@@ -470,6 +471,19 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     if (!options.ignoreChecksumCheck) {
       await checkChecksum(supabase, appid, channel, checksum)
     }
+  }
+  else {
+    await snag.track({
+      channel: 'app',
+      event: 'App external',
+      icon: '📤',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+    versionData.session_key = options.ivSessionKey
   }
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
