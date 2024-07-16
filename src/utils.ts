@@ -16,6 +16,7 @@ import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
+import { findUp } from 'find-up'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -890,6 +891,16 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
+export async function findNodeModulesPath(startDir: string) {
+  try {
+    const packageJsonPath = await findUp('node_modules', { cwd: startDir, type: 'directory' })
+    return packageJsonPath
+  }
+  catch (e) {
+    console.error('Error finding node_modules path', e)
+  }
+}
+
 export async function getLocalDependencies() {
   const dir = findRootSync(process.cwd())
   const packageJsonPath = join(process.cwd(), 'package.json')
@@ -922,7 +933,7 @@ export async function getLocalDependencies() {
     }
   }
 
-  const nodeModulesPath = join(process.cwd(), 'node_modules')
+  const nodeModulesPath = findNodeModulesPath(process.cwd())
   if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)

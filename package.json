@@ -55,6 +55,7 @@
     "ci-info": "^4.0.0",
     "commander": "12.1.0",
     "console-table-printer": "^2.12.1",
+    "find-up": "^7.0.0",
     "get-latest-version": "^5.1.0",
     "is-wsl": "^3.1.0",
     "jszip": "^3.10.1",
