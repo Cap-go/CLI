@@ -891,13 +891,20 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function findNodeModulesPath(startDir: string) {
+export async function findNodeModulesPath(startDir: string): Promise<string> {
   try {
     const packageJsonPath = await findUp('node_modules', { cwd: startDir, type: 'directory' })
-    return packageJsonPath
+    if (packageJsonPath) {
+      return packageJsonPath
+    }
+    else {
+      console.error('Error finding node_modules path')
+      program.error('')
+    }
   }
   catch (e) {
     console.error('Error finding node_modules path', e)
+    program.error('')
   }
 }
 
@@ -933,7 +940,7 @@ export async function getLocalDependencies() {
     }
   }
 
-  const nodeModulesPath = findNodeModulesPath(process.cwd())
+  const nodeModulesPath = await findNodeModulesPath(process.cwd())
   if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
