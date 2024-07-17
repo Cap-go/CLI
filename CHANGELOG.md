@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.12.12](https://github.com/Cap-go/CLI/compare/v4.12.11...v4.12.12) (2024-07-15)
+
+### [4.12.11](https://github.com/Cap-go/CLI/compare/v4.12.10...v4.12.11) (2024-07-14)
+
+
+### Bug Fixes
+
+* external missing session key ([8fbee32](https://github.com/Cap-go/CLI/commit/8fbee329cd97b58a95c05b2209b54d948cab9639))
+
 ### [4.12.10](https://github.com/Cap-go/CLI/compare/v4.12.9...v4.12.10) (2024-07-12)
 
 
