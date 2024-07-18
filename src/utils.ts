@@ -16,6 +16,7 @@ import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
+import { findUp } from 'find-up'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -335,8 +336,8 @@ export async function findProjectType() {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
   // for angular check if angular.json exists
-  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
-  // for vue check if vue.config.js exists or vue is in package.json dependancies
+  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependencies
+  // for vue check if vue.config.js exists or vue is in package.json dependencies
   // for react check if package.json exists and react is in dependencies
   const pwd = process.cwd()
   let isTypeScript = false
@@ -890,7 +891,24 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies() {
+export async function findNodeModulesPath(startDir: string): Promise<string> {
+  try {
+    const packageJsonPath = await findUp('node_modules', { cwd: startDir, type: 'directory' })
+    if (packageJsonPath) {
+      return packageJsonPath
+    }
+    else {
+      console.error('Error finding node_modules path')
+      program.error('')
+    }
+  }
+  catch (e) {
+    console.error('Error finding node_modules path', e)
+    program.error('')
+  }
+}
+
+export async function getLocalDependencies() {
   const dir = findRootSync(process.cwd())
   const packageJsonPath = join(process.cwd(), 'package.json')
 
@@ -922,7 +940,7 @@ export async function getLocalDepenencies() {
     }
   }
 
-  const nodeModulesPath = join(process.cwd(), 'node_modules')
+  const nodeModulesPath = await findNodeModulesPath(process.cwd())
   if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
@@ -990,7 +1008,7 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   return data.version.checksum
 }
 
-export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+export async function getRemoteDependencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data: remoteNativePackages, error } = await supabase
     .from('channels')
     .select(`version ( 
@@ -1052,17 +1070,17 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
 
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
-    p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
+    p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you build your app before uploading ?`)
     program.error('')
   }
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {
-  const dependenciesObject = await getLocalDepenencies()
-  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+  const dependenciesObject = await getLocalDependencies()
+  const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
-  const finalDepenencies:
+  const finalDependencies:
   ({
     name: string
     localVersion: string
@@ -1098,10 +1116,10 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
 
-  finalDepenencies.push(...removeNotInLocal)
+  finalDependencies.push(...removeNotInLocal)
 
   return {
-    finalCompatibility: finalDepenencies,
+    finalCompatibility: finalDependencies,
     localDependencies: dependenciesObject,
   }
 }

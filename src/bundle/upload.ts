@@ -9,7 +9,7 @@ import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import ky, { HTTPError } from 'ky'
 import { encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -120,7 +120,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   const updateMetadataRequired = !!channelData && channelData.disableAutoUpdate === 'version_number'
 
   // eslint-disable-next-line no-undef-init
-  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined
+  let localDependencies: Awaited<ReturnType<typeof getLocalDependencies>> | undefined = undefined
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
 
   // We only check compatibility IF the channel exists
@@ -166,7 +166,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
   else if (!ignoreMetadataCheck) {
     p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
-    localDependencies = await getLocalDepenencies()
+    localDependencies = await getLocalDependencies()
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
