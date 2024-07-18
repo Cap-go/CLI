@@ -7,6 +7,7 @@ import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
+import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
 import { encryptSource } from '../api/crypto'
 import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
@@ -27,6 +28,9 @@ interface Options extends OptionsBase {
   s3Apikey?: string
   s3Apisecret?: string
   s3BucketName?: string
+  s3Port?: number
+  s3SSL?: boolean
+  s3Endpoint?: string
   bundleUrl?: boolean
   codeCheck?: boolean
   minUpdateVersion?: string
@@ -395,29 +399,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const pm = getPMAndCommand()
   await checkLatest()
 
-  const { s3Region, s3Apikey, s3Apisecret, s3BucketName } = options
-
-  if (s3BucketName || s3Region || s3Apikey || s3Apisecret) {
-    if (!s3BucketName || !s3Region || !s3Apikey || !s3Apisecret) {
-      p.log.error('Missing argument, for S3 upload you need to provide a bucket name, region, API key, and API secret')
-      program.error('')
-    }
-  }
-
-  if (s3Region && s3Apikey && s3Apisecret && s3BucketName) {
-    p.log.info('Uploading to S3')
-    // const s3Client = new S3Client({
-    //   region: s3Region,
-    //   credentials: {
-    //     accessKeyId: s3Apikey,
-    //     secretAccessKey: s3Apisecret,
-    //   },
-    // })
-    p.log.error('S3 upload is not available we have currenly an issue with it')
-    program.error('')
-    // todo: figure out s3 upload
-    return
-  }
+  const { s3Region, s3Apikey, s3Apisecret, s3BucketName, s3Endpoint, s3Port, s3SSL } = options
 
   const apikey = getApikey(options)
   const config = await getConfig()
@@ -492,7 +474,31 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     program.error('')
   }
 
-  if (zipped) {
+  if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
+    if (!s3BucketName || !s3Endpoint || !s3Region || !s3Apikey || !s3Apisecret || !s3Port) {
+      p.log.error('Missing argument, for S3 upload you need to provide a bucket name, endpoint, region, port, API key, and API secret')
+      program.error('')
+    }
+
+    p.log.info('Uploading to S3')
+    const s3Client = new S3Client({
+      endPoint: s3Endpoint,
+      region: s3Region,
+      port: s3Port,
+      useSSL: s3SSL,
+      bucket: s3BucketName,
+      credentials: {
+        accessKeyId: s3Apikey,
+        secretAccessKey: s3Apisecret,
+      },
+    })
+    const fileName = `${appid}-${bundle}`
+    const encodeFileName = encodeURIComponent(fileName)
+    await s3Client.putObject(fileName, zipped)
+    versionData.external_url = `https://${s3Endpoint}/${encodeFileName}`
+    versionData.storage_provider = 'external'
+  }
+  else if (zipped) {
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
     versionData.storage_provider = 'r2'

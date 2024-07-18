@@ -44,7 +44,7 @@
     "check-posix-paths": "node test/check-posix-paths.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.600.0",
+    "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capacitor/cli": "6.1.0",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
