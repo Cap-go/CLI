@@ -1,4 +1,5 @@
-import { dirname, join } from 'node:path'
+import { join } from 'node:path'
+import { cwd } from 'node:process'
 import { accessSync, constants, readFileSync, writeFileSync } from 'node:fs'
 
 export const CONFIG_FILE_NAME_TS = 'capacitor.config.ts'
@@ -45,7 +46,7 @@ function loadConfigJson(content: string): CapacitorConfig {
 }
 
 export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
-  const cliRootDir = dirname(__dirname)
+  const cliRootDir = cwd()
   const extConfigFilePathTS = join(cliRootDir, CONFIG_FILE_NAME_TS)
   const extConfigFilePathJSON = join(cliRootDir, CONFIG_FILE_NAME_JSON)
 
