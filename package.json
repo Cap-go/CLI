@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "4.12.12",
+  "version": "4.12.14",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -44,8 +44,7 @@
     "check-posix-paths": "node test/check-posix-paths.js"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.600.0",
-    "@capacitor/cli": "6.1.0",
+    "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
     "@manypkg/find-root": "^2.2.1",

@@ -1,23 +1,23 @@
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, isCancel, log, outro, select } from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
 import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 export async function deleteApp(appId: string, options: OptionsBase) {
-  p.intro(`Deleting`)
+  intro(`Deleting`)
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
   const snag = useLogSnag()
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
+    log.error('Missing API key, you need to provide a API key to upload your bundle')
     program.error('')
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
   const supabase = await createSupabaseClient(options.apikey)
@@ -37,11 +37,11 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     // We are dealing with a member user that is not the owner
     // Deleting the app is not recomended at this stage
 
-    p.log.warn('Deleting the app is not recomended for users that are not the organization owner')
-    p.log.warn('You are invited as a super_admin but your are not the owner')
-    p.log.warn('It\'s strongly recomended that you do not continue!')
+    log.warn('Deleting the app is not recomended for users that are not the organization owner')
+    log.warn('You are invited as a super_admin but your are not the owner')
+    log.warn('It\'s strongly recomended that you do not continue!')
 
-    const shouldContinue = await p.select({
+    const shouldContinue = await select({
       message: 'Do you want to continue?',
       options: [
         {
@@ -55,13 +55,13 @@ export async function deleteApp(appId: string, options: OptionsBase) {
       ],
     })
 
-    if (p.isCancel(shouldContinue) || shouldContinue === 'no') {
-      p.log.error('Canceled deleting the app, exiting')
+    if (isCancel(shouldContinue) || shouldContinue === 'no') {
+      log.error('Canceled deleting the app, exiting')
       program.error('')
     }
   }
   else if (appOwnerError) {
-    p.log.warn(`Cannot get the app owner ${formatError(appOwnerError)}`)
+    log.warn(`Cannot get the app owner ${formatError(appOwnerError)}`)
   }
 
   const { error } = await supabase
@@ -70,7 +70,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     .remove([`org/${appOwner?.owner_org.id}/${appId}/icon`])
   if (error) {
     console.error(error, `images/org/${appOwner?.owner_org.id}/${appId}`)
-    p.log.error('Could not delete app logo')
+    log.error('Could not delete app logo')
   }
 
   // TODO: make the version delete in R2 too
@@ -79,7 +79,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     .from(`apps/${appId}/${userId}`)
     .remove(['versions'])
   if (delError)
-    p.log.error('Could not delete app version')
+    log.error('Could not delete app version')
   // We should not care too much, most is in r2 anyways :/
   // program.error('')
 
@@ -90,7 +90,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     // .eq('user_id', userId)
 
   if (dbError) {
-    p.log.error('Could not delete app')
+    log.error('Could not delete app')
     program.error('')
   }
   const orgId = await getOrganizationId(supabase, appId)
@@ -104,7 +104,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     },
     notify: false,
   }).catch()
-  p.log.success(`App deleted in Capgo`)
-  p.outro('Done ✅')
-  process.exit()
+  log.success(`App deleted in Capgo`)
+  outro('Done ✅')
+  exit()
 }

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
 import ciDetect from 'ci-info'
-import * as p from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
 import { baseKeyPub, getLocalConfig } from '../utils'
@@ -13,7 +13,7 @@ interface Options {
 }
 
 export async function encryptZip(zipPath: string, options: Options) {
-  p.intro(`Encryption`)
+  intro(`Encryption`)
 
   await checkLatest()
   const localConfig = await getLocalConfig()
@@ -21,7 +21,7 @@ export async function encryptZip(zipPath: string, options: Options) {
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
-    p.log.error(`Error: Zip not found at the path ${zipPath}`)
+    log.error(`Error: Zip not found at the path ${zipPath}`)
     program.error('')
   }
 
@@ -31,14 +31,14 @@ export async function encryptZip(zipPath: string, options: Options) {
   let publicKey = options.keyData || ''
 
   if (!existsSync(keyPath) && !publicKey) {
-    p.log.warning(`Cannot find public key ${keyPath} or as keyData option`)
+    log.warning(`Cannot find public key ${keyPath} or as keyData option`)
     if (ciDetect.isCI) {
-      p.log.error(`Error: Missing public key`)
+      log.error(`Error: Missing public key`)
       program.error('')
     }
-    const res = await p.confirm({ message: 'Do you want to use our public key ?' })
+    const res = await confirm({ message: 'Do you want to use our public key ?' })
     if (!res) {
-      p.log.error(`Error: Missing public key`)
+      log.error(`Error: Missing public key`)
       program.error('')
     }
     publicKey = localConfig.signKey || ''
@@ -51,10 +51,10 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   const zipFile = readFileSync(zipPath)
   const encodedZip = encryptSource(zipFile, publicKey)
-  p.log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
+  log.success(`ivSessionKey: ${encodedZiivSessionKey}`)
   // write decodedZip in a file
-  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
-  p.log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
-  p.outro(`Done ✅`)
-  process.exit()
+  writeFileSync(`${zipPath}_encrypted.zip`, encodedZiencryptedData)
+  log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
+  outro(`Done ✅`)
+  exit()
 }
