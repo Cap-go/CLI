@@ -1,25 +1,25 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import process from 'node:process'
+import { exit } from 'node:process'
 import mime from 'mime'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import type { Options } from '../api/app'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
 import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganization, verifyUser } from '../utils'
 
 export async function setApp(appId: string, options: Options) {
-  p.intro(`Set app`)
+  intro(`Set app`)
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
 
   if (!options.apikey) {
-    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
+    log.error(`Missing API key, you need to provide a API key to upload your bundle`)
     program.error(``)
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error(``)
   }
   const supabase = await createSupabaseClient(options.apikey)
@@ -33,11 +33,11 @@ export async function setApp(appId: string, options: Options) {
   const { name, icon, retention } = options
 
   if (retention && Number.isNaN(Number(retention))) {
-    p.log.error(`retention value must be a number`)
+    log.error(`retention value must be a number`)
     program.error(``)
   }
   else if (retention && retention < 0) {
-    p.log.error(`retention value cannot be less than 0`)
+    log.error(`retention value cannot be less than 0`)
     program.error(``)
   }
 
@@ -50,16 +50,16 @@ export async function setApp(appId: string, options: Options) {
     iconBuff = readFileSync(icon)
     const contentType = mime.getType(icon)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${icon}`)
+    log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
     const contentType = mime.getType(newIconPath)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${newIconPath}`)
+    log.warn(`Found app icon ${newIconPath}`)
   }
   else {
-    p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
+    log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
@@ -68,7 +68,7 @@ export async function setApp(appId: string, options: Options) {
         contentType: iconType,
       })
     if (error) {
-      p.log.error(`Could not set app ${formatError(error)}`)
+      log.error(`Could not set app ${formatError(error)}`)
       program.error(``)
     }
     const { data: signedURLData } = await supabase
@@ -88,9 +88,9 @@ export async function setApp(appId: string, options: Options) {
     .eq('app_id', appId)
     .eq('user_id', userId)
   if (dbError) {
-    p.log.error(`Could not set app ${formatError(dbError)}`)
+    log.error(`Could not set app ${formatError(dbError)}`)
     program.error(``)
   }
-  p.outro(`Done ✅`)
-  process.exit()
+  outro(`Done ✅`)
+  exit()
 }

@@ -1,7 +1,8 @@
+import { exit } from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import * as p from '@clack/prompts'
+import { log } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 
 // import { definitions } from '../types/types_supabase';
@@ -19,7 +20,7 @@ export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid
     .eq('deleted', false)
     .eq('name', bundle)
   if (delAppSpecVersionError) {
-    p.log.error(`App Version ${appid}@${bundle} not found in database`)
+    log.error(`App Version ${appid}@${bundle} not found in database`)
     program.error('')
   }
 }
@@ -34,9 +35,9 @@ export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, 
 
 export function displayBundles(data: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[]) {
   if (!data.length) {
-    p.log.error('No bundle found')
-    // eslint-disable-next-line node/prefer-global/process
-    process.exit(1)
+    log.error('No bundle found')
+
+    exit(1)
   }
   const t = new Table({
     title: 'Bundles',
@@ -52,7 +53,7 @@ export function displayBundles(data: (Database['public']['Tables']['app_versions
     })
   })
 
-  p.log.success(t.render())
+  log.success(t.render())
 }
 
 export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string) {
@@ -64,7 +65,7 @@ export async function getActiveAppVersions(supabase: SupabaseClient<Database>, a
     .order('created_at', { ascending: false })
 
   if (vError) {
-    p.log.error(`App ${appid} not found in database`)
+    log.error(`App ${appid} not found in database`)
     program.error('')
   }
   return data
@@ -78,7 +79,7 @@ export async function getChannelsVersion(supabase: SupabaseClient<Database>, app
     .eq('app_id', appid)
 
   if (channelsError) {
-    p.log.error(`App ${appid} not found in database`)
+    log.error(`App ${appid} not found in database`)
     program.error('')
   }
   return channels.map(c => c.version)
@@ -93,7 +94,7 @@ export async function getVersionData(supabase: SupabaseClient<Database>, appid: 
     .eq('deleted', false)
     .single()
   if (!versionData || versionIdError) {
-    p.log.error(`App Version ${appid}@${bundle} doesn't exist`)
+    log.error(`App Version ${appid}@${bundle} doesn't exist`)
     program.error('')
   }
   return versionData

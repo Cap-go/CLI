@@ -1,21 +1,21 @@
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
-import path, { join, resolve, sep } from 'node:path'
-import process from 'node:process'
+import { join, resolve, sep } from 'node:path'
+import { cwd, env, exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
-import { loadConfig } from '@capacitor/cli/dist/config'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@supabase/supabase-js'
 import prettyjson from 'prettyjson'
 import { LogSnag } from 'logsnag'
-import * as p from '@clack/prompts'
 import ky from 'ky'
 import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
+import { confirm as confirmC, isCancel, log, select, spinner } from '@clack/prompts'
+import { loadConfig } from './config'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -41,30 +41,38 @@ export function wait(ms: number) {
   })
 }
 
+export async function readPackageJson() {
+  const packageJson = readFileSync(join(cwd(), 'package.json'))
+  return JSON.parse(packageJson as any)
+}
+
 export async function getConfig() {
-  let config: Config
   try {
-    config = await loadConfig()
+    const extConfig = await loadConfig()
+    if (!extConfig) {
+      log.error(`No capacitor config file found, run \`cap init\` first`)
+      program.error('')
+    }
+    return extConfig
   }
   catch (err) {
-    p.log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
+    log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
     program.error('')
   }
-  return config
 }
 
 export async function getLocalConfig() {
   try {
-    const config: Config = await getConfig()
+    const extConfig = await getConfig()
     const capConfig: Partial<CapgoConfig> = {
-      host: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
-      hostWeb: (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
+      host: (extConfig?.config?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
+      hostWeb: (extConfig?.config?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
     }
 
-    if (config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa && config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon) {
-      p.log.info('Using custom supabase instance from capacitor.config.json')
-      capConfig.supaKey = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupaAnon
-      capConfig.supaHost = config?.app?.extConfig?.plugins?.CapacitorUpdater?.localSupa
+    if (extConfig?.config?.plugins?.CapacitorUpdater?.localSupa && extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon) {
+      log.info('Using custom supabase instance from capacitor.config.json')
+      capConfig.supaKey = extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon
+      capConfig.supaHost = extConfig?.config?.plugins?.CapacitorUpdater?.localSupa
     }
     return capConfig
   }
@@ -93,7 +101,7 @@ export async function getRemoteConfig() {
     .then(res => res.json<CapgoConfig>())
     .then(data => ({ ...data, ...localConfig } as CapgoConfig))
     .catch(() => {
-      p.log.info(`Local config ${formatError(localConfig)}`)
+      log.info(`Local config ${formatError(localConfig)}`)
       return localConfig
     })
 }
@@ -101,7 +109,7 @@ export async function getRemoteConfig() {
 export async function createSupabaseClient(apikey: string) {
   const config = await getRemoteConfig()
   if (!config.supaHost || !config.supaKey) {
-    p.log.error('Cannot connect to server please try again later')
+    log.error('Cannot connect to server please try again later')
     program.error('')
   }
   return createClient<Database>(config.supaHost, config.supaKey, {
@@ -122,7 +130,7 @@ export async function checkKey(supabase: SupabaseClient<Database>, apikey: strin
     .single()
 
   if (!apiAccess) {
-    p.log.error(`Invalid API key or insufficient permissions.`)
+    log.error(`Invalid API key or insufficient permissions.`)
     // create a string from keymode array with comma and space and "or" for the last one
     const keymodeStr = keymode.map((k, i) => {
       if (i === keymode.length - 1)
@@ -130,7 +138,7 @@ export async function checkKey(supabase: SupabaseClient<Database>, apikey: strin
 
       return `${k}, `
     }).join('')
-    p.log.error(`Your key should be: ${keymodeStr} mode.`)
+    log.error(`Your key should be: ${keymodeStr} mode.`)
     program.error('')
   }
 }
@@ -188,9 +196,9 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
     .single()
 
   if (error) {
-    p.log.error('Cannot get permissions for organization!')
+    log.error('Cannot get permissions for organization!')
     console.error(error)
-    process.exit(1)
+    exit(1)
   }
 
   const ok = (data as string).includes('perm')
@@ -224,12 +232,12 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
       }
       default: {
         if ((data as string).includes('invite')) {
-          p.log.info('Please accept/deny the organization invitation before trying to access the app')
-          process.exit(1)
+          log.info('Please accept/deny the organization invitation before trying to access the app')
+          exit(1)
         }
 
-        p.log.error(`Invalid output when fetching organization permission. Response: ${data}`)
-        process.exit(1)
+        log.error(`Invalid output when fetching organization permission. Response: ${data}`)
+        exit(1)
       }
     }
 
@@ -256,8 +264,8 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
       break
     }
     default: {
-      p.log.error(`Invalid error when fetching organization permission. Response: ${data}`)
-      process.exit(1)
+      log.error(`Invalid error when fetching organization permission. Response: ${data}`)
+      exit(1)
     }
   }
 
@@ -273,7 +281,7 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: 
   // isAllowedActionAppIdApiKey was updated in the orgs_v3 migration to work with the new system
   const validPlan = await (appId ? isAllowedActionAppIdApiKey(supabase, appId, apikey) : isAllowedActionOrg(supabase, orgId))
   if (!validPlan) {
-    p.log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
+    log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
     import('open')
       .then((module) => {
@@ -287,7 +295,7 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: 
     isPayingOrg(supabase, orgId),
   ])
   if (trialDays > 0 && warning && !ispaying)
-    p.log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
+    log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
 }
 
 export function findSavedKey(quiet = false) {
@@ -297,17 +305,17 @@ export function findSavedKey(quiet = false) {
   let keyPath = `${userHomeDir}/.capgo`
   if (existsSync(keyPath)) {
     if (!quiet)
-      p.log.info(`Use global apy key ${keyPath}`)
+      log.info(`Use global apy key ${keyPath}`)
     key = readFileSync(keyPath, 'utf8').trim()
   }
   keyPath = `.capgo`
   if (!key && existsSync(keyPath)) {
     if (!quiet)
-      p.log.info(`Use local apy key ${keyPath}`)
+      log.info(`Use local apy key ${keyPath}`)
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
-    p.log.error(`Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`)
+    log.error(`Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`)
     program.error('')
   }
   return key
@@ -338,7 +346,7 @@ export async function findProjectType() {
   // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
   // for vue check if vue.config.js exists or vue is in package.json dependancies
   // for react check if package.json exists and react is in dependencies
-  const pwd = process.cwd()
+  const pwd = cwd()
   let isTypeScript = false
 
   // Check for TypeScript configuration file
@@ -350,39 +358,38 @@ export async function findProjectType() {
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     if (f.includes('angular.json')) {
-      p.log.info('Found angular project')
+      log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js'
     }
     if (f.includes('nuxt.config.js' || f.includes('nuxt.config.ts'))) {
-      p.log.info('Found nuxtjs project')
+      log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
     if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
-      p.log.info('Found nextjs project')
+      log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js'
     }
     if (f.includes('svelte.config.js')) {
-      p.log.info('Found sveltekit project')
+      log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js'
     }
-    if (f.includes('rollup.config.js')) {
-      p.log.info('Found svelte project')
+    if (f.includes('rolluconfig.js')) {
+      log.info('Found svelte project')
       return isTypeScript ? 'svelte-ts' : 'svelte-js'
     }
     if (f.includes('vue.config.js')) {
-      p.log.info('Found vue project')
+      log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
     if (f.includes('package.json')) {
-      const packageJsonPath = path.resolve(f)
-      const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+      const packageJson = await readPackageJson()
       if (packageJson.dependencies) {
         if (packageJson.dependencies.react) {
-          p.log.info('Found react project test')
+          log.info('Found react project test')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (packageJson.dependencies.vue) {
-          p.log.info('Found vue project')
+          log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
       }
@@ -414,34 +421,34 @@ export function findMainFileForProjectType(projectType: string, isTypeScript: bo
 
 export async function findBuildCommandForProjectType(projectType: string) {
   if (projectType === 'angular') {
-    p.log.info('Angular project detected')
+    log.info('Angular project detected')
     return 'build'
   }
 
   if (projectType === 'nuxtjs') {
-    p.log.info('Nuxtjs project detected')
+    log.info('Nuxtjs project detected')
     return 'generate'
   }
 
   if (projectType === 'nextjs') {
-    p.log.info('Nextjs project detected')
-    p.log.warn('Please make sure you have configured static export in your next.config.js: https://nextjs.org/docs/pages/building-your-application/deploying/static-exports')
-    p.log.warn('Please make sure you have the output: \'export\' and distDir: \'dist\' in your next.config.js')
-    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    log.info('Nextjs project detected')
+    log.warn('Please make sure you have configured static export in your next.config.js: https://nextjs.org/docs/pages/building-your-application/deploying/static-exports')
+    log.warn('Please make sure you have the output: \'export\' and distDir: \'dist\' in your next.config.js')
+    const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
-      p.log.error('Aborted')
+      log.error('Aborted')
       program.error('')
     }
     return 'build'
   }
 
   if (projectType === 'sveltekit') {
-    p.log.info('Sveltekit project detected')
-    p.log.warn('Please make sure you have the adapter-static installed: https://kit.svelte.dev/docs/adapter-static')
-    p.log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
-    const doContinue = await p.confirm({ message: 'Do you want to continue?' })
+    log.info('Sveltekit project detected')
+    log.warn('Please make sure you have the adapter-static installed: https://kit.svelte.dev/docs/adapter-static')
+    log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
+    const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
-      p.log.error('Aborted')
+      log.error('Aborted')
       program.error('')
     }
     return 'build'
@@ -455,61 +462,18 @@ export async function findMainFile() {
   const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
   // search for main.ts or main.js in local dir and subdirs
   let mainFile = ''
-  const pwd = process.cwd()
+  const pwd = cwd()
   const pwdL = pwd.split('/').length
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     const folders = f.split('/').length - pwdL
     if (folders <= 2 && mainRegex.test(f)) {
       mainFile = f
-      p.log.info(`Found main file here ${f}`)
+      log.info(`Found main file here ${f}`)
       break
     }
   }
   return mainFile
-}
-
-interface Config {
-  app: {
-    appId: string
-    appName: string
-    webDir: string
-    package: {
-      version: string
-    }
-    extConfigFilePath: string
-    extConfig: {
-      extConfig: object
-      plugins: {
-        extConfig: object
-        CapacitorUpdater: {
-          appReadyTimeout?: number
-          responseTimeout?: number
-          autoDeleteFailed?: boolean
-          autoDeletePrevious?: boolean
-          autoUpdate?: boolean
-          resetWhenUpdate?: boolean
-          updateUrl?: string
-          statsUrl?: string
-          privateKey?: string
-          version?: string
-          directUpdate?: boolean
-          periodCheckDelay?: number
-          localS3?: boolean
-          localHost?: string
-          localWebHost?: string
-          localSupa?: string
-          localSupaAnon?: string
-          allowModifyUrl?: boolean
-          defaultChannel?: string
-        }
-      }
-      server: {
-        cleartext: boolean
-        url: string
-      }
-    }
-  }
 }
 
 export async function updateOrCreateVersion(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['app_versions']['Insert']) {
@@ -531,7 +495,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     return res.data.url
   }
   catch (error) {
-    p.log.error(`Cannot get upload url ${formatError(error)}`)
+    log.error(`Cannot get upload url ${formatError(error)}`)
   }
   return ''
 }
@@ -548,7 +512,7 @@ async function prepareMultipart(supabase: SupabaseClient<Database>, appId: strin
     return res.data as any
   }
   catch (error) {
-    p.log.error(`Cannot get upload url ${formatError(error)}`)
+    log.error(`Cannot get upload url ${formatError(error)}`)
     return null
   }
 }
@@ -569,7 +533,7 @@ export function zipFileUnix(filePath: string) {
 }
 
 export async function zipFileWindows(filePath: string): Promise<Buffer> {
-  p.log.info('Zipping file windows mode')
+  log.info('Zipping file windows mode')
   const zip = new JSZip()
 
   // Helper function to recursively add files and folders to the ZIP archive
@@ -658,7 +622,7 @@ export async function uploadMultipart(supabase: SupabaseClient<Database>, appId:
     return true
   }
   catch (e) {
-    p.log.error(`Could not upload via multipart ${formatError(e)}`)
+    log.error(`Could not upload via multipart ${formatError(e)}`)
     return false
   }
 }
@@ -674,7 +638,7 @@ export async function deletedFailedVersion(supabase: SupabaseClient<Database>, a
     return res.data.status
   }
   catch (error) {
-    p.log.error(`Cannot delete failed version ${formatError(error)}`)
+    log.error(`Cannot delete failed version ${formatError(error)}`)
     return Promise.reject(new Error('Cannot delete failed version'))
   }
 }
@@ -710,7 +674,7 @@ async function uploadPart(
 export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {
   // console.log('updateOrCreateChannel', update)
   if (!update.app_id || !update.name || !update.created_by) {
-    p.log.error('missing app_id, name, or created_by')
+    log.error('missing app_id, name, or created_by')
     return Promise.reject(new Error('missing app_id, name, or created_by'))
   }
   const { data, error } = await supabase
@@ -723,19 +687,19 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
 
   if (data && !error) {
     if (data.enable_progressive_deploy) {
-      p.log.info('Progressive deploy is enabled')
+      log.info('Progressive deploy is enabled')
 
       if (data.secondaryVersionPercentage !== 1)
-        p.log.warn('Latest progressive deploy has not finished')
+        log.warn('Latest progressive deploy has not finished')
 
       update.secondVersion = update.version
       if (!data.secondVersion) {
-        p.log.error('missing secondVersion')
+        log.error('missing secondVersion')
         return Promise.reject(new Error('missing secondVersion'))
       }
       update.version = data.secondVersion
       update.secondaryVersionPercentage = 0.1
-      p.log.info('Started new progressive upload!')
+      log.info('Started new progressive upload!')
 
       // update.version = undefined
     }
@@ -758,8 +722,8 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
 
 export function useLogSnag(): LogSnag {
   const logsnag = new LogSnag({
-    token: process.env.CAPGO_LOGSNAG ?? 'c124f5e9d0ce5bdd14bbb48f815d5583',
-    project: process.env.CAPGO_LOGSNAG_PROJECT ?? 'capgo',
+    token: env.CAPGO_LOGSNAG ?? 'c124f5e9d0ce5bdd14bbb48f815d5583',
+    project: env.CAPGO_LOGSNAG_PROJECT ?? 'capgo',
   })
   return logsnag
 }
@@ -769,20 +733,20 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
     .rpc('get_orgs_v5')
 
   if (orgError) {
-    p.log.error('Cannot get the list of organizations - exiting')
-    p.log.error(`Error ${JSON.stringify(orgError)}`)
+    log.error('Cannot get the list of organizations - exiting')
+    log.error(`Error ${JSON.stringify(orgError)}`)
     program.error('')
   }
 
   const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
 
   if (adminOrgs.length === 0) {
-    p.log.error(`Could not get organization with roles: ${roles.join(' or ')} because the user does not have any org`)
+    log.error(`Could not get organization with roles: ${roles.join(' or ')} because the user does not have any org`)
     program.error('')
   }
 
   const organizationUidRaw = (adminOrgs.length > 1)
-    ? await p.select({
+    ? await select({
       message: 'Please pick the organization that you want to insert to',
       options: adminOrgs.map((org) => {
         return { value: org.gid, label: org.name }
@@ -790,15 +754,15 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
     })
     : adminOrgs[0].gid
 
-  if (p.isCancel(organizationUidRaw)) {
-    p.log.error('Canceled organization selection, exiting')
+  if (isCancel(organizationUidRaw)) {
+    log.error('Canceled organization selection, exiting')
     program.error('')
   }
 
   const organizationUid = organizationUidRaw as string
   const organization = allOrganizations.find(org => org.gid === organizationUid)!
 
-  p.log.info(`Using the organization "${organization.name}" as the app owner`)
+  log.info(`Using the organization "${organization.name}" as the app owner`)
   return organization
 }
 
@@ -814,7 +778,7 @@ export async function verifyUser(supabase: SupabaseClient<Database>, apikey: str
   const userId = (dataUser || '').toString()
 
   if (!userId || userIdError) {
-    p.log.error(`Cannot auth user with apikey`)
+    log.error(`Cannot auth user with apikey`)
     program.error('')
   }
   return userId
@@ -827,7 +791,7 @@ export async function getOrganizationId(supabase: SupabaseClient<Database>, appI
     .single()
 
   if (!data || error) {
-    p.log.error(`Cannot get organization id for app id ${appId}`)
+    log.error(`Cannot get organization id for app id ${appId}`)
     formatError(error)
     program.error('')
   }
@@ -843,7 +807,7 @@ export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, 
     .limit(1)
 
   if (error) {
-    p.log.error(`Cannot check if disableAutoUpdate is required ${formatError(error)}`)
+    log.error(`Cannot check if disableAutoUpdate is required ${formatError(error)}`)
     program.error('')
   }
 
@@ -867,7 +831,7 @@ let pmRunner: PackageManagerRunner = 'npx'
 export function getPMAndCommand() {
   if (pmFetched)
     return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
-  const dir = findRootSync(process.cwd())
+  const dir = findRootSync(cwd())
   pm = findPackageManagerType(dir.rootDir, 'npm')
   pmCommand = findInstallCommand(pm)
   pmFetched = true
@@ -891,42 +855,42 @@ function readDirRecursively(dir: string): string[] {
 }
 
 export async function getLocalDepenencies() {
-  const dir = findRootSync(process.cwd())
-  const packageJsonPath = join(process.cwd(), 'package.json')
+  const dir = findRootSync(cwd())
+  const packageJsonPath = join(cwd(), 'package.json')
 
   if (!existsSync(packageJsonPath)) {
-    p.log.error('Missing package.json, you need to be in a capacitor project')
+    log.error('Missing package.json, you need to be in a capacitor project')
     program.error('')
   }
 
   let packageJson
   try {
-    packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+    packageJson = await readPackageJson()
   }
   catch (err) {
-    p.log.error('Invalid package.json, JSON parsing failed')
+    log.error('Invalid package.json, JSON parsing failed')
     console.error('json parse error: ', err)
     program.error('')
   }
 
   const { dependencies } = packageJson
   if (!dependencies) {
-    p.log.error('Missing dependencies section in package.json')
+    log.error('Missing dependencies section in package.json')
     program.error('')
   }
 
   for (const [key, value] of Object.entries(dependencies)) {
     if (typeof value !== 'string') {
-      p.log.error(`Invalid dependency ${key}: ${value}, expected string, got ${typeof value}`)
+      log.error(`Invalid dependency ${key}: ${value}, expected string, got ${typeof value}`)
       program.error('')
     }
   }
 
-  const nodeModulesPath = join(process.cwd(), 'node_modules')
+  const nodeModulesPath = join(cwd(), 'node_modules')
   if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir.rootDir, 'npm')
     const installCmd = findInstallCommand(pm)
-    p.log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
+    log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
     program.error('')
   }
 
@@ -941,7 +905,7 @@ export async function getLocalDepenencies() {
         anyInvalid = true
         const pm = findPackageManagerType(dir.rootDir, 'npm')
         const installCmd = findInstallCommand(pm)
-        p.log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
+        log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
         return { name: key, version: value }
       }
 
@@ -951,7 +915,7 @@ export async function getLocalDepenencies() {
         hasNativeFiles = files.some(fileName => nativeFileRegex.test(fileName))
       }
       catch (error) {
-        p.log.error(`Error reading node_modules files for ${key} package`)
+        log.error(`Error reading node_modules files for ${key} package`)
         console.error(error)
         program.error('')
       }
@@ -969,25 +933,30 @@ export async function getLocalDepenencies() {
   return dependenciesObject as { name: string, version: string, native: boolean }[]
 }
 
+interface ChannelChecksum {
+  version: {
+    checksum: string
+  }
+}
+
 export async function getRemoteChecksums(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data, error } = await supabase
     .from('channels')
-    .select(`version ( 
-            checksum 
-        )`)
+    .select(`version(checksum)`)
     .eq('name', channel)
     .eq('app_id', appId)
     .single()
+  const channelData = data as any as ChannelChecksum
 
   if (error
-    || data === null
-    || !data.version
-    || !data.version.checksum
+    || channelData === null
+    || !channelData.version
+    || !channelData.version.checksum
   ) {
     return null
   }
 
-  return data.version.checksum
+  return channelData.version.checksum
 }
 
 export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
@@ -1001,7 +970,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
     .single()
 
   if (error) {
-    p.log.error(`Error fetching native packages: ${error.message}`)
+    log.error(`Error fetching native packages: ${error.message}`)
     program.error('')
   }
 
@@ -1011,30 +980,30 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
   }
   catch (err) {
     // If we do not do this we will get an unreadable
-    p.log.error(`Error parsing native packages`)
+    log.error(`Error parsing native packages`)
     program.error('')
   }
 
   if (!castedRemoteNativePackages) {
-    p.log.error(`Error parsing native packages, perhaps the metadata does not exist?`)
+    log.error(`Error parsing native packages, perhaps the metadata does not exist?`)
     program.error('')
   }
 
   // Check types
   castedRemoteNativePackages.forEach((data: any) => {
     if (typeof data !== 'object') {
-      p.log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
+      log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
       program.error('')
     }
 
     const { name, version } = data
     if (!name || typeof name !== 'string') {
-      p.log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
+      log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
       program.error('')
     }
 
     if (!version || typeof version !== 'string') {
-      p.log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
+      log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
       program.error('')
     }
   })
@@ -1046,13 +1015,13 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
 }
 
 export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
-  const s = p.spinner()
+  const s = spinner()
   s.start(`Checking bundle checksum compatibility with channel ${channel}`)
   const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
 
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
-    p.log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
+    log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading ?`)
     program.error('')
   }
   s.stop(`Checksum compatible with ${channel} channel`)
