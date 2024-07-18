@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.4](https://github.com/Cap-go/CLI/compare/v4.13.3...v4.13.4) (2024-07-18)
+
+
+### Bug Fixes
+
+* path for upload mono repo ([e164253](https://github.com/Cap-go/CLI/commit/e1642536c275c5efa202712e9dc66a04ea645a0d))
+
 ### [4.13.3](https://github.com/Cap-go/CLI/compare/v4.13.2...v4.13.3) (2024-07-18)
 
 
