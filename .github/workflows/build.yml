@@ -33,14 +33,14 @@ jobs:
       - name: Run
         id: run_cli
         run: node dist/index.js --help
-      - uses: JS-DevTools/npm-publish@v3
-        if: ${{ !contains(github.ref, '-alpha.') }}
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          provenance: true
-      - uses: JS-DevTools/npm-publish@v3
-        if: ${{ contains(github.ref, '-alpha.') }}
-        with:
-          token: ${{ secrets.NPM_TOKEN }}
-          tag: next
-          provenance: true
+      # - uses: JS-DevTools/npm-publish@v3
+      #   if: ${{ !contains(github.ref, '-alpha.') }}
+      #   with:
+      #     token: ${{ secrets.NPM_TOKEN }}
+      #     provenance: true
+      # - uses: JS-DevTools/npm-publish@v3
+      #   if: ${{ contains(github.ref, '-alpha.') }}
+      #   with:
+      #     token: ${{ secrets.NPM_TOKEN }}
+      #     tag: next
+      #     provenance: true
