@@ -1,12 +1,11 @@
 import { resolve } from 'node:path'
 import { cwd } from 'node:process'
 import { accessSync, constants, readFileSync, writeFileSync } from 'node:fs'
-import { AST_NODE_TYPES, parse as parseTS } from '@typescript-eslint/typescript-estree'
 
 export const CONFIG_FILE_NAME_TS = 'capacitor.config.ts'
 export const CONFIG_FILE_NAME_JSON = 'capacitor.config.json'
 
-export interface CapacitorConfig {
+interface CapacitorConfig {
   appId: string
   appName: string
   webDir: string
@@ -15,41 +14,31 @@ export interface CapacitorConfig {
   [key: string]: any
 }
 
-export interface ExtConfigPairs {
+interface ExtConfigPairs {
   config: CapacitorConfig
   path: string
 }
 
+function parseConfigObject(configString: string): CapacitorConfig {
+  // Remove comments
+  const noComments = configString.replace(/\/\/.*|\/\*[\s\S]*?\*\//g, '')
+
+  // Parse the object
+  // eslint-disable-next-line no-new-func
+  const configObject = Function(`return ${noComments.trim()}`)()
+
+  return configObject as CapacitorConfig
+}
+
 function loadConfigTs(content: string): CapacitorConfig {
-  const ast = parseTS(content, { jsx: true })
-  let config: CapacitorConfig | null = null
+  const configRegex = /const\s+config\s*:\s*CapacitorConfig\s*=\s*(\{[\s\S]*?\n\})/
+  const match = content.match(configRegex)
 
-  // Find the config object in the AST
-  const traverse = (node: any) => {
-    if (node.type === 'VariableDeclaration' && node.declarations[0]?.id?.name === 'config') {
-      config = JSON.parse(JSON.stringify(node.declarations[0].init.properties.reduce((acc: any, prop: any) => {
-        acc[prop.key.name] = prop.value.type === 'ObjectExpression'
-          ? prop.value.properties.reduce((obj: any, p: any) => {
-            obj[p.key.name] = p.value.type === 'ArrayExpression'
-              ? p.value.elements.map((el: any) => el.value)
-              : p.value.value
-            return obj
-          }, {})
-          : prop.value.value
-        return acc
-      }, {})))
-    }
-    if (node.body)
-      node.body.forEach(traverse)
+  if (!match) {
+    throw new Error('Unable to find config object in TypeScript file')
   }
 
-  traverse(ast.body[0])
-
-  if (!config) {
-    throw new Error('Unable to parse TypeScript config')
-  }
-
-  return config
+  return parseConfigObject(match[1])
 }
 
 function loadConfigJson(content: string): CapacitorConfig {
@@ -58,7 +47,6 @@ function loadConfigJson(content: string): CapacitorConfig {
 
 export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
   const appRootDir = cwd()
-  // check if extConfigFilePathTS exist
   const extConfigFilePathTS = resolve(appRootDir, CONFIG_FILE_NAME_TS)
   const extConfigFilePathJSON = resolve(appRootDir, CONFIG_FILE_NAME_JSON)
 
@@ -90,117 +78,100 @@ export async function writeConfig(config: ExtConfigPairs): Promise<void> {
   const { config: newConfig, path } = config
   const content = readFileSync(path, 'utf-8')
 
-  if (path.endsWith('.json')) {
-    await writeConfigJson(path, content, newConfig)
-  }
-  else if (path.endsWith('.ts')) {
-    await writeConfigTs(path, content, newConfig)
-  }
-  else {
-    throw new Error('Unsupported file type')
-  }
-}
+  const updatedContent = path.endsWith('.json')
+    ? updateJsonContent(content, newConfig)
+    : updateTsContent(content, newConfig)
 
-async function writeConfigJson(path: string, content: string, newConfig: CapacitorConfig): Promise<void> {
-  const jsonConfig = JSON.parse(content)
-  const updatedContent = JSON.stringify(
-    { ...jsonConfig, ...newConfig },
-    null,
-    detectIndentation(content),
-  )
   writeFileSync(path, updatedContent)
 }
 
-async function writeConfigTs(path: string, content: string, newConfig: CapacitorConfig): Promise<void> {
-  const ast = parseTS(content, { jsx: true, comment: true, tokens: true })
-  let configNode: any = null
+function updateJsonContent(content: string, newConfig: CapacitorConfig): string {
+  const jsonRegex = /(\{[\s\S]*\})/
+  const jsonMatch = content.match(jsonRegex)
 
-  // Find the config object in the AST
-  const findConfigNode = (node: any) => {
-    if (
-      node.type === AST_NODE_TYPES.VariableDeclaration
-      && node.declarations[0]?.id?.name === 'config'
-    ) {
-      configNode = node.declarations[0].init
-      return
-    }
-    if (node.body)
-      node.body.forEach(findConfigNode)
+  if (!jsonMatch) {
+    throw new Error('Unable to find JSON object in file')
   }
 
-  findConfigNode(ast.body[0])
+  const existingConfig = JSON.parse(jsonMatch[1])
+  const updatedConfig = deepMerge(existingConfig, newConfig)
 
-  if (!configNode) {
+  // Custom replacer function to handle multiline strings
+  const replacer = (key: string, value: any) => {
+    if (key === 'privateKey' && typeof value === 'string' && value.includes('\n')) {
+      return value.replace(/\n/g, '\\n')
+    }
+    return value
+  }
+
+  const updatedJsonString = JSON.stringify(updatedConfig, replacer, detectIndentation(content))
+
+  return content.replace(jsonRegex, updatedJsonString)
+}
+
+function updateTsContent(content: string, newConfig: CapacitorConfig): string {
+  const configRegex = /(const\s+config\s*:\s*CapacitorConfig\s*=\s*)(\{[\s\S]*?\n\})/
+  const configMatch = content.match(configRegex)
+
+  if (!configMatch) {
     throw new Error('Unable to find config object in TypeScript file')
   }
 
-  // Update the AST with new config values
-  updateConfigNode(configNode, newConfig)
+  const [, prefix, configString] = configMatch
+  const existingConfig = parseConfigObject(configString)
+  const updatedConfig = deepMerge(existingConfig, newConfig)
+  const updatedConfigString = stringifyConfig(updatedConfig, detectIndentation(content))
 
-  // Regenerate the code while preserving comments and formatting
-  const updatedContent = regenerateCode(content, ast, configNode)
-  writeFileSync(path, updatedContent)
+  return content.replace(configRegex, `${prefix}${updatedConfigString}`)
 }
 
-function updateConfigNode(node: any, newConfig: CapacitorConfig): void {
-  node.properties.forEach((prop: any) => {
-    const key = prop.key.name
-    if (key in newConfig) {
-      if (typeof newConfig[key] === 'object' && newConfig[key] !== null) {
-        if (prop.value.type === AST_NODE_TYPES.ObjectExpression) {
-          updateConfigNode(prop.value, newConfig[key])
-        }
-        else {
-          prop.value = createObjectExpression(newConfig[key])
-        }
+function stringifyConfig(config: CapacitorConfig, indent: number): string {
+  const stringifyValue = (value: any, level: number, key: string = ''): string => {
+    if (typeof value === 'string') {
+      // Convert multiline strings (like RSA keys) to single line
+      if (key === 'privateKey' && value.includes('\n')) {
+        return `'${value.replace(/\n/g, '\\n')}'`
+      }
+      return `'${value}'`
+    }
+    if (typeof value === 'number' || typeof value === 'boolean')
+      return String(value)
+    if (Array.isArray(value)) {
+      return `[${value.map(v => stringifyValue(v, level + 1)).join(', ')}]`
+    }
+    if (typeof value === 'object' && value !== null) {
+      const innerIndent = ' '.repeat((level + 1) * indent)
+      const entries = Object.entries(value).map(([k, v]) =>
+        `${innerIndent}${k}: ${stringifyValue(v, level + 1, k)}`,
+      ).join(',\n')
+      return `{\n${entries}\n${' '.repeat(level * indent)}}`
+    }
+    return 'null'
+  }
+
+  return stringifyValue(config, 0)
+}
+
+function deepMerge(target: any, source: any): any {
+  const output = Object.assign({}, target)
+  if (isObject(target) && isObject(source)) {
+    Object.keys(source).forEach((key) => {
+      if (isObject(source[key])) {
+        if (!(key in target))
+          Object.assign(output, { [key]: source[key] })
+        else
+          output[key] = deepMerge(target[key], source[key])
       }
       else {
-        prop.value = createLiteral(newConfig[key])
+        Object.assign(output, { [key]: source[key] })
       }
-    }
-  })
-}
-
-function createObjectExpression(obj: Record<string, any>): any {
-  return {
-    type: AST_NODE_TYPES.ObjectExpression,
-    properties: Object.entries(obj).map(([key, value]) => ({
-      type: AST_NODE_TYPES.Property,
-      key: { type: AST_NODE_TYPES.Identifier, name: key },
-      value: typeof value === 'object' && value !== null
-        ? createObjectExpression(value)
-        : createLiteral(value),
-      computed: false,
-      method: false,
-      shorthand: false,
-    })),
+    })
   }
+  return output
 }
 
-function createLiteral(value: any): any {
-  return {
-    type: AST_NODE_TYPES.Literal,
-    value,
-    raw: JSON.stringify(value),
-  }
-}
-
-function regenerateCode(originalContent: string, ast: any, configNode: any): string {
-  const lines = originalContent.split('\n')
-  const updatedConfigString = JSON.stringify(configNode, null, detectIndentation(originalContent))
-    .replace(/"([^"]+)":/g, '$1:')
-    .replace(/"/g, '\'')
-
-  const startLine = configNode.loc.start.line - 1
-  const endLine = configNode.loc.end.line - 1
-
-  const updatedLines = [
-    ...lines.slice(0, startLine),
-    ...updatedConfigString.split('\n'),
-    ...lines.slice(endLine + 1),
-  ]
-
-  return updatedLines.join('\n')
+function isObject(item: any): boolean {
+  return (item && typeof item === 'object' && !Array.isArray(item))
 }
 
 function detectIndentation(content: string): number {

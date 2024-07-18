@@ -108,7 +108,8 @@ export async function createKey(options: Options, logg = true) {
       extConfig.config.plugins.CapacitorUpdater = {}
     }
 
-    extConfig.config.plugins.CapacitorUpdater.privateKey = privateKey
+    const flattenPrivateKey = privateKey.replace(/\\n/g, '\\n')
+    extConfig.config.plugins.CapacitorUpdater.privateKey = flattenPrivateKey
     // console.log('extConfig', extConfig)
     writeConfig(extConfig)
   }
