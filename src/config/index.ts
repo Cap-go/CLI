@@ -67,7 +67,7 @@ export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
       }
     }
     catch (err) {
-      console.error('Cannot find capacitor.config.ts or capacitor.config.json')
+      console.error(`Cannot find ${extConfigFilePathTS} or ${extConfigFilePathJSON}`)
       return undefined
     }
   }
