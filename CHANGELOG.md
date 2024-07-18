@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.5](https://github.com/Cap-go/CLI/compare/v4.13.4...v4.13.5) (2024-07-18)
+
+
+### Bug Fixes
+
+* lint mjs ([8621ec0](https://github.com/Cap-go/CLI/commit/8621ec0899e14e3386d5c9899937ae56dca19495))
+
 ### [4.13.4](https://github.com/Cap-go/CLI/compare/v4.13.3...v4.13.4) (2024-07-18)
 
 
