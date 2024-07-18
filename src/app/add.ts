@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { config, exit } from 'node:process'
+import { exit } from 'node:process'
 import mime from 'mime'
 import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'

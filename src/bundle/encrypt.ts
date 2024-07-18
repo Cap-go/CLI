@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import { program } from 'commander'
 import ciDetect from 'ci-info'
-import { intro, log, outro } from '@clack/prompts'
+import { confirm as confirmC, intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
 import { baseKeyPub, getLocalConfig } from '../utils'
@@ -36,7 +36,7 @@ export async function encryptZip(zipPath: string, options: Options) {
       log.error(`Error: Missing public key`)
       program.error('')
     }
-    const res = await confirm({ message: 'Do you want to use our public key ?' })
+    const res = await confirmC({ message: 'Do you want to use our public key ?' })
     if (!res) {
       log.error(`Error: Missing public key`)
       program.error('')
@@ -51,9 +51,9 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   const zipFile = readFileSync(zipPath)
   const encodedZip = encryptSource(zipFile, publicKey)
-  log.success(`ivSessionKey: ${encodedZiivSessionKey}`)
+  log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
   // write decodedZip in a file
-  writeFileSync(`${zipPath}_encrypted.zip`, encodedZiencryptedData)
+  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
   log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
   outro(`Done ✅`)
   exit()
