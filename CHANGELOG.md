@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.13.0](https://github.com/Cap-go/CLI/compare/v4.12.15...v4.13.0) (2024-07-18)
+
+
+### Features
+
+* adding ncc support ([70eddce](https://github.com/Cap-go/CLI/commit/70eddce117ee8bdc6d861990e36b3ac836be01b4))
+
+
+### Bug Fixes
+
+* no more deps when install ([3bc93ed](https://github.com/Cap-go/CLI/commit/3bc93edadba09d789f00c202a55d26b10d6579f9))
+* script ([8267d43](https://github.com/Cap-go/CLI/commit/8267d435d90e4e579b36edf5051152179b3841c1))
+
 ### [4.12.15](https://github.com/Cap-go/CLI/compare/v4.12.14...v4.12.15) (2024-07-18)
 
 
