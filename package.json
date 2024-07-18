@@ -32,11 +32,11 @@
     "node": ">=18.0.0"
   },
   "scripts": {
-    "build": "node build.mjs",
-    "dev": "NODE_ENV=development node build.mjs",
+    "build": "ncc build",
+    "dev": "NODE_ENV=development ncc build",
     "no-debug": "node dist/index.js",
     "test": "npx --yes ts-node -T src/index.ts",
-    "dev-build": "SUPA_DB=development node build.mjs",
+    "dev-build": "SUPA_DB=development ncc build",
     "pack": "pkg",
     "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
     "test_rls": "ts-node ./test/test_headers_rls.ts",
