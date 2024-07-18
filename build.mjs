@@ -1,16 +1,14 @@
 import * as esbuild from "esbuild";
 
-// Replace 'your-external-dependencies-here' with actual externals from your project
-const external = [];
-
 esbuild.build({
   entryPoints: ["src/index.ts"],
   bundle: true,
   platform: "node",
   target: "node18",
-  external,
-  outdir: "dist",
+  outfile: "dist/index.js", // Change this to output a single file
   sourcemap: process.env.NODE_ENV === "development",
+  minify: true, // Minify the output
+  treeShaking: true, // Enable tree shaking to remove unused code
   banner: {
     js: "#!/usr/bin/env node",
   },
