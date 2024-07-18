@@ -2,7 +2,7 @@ import { exit, version as nodeVersion } from 'node:process'
 import { platform, version } from 'node:os'
 import getLatest from 'get-latest-version'
 import { log, spinner } from '@clack/prompts'
-import { readPackageJson } from '../utils'
+import { getConfig, readPackageJson } from '../utils'
 import pack from '../../package.json'
 
 async function getLatestDependencies(installedDependencies: { [key: string]: string }) {
@@ -45,10 +45,27 @@ async function getInstalledDependencies() {
 }
 
 export async function getInfo() {
-  log.info(' 💊   Capgo Doctor  💊\n')
-  log.info(` OS: ${platform()} ${version()}\n`)
-  log.info(` Node: ${nodeVersion}\n`)
-  log.info(' Installed Dependencies:\n')
+  log.warn(' 💊   Capgo Doctor  💊')
+  // app name
+  const extConfig = await getConfig()
+  const pkg = await readPackageJson()
+  // create bundle name format : 1.0.0-beta.x where x is a uuid
+  const appVersion = extConfig?.config?.plugins?.CapacitorUpdater?.version
+    || pkg?.version
+  const appName = extConfig?.config?.appName || ''
+  log.info(` App Name: ${appName}`)
+  // app id
+  const appId = extConfig?.config?.appId || ''
+  log.info(` App ID: ${appId}`)
+  // app version
+  log.info(` App Version: ${appVersion}`)
+  // webdir
+  const webDir = extConfig?.config?.webDir || ''
+  log.info(` Web Dir: ${webDir}`)
+  // os
+  log.info(` OS: ${platform()} ${version()}`)
+  log.info(` Node: ${nodeVersion}`)
+  log.info(' Installed Dependencies:')
   const installedDependencies = await getInstalledDependencies()
   if (Object.keys(installedDependencies).length === 0) {
     // display in red color in shell with console log
@@ -61,7 +78,6 @@ export async function getInfo() {
       log.info(`   ${dependency}: ${installedVersion}`)
     }
   }
-  log.info('\n')
   const s = spinner()
   s.start(`Running: Loading latest dependencies`)
   const latestDependencies = await getLatestDependencies(installedDependencies)

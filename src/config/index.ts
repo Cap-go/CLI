@@ -5,7 +5,7 @@ import { accessSync, constants, readFileSync, writeFileSync } from 'node:fs'
 export const CONFIG_FILE_NAME_TS = 'capacitor.config.ts'
 export const CONFIG_FILE_NAME_JSON = 'capacitor.config.json'
 
-interface CapacitorConfig {
+export interface CapacitorConfig {
   appId: string
   appName: string
   webDir: string
@@ -86,92 +86,68 @@ export async function writeConfig(config: ExtConfigPairs): Promise<void> {
 }
 
 function updateJsonContent(content: string, newConfig: CapacitorConfig): string {
-  const jsonRegex = /(\{[\s\S]*\})/
-  const jsonMatch = content.match(jsonRegex)
+  const jsonObj = JSON.parse(content)
+  if (!jsonObj.plugins)
+    jsonObj.plugins = {}
+  if (!jsonObj.plugins.CapacitorUpdater)
+    jsonObj.plugins.CapacitorUpdater = {}
 
-  if (!jsonMatch) {
-    throw new Error('Unable to find JSON object in file')
-  }
+  Object.assign(jsonObj.plugins.CapacitorUpdater, newConfig.plugins?.CapacitorUpdater)
 
-  const existingConfig = JSON.parse(jsonMatch[1])
-  const updatedConfig = deepMerge(existingConfig, newConfig)
-
-  // Custom replacer function to handle multiline strings
-  const replacer = (key: string, value: any) => {
-    if (key === 'privateKey' && typeof value === 'string' && value.includes('\n')) {
-      return value.replace(/\n/g, '\\n')
-    }
-    return value
-  }
-
-  const updatedJsonString = JSON.stringify(updatedConfig, replacer, detectIndentation(content))
-
-  return content.replace(jsonRegex, updatedJsonString)
+  return JSON.stringify(jsonObj, null, detectIndentation(content))
 }
 
 function updateTsContent(content: string, newConfig: CapacitorConfig): string {
-  const configRegex = /(const\s+config\s*:\s*CapacitorConfig\s*=\s*)(\{[\s\S]*?\n\})/
-  const configMatch = content.match(configRegex)
+  const capUpdaterRegex = /(\bCapacitorUpdater\s*:\s*\{[^}]*\})/g
 
-  if (!configMatch) {
-    throw new Error('Unable to find config object in TypeScript file')
-  }
-
-  const [, prefix, configString] = configMatch
-  const existingConfig = parseConfigObject(configString)
-  const updatedConfig = deepMerge(existingConfig, newConfig)
-  const updatedConfigString = stringifyConfig(updatedConfig, detectIndentation(content))
-
-  return content.replace(configRegex, `${prefix}${updatedConfigString}`)
+  return content.replace(capUpdaterRegex, (match) => {
+    const updatedSection = updateCapacitorUpdaterSection(match, newConfig.plugins?.CapacitorUpdater || {})
+    return updatedSection
+  })
 }
 
-function stringifyConfig(config: CapacitorConfig, indent: number): string {
-  const stringifyValue = (value: any, level: number, key: string = ''): string => {
-    if (typeof value === 'string') {
-      // Convert multiline strings (like RSA keys) to single line
-      if (key === 'privateKey' && value.includes('\n')) {
-        return `'${value.replace(/\n/g, '\\n')}'`
+function updateCapacitorUpdaterSection(section: string, newConfig: Record<string, any>): string {
+  const lines = section.split('\n')
+  const updatedLines = lines.map((line) => {
+    // eslint-disable-next-line regexp/no-super-linear-backtracking
+    const keyValueMatch = line.match(/^\s*(\w+)\s*:\s*(.+?),?\s*$/)
+    if (keyValueMatch) {
+      const [, key] = keyValueMatch
+      if (key in newConfig) {
+        const newValue = formatValue(newConfig[key])
+        return line.replace(/:\s*.+/, `: ${newValue},`)
       }
-      return `'${value}'`
     }
-    if (typeof value === 'number' || typeof value === 'boolean')
-      return String(value)
-    if (Array.isArray(value)) {
-      return `[${value.map(v => stringifyValue(v, level + 1)).join(', ')}]`
-    }
-    if (typeof value === 'object' && value !== null) {
-      const innerIndent = ' '.repeat((level + 1) * indent)
-      const entries = Object.entries(value).map(([k, v]) =>
-        `${innerIndent}${k}: ${stringifyValue(v, level + 1, k)}`,
-      ).join(',\n')
-      return `{\n${entries}\n${' '.repeat(level * indent)}}`
-    }
-    return 'null'
-  }
+    return line
+  })
 
-  return stringifyValue(config, 0)
+  // Add new properties
+  Object.entries(newConfig).forEach(([key, value]) => {
+    if (!updatedLines.some(line => line.includes(`${key}:`))) {
+      const indent = detectIndentation(section)
+      updatedLines.splice(-1, 0, `${' '.repeat(indent)}${key}: ${formatValue(value)},`)
+    }
+  })
+
+  return updatedLines.join('\n')
 }
 
-function deepMerge(target: any, source: any): any {
-  const output = Object.assign({}, target)
-  if (isObject(target) && isObject(source)) {
-    Object.keys(source).forEach((key) => {
-      if (isObject(source[key])) {
-        if (!(key in target))
-          Object.assign(output, { [key]: source[key] })
-        else
-          output[key] = deepMerge(target[key], source[key])
-      }
-      else {
-        Object.assign(output, { [key]: source[key] })
-      }
-    })
+function formatValue(value: any): string {
+  if (typeof value === 'string') {
+    // Convert multiline strings (like RSA keys) to single line
+    if (value.includes('\n')) {
+      return `'${value.replace(/\n/g, '\\n')}'`
+    }
+    return `'${value}'`
   }
-  return output
-}
-
-function isObject(item: any): boolean {
-  return (item && typeof item === 'object' && !Array.isArray(item))
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value)
+  if (Array.isArray(value))
+    return `[${value.map(formatValue).join(', ')}]`
+  if (typeof value === 'object' && value !== null) {
+    return `{ ${Object.entries(value).map(([k, v]) => `${k}: ${formatValue(v)}`).join(', ')} }`
+  }
+  return 'null'
 }
 
 function detectIndentation(content: string): number {
