@@ -23,6 +23,7 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
+const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]> =
   ArrayType extends readonly (infer ElementType)[] ? ElementType : never
@@ -42,7 +43,7 @@ export function wait(ms: number) {
 }
 
 export async function readPackageJson() {
-  const packageJson = readFileSync(join(cwd(), 'package.json'))
+  const packageJson = readFileSync(join(cwd(), PACKNAME))
   return JSON.parse(packageJson as any)
 }
 

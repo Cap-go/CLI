@@ -1,5 +1,4 @@
-import { resolve } from 'node:path'
-import { cwd } from 'node:process'
+import { dirname, join } from 'node:path'
 import { accessSync, constants, readFileSync, writeFileSync } from 'node:fs'
 
 export const CONFIG_FILE_NAME_TS = 'capacitor.config.ts'
@@ -46,9 +45,9 @@ function loadConfigJson(content: string): CapacitorConfig {
 }
 
 export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
-  const appRootDir = cwd()
-  const extConfigFilePathTS = resolve(appRootDir, CONFIG_FILE_NAME_TS)
-  const extConfigFilePathJSON = resolve(appRootDir, CONFIG_FILE_NAME_JSON)
+  const cliRootDir = dirname(__dirname)
+  const extConfigFilePathTS = join(cliRootDir, CONFIG_FILE_NAME_TS)
+  const extConfigFilePathJSON = join(cliRootDir, CONFIG_FILE_NAME_JSON)
 
   try {
     accessSync(extConfigFilePathTS, constants.R_OK)
@@ -82,7 +81,8 @@ export async function writeConfig(config: ExtConfigPairs): Promise<void> {
     ? updateJsonContent(content, newConfig)
     : updateTsContent(content, newConfig)
 
-  writeFileSync(path, updatedContent)
+  // Use writeFileSync with 'utf8' encoding to ensure proper handling of line endings
+  writeFileSync(path, updatedContent, { encoding: 'utf8' })
 }
 
 function updateJsonContent(content: string, newConfig: CapacitorConfig): string {
