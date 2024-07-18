@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.2](https://github.com/Cap-go/CLI/compare/v4.13.1...v4.13.2) (2024-07-18)
+
+
+### Bug Fixes
+
+* use esbuild with embed modules ([2e582b5](https://github.com/Cap-go/CLI/commit/2e582b56693611927e433cb5ba4b9c478dd141a9))
+
 ### [4.13.1](https://github.com/Cap-go/CLI/compare/v4.13.0...v4.13.1) (2024-07-18)
 
 
