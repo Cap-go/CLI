@@ -46,6 +46,7 @@
   "devDependencies": {
     "@antfu/eslint-config": "^2.23.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
+    "@capacitor/cli": "^6.1.1",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
     "@manypkg/find-root": "^2.2.1",
