@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.11](https://github.com/Cap-go/CLI/compare/v4.13.10...v4.13.11) (2024-07-20)
+
+
+### Bug Fixes
+
+* use old dep for parsing config file ([04d5c29](https://github.com/Cap-go/CLI/commit/04d5c29e64bbbcb8434be26300626b2114606143))
+
 ### [4.13.10](https://github.com/Cap-go/CLI/compare/v4.13.9...v4.13.10) (2024-07-19)
 
 
