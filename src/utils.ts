@@ -401,7 +401,7 @@ export async function findProjectType() {
 }
 
 export function findMainFileForProjectType(projectType: string, isTypeScript: boolean): string | null {
-  if (projectType === 'angular') {
+  if (projectType === 'angular-js' || projectType === 'angular-ts') {
     return isTypeScript ? 'src/main.ts' : 'src/main.js'
   }
   if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
