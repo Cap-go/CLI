@@ -118,8 +118,8 @@ export function displayChannels(data: Channel[]) {
       ...(row.enable_progressive_deploy && row.second_version ? { 'Next version': row.second_version.name } : undefined),
       ...(row.enable_progressive_deploy && row.second_version ? { 'Next %': row.secondary_version_percentage } : undefined),
       'AB Testing': row.enable_ab_testing ? '✅' : '❌',
-      ...(row.enable_ab_testing && row.second_version ? { 'Version B': row.second_version } : undefined),
-      ...(row.enable_ab_testing && row.second_version ? { 'A/B %': row.secondary_version_percentage } : undefined),
+      ...(row.enable_ab_testing && row.second_version ? { 'Version B': row.second_version.name } : undefined),
+      ...(row.enable_ab_testing && row.second_version ? { 'A/B %': `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` } : undefined),
       'Emulator': row.allow_emulator ? '✅' : '❌',
       'Dev 📱': row.allow_dev ? '✅' : '❌',
     })
