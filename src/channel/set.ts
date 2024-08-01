@@ -1,6 +1,6 @@
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
@@ -14,6 +14,7 @@ import {
   formatError,
   getConfig,
   getOrganizationId,
+  readPackageJson,
   updateOrCreateChannel,
   useLogSnag,
   verifyUser,
@@ -36,18 +37,18 @@ interface Options extends OptionsBase {
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
 export async function setChannel(channel: string, appId: string, options: Options) {
-  p.intro(`Set channel`)
+  intro(`Set channel`)
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
   const snag = useLogSnag()
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
+    log.error('Missing API key, you need to provide a API key to upload your bundle')
     program.error('')
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
   const supabase = await createSupabaseClient(options.apikey)
@@ -59,11 +60,11 @@ export async function setChannel(channel: string, appId: string, options: Option
 
   const { bundle, state, downgrade, latest, upgrade, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
   if (!channel) {
-    p.log.error('Missing argument, you need to provide a channel')
+    log.error('Missing argument, you need to provide a channel')
     program.error('')
   }
   if (latest && bundle) {
-    p.log.error('Cannot set latest and bundle at the same time')
+    log.error('Cannot set latest and bundle at the same time')
     program.error('')
   }
   if (bundle == null
@@ -77,7 +78,7 @@ export async function setChannel(channel: string, appId: string, options: Option
     && dev == null
     && emulator == null
     && disableAutoUpdate == null) {
-    p.log.error('Missing argument, you need to provide a option to set')
+    log.error('Missing argument, you need to provide a option to set')
     program.error('')
   }
   try {
@@ -89,7 +90,8 @@ export async function setChannel(channel: string, appId: string, options: Option
       owner_org: orgId,
       version: undefined as any,
     }
-    const bundleVersion = latest ? config?.app?.package?.version : bundle
+    const pack = await readPackageJson()
+    const bundleVersion = latest ? pack?.version : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
         .from('app_versions')
@@ -100,33 +102,33 @@ export async function setChannel(channel: string, appId: string, options: Option
         .eq('deleted', false)
         .single()
       if (vError || !data) {
-        p.log.error(`Cannot find version ${bundleVersion}`)
+        log.error(`Cannot find version ${bundleVersion}`)
         program.error('')
       }
-      p.log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
+      log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
       channelPayload.version = data.id
     }
     if (state != null) {
       if (state === 'public' || state === 'private')
-        p.log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`)
+        log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`)
 
-      p.log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
+      log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
       channelPayload.public = state === 'public' || state === 'default'
     }
     if (downgrade != null) {
-      p.log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
+      log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
       channelPayload.disable_auto_update_under_native = !downgrade
     }
     if (ios != null) {
-      p.log.info(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`)
+      log.info(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`)
       channelPayload.ios = !!ios
     }
     if (android != null) {
-      p.log.info(`Set ${appId} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`)
+      log.info(`Set ${appId} channel: ${channel} to ${android ? 'allow' : 'disallow'} android update`)
       channelPayload.android = !!android
     }
     if (selfAssign != null) {
-      p.log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`)
+      log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`)
       channelPayload.allow_device_self_set = !!selfAssign
     }
     if (disableAutoUpdate != null) {
@@ -134,7 +136,7 @@ export async function setChannel(channel: string, appId: string, options: Option
 
       // The user passed an unimplemented strategy
       if (!disableAutoUpdatesPossibleOptions.includes(finalDisableAutoUpdate)) {
-        p.log.error(`Channel strategy ${finalDisableAutoUpdate} is not known. The possible values are: ${disableAutoUpdatesPossibleOptions.join(', ')}.`)
+        log.error(`Channel strategy ${finalDisableAutoUpdate} is not known. The possible values are: ${disableAutoUpdatesPossibleOptions.join(', ')}.`)
         program.error('')
       }
 
@@ -144,17 +146,17 @@ export async function setChannel(channel: string, appId: string, options: Option
 
       // This cast is safe, look above
       channelPayload.disable_auto_update = finalDisableAutoUpdate as any
-      p.log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`)
+      log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`)
     }
     try {
       const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
       if (dbError) {
-        p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
+        log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
         program.error('')
       }
     }
     catch (e) {
-      p.log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
+      log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
       program.error('')
     }
     await snag.track({
@@ -169,9 +171,9 @@ export async function setChannel(channel: string, appId: string, options: Option
     }).catch()
   }
   catch (err) {
-    p.log.error(`Unknow error ${formatError(err)}`)
+    log.error(`Unknow error ${formatError(err)}`)
     program.error('')
   }
-  p.outro(`Done ✅`)
-  process.exit()
+  outro(`Done ✅`)
+  exit()
 }

@@ -1,8 +1,8 @@
 import { existsSync, readFileSync } from 'node:fs'
-import process from 'node:process'
+import { exit } from 'node:process'
 import mime from 'mime'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import type { Options } from '../api/app'
 import { checkAppExists, newIconPath } from '../api/app'
@@ -25,24 +25,24 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
 
 export async function addAppInternal(appId: string, options: Options, organization?: Organization, throwErr = true) {
   if (throwErr)
-    p.intro(`Adding`)
+    intro(`Adding`)
 
   await checkLatest()
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
 
   if (!options.apikey) {
-    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
+    log.error(`Missing API key, you need to provide a API key to upload your bundle`)
     program.error('')
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
 
   if (appId.includes('--')) {
-    p.log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
+    log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
     program.error('')
   }
 
@@ -53,7 +53,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
   if (appExist) {
-    p.log.error(`App ${appId} already exist`)
+    log.error(`App ${appId} already exist`)
     program.error('')
   }
 
@@ -65,15 +65,14 @@ export async function addAppInternal(appId: string, options: Options, organizati
   await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
 
   let { name, icon } = options
-  appId = appId || config?.app?.appId
-  name = name || config?.app?.appName || 'Unknown'
+  name = name || extConfig.config?.appName || 'Unknown'
   icon = icon || 'resources/icon.png' // default path for capacitor app
   if (!icon || !name) {
-    p.log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
     program.error('')
   }
   if (throwErr)
-    p.log.info(`Adding ${appId} to Capgo`)
+    log.info(`Adding ${appId} to Capgo`)
 
   let iconBuff
   let iconType
@@ -82,16 +81,16 @@ export async function addAppInternal(appId: string, options: Options, organizati
     iconBuff = readFileSync(icon)
     const contentType = mime.getType(icon)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${icon}`)
+    log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
     const contentType = mime.getType(newIconPath)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${newIconPath}`)
+    log.warn(`Found app icon ${newIconPath}`)
   }
   else {
-    p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
+    log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
 
   const fileName = `icon`
@@ -106,7 +105,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
       })
     if (error) {
       console.error(error)
-      p.log.error(`Could not add app ${formatError(error)}`)
+      log.error(`Could not add app ${formatError(error)}`)
       program.error('')
     }
     const { data: signedURLData } = await supabase
@@ -125,7 +124,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
       app_id: appId,
     })
   if (dbError) {
-    p.log.error(`Could not add app ${formatError(dbError)}`)
+    log.error(`Could not add app ${formatError(dbError)}`)
     program.error('')
   }
   const { error: dbVersionError } = await supabase
@@ -142,13 +141,13 @@ export async function addAppInternal(appId: string, options: Options, organizati
       app_id: appId,
     }])
   if (dbVersionError) {
-    p.log.error(`Could not add app ${formatError(dbVersionError)}`)
+    log.error(`Could not add app ${formatError(dbVersionError)}`)
     program.error('')
   }
-  p.log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
+  log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
   if (throwErr) {
-    p.outro(`Done ✅`)
-    process.exit()
+    outro(`Done ✅`)
+    exit()
   }
   return true
 }

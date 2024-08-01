@@ -1,8 +1,8 @@
-import process from 'node:process'
+import { exit } from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import * as p from '@clack/prompts'
+import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { formatError } from '../utils'
 
@@ -13,15 +13,15 @@ export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Data
     .eq('app_id', appid)
     .eq('version', versionData.id)
   if (errorChannel) {
-    p.log.error(`Cannot check Version ${appid}@${versionData.name}`)
+    log.error(`Cannot check Version ${appid}@${versionData.name}`)
     program.error('')
   }
   if (channelFound && channelFound.length > 0) {
-    p.intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
-    if (await p.confirm({ message: 'unlink it?' })) {
+    intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
+    if (await confirmC({ message: 'unlink it?' })) {
       // loop on all channels and set version to unknown
       for (const channel of channelFound) {
-        const s = p.spinner()
+        const s = spinner()
         s.start(`Unlinking channel ${channel.name}`)
         const { error: errorChannelUpdate } = await supabase
           .from('channels')
@@ -31,16 +31,16 @@ export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Data
           .eq('id', channel.id)
         if (errorChannelUpdate) {
           s.stop(`Cannot update channel ${channel.name} ${formatError(errorChannelUpdate)}`)
-          process.exit(1)
+          exit(1)
         }
         s.stop(`✅ Channel ${channel.name} unlinked`)
       }
     }
     else {
-      p.log.error(`Unlink it first`)
+      log.error(`Unlink it first`)
       program.error('')
     }
-    p.outro(`Version unlinked from ${channelFound.length} channel`)
+    outro(`Version unlinked from ${channelFound.length} channel`)
   }
 }
 
@@ -53,7 +53,7 @@ export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: st
     .throwOnError()
     .single().then(({ data, error }) => {
       if (error) {
-        p.log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
+        log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
         program.error('')
       }
       return data
@@ -125,7 +125,7 @@ export function displayChannels(data: Channel[]) {
     })
   })
 
-  p.log.success(t.render())
+  log.success(t.render())
 }
 
 export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {
@@ -156,7 +156,7 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
     .order('created_at', { ascending: false })
 
   if (vError) {
-    p.log.error(`App ${appid} not found in database`)
+    log.error(`App ${appid} not found in database`)
     program.error('')
   }
   return data as any as Channel[]

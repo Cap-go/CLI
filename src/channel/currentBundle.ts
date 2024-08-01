@@ -1,6 +1,6 @@
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, log } from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
 import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
@@ -20,18 +20,18 @@ export async function currentBundle(channel: string, appId: string, options: Opt
   const { quiet } = options
 
   if (!quiet)
-    p.intro(`List current bundle`)
+    intro(`List current bundle`)
 
   options.apikey = options.apikey || findSavedKey(quiet)
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
+    log.error('Missing API key, you need to provide a API key to upload your bundle')
     program.error('')
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
   const supabase = await createSupabaseClient(options.apikey)
@@ -41,7 +41,7 @@ export async function currentBundle(channel: string, appId: string, options: Opt
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   if (!channel) {
-    p.log.error(`Please provide a channel to get the bundle from.`)
+    log.error(`Please provide a channel to get the bundle from.`)
     program.error('')
   }
 
@@ -53,20 +53,20 @@ export async function currentBundle(channel: string, appId: string, options: Opt
     .limit(1)
 
   if (error || supabaseChannel.length === 0) {
-    p.log.error(`Error retrieving channel ${channel} for app ${appId}. Perhaps the channel does not exists?`)
+    log.error(`Error retrieving channel ${channel} for app ${appId}. Perhaps the channel does not exists?`)
     program.error('')
   }
 
   const { version } = supabaseChannel[0] as any as Channel
   if (!version) {
-    p.log.error(`Error retrieving channel ${channel} for app ${appId}. Perhaps the channel does not exists?`)
+    log.error(`Error retrieving channel ${channel} for app ${appId}. Perhaps the channel does not exists?`)
     program.error('')
   }
 
   if (!quiet)
-    p.log.info(`Current bundle for channel ${channel} is ${version.name}`)
+    log.info(`Current bundle for channel ${channel} is ${version.name}`)
   else
-    p.log.info(version.name)
+    log.info(version.name)
 
-  process.exit()
+  exit()
 }

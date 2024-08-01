@@ -1,7 +1,8 @@
-import { readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
-import process from 'node:process'
+import { exit } from 'node:process'
+import { join } from 'node:path'
 import * as p from '@clack/prompts'
 import type LogSnag from 'logsnag'
 import semver from 'semver'
@@ -15,7 +16,7 @@ import { addAppInternal } from './app/add'
 import { checkLatest } from './api/update'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, useLogSnag, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -87,7 +88,7 @@ function cleanupStepsDone() {
 async function cancelCommand(command: boolean | symbol, orgId: string, snag: LogSnag) {
   if (p.isCancel(command)) {
     await markSnag('onboarding-v2', orgId, snag, 'canceled', '🤷')
-    process.exit()
+    exit()
   }
 }
 
@@ -147,20 +148,20 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
     const s = p.spinner()
     s.start(`Checking if @capgo/capacitor-updater is installed`)
     let versionToInstall = 'latest'
-    const pack = JSON.parse(readFileSync('package.json').toString())
+    const pack = await readPackageJson()
     let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
     coreVersion = coreVersion?.replace('^', '').replace('~', '')
     if (!coreVersion) {
       s.stop('Error')
       p.log.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
     else if (semver.lt(coreVersion, '5.0.0')) {
       s.stop('Error')
       p.log.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
     else if (semver.lt(coreVersion, '6.0.0')) {
       s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
@@ -170,7 +171,7 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop('Error')
       p.log.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
@@ -192,43 +193,96 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
 async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
   await cancelCommand(doAddCode, orgId, snag)
+
   if (doAddCode) {
     const s = p.spinner()
     s.start(`Adding @capacitor-updater to your main file`)
+
     const projectType = await findProjectType()
-    let mainFilePath
-    if (projectType === 'unknown')
-      mainFilePath = await findMainFile()
-    else
-      mainFilePath = await findMainFileForProjectType(projectType)
+    if (projectType === 'nuxtjs-js' || projectType === 'nuxtjs-ts') {
+      // Nuxt.js specific logic
+      const nuxtDir = join('plugins')
+      if (!existsSync(nuxtDir)) {
+        mkdirSync(nuxtDir, { recursive: true })
+      }
+      let nuxtFilePath
+      if (projectType === 'nuxtjs-ts') {
+        nuxtFilePath = join(nuxtDir, 'capacitorUpdater.client.ts')
+      }
+      else {
+        nuxtFilePath = join(nuxtDir, 'capacitorUpdater.client.js')
+      }
+      const nuxtFileContent = `
+        import { CapacitorUpdater } from '@capgo/capacitor-updater'
 
-    if (!mainFilePath) {
-      s.stop('Error')
-      p.log.warn('Cannot find main file, You need to add @capgo/capacitor-updater manually')
-      p.outro(`Bye 👋`)
-      process.exit()
-    }
-    // open main file and inject codeInject
-    const mainFile = readFileSync(mainFilePath)
-    // find the last import line in the file and inject codeInject after it
-    const mainFileContent = mainFile.toString()
-    const matches = mainFileContent.match(regexImport)
-    const last = matches?.pop()
-    if (!last) {
-      s.stop('Error')
-      p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
-      p.outro(`Bye 👋`)
-      process.exit()
-    }
-
-    if (mainFileContent.includes(codeInject)) {
-      s.stop(`Code already added to ${mainFilePath} ✅`)
+        export default defineNuxtPlugin(() => {
+          CapacitorUpdater.notifyAppReady()
+        })
+      `
+      if (existsSync(nuxtFilePath)) {
+        const currentContent = readFileSync(nuxtFilePath, 'utf8')
+        if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
+          s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅')
+          p.log.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
+        }
+        else {
+          writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
+          s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
+          p.log.info('Updated capacitorUpdater.client.ts file with required code')
+        }
+      }
+      else {
+        writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
+        s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
+        p.log.info('Created plugins directory and capacitorUpdater.client.ts file')
+      }
     }
     else {
-      const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
-      writeFileSync(mainFilePath, newMainFileContent)
-      s.stop(`Code added to ${mainFilePath} ✅`)
+      // Handle other project types
+      let mainFilePath
+      if (projectType === 'unknown') {
+        mainFilePath = await findMainFile()
+      }
+      else {
+        const isTypeScript = projectType.endsWith('-ts')
+        mainFilePath = await findMainFileForProjectType(projectType, isTypeScript)
+      }
+
+      if (!mainFilePath) {
+        s.stop('Error')
+        if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
+          p.log.warn(`You might not be using app router configuration or the latest version of Next.js`)
+        }
+        else {
+          p.log.warn(`Cannot find the latest version of ${projectType}, you might need to upgrade to the latest version of ${projectType}`)
+        }
+        p.outro(`Bye 👋`)
+        exit()
+      }
+
+      // Open main file and inject codeInject
+      const mainFile = readFileSync(mainFilePath, 'utf8')
+      const mainFileContent = mainFile.toString()
+      const matches = mainFileContent.match(regexImport)
+      const last = matches?.pop()
+
+      if (!last) {
+        s.stop('Error')
+        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
+        p.outro(`Bye 👋`)
+        exit()
+      }
+
+      if (mainFileContent.includes(codeInject)) {
+        s.stop(`Code already added to ${mainFilePath} ✅`)
+      }
+      else {
+        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
+        writeFileSync(mainFilePath, newMainFileContent, 'utf8')
+        s.stop(`Code added to ${mainFilePath} ✅`)
+      }
     }
+
     await markStep(orgId, snag, 5)
   }
   else {
@@ -248,7 +302,7 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop('Error')
       p.log.warn(`Cannot create key ❌`)
       p.outro(`Bye 👋`)
-      process.exit(1)
+      exit(1)
     }
     else {
       s.stop(`key created 🔑`)
@@ -267,13 +321,13 @@ async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
     s.start(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
-    const pack = JSON.parse(readFileSync('package.json').toString())
+    const pack = await readPackageJson()
     // check in script build exist
     if (!pack.scripts[buildCommand]) {
       s.stop('Error')
       p.log.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
     execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
     s.stop(`Build & Sync Done ✅`)
@@ -299,7 +353,7 @@ async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string
       s.stop('Error')
       p.log.warn(`Upload failed ❌`)
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
     else {
       s.stop(`Upload Done ✅`)
@@ -325,7 +379,7 @@ async function step9(orgId: string, snag: LogSnag) {
     })
     if (p.isCancel(plaformType)) {
       p.outro(`Bye 👋`)
-      process.exit()
+      exit()
     }
 
     const platform = plaformType as 'ios' | 'android'
@@ -344,8 +398,7 @@ async function step10(orgId: string, snag: LogSnag, apikey: string, appId: strin
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
-    p.log.info(`Wait logs sent to Capgo from ${appId} device, Put the app in background and open it again.`)
-    p.log.info('Waiting... (there is a usual delay of 15 seconds until the backend process the logs)')
+    p.log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
     await waitLog('onboarding-v2', apikey, appId, snag, orgId)
   }
   else {
@@ -360,8 +413,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   p.intro(`Capgo onboarding 🛫`)
   await checkLatest()
   const snag = useLogSnag()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
   const apikey = apikeyCommand || findSavedKey()
 
   const log = p.spinner()
@@ -430,12 +483,13 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   catch (e) {
     console.error(e)
     p.log.error(`Error during onboarding, please try again later`)
-    process.exit(1)
+    exit(1)
   }
 
   p.log.info(`Welcome onboard ✈️!`)
   p.log.info(`Your Capgo update system is setup`)
   p.log.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
+  p.log.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
   p.outro(`Bye 👋`)
-  process.exit()
+  exit()
 }
