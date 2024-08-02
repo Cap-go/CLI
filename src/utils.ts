@@ -680,7 +680,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
   }
   const { data, error } = await supabase
     .from('channels')
-    .select('enable_progressive_deploy, secondaryVersionPercentage, secondVersion')
+    .select('enable_progressive_deploy, secondary_version_percentage, second_version')
     .eq('app_id', update.app_id)
     .eq('name', update.name)
     // .eq('created_by', update.created_by)
@@ -690,16 +690,16 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     if (data.enable_progressive_deploy) {
       log.info('Progressive deploy is enabled')
 
-      if (data.secondaryVersionPercentage !== 1)
+      if (data.secondary_version_percentage !== 1)
         log.warn('Latest progressive deploy has not finished')
 
-      update.secondVersion = update.version
-      if (!data.secondVersion) {
+      update.second_version = update.version
+      if (!data.second_version) {
         log.error('missing secondVersion')
         return Promise.reject(new Error('missing secondVersion'))
       }
-      update.version = data.secondVersion
-      update.secondaryVersionPercentage = 0.1
+      update.version = data.second_version
+      update.secondary_version_percentage = 0.1
       log.info('Started new progressive upload!')
 
       // update.version = undefined
@@ -802,7 +802,7 @@ export async function getOrganizationId(supabase: SupabaseClient<Database>, appI
 export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, channel: string, appId: string): Promise<boolean> {
   const { data, error } = await supabase
     .from('channels')
-    .select('disableAutoUpdate')
+    .select('disable_auto_update')
     .eq('name', channel)
     .eq('app_id', appId)
     .limit(1)
@@ -816,8 +816,8 @@ export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, 
   if (data.length === 0)
     return false
 
-  const { disableAutoUpdate } = (data[0])
-  return disableAutoUpdate === 'version_number'
+  const { disable_auto_update } = (data[0])
+  return disable_auto_update === 'version_number'
 }
 
 export function getHumanDate(createdA: string | null) {
