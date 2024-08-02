@@ -137,7 +137,6 @@ bundle
   .option('--ignore-checksum-check', 'Ignores the checksum check when uploading')
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
   .option('--multipart', 'Uses multipart protocol to upload data to S3')
-  .option('--partial', 'Uploads the bundle via partial update')
 
 bundle
   .command('compatibility [appId]')

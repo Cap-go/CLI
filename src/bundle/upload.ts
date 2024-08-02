@@ -44,7 +44,6 @@ interface Options extends OptionsBase {
   ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
-  partial?: boolean
 }
 
 const alertMb = 20
