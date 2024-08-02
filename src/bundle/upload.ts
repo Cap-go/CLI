@@ -571,7 +571,14 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   if (zipped) {
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
-    const finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+
+    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    try {
+      finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+    }
+    catch (err) {
+      p.log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    }
 
     versionData.storage_provider = 'r2'
     versionData.manifest = finalManifest
