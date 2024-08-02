@@ -6,7 +6,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "target": "es6",
+    "target": "es2015",
     "moduleResolution": "node",
     "sourceMap": true,
     "outDir": "dist",
