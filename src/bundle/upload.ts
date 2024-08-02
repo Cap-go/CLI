@@ -12,6 +12,7 @@ import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
 import { promiseFiles } from 'node-dir'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
@@ -122,12 +123,12 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const { data: channelData, error: channelError } = await supabase
     .from('channels')
-    .select('disableAutoUpdate, version ( minUpdateVersion, native_packages )')
+    .select('disable_auto_update, version ( min_update_version, native_packages )')
     .eq('name', channel)
     .eq('app_id', appid)
     .single()
 
-  const updateMetadataRequired = !!channelData && channelData.disableAutoUpdate === 'version_number'
+  const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
   // eslint-disable-next-line no-undef-init
   let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined
@@ -528,7 +529,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     session_key: undefined as undefined | string,
     external_url: options.external,
     storage_provider: options.external ? 'external' : 'r2-direct',
-    minUpdateVersion,
+    min_update_version: minUpdateVersion,
     native_packages: nativePackages,
     owner_org: orgId,
     user_id: userId,

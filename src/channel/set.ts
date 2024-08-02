@@ -117,7 +117,7 @@ export async function setChannel(channel: string, appId: string, options: Option
     }
     if (downgrade != null) {
       log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
-      channelPayload.disableAutoUpdateUnderNative = !downgrade
+      channelPayload.disable_auto_update_under_native = !downgrade
     }
     if (ios != null) {
       log.info(`Set ${appId} channel: ${channel} to ${ios ? 'allow' : 'disallow'} ios update`)
@@ -145,7 +145,7 @@ export async function setChannel(channel: string, appId: string, options: Option
         finalDisableAutoUpdate = 'version_number'
 
       // This cast is safe, look above
-      channelPayload.disableAutoUpdate = finalDisableAutoUpdate as any
+      channelPayload.disable_auto_update = finalDisableAutoUpdate as any
       log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`)
     }
     try {

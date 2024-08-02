@@ -86,13 +86,13 @@ interface Channel {
   public: boolean
   ios: boolean
   android: boolean
-  disableAutoUpdate: string
-  disableAutoUpdateUnderNative: boolean
+  disable_auto_update: string
+  disable_auto_update_under_native: boolean
   allow_device_self_set: boolean
   enable_progressive_deploy: boolean
-  secondaryVersionPercentage: number
-  secondVersion?: version
-  enableAbTesting: boolean
+  secondary_version_percentage: number
+  second_version?: version
+  enable_ab_testing: boolean
   allow_emulator: boolean
   allow_dev: boolean
   version?: version
@@ -111,15 +111,15 @@ export function displayChannels(data: Channel[]) {
       'Public': row.public ? '✅' : '❌',
       'iOS': row.ios ? '✅' : '❌',
       'Android': row.android ? '✅' : '❌',
-      '⬆️ limit': row.disableAutoUpdate,
-      '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
+      '⬆️ limit': row.disable_auto_update,
+      '⬇️ under native': row.disable_auto_update_under_native ? '❌' : '✅',
       'Self assign': row.allow_device_self_set ? '✅' : '❌',
       'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
-      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined),
-      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
-      'AB Testing': row.enableAbTesting ? '✅' : '❌',
-      ...(row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined),
-      ...(row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
+      ...(row.enable_progressive_deploy && row.second_version ? { 'Next version': row.second_version.name } : undefined),
+      ...(row.enable_progressive_deploy && row.second_version ? { 'Next %': row.secondary_version_percentage } : undefined),
+      'AB Testing': row.enable_ab_testing ? '✅' : '❌',
+      ...(row.enable_ab_testing && row.second_version ? { 'Version B': row.second_version.name } : undefined),
+      ...(row.enable_ab_testing && row.second_version ? { 'A/B %': `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` } : undefined),
       'Emulator': row.allow_emulator ? '✅' : '❌',
       'Dev 📱': row.allow_dev ? '✅' : '❌',
     })
@@ -140,12 +140,12 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
       ios,
       android,
       allow_device_self_set,
-      disableAutoUpdateUnderNative,
-      disableAutoUpdate,
+      disable_auto_update_under_native,
+      disable_auto_update,
       enable_progressive_deploy,
-      enableAbTesting,
-      secondaryVersionPercentage,
-      secondVersion (id, name),
+      enable_ab_testing,
+      secondary_version_percentage,
+      second_version (id, name),
       created_at,
       created_by,
       app_id,
