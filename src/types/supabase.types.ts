@@ -82,6 +82,7 @@ export interface Database {
           external_url: string | null
           id: number
           min_update_version: string | null
+          minUpdateVersion: string | null
           name: string
           native_packages: Json[] | null
           owner_org: string
@@ -100,6 +101,7 @@ export interface Database {
           external_url?: string | null
           id?: number
           min_update_version?: string | null
+          minUpdateVersion?: string | null
           name: string
           native_packages?: Json[] | null
           owner_org: string
@@ -118,6 +120,7 @@ export interface Database {
           external_url?: string | null
           id?: number
           min_update_version?: string | null
+          minUpdateVersion?: string | null
           name?: string
           native_packages?: Json[] | null
           owner_org?: string
@@ -350,6 +353,9 @@ export interface Database {
           created_by: string | null
           disable_auto_update: Database['public']['Enums']['disable_update']
           disable_auto_update_under_native: boolean
+          disableAutoUpdate:
+            | Database['public']['Enums']['disable_update']
+            | null
           enable_ab_testing: boolean
           enable_progressive_deploy: boolean
           id: number
@@ -359,6 +365,8 @@ export interface Database {
           public: boolean
           second_version: number | null
           secondary_version_percentage: number
+          secondaryVersionPercentage: number | null
+          secondVersion: number | null
           updated_at: string
           version: number
         }
@@ -373,6 +381,9 @@ export interface Database {
           created_by?: string | null
           disable_auto_update?: Database['public']['Enums']['disable_update']
           disable_auto_update_under_native?: boolean
+          disableAutoUpdate?:
+            | Database['public']['Enums']['disable_update']
+            | null
           enable_ab_testing?: boolean
           enable_progressive_deploy?: boolean
           id?: number
@@ -382,6 +393,8 @@ export interface Database {
           public?: boolean
           second_version?: number | null
           secondary_version_percentage?: number
+          secondaryVersionPercentage?: number | null
+          secondVersion?: number | null
           updated_at?: string
           version: number
         }
@@ -396,6 +409,9 @@ export interface Database {
           created_by?: string | null
           disable_auto_update?: Database['public']['Enums']['disable_update']
           disable_auto_update_under_native?: boolean
+          disableAutoUpdate?:
+            | Database['public']['Enums']['disable_update']
+            | null
           enable_ab_testing?: boolean
           enable_progressive_deploy?: boolean
           id?: number
@@ -405,6 +421,8 @@ export interface Database {
           public?: boolean
           second_version?: number | null
           secondary_version_percentage?: number
+          secondaryVersionPercentage?: number | null
+          secondVersion?: number | null
           updated_at?: string
           version?: number
         }
@@ -1649,6 +1667,7 @@ export interface Database {
           external_url: string | null
           id: number
           min_update_version: string | null
+          minUpdateVersion: string | null
           name: string
           native_packages: Json[] | null
           owner_org: string

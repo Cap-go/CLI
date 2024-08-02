@@ -1,13 +1,16 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
+import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream, existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
+import { createGzip } from 'node:zlib'
+import { buffer as readBuffer } from 'node:stream/consumers'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
+import { promiseFiles } from 'node-dir'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
@@ -49,6 +52,7 @@ const UPLOAD_TIMEOUT = 120000
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
+type manifestType = Awaited<ReturnType<typeof generateManifest>>
 
 async function getBundle(config: CapacitorConfig, options: Options) {
   const pkg = await readPackageJson()
@@ -226,6 +230,91 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
+}
+
+async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
+  const allFiles = (await promiseFiles(path))
+    .map((file) => {
+      const buffer = readFileSync(file)
+      const hash = createHash('sha-256').update(buffer).digest('hex')
+      let filePath = file.replace(path, '')
+      if (filePath.startsWith('/'))
+        filePath = filePath.substring(1, filePath.length)
+      return { file: filePath, hash }
+    })
+  return allFiles
+}
+
+async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
+  const spinner = spinnerC()
+  spinner.start('Generating the update manifest')
+  const manifest = await generateManifest(path)
+  spinner.stop('Manifest generated successfully')
+
+  await snag.track({
+    channel: 'partial-update',
+    event: 'Generate manifest',
+    icon: '📂',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+    },
+    notify: false,
+  }).catch()
+
+  return manifest
+}
+
+async function uploadPartial(supabase: SupabaseType, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
+  const data = {
+    app_id: appId,
+    name,
+    version: 2,
+    manifest,
+  }
+  let uploadResponse: { path: string, hash: string, uploadLink: string, finalPath: string }[]
+  try {
+    const pathUploadLink = 'private/upload_link'
+    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    uploadResponse = res.data as any
+  }
+  catch (error) {
+    log.error(`Cannot get upload url ${formatError(error)}`)
+    program.error('')
+  }
+
+  for (const manifestEntry of uploadResponse) {
+    const finalFilePath = `${path}/${manifestEntry.path}`
+
+    const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
+    const fileBuffer = await readBuffer(fileStream)
+
+    try {
+      await ky.put(manifestEntry.uploadLink, {
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        retry: 5,
+        body: fileBuffer,
+      })
+    }
+    catch (errorUpload) {
+      if (errorUpload instanceof HTTPError) {
+        const body = await errorUpload.response.text()
+        log.error(`Response: ${formatError(body)}`)
+      }
+      else {
+        console.error(errorUpload)
+      }
+    }
+  }
+
+  log.info('Uploaded all files successfully')
+  return uploadResponse.map((entry) => {
+    return {
+      file_name: entry.path,
+      s3_path: entry.finalPath,
+      file_hash: entry.hash,
+    }
+  })
 }
 
 async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, snag: LogSnag, orgId: string, appid: string) {
@@ -470,6 +559,8 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = options.ivSessionKey
   }
 
+  const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
+
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
     log.error(`Cannot add bundle ${formatError(dbError)}`)
@@ -503,7 +594,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   else if (zipped) {
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
+    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    try {
+      finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+    }
+    catch (err) {
+      p.log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    }
+
     versionData.storage_provider = 'r2'
+    versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       log.error(`Cannot update bundle ${formatError(dbError2)}`)
