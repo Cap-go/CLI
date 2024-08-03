@@ -14,7 +14,7 @@ import { promiseFiles } from 'node-dir'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptChecksum, encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { type OptionsBase, OrganizationPerm, baseKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -329,23 +329,23 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   checksum = await getChecksum(zipped, 'crc32')
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption
-  if (!key && !existsSync(baseKeyPub)) {
+  if (!key && !existsSync(baseKey)) {
     log.info(`Encryption ignored`)
   }
-  else if (key || existsSync(baseKeyPub)) {
-    const publicKey = typeof key === 'string' ? key : baseKeyPub
+  else if (key || existsSync(baseKey)) {
+    const privateKey = typeof key === 'string' ? key : baseKey
     let keyData = options.keyData || ''
-    // check if publicKey exist
-    if (!keyData && !existsSync(publicKey)) {
-      log.error(`Cannot find public key ${publicKey}`)
+    // check if privateKey exist
+    if (!keyData && !existsSync(privateKey)) {
+      log.error(`Cannot find private key ${privateKey}`)
       if (ciDetect.isCI) {
-        log.error('Cannot ask if user wants to use capgo public key on the cli')
+        log.error('Cannot ask if user wants to use capgo private key on the cli')
         program.error('')
       }
 
-      const res = await confirmC({ message: 'Do you want to use our public key ?' })
+      const res = await confirmC({ message: 'Do you want to use our private key ?' })
       if (!res) {
-        log.error(`Error: Missing public key`)
+        log.error(`Error: Missing private key`)
         program.error('')
       }
       keyData = localConfig.signKey || ''
@@ -360,9 +360,9 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       },
       notify: false,
     }).catch()
-    // open with fs publicKey path
+    // open with fs privateKey path
     if (!keyData) {
-      const keyFile = readFileSync(publicKey)
+      const keyFile = readFileSync(privateKey)
       keyData = keyFile.toString()
     }
     // encrypt
