@@ -28,7 +28,7 @@ export async function saveKey(options: saveOptions, logg = true) {
 
   if (!existsSync(keyPath) && !publicKey) {
     if (log) {
-      log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${extConfig.config.app.extConfigFilePath}`)
+      log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${extConfig.path}`)
       program.error('')
     }
     else {
@@ -73,7 +73,7 @@ export async function saveKey(options: saveOptions, logg = true) {
     await writeConfig(extConfig)
   }
   if (log) {
-    log.success(`public key saved into ${extConfig.config.app.extConfigFilePath} file in local directory`)
+    log.success(`public key saved into ${extConfig.path} file in local directory`)
     log.success(`your app will decode the zip archive with this key`)
   }
   return true
@@ -142,7 +142,7 @@ export async function createKey(options: Options, logg = true) {
     log.success('This key will be use to encrypt your bundle before sending it to Capgo')
     log.success('Keep it safe')
     log.success('Than make it unreadable by Capgo and unmodifiable by anyone')
-    log.success(`Public key saved in ${extConfig.config.app.extConfigFilePath}`)
+    log.success(`Public key saved in ${extConfig.path}`)
     log.success('Your app will be the only one having it')
     log.success('Only your users can decrypt your update')
     log.success('Only you can send them an update')
