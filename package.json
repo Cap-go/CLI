@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "4.13.19",
+  "version": "4.13.20",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
