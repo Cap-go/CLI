@@ -13,7 +13,7 @@ import ky, { HTTPError } from 'ky'
 import { promiseFiles } from 'node-dir'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { encryptSource } from '../api/crypto'
+import { encryptChecksum, encryptSource } from '../api/crypto'
 import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
@@ -368,6 +368,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // encrypt
     log.info(`Encrypting your bundle`)
     const res = encryptSource(zipped, keyData)
+    checksum = encryptChecksum(checksum, keyData)
     sessionKey = res.ivSessionKey
     if (options.displayIvSession) {
       log.info(`Your Iv Session key is ${sessionKey},

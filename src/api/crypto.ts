@@ -42,6 +42,19 @@ export interface Encoded {
   ivSessionKey: string
   encryptedData: Buffer
 }
+
+export function encryptChecksum(checksum: string, key: string): string {
+  const checksumEncrypted = privateEncrypt(
+    {
+      key,
+      padding,
+    },
+    Buffer.from(checksum, formatB64),
+  ).toString(formatB64)
+
+  return checksumEncrypted
+}
+
 export function encryptSource(source: Buffer, key: string): Encoded {
   // console.log('decryptKeyType - ', decryptKeyType);
   // console.log(key);
