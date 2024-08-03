@@ -3,9 +3,9 @@ import {
   createCipheriv,
   createDecipheriv,
   generateKeyPairSync,
-  randomBytes,
+  privateEncrypt,
   publicDecrypt,
-  privateEncrypt
+  randomBytes,
 } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 
@@ -20,11 +20,10 @@ export function decryptSource(source: Buffer, ivSessionKey: string, key: string)
   const [ivB64, sessionb64Encrypted] = ivSessionKey.split(':')
   // console.log('\nsessionb64Encrypted', sessionb64Encrypted)
   // console.log('\nivB64', ivB64)
-  let sessionKey: Buffer;
-  sessionKey = publicDecrypt(
+  const sessionKey: Buffer = publicDecrypt(
     {
       key,
-      padding
+      padding,
     },
     Buffer.from(sessionb64Encrypted, formatB64),
   )
@@ -60,11 +59,10 @@ export function encryptSource(source: Buffer, key: string): Encoded {
   const ivB64 = initVector.toString(formatB64)
   // console.log('\nivB64', ivB64)
 
-  let sessionb64Encrypted;
-  sessionb64Encrypted = privateEncrypt(
+  const sessionb64Encrypted = privateEncrypt(
     {
       key,
-      padding
+      padding,
     },
     sessionKey,
   ).toString(formatB64)
