@@ -1,44 +1,24 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import process from 'node:process'
+import { createHash, randomUUID } from 'node:crypto'
+import { createReadStream, existsSync, readFileSync } from 'node:fs'
+import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
-import AdmZip from 'adm-zip'
+import { createGzip } from 'node:zlib'
+import { buffer as readBuffer } from 'node:stream/consumers'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import ciDetect from 'ci-info'
-import ky from 'ky'
-import { checkLatest } from '../api/update'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import type LogSnag from 'logsnag'
+import { S3Client } from '@bradenmacdonald/s3-lite-client'
+import ky, { HTTPError } from 'ky'
+import { promiseFiles } from 'node-dir'
+import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
-import type {
-  OptionsBase,
-} from '../utils'
-import {
-  OrganizationPerm,
-  baseKeyPub,
-  checkCompatibility,
-  checkPlanValid,
-  convertAppName,
-  createSupabaseClient,
-  findSavedKey,
-  formatError,
-  getAppOwner,
-  getConfig,
-  getLocalConfig,
-  getLocalDepenencies,
-  hasOrganizationPerm,
-  regexSemver,
-  requireUpdateMetadata,
-  updateOrCreateChannel,
-  updateOrCreateVersion,
-  uploadUrl,
-  useLogSnag,
-  verifyUser,
-} from '../utils'
+import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { checkLatest } from '../api/update'
+import type { CapacitorConfig } from '../config'
 import { checkIndexPosition, searchInDirectory } from './check'
-
-const alertMb = 20
 
 interface Options extends OptionsBase {
   bundle?: string
@@ -49,86 +29,105 @@ interface Options extends OptionsBase {
   key?: boolean | string
   keyData?: string
   ivSessionKey?: string
+  s3Region?: string
+  s3Apikey?: string
+  s3Apisecret?: string
+  s3BucketName?: string
+  s3Port?: number
+  s3SSL?: boolean
+  s3Endpoint?: string
   bundleUrl?: boolean
   codeCheck?: boolean
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
+  ignoreChecksumCheck?: boolean
+  timeout?: number
+  multipart?: boolean
 }
 
-export async function uploadBundle(appid: string, options: Options, shouldExit = true) {
-  p.intro(`Uploading`)
-  await checkLatest()
-  let { bundle, path, channel } = options
-  const { external, key = false, displayIvSession, autoMinUpdateVersion, ignoreMetadataCheck } = options
-  let { minUpdateVersion } = options
-  options.apikey = options.apikey || findSavedKey()
-  const snag = useLogSnag()
+const alertMb = 20
+const UPLOAD_TIMEOUT = 120000
 
-  channel = channel || 'dev'
+type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
+type pmType = ReturnType<typeof getPMAndCommand>
+type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
+type manifestType = Awaited<ReturnType<typeof generateManifest>>
 
-  const config = await getConfig()
-  const localS3: boolean = (config.app.extConfig.plugins && config.app.extConfig.plugins.CapacitorUpdater
-    && config.app.extConfig.plugins.CapacitorUpdater.localS3) === true
-
-  const checkNotifyAppReady = options.codeCheck
-  appid = appid || config?.app?.appId
+async function getBundle(config: CapacitorConfig, options: Options) {
+  const pkg = await readPackageJson()
   // create bundle name format : 1.0.0-beta.x where x is a uuid
-  const uuid = randomUUID().split('-')[0]
-  bundle = bundle || config?.app?.package?.version || `0.0.1-beta.${uuid}`
-  // check if bundle is valid
+  const bundle = options.bundle
+    || config?.plugins?.CapacitorUpdater?.version
+    || pkg?.version
+    || `0.0.1-beta.${randomUUID().split('-')[0]}`
+
   if (!regexSemver.test(bundle)) {
-    p.log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`)
+    log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`)
     program.error('')
   }
-  path = path || config?.app?.webDir
-  if (!options.apikey) {
-    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
+
+  return bundle
+}
+
+function getApikey(options: Options) {
+  const apikey = options.apikey || findSavedKey()
+  if (!apikey) {
+    log.error(`Missing API key, you need to provide a API key to upload your bundle`)
     program.error('')
   }
-  if (!appid || !bundle || !path) {
-    p.log.error('Missing argument, you need to provide a appid and a bundle and a path, or be in a capacitor project')
+
+  return apikey
+}
+
+function getAppIdAndPath(appId: string | undefined, options: Options, config: CapacitorConfig) {
+  const finalAppId = appId || config?.appId
+  const path = options.path || config?.webDir
+
+  if (!finalAppId || !path) {
+    log.error('Missing argument, you need to provide a appid and a path (--path), or be in a capacitor project')
     program.error('')
   }
-  // check if path exist
+
   if (!existsSync(path)) {
-    p.log.error(`Path ${path} does not exist, build your app first, or provide a valid path`)
+    log.error(`Path ${path} does not exist, build your app first, or provide a valid path`)
     program.error('')
   }
+
+  return { appid: finalAppId, path }
+}
+
+function checkNotifyAppReady(options: Options, path: string) {
+  const checkNotifyAppReady = options.codeCheck
 
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
     const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
     if (!isPluginConfigured) {
-      p.log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`)
+      log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`)
       program.error('')
     }
     const foundIndex = checkIndexPosition(path)
     if (!foundIndex) {
-      p.log.error(`index.html is missing in the root folder or in the only folder in the root folder`)
+      log.error(`index.html is missing in the root folder or in the only folder in the root folder`)
       program.error('')
     }
   }
+}
 
-  p.log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
-
-  const localConfig = await getLocalConfig()
-  const supabase = await createSupabaseClient(options.apikey)
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'upload'])
-  // Check we have app access to this appId
-  // await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appid);
-
-  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.upload)
-  await checkPlanValid(supabase, userId, appid, options.apikey, false)
-
-  const updateMetadataRequired = await requireUpdateMetadata(supabase, channel)
-
+async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: Options, channel: string, appid: string, bundle: string) {
   // Check compatibility here
+  const ignoreMetadataCheck = options.ignoreMetadataCheck
+  const autoMinUpdateVersion = options.autoMinUpdateVersion
+  let minUpdateVersion = options.minUpdateVersion
+
   const { data: channelData, error: channelError } = await supabase
     .from('channels')
-    .select('version ( minUpdateVersion, native_packages )')
+    .select('disable_auto_update, version ( min_update_version, native_packages )')
     .eq('name', channel)
     .eq('app_id', appid)
     .single()
+
+  const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
   // eslint-disable-next-line no-undef-init
   let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined
@@ -136,7 +135,7 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
 
   // We only check compatibility IF the channel exists
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
-    const spinner = p.spinner()
+    const spinner = spinnerC()
     spinner.start(`Checking bundle compatibility with channel ${channel}`)
     const {
       finalCompatibility: finalCompatibilityWithChannel,
@@ -147,160 +146,54 @@ export async function uploadBundle(appid: string, options: Options, shouldExit =
     localDependencies = localDependenciesWithChannel
 
     if (finalCompatibility.find(x => x.localVersion !== x.remoteVersion)) {
-      p.log.error(`Your bundle is not compatible with the channel ${channel}`)
-      p.log.warn(`You can check compatibility with "npx @capgo/cli bundle compatibility"`)
+      spinner.stop(`Bundle NOT compatible with ${channel} channel`)
+      log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
       if (autoMinUpdateVersion) {
         minUpdateVersion = bundle
-        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`)
+        log.info(`Auto set min-update-version to ${minUpdateVersion}`)
       }
     }
     else if (autoMinUpdateVersion) {
       try {
         const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
         if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
-          p.log.error('Invalid remote min update version, skipping auto setting compatibility')
+          log.error('Invalid remote min update version, skipping auto setting compatibility')
           program.error('')
         }
 
         minUpdateVersion = lastMinUpdateVersion
-        p.log.info(`Auto set min-update-version to ${minUpdateVersion}`)
+        spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
       catch (error) {
-        p.log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
+        log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
         program.error('')
       }
     }
-    spinner.stop(`Bundle compatible with ${channel} channel`)
+    else {
+      spinner.stop(`Bundle compatible with ${channel} channel`)
+    }
   }
   else if (!ignoreMetadataCheck) {
-    p.log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
+    log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
     localDependencies = await getLocalDepenencies()
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
-      p.log.info(`Auto set min-update-version to ${minUpdateVersion}`)
+      log.info(`Auto set min-update-version to ${minUpdateVersion}`)
     }
   }
 
   if (updateMetadataRequired && !minUpdateVersion && !ignoreMetadataCheck) {
-    p.log.error(`You need to provide a min-update-version to upload a bundle to this channel`)
+    log.error(`You need to provide a min-update-version to upload a bundle to this channel`)
     program.error('')
   }
 
   if (minUpdateVersion) {
     if (!regexSemver.test(minUpdateVersion)) {
-      p.log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`)
+      log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`)
       program.error('')
     }
-  }
-
-  const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial', { userid: userId })
-    .single()
-  if ((isTrial && isTrial > 0) || isTrialsError) {
-    p.log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    p.log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans`)
-  }
-
-  // check if app already exist
-  const { data: appVersion, error: appVersionError } = await supabase
-    .rpc('exist_app_versions', { appid, apikey: options.apikey, name_version: bundle })
-    .single()
-
-  if (appVersion || appVersionError) {
-    p.log.error(`Version already exists ${formatError(appVersionError)}`)
-    program.error('')
-  }
-  // make bundle safe for s3 name https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
-  const safeBundle = bundle.replace(/[^a-zA-Z0-9-_.!*'()]/g, '__')
-  const fileName = `${safeBundle}.zip`
-
-  let sessionKey
-  let checksum = ''
-  let zipped: Buffer | null = null
-  if (!external) {
-    const zip = new AdmZip()
-    zip.addLocalFolder(path)
-    zipped = zip.toBuffer()
-    const s = p.spinner()
-    s.start(`Calculating checksum`)
-    checksum = await getChecksum(zipped, 'crc32')
-    s.stop(`Checksum: ${checksum}`)
-    if (key || existsSync(baseKeyPub)) {
-      const publicKey = typeof key === 'string' ? key : baseKeyPub
-      let keyData = options.keyData || ''
-      // check if publicKey exist
-      if (!keyData && !existsSync(publicKey)) {
-        p.log.error(`Cannot find public key ${publicKey}`)
-        if (ciDetect.isCI)
-          program.error('')
-
-        const res = await p.confirm({ message: 'Do you want to use our public key ?' })
-        if (!res) {
-          p.log.error(`Error: Missing public key`)
-          program.error('')
-        }
-        keyData = localConfig.signKey || ''
-      }
-      await snag.track({
-        channel: 'app',
-        event: 'App encryption',
-        icon: '🔑',
-        user_id: userId,
-        tags: {
-          'app-id': appid,
-        },
-        notify: false,
-      }).catch()
-      // open with fs publicKey path
-      if (!keyData) {
-        const keyFile = readFileSync(publicKey)
-        keyData = keyFile.toString()
-      }
-      // encrypt
-      p.log.info(`Encrypting your bundle`)
-      const res = encryptSource(zipped, keyData)
-      sessionKey = res.ivSessionKey
-      if (displayIvSession) {
-        p.log.info(`Your Iv Session key is ${sessionKey},
-keep it safe, you will need it to decrypt your bundle.
-It will be also visible in your dashboard\n`)
-      }
-      zipped = res.encryptedData
-    }
-    const mbSize = Math.floor(zipped.byteLength / 1024 / 1024)
-    if (mbSize > alertMb) {
-      p.log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
-      p.log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
-      await snag.track({
-        channel: 'app-error',
-        event: 'App Too Large',
-        icon: '🚛',
-        user_id: userId,
-        tags: {
-          'app-id': appid,
-        },
-        notify: false,
-      }).catch()
-    }
-  }
-  else if (external && !external.startsWith('https://')) {
-    p.log.error(`External link should should start with "https://" current is "${external}"`)
-    program.error('')
-  }
-  else {
-    await snag.track({
-      channel: 'app',
-      event: 'App external',
-      icon: '📤',
-      user_id: userId,
-      tags: {
-        'app-id': appid,
-      },
-      notify: false,
-    }).catch()
-    sessionKey = options.ivSessionKey
   }
 
   const hashedLocalDependencies = localDependencies
@@ -311,119 +204,450 @@ It will be also visible in your dashboard\n`)
 
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
 
-  const appOwner = await getAppOwner(supabase, appid)
+  return { nativePackages, minUpdateVersion }
+}
 
-  const versionData = {
-    bucket_id: external ? undefined : fileName,
-    user_id: appOwner,
-    name: bundle,
-    app_id: appid,
-    session_key: sessionKey,
-    external_url: external,
-    storage_provider: external ? 'external' : 'r2-direct',
-    minUpdateVersion,
-    native_packages: nativePackages,
-    checksum,
+async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: localConfigType) {
+  const { data: isTrial, error: isTrialsError } = await supabase
+    .rpc('is_trial_org', { orgid: orgId })
+    .single()
+  if ((isTrial && isTrial > 0) || isTrialsError) {
+  // TODO: Come back to this to fix for orgs v3
+    log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
+    log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
   }
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-  if (dbError) {
-    p.log.error(`Cannot add bundle ${formatError(dbError)}`)
+}
+
+async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string) {
+  // check if app already exist
+  // apikey is sooo legacy code, current prod does not use it
+  // TODO: remove apikey and create a new function who not need it
+  const { data: appVersion, error: appVersionError } = await supabase
+    .rpc('exist_app_versions', { appid, apikey: '', name_version: bundle })
+    .single()
+
+  if (appVersion || appVersionError) {
+    log.error(`Version already exists ${formatError(appVersionError)}`)
     program.error('')
   }
-  if (!external && zipped) {
-    const spinner = p.spinner()
-    spinner.start(`Uploading Bundle`)
+}
 
-    const url = await uploadUrl(supabase, appid, fileName)
-    if (!url) {
-      p.log.error(`Cannot get upload url`)
-      program.error('')
-    }
-    await ky.put(url, {
-      timeout: 60000,
-      body: zipped,
-      headers: (!localS3
-        ? {
-            'Content-Type': 'application/octet-stream',
-            'Cache-Control': 'public, max-age=456789, immutable',
-            'x-amz-meta-crc32': checksum,
-          }
-        : undefined),
+async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
+  const allFiles = (await promiseFiles(path))
+    .map((file) => {
+      const buffer = readFileSync(file)
+      const hash = createHash('sha-256').update(buffer).digest('hex')
+      let filePath = file.replace(path, '')
+      if (filePath.startsWith('/'))
+        filePath = filePath.substring(1, filePath.length)
+      return { file: filePath, hash }
     })
-    versionData.storage_provider = 'r2'
-    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
-    if (dbError2) {
-      p.log.error(`Cannot update bundle ${formatError(dbError2)}`)
-      program.error('')
-    }
-    spinner.stop('Bundle Uploaded 💪')
+  return allFiles
+}
+
+async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
+  const spinner = spinnerC()
+  spinner.start('Generating the update manifest')
+  const manifest = await generateManifest(path)
+  spinner.stop('Manifest generated successfully')
+
+  await snag.track({
+    channel: 'partial-update',
+    event: 'Generate manifest',
+    icon: '📂',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+    },
+    notify: false,
+  }).catch()
+
+  return manifest
+}
+
+async function uploadPartial(supabase: SupabaseType, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
+  const data = {
+    app_id: appId,
+    name,
+    version: 2,
+    manifest,
   }
+  let uploadResponse: { path: string, hash: string, uploadLink: string, finalPath: string }[]
+  try {
+    const pathUploadLink = 'private/upload_link'
+    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    uploadResponse = res.data as any
+  }
+  catch (error) {
+    log.error(`Cannot get upload url ${formatError(error)}`)
+    program.error('')
+  }
+
+  for (const manifestEntry of uploadResponse) {
+    const finalFilePath = `${path}/${manifestEntry.path}`
+
+    const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
+    const fileBuffer = await readBuffer(fileStream)
+
+    try {
+      await ky.put(manifestEntry.uploadLink, {
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        retry: 5,
+        body: fileBuffer,
+      })
+    }
+    catch (errorUpload) {
+      if (errorUpload instanceof HTTPError) {
+        const body = await errorUpload.response.text()
+        log.error(`Response: ${formatError(body)}`)
+      }
+      else {
+        console.error(errorUpload)
+      }
+    }
+  }
+
+  log.info('Uploaded all files successfully')
+  return uploadResponse.map((entry) => {
+    return {
+      file_name: entry.path,
+      s3_path: entry.finalPath,
+      file_hash: entry.hash,
+    }
+  })
+}
+
+async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, snag: LogSnag, orgId: string, appid: string) {
+  let sessionKey
+  let checksum = ''
+  let zipped: Buffer | null = null
+  const key = options.key
+
+  zipped = await zipFile(path)
+  const s = spinnerC()
+  s.start(`Calculating checksum`)
+  checksum = await getChecksum(zipped, 'crc32')
+  s.stop(`Checksum: ${checksum}`)
+  // key should be undefined or a string if false it should ingore encryption
+  if (!key) {
+    log.info(`Encryption ignored`)
+  }
+  else if (key || existsSync(baseKeyPub)) {
+    const publicKey = typeof key === 'string' ? key : baseKeyPub
+    let keyData = options.keyData || ''
+    // check if publicKey exist
+    if (!keyData && !existsSync(publicKey)) {
+      log.error(`Cannot find public key ${publicKey}`)
+      if (ciDetect.isCI) {
+        log.error('Cannot ask if user wants to use capgo public key on the cli')
+        program.error('')
+      }
+
+      const res = await confirmC({ message: 'Do you want to use our public key ?' })
+      if (!res) {
+        log.error(`Error: Missing public key`)
+        program.error('')
+      }
+      keyData = localConfig.signKey || ''
+    }
+    await snag.track({
+      channel: 'app',
+      event: 'App encryption',
+      icon: '🔑',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+    // open with fs publicKey path
+    if (!keyData) {
+      const keyFile = readFileSync(publicKey)
+      keyData = keyFile.toString()
+    }
+    // encrypt
+    log.info(`Encrypting your bundle`)
+    const res = encryptSource(zipped, keyData)
+    sessionKey = res.ivSessionKey
+    if (options.displayIvSession) {
+      log.info(`Your Iv Session key is ${sessionKey},
+keep it safe, you will need it to decrypt your bundle.
+It will be also visible in your dashboard\n`)
+    }
+    zipped = res.encryptedData
+  }
+  const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
+  if (mbSize > alertMb) {
+    log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
+    log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
+    await snag.track({
+      channel: 'app-error',
+      event: 'App Too Large',
+      icon: '🚛',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+  }
+
+  return { zipped, sessionKey, checksum }
+}
+
+async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
+  const spinner = spinnerC()
+  spinner.start(`Uploading Bundle`)
+  const startTime = performance.now()
+
+  try {
+    if (options.multipart !== undefined && options.multipart) {
+      log.info(`Uploading bundle as multipart`)
+      await uploadMultipart(supabase, appid, bundle, zipped, orgId)
+    }
+    else {
+      const url = await uploadUrl(supabase, appid, bundle)
+      if (!url) {
+        log.error(`Cannot get upload url`)
+        program.error('')
+      }
+      await ky.put(url, {
+        timeout: options.timeout || UPLOAD_TIMEOUT,
+        retry: 5,
+        body: zipped,
+      })
+    }
+  }
+  catch (errorUpload) {
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+    log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
+    if (errorUpload instanceof HTTPError) {
+      const body = await errorUpload.response.text()
+      log.error(`Response: ${formatError(body)}`)
+    }
+    // call delete version on path /delete_failed_version to delete the version
+    await deletedFailedVersion(supabase, appid, bundle)
+    program.error('')
+  }
+
+  const endTime = performance.now()
+  const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+  spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
+}
+
+async function setVersionInChannel(
+  supabase: SupabaseType,
+  apikey: string,
+  displayBundleUrl: boolean,
+  bundle: string,
+  channel: string,
+  userId: string,
+  orgId: string,
+  appid: string,
+  localConfig: localConfigType,
+  permissions: OrganizationPerm,
+) {
   const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey: options.apikey, name_version: bundle, appid })
+    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
 
   if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
       app_id: appid,
-      created_by: appOwner,
+      created_by: userId,
       version: versionId,
+      owner_org: orgId,
     })
     if (dbError3) {
-      p.log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
+      log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
       program.error('')
     }
     const appidWeb = convertAppName(appid)
     const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
     if (data?.public)
-      p.log.info('Your update is now available in your public channel 🎉')
+      log.info('Your update is now available in your public channel 🎉')
     else if (data?.id)
-      p.log.info(`Link device to this bundle to try it: ${bundleUrl}`)
+      log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (options.bundleUrl)
-      p.log.info(`Bundle url: ${bundleUrl}`)
+    if (displayBundleUrl) {
+      log.info(`Bundle url: ${bundleUrl}`)
+    }
+    else if (!versionId) {
+      log.warn('Cannot set bundle with upload key, use key with more rights for that')
+      program.error('')
+    }
+    else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+      log.warn('Cannot set channel as a upload organization member')
+    }
   }
-  else if (!versionId) {
-    p.log.warn('Cannot set bundle with upload key, use key with more rights for that')
+}
+
+export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
+  intro(`Uploading`)
+  const pm = getPMAndCommand()
+  await checkLatest()
+
+  const { s3Region, s3Apikey, s3Apisecret, s3BucketName, s3Endpoint, s3Port, s3SSL } = options
+
+  const apikey = getApikey(options)
+  const extConfig = await getConfig()
+  const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
+  const bundle = await getBundle(extConfig.config, options)
+  const channel = options.channel || 'dev'
+  const snag = useLogSnag()
+
+  checkNotifyAppReady(options, path)
+
+  log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
+
+  const localConfig = await getLocalConfig()
+  const supabase = await createSupabaseClient(apikey)
+  const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
+  // Check we have app access to this appId
+  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
+
+  // Now if it does exist we will fetch the org id
+  const orgId = await getOrganizationId(supabase, appid)
+  await checkPlanValid(supabase, orgId, apikey, appid, true)
+  await checkTrial(supabase, orgId, localConfig)
+  const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
+  await checkVersionExists(supabase, appid, bundle)
+
+  if (options.external && !options.external.startsWith('https://')) {
+    log.error(`External link should should start with "https://" current is "${external}"`)
     program.error('')
   }
-  else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-    p.log.warn('Cannot set channel as a upload organization member')
+
+  const versionData = {
+    // bucket_id: external ? undefined : fileName,
+    name: bundle,
+    app_id: appid,
+    session_key: undefined as undefined | string,
+    external_url: options.external,
+    storage_provider: options.external ? 'external' : 'r2-direct',
+    min_update_version: minUpdateVersion,
+    native_packages: nativePackages,
+    owner_org: orgId,
+    user_id: userId,
+    checksum: undefined as undefined | string,
+  } as Database['public']['Tables']['app_versions']['Insert']
+
+  let zipped: Buffer | null = null
+  if (!options.external) {
+    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
+    versionData.session_key = sessionKey
+    versionData.checksum = checksum
+    zipped = _zipped
+    if (!options.ignoreChecksumCheck) {
+      await checkChecksum(supabase, appid, channel, checksum)
+    }
   }
+  else {
+    await snag.track({
+      channel: 'app',
+      event: 'App external',
+      icon: '📤',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+    versionData.session_key = options.ivSessionKey
+  }
+
+  const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
+
+  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+  if (dbError) {
+    log.error(`Cannot add bundle ${formatError(dbError)}`)
+    program.error('')
+  }
+
+  if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
+    if (!s3BucketName || !s3Endpoint || !s3Region || !s3Apikey || !s3Apisecret || !s3Port) {
+      log.error('Missing argument, for S3 upload you need to provide a bucket name, endpoint, region, port, API key, and API secret')
+      program.error('')
+    }
+
+    log.info('Uploading to S3')
+    const s3Client = new S3Client({
+      endPoint: s3Endpoint,
+      region: s3Region,
+      port: s3Port,
+      useSSL: s3SSL,
+      bucket: s3BucketName,
+      credentials: {
+        accessKeyId: s3Apikey,
+        secretAccessKey: s3Apisecret,
+      },
+    })
+    const fileName = `${appid}-${bundle}`
+    const encodeFileName = encodeURIComponent(fileName)
+    await s3Client.putObject(fileName, zipped)
+    versionData.external_url = `https://${s3Endpoint}/${encodeFileName}`
+    versionData.storage_provider = 'external'
+  }
+  else if (zipped) {
+    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
+
+    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    try {
+      finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+    }
+    catch (err) {
+      log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    }
+
+    versionData.storage_provider = 'r2'
+    versionData.manifest = finalManifest
+    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+    if (dbError2) {
+      log.error(`Cannot update bundle ${formatError(dbError2)}`)
+      program.error('')
+    }
+  }
+
+  await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, permissions)
+
   await snag.track({
     channel: 'app',
     event: 'App Uploaded',
     icon: '⏫',
-    user_id: userId,
+    user_id: orgId,
     tags: {
       'app-id': appid,
     },
     notify: false,
   }).catch()
   if (shouldExit) {
-    p.outro('Time to share your update to the world 🌍')
-    process.exit()
+    outro('Time to share your update to the world 🌍')
+    exit()
   }
   return true
 }
 
-export async function uploadCommand(apikey: string, options: Options) {
+export async function uploadCommand(appid: string, options: Options) {
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
-    p.log.error(formatError(error))
+    log.error(formatError(error))
     program.error('')
   }
 }
 
-export async function uploadDeprecatedCommand(apikey: string, options: Options) {
-  p.log.warn('⚠️  This command is deprecated, use "npx @capgo/cli bundle upload" instead ⚠️')
+export async function uploadDeprecatedCommand(appid: string, options: Options) {
+  const pm = getPMAndCommand()
+  log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
-    await uploadBundle(apikey, options, true)
+    await uploadBundle(appid, options, true)
   }
   catch (error) {
-    p.log.error(formatError(error))
+    log.error(formatError(error))
     program.error('')
   }
 }

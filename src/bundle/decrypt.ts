@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
-import * as p from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import { decryptSource } from '../api/crypto'
 import { baseKeyPub, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
@@ -12,37 +12,36 @@ interface Options {
 }
 
 export async function decryptZip(zipPath: string, ivsessionKey: string, options: Options) {
-  p.intro(`Decrypt zip file`)
+  intro(`Decrypt zip file`)
   await checkLatest()
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
-    p.log.error(`Zip not found at the path ${zipPath}`)
+    log.error(`Zip not found at the path ${zipPath}`)
     program.error('')
   }
 
-  const config = await getConfig()
-  const { extConfig } = config.app
+  const extConfig = await getConfig()
   // console.log('config - ', config)
   // console.log('extConfig - ', extConfig)
 
-  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
+  const hasPrivateKeyInConfig = !!extConfig.config?.plugins?.CapacitorUpdater?.privateKey
   // console.log(`There ${hasPrivateKeyInConfig ? 'IS' : 'IS NOT'} a privateKey in the config`);
 
   if (hasPrivateKeyInConfig)
-    p.log.warning(`There is still a privateKey in the config`)
+    log.warning(`There is still a privateKey in the config`)
 
-  if (!options.key && !existsSync(baseKeyPub) && !extConfig.plugins?.CapacitorUpdater?.publicKey) {
-    p.log.error(`Public key not found at the path ${baseKeyPub} or in ${config.app.extConfigFilePath}`)
+  if (!options.key && !existsSync(baseKeyPub) && !extConfig.config.plugins?.CapacitorUpdater?.publicKey) {
+    log.error(`Public key not found at the path ${baseKeyPub} or in ${extConfig.config.app.extConfigFilePath}`)
     program.error('')
   }
   const keyPath = options.key || baseKeyPub
   // check if private exist
 
-  let publicKey = extConfig?.plugins?.CapacitorUpdater?.publicKey;
+  let publicKey = extConfig.config?.plugins?.CapacitorUpdater?.publicKey
 
   if (!existsSync(keyPath) && !publicKey) {
-    p.log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${config.app.extConfigFilePath}`)
+    log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${extConfig.config.app.extConfigFilePath}`)
     program.error('')
   }
   else if (existsSync(keyPath)) {
@@ -53,7 +52,7 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
 
   // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
   if (publicKey && !publicKey.startsWith('-----BEGIN RSA PUBLIC KEY-----')) {
-    p.log.error(`the public key provided is not a valid RSA Public key`)
+    log.error(`the public key provided is not a valid RSA Public key`)
     program.error('')
   }
 
@@ -62,7 +61,7 @@ export async function decryptZip(zipPath: string, ivsessionKey: string, options:
   const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? publicKey ?? '')
   // write decodedZip in a file
   writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
-  p.log.success(`Decrypted zip file at ${zipPath}_decrypted.zip`)
-  p.outro(`Done ✅`)
-  process.exit()
+  log.success(`Decrypted zip file at ${zipPath}_decrypted.zip`)
+  outro(`Done ✅`)
+  exit()
 }

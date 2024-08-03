@@ -1,5 +1,6 @@
 import { program } from 'commander'
 import pack from '../package.json'
+import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
 import { listBundle } from './bundle/list'
@@ -113,6 +114,13 @@ bundle
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--iv-session-key <key>', 'Set the iv and session key for bundle url external')
+  .option('--s3-region <region>', 'Region for your S3 bucket')
+  .option('--s3-apikey <apikey>', 'Apikey for your S3 endpoint')
+  .option('--s3-apisecret <apisecret>', 'Api secret for your S3 endpoint')
+  .option('--s3-endoint <s3Endpoint>', 'Url of S3 endpoint')
+  .option('--s3-bucket-name <bucketName>', 'Name for your AWS S3 bucket')
+  .option('--s3-port <port>', 'Port for your S3 endpoint')
+  .option('--no-s3-ssl', 'Disable SSL for S3 upload')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
@@ -126,6 +134,9 @@ bundle
   )
   .option('--auto-min-update-version', 'Set the min update version based on native packages')
   .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
+  .option('--ignore-checksum-check', 'Ignores the checksum check when uploading')
+  .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
+  .option('--multipart', 'Uses multipart protocol to upload data to S3')
 
 bundle
   .command('compatibility [appId]')
@@ -148,12 +159,13 @@ bundle
   .action(listBundle)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
-bundle
-  .command('unlink [appId]')
-  .description('Unlink a bundle in Capgo Cloud')
-  .action(listBundle)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
+// TODO: Fix this command!
+// bundle
+//   .command('unlink [appId]')
+//   .description('Unlink a bundle in Capgo Cloud')
+//   .action(listBundle)
+//   .option('-a, --apikey <apikey>', 'apikey to link to your account')
+//   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to unlink')
 
 bundle
   .command('cleanup [appId]')
@@ -242,7 +254,11 @@ channel
   .option('--no-android', 'Disable sending update to android devices')
   .option('--self-assign', 'Allow to device to self assign to this channel')
   .option('--no-self-assign', 'Disable devices to self assign to this channel')
-  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none')
+  .option('--disable-auto-update <disableAutoUpdate>', 'Disable auto update strategy for this channel.The possible options are: major, minor, metadata, patch, none')
+  .option('--dev', 'Allow sending update to development devices')
+  .option('--no-dev', 'Disable sending update to development devices')
+  .option('--emulator', 'Allow sending update to emulator devices')
+  .option('--no-emulator', 'Disable sending update to emulator devices')
 
 const key = program
   .command('key')
@@ -281,5 +297,14 @@ program
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
+
+const account = program
+  .command('account')
+  .description('Manage account')
+
+account.command('id')
+  .description('Get your account ID')
+  .action(getUserId)
+  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 program.parseAsync()

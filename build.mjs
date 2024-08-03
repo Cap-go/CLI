@@ -1,16 +1,15 @@
+import { exit } from 'node:process'
 import * as esbuild from 'esbuild'
-
-// Replace 'your-external-dependencies-here' with actual externals from your project
-const external = [];
 
 esbuild.build({
   entryPoints: ['src/index.ts'],
   bundle: true,
   platform: 'node',
-  target: 'node20', 
-  external,
-  outdir: 'dist',
+  target: 'node18',
+  outfile: 'dist/index.js', // Change this to output a single file
   sourcemap: process.env.NODE_ENV === 'development',
+  minify: true, // Minify the output
+  treeShaking: true, // Enable tree shaking to remove unused code
   banner: {
     js: '#!/usr/bin/env node',
   },
@@ -20,4 +19,19 @@ esbuild.build({
   loader: {
     '.ts': 'ts',
   },
-}).catch(() => process.exit(1));
+  plugins: [
+    // TOSO: remove this when fixed
+    {
+      name: 'ignore-punycode',
+      setup(build) {
+        build.onResolve({ filter: /^punycode$/ }, args => ({
+          path: args.path,
+          namespace: 'ignore',
+        }))
+        build.onLoad({ filter: /.*/, namespace: 'ignore' }, () => ({
+          contents: 'export default {}',
+        }))
+      },
+    },
+  ],
+}).catch(() => exit(1))

@@ -2,6 +2,1007 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.21](https://github.com/Cap-go/CLI/compare/v4.13.20...v4.13.21) (2024-08-03)
+
+
+### Bug Fixes
+
+* error in decrypt code ([6e8dcc5](https://github.com/Cap-go/CLI/commit/6e8dcc5a49895b039abb4ae5229a57dda055a422))
+
+### [4.13.20](https://github.com/Cap-go/CLI/compare/v4.13.19...v4.13.20) (2024-08-03)
+
+
+### Bug Fixes
+
+* error p missing ([baa8f87](https://github.com/Cap-go/CLI/commit/baa8f87deef0fada3887ee92d166c3fc0413310c))
+
+### [4.13.19](https://github.com/Cap-go/CLI/compare/v4.13.18...v4.13.19) (2024-08-03)
+
+### [4.13.18](https://github.com/Cap-go/CLI/compare/v4.13.17...v4.13.18) (2024-08-03)
+
+
+### Bug Fixes
+
+* types issue ([34d274f](https://github.com/Cap-go/CLI/commit/34d274fcd3d93fa73e7983e5cad9260d9a37678d))
+
+### [4.13.17](https://github.com/Cap-go/CLI/compare/v4.13.16...v4.13.17) (2024-08-02)
+
+### [4.13.16](https://github.com/Cap-go/CLI/compare/v4.13.15...v4.13.16) (2024-08-02)
+
+### [4.13.15](https://github.com/Cap-go/CLI/compare/v4.13.14...v4.13.15) (2024-08-02)
+
+### [4.13.14](https://github.com/Cap-go/CLI/compare/v4.13.13...v4.13.14) (2024-07-31)
+
+### [4.13.13](https://github.com/Cap-go/CLI/compare/v4.13.12...v4.13.13) (2024-07-29)
+
+### [4.13.12](https://github.com/Cap-go/CLI/compare/v4.13.11...v4.13.12) (2024-07-29)
+
+### [4.13.11](https://github.com/Cap-go/CLI/compare/v4.13.10...v4.13.11) (2024-07-20)
+
+
+### Bug Fixes
+
+* use old dep for parsing config file ([04d5c29](https://github.com/Cap-go/CLI/commit/04d5c29e64bbbcb8434be26300626b2114606143))
+
+### [4.13.10](https://github.com/Cap-go/CLI/compare/v4.13.9...v4.13.10) (2024-07-19)
+
+
+### Bug Fixes
+
+* revert change who read the config file ([6e40042](https://github.com/Cap-go/CLI/commit/6e40042e0247a7599f86a975ce9f33df82741c8b))
+
+### [4.13.9](https://github.com/Cap-go/CLI/compare/v4.13.8...v4.13.9) (2024-07-18)
+
+
+### Bug Fixes
+
+* disable deploy until fixed ([142e0a3](https://github.com/Cap-go/CLI/commit/142e0a36ead27aa4fc9dfeed539e3164dac0ef6f))
+
+### [4.13.8](https://github.com/Cap-go/CLI/compare/v4.13.7...v4.13.8) (2024-07-18)
+
+
+### Bug Fixes
+
+* better path ([8db73e7](https://github.com/Cap-go/CLI/commit/8db73e796362d708f302982c7565048fd9e40a59))
+
+### [4.13.7](https://github.com/Cap-go/CLI/compare/v4.13.6...v4.13.7) (2024-07-18)
+
+
+### Bug Fixes
+
+* updates dependencies ([06ca992](https://github.com/Cap-go/CLI/commit/06ca99294d045024638917d89f1a131320313315))
+
+### [4.13.6](https://github.com/Cap-go/CLI/compare/v4.13.5...v4.13.6) (2024-07-18)
+
+
+### Bug Fixes
+
+* better error message to debug windows users ([bc57433](https://github.com/Cap-go/CLI/commit/bc574335614433d25bdd014ef5873c8a790b49d6))
+
+### [4.13.5](https://github.com/Cap-go/CLI/compare/v4.13.4...v4.13.5) (2024-07-18)
+
+
+### Bug Fixes
+
+* lint mjs ([8621ec0](https://github.com/Cap-go/CLI/commit/8621ec0899e14e3386d5c9899937ae56dca19495))
+
+### [4.13.4](https://github.com/Cap-go/CLI/compare/v4.13.3...v4.13.4) (2024-07-18)
+
+
+### Bug Fixes
+
+* path for upload mono repo ([e164253](https://github.com/Cap-go/CLI/commit/e1642536c275c5efa202712e9dc66a04ea645a0d))
+
+### [4.13.3](https://github.com/Cap-go/CLI/compare/v4.13.2...v4.13.3) (2024-07-18)
+
+
+### Bug Fixes
+
+* try to optimize publish ([3d32bb9](https://github.com/Cap-go/CLI/commit/3d32bb98cb79afe8104c513c8d49f68df82b29ae))
+
+### [4.13.2](https://github.com/Cap-go/CLI/compare/v4.13.1...v4.13.2) (2024-07-18)
+
+
+### Bug Fixes
+
+* use esbuild with embed modules ([2e582b5](https://github.com/Cap-go/CLI/commit/2e582b56693611927e433cb5ba4b9c478dd141a9))
+
+### [4.13.1](https://github.com/Cap-go/CLI/compare/v4.13.0...v4.13.1) (2024-07-18)
+
+
+### Bug Fixes
+
+* lint and typo ([d648cd3](https://github.com/Cap-go/CLI/commit/d648cd3eaccbafaf2247cd60379f9162bd48180c))
+
+## [4.13.0](https://github.com/Cap-go/CLI/compare/v4.12.15...v4.13.0) (2024-07-18)
+
+
+### Features
+
+* adding ncc support ([70eddce](https://github.com/Cap-go/CLI/commit/70eddce117ee8bdc6d861990e36b3ac836be01b4))
+
+
+### Bug Fixes
+
+* no more deps when install ([3bc93ed](https://github.com/Cap-go/CLI/commit/3bc93edadba09d789f00c202a55d26b10d6579f9))
+* script ([8267d43](https://github.com/Cap-go/CLI/commit/8267d435d90e4e579b36edf5051152179b3841c1))
+
+### [4.12.15](https://github.com/Cap-go/CLI/compare/v4.12.14...v4.12.15) (2024-07-18)
+
+
+### Bug Fixes
+
+* better imports ([b02d95d](https://github.com/Cap-go/CLI/commit/b02d95df18231530ed33e17ab322a92face25727))
+* do not even make modif ([dbc7e5b](https://github.com/Cap-go/CLI/commit/dbc7e5bc9a07e29520309149146458d78c30cb72))
+* it work but remove comments ([6ff1480](https://github.com/Cap-go/CLI/commit/6ff1480765e206779ef8eaf82e19683bbf83e525))
+
+### [4.12.14](https://github.com/Cap-go/CLI/compare/v4.12.13...v4.12.14) (2024-07-18)
+
+### [4.12.13](https://github.com/Cap-go/CLI/compare/v4.12.12...v4.12.13) (2024-07-17)
+
+
+### Bug Fixes
+
+* add autofix ([3a226cf](https://github.com/Cap-go/CLI/commit/3a226cfeb3ab3ccc6c73b067b9e8899bb8189286))
+
+### [4.12.12](https://github.com/Cap-go/CLI/compare/v4.12.11...v4.12.12) (2024-07-15)
+
+### [4.12.11](https://github.com/Cap-go/CLI/compare/v4.12.10...v4.12.11) (2024-07-14)
+
+
+### Bug Fixes
+
+* external missing session key ([8fbee32](https://github.com/Cap-go/CLI/commit/8fbee329cd97b58a95c05b2209b54d948cab9639))
+
+### [4.12.10](https://github.com/Cap-go/CLI/compare/v4.12.9...v4.12.10) (2024-07-12)
+
+
+### Bug Fixes
+
+* better debug command ([7000651](https://github.com/Cap-go/CLI/commit/700065146e13edd5ff813d025131db91da07dc99))
+
+### [4.12.9](https://github.com/Cap-go/CLI/compare/v4.12.8...v4.12.9) (2024-07-12)
+
+### [4.12.8](https://github.com/Cap-go/CLI/compare/v4.12.7...v4.12.8) (2024-07-12)
+
+### [4.12.7](https://github.com/Cap-go/CLI/compare/v4.12.6...v4.12.7) (2024-07-12)
+
+### [4.12.6](https://github.com/Cap-go/CLI/compare/v4.12.5...v4.12.6) (2024-07-09)
+
+
+### Bug Fixes
+
+* remove error if no checksum found it's normal ([41c211a](https://github.com/Cap-go/CLI/commit/41c211a87bc6a69f6847288bf89efb598d155b50))
+
+### [4.12.5](https://github.com/Cap-go/CLI/compare/v4.12.4...v4.12.5) (2024-07-09)
+
+
+### Bug Fixes
+
+* lint ([01e0f31](https://github.com/Cap-go/CLI/commit/01e0f31b20232578e47cc886be729e7e4e4885ed))
+* remove preprod url ([0d8672a](https://github.com/Cap-go/CLI/commit/0d8672a1534a5e88260cbbad7eb10821d07e6cba))
+
+### [4.12.4](https://github.com/Cap-go/CLI/compare/v4.12.3...v4.12.4) (2024-07-09)
+
+
+### Bug Fixes
+
+* make better compression on windows ([dc93876](https://github.com/Cap-go/CLI/commit/dc9387649ae6cdfa09172e2e806d834787cb2fd0))
+* use custom function to read recurst dir to fix windows issue ([cbd2217](https://github.com/Cap-go/CLI/commit/cbd2217ab877a40179f65be217e915fcbf7d0be1))
+* version error ([6ec20c7](https://github.com/Cap-go/CLI/commit/6ec20c7195cfe454ef5bfa258163088c14231647))
+
+### [4.12.3](https://github.com/Cap-go/CLI/compare/v4.12.2...v4.12.3) (2024-07-08)
+
+
+### Bug Fixes
+
+* getLocalDepenencies for windows ([ca7bf4e](https://github.com/Cap-go/CLI/commit/ca7bf4e97c6a2ff766978ed61089fd805126dde1))
+
+### [4.12.2](https://github.com/Cap-go/CLI/compare/v4.12.1...v4.12.2) (2024-07-08)
+
+
+### Bug Fixes
+
+* issue with upload ([ca08aec](https://github.com/Cap-go/CLI/commit/ca08aec7f38e1ae9c431ba35764f8659b23692e1))
+
+### [4.12.1](https://github.com/Cap-go/CLI/compare/v4.12.0...v4.12.1) (2024-07-08)
+
+
+### Bug Fixes
+
+* types ([3ee5a38](https://github.com/Cap-go/CLI/commit/3ee5a3872d2b74894e42b26c492a572edae2baa3))
+
+## [4.12.0](https://github.com/Cap-go/CLI/compare/v4.11.7...v4.12.0) (2024-07-08)
+
+
+### Features
+
+* add check for duplicated checksum ([0204005](https://github.com/Cap-go/CLI/commit/0204005b7fffd097f4f46eeb58bce3029c5edb54))
+
+### [4.11.7](https://github.com/Cap-go/CLI/compare/v4.11.6...v4.11.7) (2024-07-01)
+
+### [4.11.6](https://github.com/Cap-go/CLI/compare/v4.11.5...v4.11.6) (2024-06-28)
+
+### [4.11.5](https://github.com/Cap-go/CLI/compare/v4.11.4...v4.11.5) (2024-06-23)
+
+
+### Bug Fixes
+
+* remove old package and use only clack ([f243b9e](https://github.com/Cap-go/CLI/commit/f243b9e8b3ac79415d181b28308120ceb7e6f252))
+
+### [4.11.4](https://github.com/Cap-go/CLI/compare/v4.11.3...v4.11.4) (2024-06-23)
+
+
+### Bug Fixes
+
+* bun ([0fbdf43](https://github.com/Cap-go/CLI/commit/0fbdf430dd13a82056ef9a870a8afce89c34f313))
+
+### [4.11.3](https://github.com/Cap-go/CLI/compare/v4.11.2...v4.11.3) (2024-06-23)
+
+
+### Bug Fixes
+
+* use better win detection ([2020dc1](https://github.com/Cap-go/CLI/commit/2020dc1dc3daa4d020d700edb6e15c7bf1d847a0))
+
+### [4.11.2](https://github.com/Cap-go/CLI/compare/v4.11.1...v4.11.2) (2024-06-23)
+
+
+### Bug Fixes
+
+* add log for windows ([a871d7f](https://github.com/Cap-go/CLI/commit/a871d7f444796b9e2b53fc4d8ad91ac202c9adae))
+
+### [4.11.1](https://github.com/Cap-go/CLI/compare/v4.11.0...v4.11.1) (2024-06-23)
+
+
+### Bug Fixes
+
+* use JSZip for all windows ([c5bff16](https://github.com/Cap-go/CLI/commit/c5bff169cb401dc50167214c886cba375c99c986))
+
+## [4.11.0](https://github.com/Cap-go/CLI/compare/v4.10.77...v4.11.0) (2024-06-23)
+
+
+### Features
+
+* deploy for windows ([47220bc](https://github.com/Cap-go/CLI/commit/47220bc961c34b4ac2318dadf13eb9261c00e561))
+
+### [4.10.77](https://github.com/Cap-go/CLI/compare/v4.10.76...v4.10.77) (2024-06-23)
+
+### [4.10.76](https://github.com/Cap-go/CLI/compare/v4.10.75...v4.10.76) (2024-06-22)
+
+### [4.10.75](https://github.com/Cap-go/CLI/compare/v4.10.74...v4.10.75) (2024-06-21)
+
+
+### Bug Fixes
+
+* delete ios setup for now as we cannot manage to make it work easy ([cadec4e](https://github.com/Cap-go/CLI/commit/cadec4ef73d19f85c511239d0155687256d7321e))
+
+### [4.10.74](https://github.com/Cap-go/CLI/compare/v4.10.73...v4.10.74) (2024-06-21)
+
+
+### Bug Fixes
+
+* podfile ([8912d4c](https://github.com/Cap-go/CLI/commit/8912d4c6b35d2a5787330fb14cd9fa137ad1d2b9))
+
+### [4.10.73](https://github.com/Cap-go/CLI/compare/v4.10.72...v4.10.73) (2024-06-21)
+
+
+### Bug Fixes
+
+* test with pod ([1e5a5f9](https://github.com/Cap-go/CLI/commit/1e5a5f92df27e79526271c7a4acda61111d8a300))
+
+### [4.10.72](https://github.com/Cap-go/CLI/compare/v4.10.71...v4.10.72) (2024-06-21)
+
+
+### Bug Fixes
+
+* disable checks ([b6e5b27](https://github.com/Cap-go/CLI/commit/b6e5b270fbbc0148c7597bdcc44e8482f47c5515))
+
+### [4.10.71](https://github.com/Cap-go/CLI/compare/v4.10.70...v4.10.71) (2024-06-21)
+
+
+### Bug Fixes
+
+* test mac ([9603e6d](https://github.com/Cap-go/CLI/commit/9603e6dd3250b2def347b9fc8ca5c8cf81c988ee))
+
+### [4.10.70](https://github.com/Cap-go/CLI/compare/v4.10.69...v4.10.70) (2024-06-21)
+
+
+### Bug Fixes
+
+* install ([28fff1f](https://github.com/Cap-go/CLI/commit/28fff1f4f119d09f0e192c1708bea3a9ce62fd80))
+
+### [4.10.69](https://github.com/Cap-go/CLI/compare/v4.10.68...v4.10.69) (2024-06-21)
+
+
+### Bug Fixes
+
+* test other solution ([1f068e1](https://github.com/Cap-go/CLI/commit/1f068e1d4c8c81bfc046686c2e4e28f1fff4ee7d))
+
+### [4.10.68](https://github.com/Cap-go/CLI/compare/v4.10.67...v4.10.68) (2024-06-21)
+
+
+### Bug Fixes
+
+* remove dup ([a5aa77c](https://github.com/Cap-go/CLI/commit/a5aa77c96b1ceae3e36d760446f31116e8cb55ee))
+
+### [4.10.67](https://github.com/Cap-go/CLI/compare/v4.10.66...v4.10.67) (2024-06-21)
+
+
+### Bug Fixes
+
+* test again ([52af439](https://github.com/Cap-go/CLI/commit/52af439de9a4f4eb99527ac621bedc1a47d72fc0))
+
+### [4.10.66](https://github.com/Cap-go/CLI/compare/v4.10.65...v4.10.66) (2024-06-21)
+
+
+### Bug Fixes
+
+* try different way to init swift and do it first step to test ([26d32ea](https://github.com/Cap-go/CLI/commit/26d32ea5d66097cde1b9b24378884a0f9561a79e))
+
+### [4.10.65](https://github.com/Cap-go/CLI/compare/v4.10.64...v4.10.65) (2024-06-21)
+
+
+### Bug Fixes
+
+* swift test ([3da5261](https://github.com/Cap-go/CLI/commit/3da5261730faa58fff04ef986ec04e9761e5138f))
+
+### [4.10.64](https://github.com/Cap-go/CLI/compare/v4.10.63...v4.10.64) (2024-06-21)
+
+
+### Bug Fixes
+
+* add test in swift as well ([9dfd7e6](https://github.com/Cap-go/CLI/commit/9dfd7e6d36699759b18799bef624d59d4e360da5))
+
+### [4.10.63](https://github.com/Cap-go/CLI/compare/v4.10.62...v4.10.63) (2024-06-21)
+
+
+### Bug Fixes
+
+* try to force posix ([5d0b446](https://github.com/Cap-go/CLI/commit/5d0b4465d0d49988c95d85b465efd88d3966077a))
+
+### [4.10.62](https://github.com/Cap-go/CLI/compare/v4.10.61...v4.10.62) (2024-06-21)
+
+
+### Bug Fixes
+
+* try other lib to zip ([99b03ee](https://github.com/Cap-go/CLI/commit/99b03eea88e6c88572aff919f6dafbd2f49680be))
+
+### [4.10.61](https://github.com/Cap-go/CLI/compare/v4.10.60...v4.10.61) (2024-06-21)
+
+
+### Bug Fixes
+
+* add console log ([9f0a7a0](https://github.com/Cap-go/CLI/commit/9f0a7a0347ef520bb8075d55374054240dba074c))
+
+### [4.10.60](https://github.com/Cap-go/CLI/compare/v4.10.59...v4.10.60) (2024-06-21)
+
+
+### Bug Fixes
+
+* path issue ([cbab5a9](https://github.com/Cap-go/CLI/commit/cbab5a9526c52cf2e51204d2e068e6493fc1f1cc))
+
+### [4.10.59](https://github.com/Cap-go/CLI/compare/v4.10.58...v4.10.59) (2024-06-21)
+
+
+### Bug Fixes
+
+* try new fix ([4d65f3c](https://github.com/Cap-go/CLI/commit/4d65f3cf7b8d617156668a596b18ef06f08a4659))
+
+### [4.10.58](https://github.com/Cap-go/CLI/compare/v4.10.57...v4.10.58) (2024-06-21)
+
+
+### Bug Fixes
+
+* zipFile ([8a5f0b6](https://github.com/Cap-go/CLI/commit/8a5f0b62392bfd2be77c3a45bd3d5e83a9d58ace))
+
+### [4.10.57](https://github.com/Cap-go/CLI/compare/v4.10.56...v4.10.57) (2024-06-21)
+
+
+### Bug Fixes
+
+* use better path system ([330a130](https://github.com/Cap-go/CLI/commit/330a130ba3f16be88a40ebf298893b2d3cd518ba))
+
+### [4.10.56](https://github.com/Cap-go/CLI/compare/v4.10.55...v4.10.56) (2024-06-21)
+
+
+### Bug Fixes
+
+* test in shell ([1026921](https://github.com/Cap-go/CLI/commit/1026921a44259295bfc5157ffee08eaaabcee1fa))
+
+### [4.10.55](https://github.com/Cap-go/CLI/compare/v4.10.54...v4.10.55) (2024-06-21)
+
+
+### Bug Fixes
+
+* try to force correct path ([c639d9e](https://github.com/Cap-go/CLI/commit/c639d9ef500640de37f5144fbae1c9b4d057ff83))
+
+### [4.10.54](https://github.com/Cap-go/CLI/compare/v4.10.53...v4.10.54) (2024-06-21)
+
+
+### Bug Fixes
+
+* test the new path system ([73551e9](https://github.com/Cap-go/CLI/commit/73551e9b57976aecf1fd1f0eb8001f9e8fe9fe80))
+
+### [4.10.53](https://github.com/Cap-go/CLI/compare/v4.10.52...v4.10.53) (2024-06-21)
+
+
+### Bug Fixes
+
+* update test to fail like updater ([4a9a75d](https://github.com/Cap-go/CLI/commit/4a9a75d3d98bdb594b17a9a2149a73fae75b6ffa))
+
+### [4.10.52](https://github.com/Cap-go/CLI/compare/v4.10.51...v4.10.52) (2024-06-21)
+
+
+### Bug Fixes
+
+* path ([78a210e](https://github.com/Cap-go/CLI/commit/78a210e9fc61add77be4e0103abffd5469fbfd00))
+
+### [4.10.51](https://github.com/Cap-go/CLI/compare/v4.10.50...v4.10.51) (2024-06-21)
+
+
+### Bug Fixes
+
+* add missing checkout ([5428a4f](https://github.com/Cap-go/CLI/commit/5428a4f6f4ccf92391433cc6b48eca75e1f92fa9))
+
+### [4.10.50](https://github.com/Cap-go/CLI/compare/v4.10.49...v4.10.50) (2024-06-21)
+
+
+### Bug Fixes
+
+* java ([502052c](https://github.com/Cap-go/CLI/commit/502052c192253e0629e328dcbedd55fd75cbdef8))
+
+### [4.10.49](https://github.com/Cap-go/CLI/compare/v4.10.48...v4.10.49) (2024-06-21)
+
+
+### Bug Fixes
+
+* disable on build + add back java ([e131c54](https://github.com/Cap-go/CLI/commit/e131c545708b4755efdf73dc9c5a3176634f11d3))
+
+### [4.10.48](https://github.com/Cap-go/CLI/compare/v4.10.47...v4.10.48) (2024-06-21)
+
+
+### Bug Fixes
+
+* disable java for now ([386e7a7](https://github.com/Cap-go/CLI/commit/386e7a760d9d35a48988118059fac19990a24d32))
+
+### [4.10.47](https://github.com/Cap-go/CLI/compare/v4.10.46...v4.10.47) (2024-06-21)
+
+
+### Bug Fixes
+
+* do java last ([7374db6](https://github.com/Cap-go/CLI/commit/7374db68ac96dc4c0c8cd69452ad9485285f7d63))
+
+### [4.10.46](https://github.com/Cap-go/CLI/compare/v4.10.45...v4.10.46) (2024-06-21)
+
+
+### Bug Fixes
+
+* path javac ([e323cef](https://github.com/Cap-go/CLI/commit/e323cef1aa48ed164e1d503edc86ac6133abe0ca))
+* remove double check ([5752085](https://github.com/Cap-go/CLI/commit/57520855f066cb3dc7ed78358b3e53628402c55d))
+
+### [4.10.45](https://github.com/Cap-go/CLI/compare/v4.10.44...v4.10.45) (2024-06-21)
+
+
+### Bug Fixes
+
+* path verifyZip ([8d33d6f](https://github.com/Cap-go/CLI/commit/8d33d6f4590a923f0b1bcad18e5817b759967bee))
+
+### [4.10.44](https://github.com/Cap-go/CLI/compare/v4.10.43...v4.10.44) (2024-06-21)
+
+
+### Bug Fixes
+
+* better download ([56c8206](https://github.com/Cap-go/CLI/commit/56c82063eae4fca364e1ceae576f609c466ad08e))
+
+### [4.10.43](https://github.com/Cap-go/CLI/compare/v4.10.42...v4.10.43) (2024-06-21)
+
+
+### Bug Fixes
+
+* add list of files ([d445ff8](https://github.com/Cap-go/CLI/commit/d445ff816764c24ffaa4557d9c6bc3a7b2858765))
+
+### [4.10.42](https://github.com/Cap-go/CLI/compare/v4.10.41...v4.10.42) (2024-06-21)
+
+
+### Bug Fixes
+
+* checkout v4 ([991f01a](https://github.com/Cap-go/CLI/commit/991f01acbfdf4a758b7b6f514d5da10315507e0b))
+
+### [4.10.41](https://github.com/Cap-go/CLI/compare/v4.10.40...v4.10.41) (2024-06-21)
+
+
+### Bug Fixes
+
+* zipinfo ([acb92ce](https://github.com/Cap-go/CLI/commit/acb92cee851d22c4fb7074b4d5074cdcc6b3eb44))
+
+### [4.10.40](https://github.com/Cap-go/CLI/compare/v4.10.39...v4.10.40) (2024-06-21)
+
+
+### Bug Fixes
+
+* better test ([0bf19ce](https://github.com/Cap-go/CLI/commit/0bf19ce088c6c97ed0bdca8c277b1c973c493645))
+
+### [4.10.39](https://github.com/Cap-go/CLI/compare/v4.10.38...v4.10.39) (2024-06-21)
+
+
+### Bug Fixes
+
+* add missing java file and control test linux ([bcb0141](https://github.com/Cap-go/CLI/commit/bcb0141eda8e6fe9c607285fbb9a23f7421a5a1b))
+
+### [4.10.38](https://github.com/Cap-go/CLI/compare/v4.10.37...v4.10.38) (2024-06-21)
+
+
+### Bug Fixes
+
+* try artifact v4 and add java command ([1ba8907](https://github.com/Cap-go/CLI/commit/1ba8907eaf82f16f61eec4c5b8c5d1beacd7dbd2))
+
+### [4.10.37](https://github.com/Cap-go/CLI/compare/v4.10.36...v4.10.37) (2024-06-21)
+
+### [4.10.36](https://github.com/Cap-go/CLI/compare/v4.10.35...v4.10.36) (2024-06-21)
+
+
+### Bug Fixes
+
+* add other file for better test ([9757a93](https://github.com/Cap-go/CLI/commit/9757a9375cc754556b4384e30cb95faee9ab23e1))
+* get info with zipinfo ([5d7ecdc](https://github.com/Cap-go/CLI/commit/5d7ecdcd94bb7489c01e53ce9927b05185165f37))
+
+### [4.10.35](https://github.com/Cap-go/CLI/compare/v4.10.34...v4.10.35) (2024-06-21)
+
+
+### Bug Fixes
+
+* test file before unzip ([9ec2ac3](https://github.com/Cap-go/CLI/commit/9ec2ac31b53cd3c5ccd76f3cb3d72cdfada63a84))
+
+### [4.10.34](https://github.com/Cap-go/CLI/compare/v4.10.33...v4.10.34) (2024-06-21)
+
+
+### Bug Fixes
+
+* add check file ([41cd144](https://github.com/Cap-go/CLI/commit/41cd144ee0e757157e98d5ebbdbb04fabee0e3b9))
+* deps ([cef42c3](https://github.com/Cap-go/CLI/commit/cef42c390ac148dd24237ac603c5fbd697e3fe9c))
+
+### [4.10.33](https://github.com/Cap-go/CLI/compare/v4.10.32...v4.10.33) (2024-06-21)
+
+
+### Bug Fixes
+
+* path unzip ([4a58dc1](https://github.com/Cap-go/CLI/commit/4a58dc19b7623730b7034262aa8a6e2c96748084))
+
+### [4.10.32](https://github.com/Cap-go/CLI/compare/v4.10.31...v4.10.32) (2024-06-21)
+
+
+### Bug Fixes
+
+* unzip command ([3e9390a](https://github.com/Cap-go/CLI/commit/3e9390a04d3c37bbc8273bcef9b9c7b4907a0ab6))
+
+### [4.10.31](https://github.com/Cap-go/CLI/compare/v4.10.30...v4.10.31) (2024-06-21)
+
+
+### Bug Fixes
+
+* try to excrat both ([3906045](https://github.com/Cap-go/CLI/commit/39060457304f571140c7d86b2044123658937264))
+
+### [4.10.30](https://github.com/Cap-go/CLI/compare/v4.10.29...v4.10.30) (2024-06-21)
+
+
+### Bug Fixes
+
+* add depends ([af4a12c](https://github.com/Cap-go/CLI/commit/af4a12cc771c28f4232031897898cd43be176e8c))
+
+### [4.10.29](https://github.com/Cap-go/CLI/compare/v4.10.28...v4.10.29) (2024-06-21)
+
+### [4.10.28](https://github.com/Cap-go/CLI/compare/v4.10.27...v4.10.28) (2024-06-20)
+
+
+### Bug Fixes
+
+* lockfile issue ([a63b4eb](https://github.com/Cap-go/CLI/commit/a63b4eb53bf8959e3c839aa6297f5d181d2da576))
+* try another way to test posix ([9e7574d](https://github.com/Cap-go/CLI/commit/9e7574d24e54339b8f41de7958d5562682466088))
+
+### [4.10.27](https://github.com/Cap-go/CLI/compare/v4.10.26...v4.10.27) (2024-06-20)
+
+
+### Bug Fixes
+
+* remove too old version ([6b510e3](https://github.com/Cap-go/CLI/commit/6b510e37165487f74829296ee4becb5644d8880f))
+
+### [4.10.26](https://github.com/Cap-go/CLI/compare/v4.10.25...v4.10.26) (2024-06-20)
+
+
+### Bug Fixes
+
+* test on multiple os ([9516f96](https://github.com/Cap-go/CLI/commit/9516f9647ae66fc455ff4d9955d922abbfc5bed0))
+
+### [4.10.25](https://github.com/Cap-go/CLI/compare/v4.10.24...v4.10.25) (2024-06-20)
+
+
+### Bug Fixes
+
+* add zip test ([45da8fe](https://github.com/Cap-go/CLI/commit/45da8fee6c7ac068532295d26180aa73996e6b58))
+
+### [4.10.24](https://github.com/Cap-go/CLI/compare/v4.10.23...v4.10.24) (2024-06-19)
+
+
+### Bug Fixes
+
+* add message for multipart ([db2fc69](https://github.com/Cap-go/CLI/commit/db2fc6921418d3665304e358fe842efb8c9bc773))
+
+### [4.10.23](https://github.com/Cap-go/CLI/compare/v4.10.22...v4.10.23) (2024-06-19)
+
+### [4.10.22](https://github.com/Cap-go/CLI/compare/v4.10.21...v4.10.22) (2024-06-19)
+
+
+### Bug Fixes
+
+* disable windows powershell ([83d0c6a](https://github.com/Cap-go/CLI/commit/83d0c6a61c5085aefc3a1a7f5567cda2fd629469))
+
+### [4.10.21](https://github.com/Cap-go/CLI/compare/v4.10.20...v4.10.21) (2024-06-18)
+
+
+### Bug Fixes
+
+* remove old headers ([4d0c4b2](https://github.com/Cap-go/CLI/commit/4d0c4b24c5608034f948e0ce07d1e6fb5b9bb75d))
+
+### [4.10.20](https://github.com/Cap-go/CLI/compare/v4.10.19...v4.10.20) (2024-06-18)
+
+
+### Bug Fixes
+
+* lint issue ([df7867b](https://github.com/Cap-go/CLI/commit/df7867ba88b1c87a2a123caae68b5b9c4505487e))
+
+### [4.10.19](https://github.com/Cap-go/CLI/compare/v4.10.18...v4.10.19) (2024-06-18)
+
+### [4.10.18](https://github.com/Cap-go/CLI/compare/v4.10.17...v4.10.18) (2024-06-17)
+
+
+### Bug Fixes
+
+* add log message for the user ([e8b7437](https://github.com/Cap-go/CLI/commit/e8b7437da81bf819d6765fab7659f5d975855693))
+
+### [4.10.17](https://github.com/Cap-go/CLI/compare/v4.10.16...v4.10.17) (2024-06-13)
+
+
+### Bug Fixes
+
+* remove old userId ([b263deb](https://github.com/Cap-go/CLI/commit/b263debe9b13fd68841c3a176f660863160a3872))
+
+### [4.10.16](https://github.com/Cap-go/CLI/compare/v4.10.15...v4.10.16) (2024-06-13)
+
+
+### Bug Fixes
+
+* issue auto delete failed ([62fef1d](https://github.com/Cap-go/CLI/commit/62fef1dd5816c9c9781002d68f9566bbcace8e0f))
+
+### [4.10.15](https://github.com/Cap-go/CLI/compare/v4.10.14...v4.10.15) (2024-06-12)
+
+
+### Bug Fixes
+
+* remove crc32 from presigned ([fb1c6b6](https://github.com/Cap-go/CLI/commit/fb1c6b62571c47f204f05b4dbf5d903fc2fc9d65))
+
+### [4.10.14](https://github.com/Cap-go/CLI/compare/v4.10.13...v4.10.14) (2024-06-09)
+
+
+### Bug Fixes
+
+* better report error in init command ([af3dbf9](https://github.com/Cap-go/CLI/commit/af3dbf9e882e1dceb5d0b0ffb15484c1d4e01764))
+
+### [4.10.13](https://github.com/Cap-go/CLI/compare/v4.10.12...v4.10.13) (2024-06-08)
+
+
+### Bug Fixes
+
+* image upload ([cc42ebf](https://github.com/Cap-go/CLI/commit/cc42ebf8b297119383d5e08a73416515218bdbae))
+
+### [4.10.12](https://github.com/Cap-go/CLI/compare/v4.10.11...v4.10.12) (2024-06-07)
+
+
+### Bug Fixes
+
+* add back debug command ([bb220a3](https://github.com/Cap-go/CLI/commit/bb220a3c42d30397f67d78233d6b8be460674a23))
+
+### [4.10.11](https://github.com/Cap-go/CLI/compare/v4.10.10...v4.10.11) (2024-06-05)
+
+
+### Bug Fixes
+
+* rename method to get id ([60fa77b](https://github.com/Cap-go/CLI/commit/60fa77b69ceb5f540357856ed9f3a886e0641337))
+
+### [4.10.10](https://github.com/Cap-go/CLI/compare/v4.10.9...v4.10.10) (2024-06-03)
+
+
+### Bug Fixes
+
+* use latest packages ([9ce1d30](https://github.com/Cap-go/CLI/commit/9ce1d30713600c4feb0fac7a9f84dec6867655b2))
+
+### [4.10.9](https://github.com/Cap-go/CLI/compare/v4.10.8...v4.10.9) (2024-06-03)
+
+
+### Bug Fixes
+
+* add better error message ([53336b4](https://github.com/Cap-go/CLI/commit/53336b439cc946977fb34f8ba9cc45ab0e0a15ce))
+* use latest types ([02289b3](https://github.com/Cap-go/CLI/commit/02289b3a637a60cee7543272e5617652c094ef75))
+
+### [4.10.8](https://github.com/Cap-go/CLI/compare/v4.10.7...v4.10.8) (2024-05-27)
+
+
+### Bug Fixes
+
+* lint and updates types ([1b3313f](https://github.com/Cap-go/CLI/commit/1b3313f6b165c88b57ea64c7cb2544c05a6921df))
+
+### [4.10.7](https://github.com/Cap-go/CLI/compare/v4.10.6...v4.10.7) (2024-05-27)
+
+
+### Bug Fixes
+
+* add snag for multipart upload ([eef8d38](https://github.com/Cap-go/CLI/commit/eef8d38d01bc7b25def9d5e9995ec3ae5acfc8cf))
+
+### [4.10.6](https://github.com/Cap-go/CLI/compare/v4.10.5...v4.10.6) (2024-05-24)
+
+
+### Bug Fixes
+
+* userId in logsnag ([b4f0cef](https://github.com/Cap-go/CLI/commit/b4f0cefd4e4f3366e5e8e6698f7c7b7b907eebba))
+
+### [4.10.5](https://github.com/Cap-go/CLI/compare/v4.10.4...v4.10.5) (2024-05-21)
+
+
+### Bug Fixes
+
+* issue returning channel list ([aee3ed5](https://github.com/Cap-go/CLI/commit/aee3ed5cb011c10854f8a7806f69a80d10b389ac))
+
+### [4.10.4](https://github.com/Cap-go/CLI/compare/v4.10.3...v4.10.4) (2024-05-15)
+
+### [4.10.3](https://github.com/Cap-go/CLI/compare/v4.10.2...v4.10.3) (2024-05-14)
+
+
+### Bug Fixes
+
+* info command ([a79f247](https://github.com/Cap-go/CLI/commit/a79f247160ad992688e297335cb4bacfe0e039a8))
+
+### [4.10.2](https://github.com/Cap-go/CLI/compare/v4.10.1...v4.10.2) (2024-05-14)
+
+
+### Bug Fixes
+
+* cleanup db functions ([22e9f7d](https://github.com/Cap-go/CLI/commit/22e9f7db9724a7245b7547757b66a40644ce4348))
+
+### [4.10.1](https://github.com/Cap-go/CLI/compare/v4.10.0...v4.10.1) (2024-05-14)
+
+
+### Bug Fixes
+
+* add missing new userID in logsnag ([0dcf806](https://github.com/Cap-go/CLI/commit/0dcf8063e8819fc3cd0c623f7f761025216d7558))
+
+## [4.10.0](https://github.com/Cap-go/CLI/compare/v4.9.3...v4.10.0) (2024-05-14)
+
+
+### Features
+
+* allow get userId from CLI ([2f3857e](https://github.com/Cap-go/CLI/commit/2f3857ec23a946f137eded6f94b8a235be18b666))
+
+### [4.9.3](https://github.com/Cap-go/CLI/compare/v4.9.2...v4.9.3) (2024-05-14)
+
+### [4.9.2](https://github.com/Cap-go/CLI/compare/v4.9.1...v4.9.2) (2024-05-13)
+
+
+### Bug Fixes
+
+* types ([84cc60b](https://github.com/Cap-go/CLI/commit/84cc60b1f64167978f7fbba6b6a2aafd9b585fda))
+
+### [4.9.1](https://github.com/Cap-go/CLI/compare/v4.9.0...v4.9.1) (2024-05-13)
+
+
+### Bug Fixes
+
+* use latest versions ([8e9e4e0](https://github.com/Cap-go/CLI/commit/8e9e4e0d383b460a88bf19f101db3d80dc914343))
+
+## [4.9.0](https://github.com/Cap-go/CLI/compare/v4.8.3...v4.9.0) (2024-05-13)
+
+
+### Features
+
+* search for root dir for mono repo ([1581130](https://github.com/Cap-go/CLI/commit/1581130b168b95012b8f36aed67ddeb5ecaa2c66))
+
+### [4.8.3](https://github.com/Cap-go/CLI/compare/v4.8.2...v4.8.3) (2024-05-13)
+
+
+### Bug Fixes
+
+* issue find-package-manager ([66667cf](https://github.com/Cap-go/CLI/commit/66667cf3af6fdd417620573c91c4df3f2be10ebb))
+
+### [4.8.2](https://github.com/Cap-go/CLI/compare/v4.8.1...v4.8.2) (2024-05-11)
+
+### [4.8.1](https://github.com/Cap-go/CLI/compare/v4.8.0...v4.8.1) (2024-05-11)
+
+## [4.8.0](https://github.com/Cap-go/CLI/compare/v4.7.0...v4.8.0) (2024-05-10)
+
+
+### Features
+
+* auto select package manager and runner ([94f8bef](https://github.com/Cap-go/CLI/commit/94f8bef06efeafbd5cff1979f5ed75de2a523caa))
+
+## [4.7.0](https://github.com/Cap-go/CLI/compare/v4.6.3...v4.7.0) (2024-05-10)
+
+
+### Features
+
+* add upload time + correct PM name ([af61757](https://github.com/Cap-go/CLI/commit/af6175751d92070088d4569b892a333a3e1a1063))
+
+### [4.6.3](https://github.com/Cap-go/CLI/compare/v4.6.2...v4.6.3) (2024-05-10)
+
+
+### Bug Fixes
+
+* add timeout option ([e8c8890](https://github.com/Cap-go/CLI/commit/e8c8890204bc327443a58b303c5fe8ae132dab2d))
+
+### [4.6.2](https://github.com/Cap-go/CLI/compare/v4.6.1...v4.6.2) (2024-05-08)
+
+
+### Bug Fixes
+
+* better handle nuxt and nextjs ([7f9c0a0](https://github.com/Cap-go/CLI/commit/7f9c0a04ac5097b5ea7b9b9edb0dc815e43ca2e7))
+
+### [4.6.1](https://github.com/Cap-go/CLI/compare/v4.6.0...v4.6.1) (2024-05-08)
+
+
+### Bug Fixes
+
+* force encryption when init and exist ([f6be928](https://github.com/Cap-go/CLI/commit/f6be9281dc8e978fc1a7e80174a884c50d46c495))
+
+## [4.6.0](https://github.com/Cap-go/CLI/compare/v4.5.0...v4.6.0) (2024-05-08)
+
+
+### Features
+
+* allow set dev device and emulators ([bdb3517](https://github.com/Cap-go/CLI/commit/bdb3517586c34b6a980727f4037540c5d48bda1b))
+* Show migration for v5 apps, but allow work ([df4de91](https://github.com/Cap-go/CLI/commit/df4de915b8805f560137364e5764325a8da5e7ef))
+
+## [4.5.0](https://github.com/Cap-go/CLI/compare/v4.4.5...v4.5.0) (2024-05-02)
+
+
+### Features
+
+* remove old code and cleanup eslint ([963a50d](https://github.com/Cap-go/CLI/commit/963a50dc23b7f8244cfaabfe437881817c9617b4))
+
+### [4.4.5](https://github.com/Cap-go/CLI/compare/v4.4.4...v4.4.5) (2024-04-25)
+
+
+### Bug Fixes
+
+* better message recomendation for CLI ([23aad3e](https://github.com/Cap-go/CLI/commit/23aad3e081ed733259efa0ac66668bfbf653b65c))
+
+### [4.4.4](https://github.com/Cap-go/CLI/compare/v4.4.3...v4.4.4) (2024-04-23)
+
+
+### Bug Fixes
+
+* use nodejs 18 compat version ([06c478a](https://github.com/Cap-go/CLI/commit/06c478ae61c1efb9a6e39d7a407b00e0e0c804d4))
+
+### [4.4.3](https://github.com/Cap-go/CLI/compare/v4.4.2...v4.4.3) (2024-04-23)
+
+
+### Bug Fixes
+
+* make node18 as min version ([d052828](https://github.com/Cap-go/CLI/commit/d05282878df55236a20b19bd6d8f99cbfe5bae20))
+
+### [4.4.2](https://github.com/Cap-go/CLI/compare/v4.4.1...v4.4.2) (2024-04-23)
+
+
+### Bug Fixes
+
+* downgrade min version to node 18 ([b2da10b](https://github.com/Cap-go/CLI/commit/b2da10bd3fdc54a43d01c1700cfa08937ea278fa))
+
+### [4.4.1](https://github.com/Cap-go/CLI/compare/v4.4.0...v4.4.1) (2024-04-21)
+
+
+### Bug Fixes
+
+* lint issue auto delete ([3d343e2](https://github.com/Cap-go/CLI/commit/3d343e29522b4de725836965c9ec2aabcf469171))
+
+## [4.4.0](https://github.com/Cap-go/CLI/compare/v4.3.6...v4.4.0) (2024-04-21)
+
+
+### Features
+
+* add auto delete Failed Versions upload ([8ba691c](https://github.com/Cap-go/CLI/commit/8ba691c116b92ababa2870fd5ed9479b9286242d))
+
+### [4.3.6](https://github.com/Cap-go/CLI/compare/v4.3.5...v4.3.6) (2024-04-21)
+
+
+### Bug Fixes
+
+* add more retry ([a3e4c8e](https://github.com/Cap-go/CLI/commit/a3e4c8e3de66a9dca05fd48a4c480c6b54328c1b))
+
+### [4.3.5](https://github.com/Cap-go/CLI/compare/v4.3.4...v4.3.5) (2024-04-18)
+
+### [4.3.4](https://github.com/Cap-go/CLI/compare/v4.3.3...v4.3.4) (2024-04-17)
+
+### [4.3.3](https://github.com/Cap-go/CLI/compare/v4.3.2...v4.3.3) (2024-04-16)
+
+### [4.3.2](https://github.com/Cap-go/CLI/compare/v4.3.1...v4.3.2) (2024-04-14)
+
+### [4.3.1](https://github.com/Cap-go/CLI/compare/v4.3.0...v4.3.1) (2024-04-14)
+
+## [4.3.0](https://github.com/Cap-go/CLI/compare/v4.2.12...v4.3.0) (2024-03-31)
+
+
+### Features
+
+* add S3 upload support ([f0353f5](https://github.com/Cap-go/CLI/commit/f0353f583a265a6d4f3621639384b1b43f60f53e))
+
+### [4.2.12](https://github.com/Cap-go/CLI/compare/v4.2.11...v4.2.12) (2024-03-29)
+
+
+### Bug Fixes
+
+* types issue ([ad9afa1](https://github.com/Cap-go/CLI/commit/ad9afa184f35863ba0d9f942bed133ee68e9661a))
+
+### [4.2.11](https://github.com/Cap-go/CLI/compare/v4.2.10...v4.2.11) (2024-03-25)
+
+### [4.2.10](https://github.com/Cap-go/CLI/compare/v4.2.9...v4.2.10) (2024-03-25)
+
+### [4.2.9](https://github.com/Cap-go/CLI/compare/v4.2.8...v4.2.9) (2024-03-23)
+
+
+### Bug Fixes
+
+* empty list issue ([dac8617](https://github.com/Cap-go/CLI/commit/dac86177c55c71bd3ad3bbbca7833ba30d461c33))
+
+### [4.2.8](https://github.com/Cap-go/CLI/compare/v4.2.7...v4.2.8) (2024-03-23)
+
+### [4.2.7](https://github.com/Cap-go/CLI/compare/v4.2.6...v4.2.7) (2024-03-23)
+
+
+### Bug Fixes
+
+* lint issue ([a836b3c](https://github.com/Cap-go/CLI/commit/a836b3cf59a6396f2200a3a5383d5dd10e19ad07))
+
+### [4.2.6](https://github.com/Cap-go/CLI/compare/v4.2.5...v4.2.6) (2024-03-23)
+
+
+### Bug Fixes
+
+* lint ([92b0e46](https://github.com/Cap-go/CLI/commit/92b0e462b7cc3d2c77b585d6596aba746df16b71))
+* upload ([394b2ce](https://github.com/Cap-go/CLI/commit/394b2ceb1947de2e86870f1f3d57e9efe646b40a))
+
+### [4.2.5](https://github.com/Cap-go/CLI/compare/v4.2.4...v4.2.5) (2024-03-22)
+
+
+### Bug Fixes
+
+* zip json output ([4028f9b](https://github.com/Cap-go/CLI/commit/4028f9b79b3c53a7967a137784918f4ac614d011))
+
+### [4.2.4](https://github.com/Cap-go/CLI/compare/v4.2.3...v4.2.4) (2024-03-22)
+
+
+### Bug Fixes
+
+* make no-key works ([11eed1a](https://github.com/Cap-go/CLI/commit/11eed1a515d44800ef369303dd14c5218b2164ca))
+
+### [4.2.3](https://github.com/Cap-go/CLI/compare/v4.2.2...v4.2.3) (2024-03-12)
+
+
+### Bug Fixes
+
+* issue check plan ([ed64d10](https://github.com/Cap-go/CLI/commit/ed64d107612cfc58548dca80bf1915e90b98ec33))
+
+### [4.2.2](https://github.com/Cap-go/CLI/compare/v4.2.1...v4.2.2) (2024-03-11)
+
+### [4.2.1](https://github.com/Cap-go/CLI/compare/v4.2.0...v4.2.1) (2024-03-08)
+
+
+### Bug Fixes
+
+* test file ([2094dc5](https://github.com/Cap-go/CLI/commit/2094dc58421410130f89965d5ea0c265dc563f54))
+
+## [4.2.0](https://github.com/Cap-go/CLI/compare/v4.1.0...v4.2.0) (2024-03-04)
+
+
+### Features
+
+* allow ussage of version in Capcitor config instead of package.json ([7b2084a](https://github.com/Cap-go/CLI/commit/7b2084ab6a8d1cede375cb393b6718f3a5aa23dc))
+
 ## [4.1.0](https://github.com/Cap-go/CLI/compare/v4.0.14...v4.1.0) (2024-02-27)
 
 

@@ -1,9 +1,9 @@
-import * as p from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
+import { intro, log } from '@clack/prompts'
 import type { OptionsBase } from '../utils'
-import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
-import { checkAppExistsAndHasPermissionErr } from '../api/app'
+import { OrganizationPerm, checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -11,24 +11,24 @@ interface Options extends OptionsBase {
 }
 
 export async function checkCompatibilityCommand(appId: string, options: Options) {
-  p.intro(`Check compatibility`)
+  intro(`Check compatibility`)
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = appId || extConfig?.config?.appId
 
   const { channel } = options
 
   if (!channel) {
-    p.log.error('Missing argument, you need to provide a channel')
+    log.error('Missing argument, you need to provide a channel')
     program.error('')
   }
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
+    log.error('Missing API key, you need to provide a API key to upload your bundle')
     program.error('')
   }
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error('')
   }
 
@@ -36,7 +36,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
   // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionErr(supabase, options.apikey, appId)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
   // const hashedLocalDependencies = new Map(dependenciesObject
   //     .filter((a) => !!a.native && a.native !== undefined)
@@ -66,5 +66,5 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
     })
   })
 
-  p.log.success(t.render())
+  log.success(t.render())
 }

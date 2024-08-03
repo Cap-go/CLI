@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import process from 'node:process'
+import { exit } from 'node:process'
 import { program } from 'commander'
 import ciDetect from 'ci-info'
-import * as p from '@clack/prompts'
+import { confirm as confirmC, intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
-import { baseKey, getLocalConfig, getConfig } from '../utils'
+import { baseKey, getConfig, getLocalConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -13,47 +13,46 @@ interface Options {
 }
 
 export async function encryptZip(zipPath: string, options: Options) {
-  p.intro(`Encryption`)
+  intro(`Encryption`)
 
   await checkLatest()
   const localConfig = await getLocalConfig()
-  const config = await getConfig()
-  const { extConfig } = config.app
+  const extConfig = await getConfig()
   // console.log('localConfig - ', localConfig)
   // console.log('config - ', config)
 
-  const hasPrivateKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.privateKey ? true : false
-  const hasPublicKeyInConfig = extConfig?.plugins?.CapacitorUpdater?.publicKey ? true : false
+  const hasPrivateKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.privateKey
+  const hasPublicKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.publicKey
 
   if (hasPrivateKeyInConfig)
-    p.log.warning(`There is still a privateKey in the config`)
+    log.warning(`There is still a privateKey in the config`)
 
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {
-    p.log.error(`Error: Zip not found at the path ${zipPath}`)
+    log.error(`Error: Zip not found at the path ${zipPath}`)
     program.error('')
   }
 
   if (!hasPublicKeyInConfig) {
-    p.log.warning(`Warning: Missing Public Key in config`)
+    log.warning(`Warning: Missing Public Key in config`)
   }
 
   const keyPath = options.key || baseKey
   // check if publicKey exist
 
-  //let publicKey = options.keyData || ''
+  // let publicKey = options.keyData || ''
   let privateKey = options.keyData || ''
 
   if (!existsSync(keyPath) && !privateKey) {
-    p.log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
+    log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
     if (ciDetect.isCI) {
-      p.log.error(`Error: Missing key`)
+      log.error(`Error: Missing key`)
       program.error('')
     }
-    const res = await p.confirm({ message: `Do you want to use our private key?` })
+    const res = await confirmC({ message: `Do you want to use our private key?` })
     if (!res) {
-      p.log.error(`Error: Missing private key`)
+      log.error(`Error: Missing private key`)
       program.error('')
     }
 
@@ -67,16 +66,16 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
   if (privateKey && !privateKey.startsWith('-----BEGIN RSA PRIVATE KEY-----')) {
-      p.log.error(`the private key provided is not a valid RSA Private key`)
-      program.error('')
+    log.error(`the private key provided is not a valid RSA Private key`)
+    program.error('')
   }
 
   const zipFile = readFileSync(zipPath)
   const encodedZip = encryptSource(zipFile, privateKey)
-  p.log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
+  log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
-  p.log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
-  p.outro(`Done ✅`)
-  process.exit()
+  log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
+  outro(`Done ✅`)
+  exit()
 }

@@ -1,28 +1,27 @@
-import process from 'node:process'
+import { exit } from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import * as p from '@clack/prompts'
+import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { formatError, getHumanDate } from '../utils'
+import { formatError } from '../utils'
 
-export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, userId: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
+export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: channelFound, error: errorChannel } = await supabase
     .from('channels')
     .select()
     .eq('app_id', appid)
-    .eq('created_by', userId)
     .eq('version', versionData.id)
   if (errorChannel) {
-    p.log.error(`Cannot check Version ${appid}@${versionData.name}`)
+    log.error(`Cannot check Version ${appid}@${versionData.name}`)
     program.error('')
   }
   if (channelFound && channelFound.length > 0) {
-    p.intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
-    if (await p.confirm({ message: 'unlink it?' })) {
+    intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
+    if (await confirmC({ message: 'unlink it?' })) {
       // loop on all channels and set version to unknown
       for (const channel of channelFound) {
-        const s = p.spinner()
+        const s = spinner()
         s.start(`Unlinking channel ${channel.name}`)
         const { error: errorChannelUpdate } = await supabase
           .from('channels')
@@ -32,16 +31,16 @@ export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Data
           .eq('id', channel.id)
         if (errorChannelUpdate) {
           s.stop(`Cannot update channel ${channel.name} ${formatError(errorChannelUpdate)}`)
-          process.exit(1)
+          exit(1)
         }
         s.stop(`✅ Channel ${channel.name} unlinked`)
       }
     }
     else {
-      p.log.error(`Unlink it first`)
+      log.error(`Unlink it first`)
       program.error('')
     }
-    p.outro(`Version unlinked from ${channelFound.length} channel`)
+    outro(`Version unlinked from ${channelFound.length} channel`)
   }
 }
 
@@ -52,7 +51,13 @@ export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: st
     .eq('app_id', appId)
     .eq('name', 'unknown')
     .throwOnError()
-    .single().then(({ data }) => data)
+    .single().then(({ data, error }) => {
+      if (error) {
+        log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
+        program.error('')
+      }
+      return data
+    })
 }
 
 export function createChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {
@@ -63,20 +68,36 @@ export function createChannel(supabase: SupabaseClient<Database>, update: Databa
     .single()
 }
 
-export function delChannel(supabase: SupabaseClient<Database>, name: string, appId: string, userId: string) {
+export function delChannel(supabase: SupabaseClient<Database>, name: string, appId: string, _userId: string) {
   return supabase
     .from('channels')
     .delete()
     .eq('name', name)
     .eq('app_id', appId)
-    .eq('created_by', userId)
     .single()
 }
 interface version {
   id: string
   name: string
 }
-export function displayChannels(data: (Database['public']['Tables']['channels']['Row'] & { version?: version, secondVersion?: version })[]) {
+interface Channel {
+  id: number
+  name: string
+  public: boolean
+  ios: boolean
+  android: boolean
+  disable_auto_update: string
+  disable_auto_update_under_native: boolean
+  allow_device_self_set: boolean
+  enable_progressive_deploy: boolean
+  secondary_version_percentage: number
+  second_version?: version
+  enable_ab_testing: boolean
+  allow_emulator: boolean
+  allow_dev: boolean
+  version?: version
+}
+export function displayChannels(data: Channel[]) {
   const t = new Table({
     title: 'Channels',
     charLength: { '❌': 2, '✅': 2 },
@@ -85,26 +106,26 @@ export function displayChannels(data: (Database['public']['Tables']['channels'][
   // add rows with color
   data.reverse().forEach((row) => {
     t.addRow({
-      Name: row.name,
-      ... (row.version ? { Version: row.version.name } : undefined),
-      Public: row.public ? '✅' : '❌',
-      iOS: row.ios ? '❌' : '✅',
-      Android: row.android ? '❌' : '✅',
-      '⬆️ limit': row.disableAutoUpdate,
-      '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
+      'Name': row.name,
+      ...(row.version ? { Version: row.version.name } : undefined),
+      'Public': row.public ? '✅' : '❌',
+      'iOS': row.ios ? '✅' : '❌',
+      'Android': row.android ? '✅' : '❌',
+      '⬆️ limit': row.disable_auto_update,
+      '⬇️ under native': row.disable_auto_update_under_native ? '❌' : '✅',
       'Self assign': row.allow_device_self_set ? '✅' : '❌',
       'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
-      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined ),
-      ...( row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
-      'AB Testing': row.enableAbTesting ? '✅' : '❌',
-      ...( row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined ),
-      ...( row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
-      "Emulator": row.allow_emulator ? '✅' : '❌',
-      "Dev 📱": row.allow_dev ? '✅' : '❌',
+      ...(row.enable_progressive_deploy && row.second_version ? { 'Next version': row.second_version.name } : undefined),
+      ...(row.enable_progressive_deploy && row.second_version ? { 'Next %': row.secondary_version_percentage } : undefined),
+      'AB Testing': row.enable_ab_testing ? '✅' : '❌',
+      ...(row.enable_ab_testing && row.second_version ? { 'Version B': row.second_version.name } : undefined),
+      ...(row.enable_ab_testing && row.second_version ? { 'A/B %': `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` } : undefined),
+      'Emulator': row.allow_emulator ? '✅' : '❌',
+      'Dev 📱': row.allow_dev ? '✅' : '❌',
     })
   })
 
-  p.log.success(t.render())
+  log.success(t.render())
 }
 
 export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {
@@ -119,12 +140,12 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
       ios,
       android,
       allow_device_self_set,
-      disableAutoUpdateUnderNative,
-      disableAutoUpdate,
+      disable_auto_update_under_native,
+      disable_auto_update,
       enable_progressive_deploy,
-      enableAbTesting,
-      secondaryVersionPercentage,
-      secondVersion (id, name),
+      enable_ab_testing,
+      secondary_version_percentage,
+      second_version (id, name),
       created_at,
       created_by,
       app_id,
@@ -135,8 +156,8 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
     .order('created_at', { ascending: false })
 
   if (vError) {
-    p.log.error(`App ${appid} not found in database`)
+    log.error(`App ${appid} not found in database`)
     program.error('')
   }
-  return data
+  return data as any as Channel[]
 }
