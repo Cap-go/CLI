@@ -531,7 +531,6 @@ export async function manifestUploadUrls(supabase: SupabaseClient<Database>, app
     manifest,
   }
   try {
-    log.info(`Generating the update manifest ${formatError(data)}`)
     const pathUploadLink = 'private/upload_link'
     const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
     if (!res.data) {
