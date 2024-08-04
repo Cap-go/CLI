@@ -56,22 +56,11 @@ export function encryptChecksum(checksum: string, key: string): string {
 }
 
 export function encryptSource(source: Buffer, key: string): Encoded {
-  // console.log('decryptKeyType - ', decryptKeyType);
-  // console.log(key);
-
-  // encrypt zip with key
   const initVector = randomBytes(16)
   const sessionKey = randomBytes(16)
-  // encrypt session key with public key
-  // console.log('\nencrypted.key', encrypted.key.toString(CryptoJS.enc.Base64))
   const cipher = createCipheriv(algorithm, sessionKey, initVector)
   cipher.setAutoPadding(true)
-  // console.log('\nsessionKey', sessionKey.toString())
-  // const sessionB64 = sessionKey.toString(formatB64)
-  // console.log('\nsessionB64', sessionB64)
   const ivB64 = initVector.toString(formatB64)
-  // console.log('\nivB64', ivB64)
-
   const sessionb64Encrypted = privateEncrypt(
     {
       key,
@@ -80,11 +69,7 @@ export function encryptSource(source: Buffer, key: string): Encoded {
     sessionKey,
   ).toString(formatB64)
 
-  // console.log('\nsessionb64Encrypted', sessionb64Encrypted)
   const ivSessionKey = `${ivB64}:${sessionb64Encrypted}`
-  // console.log('\nivSessionKey', sessionKey)
-  // encrypted to buffer
-
   const encryptedData = Buffer.concat([cipher.update(source), cipher.final()])
 
   return {
@@ -98,7 +83,6 @@ export interface RSAKeys {
 }
 export function createRSA(): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-    // The standard secure default length for RSA keys is 2048 bits
     modulusLength: 2048,
   })
 
