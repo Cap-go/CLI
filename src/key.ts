@@ -20,14 +20,15 @@ export async function saveKey(options: saveOptions, logg = true) {
 
   const extConfig = await getConfig()
 
-  const keyPath = options.key || baseKey
+  // const keyPath = options.key || baseKey
+  const keyPath = options.key || baseKeyPub
   // check if publicKey exist
 
-  let privateKey = options.keyData || ''
+  let publicKey = options.keyData || ''
 
-  if (!existsSync(keyPath) && !privateKey) {
-    if (logg) {
-      log.error(`Cannot find public key ${keyPath} or as keyData option or in ${extConfig.path}`)
+  if (!existsSync(keyPath) && !publicKey) {
+    if (log) {
+      log.error(`Cannot find a public key at ${keyPath} or as keyData option or in ${extConfig.path}`)
       program.error('')
     }
     else {
@@ -37,7 +38,20 @@ export async function saveKey(options: saveOptions, logg = true) {
   else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
-    privateKey = keyFile.toString()
+    publicKey = keyFile.toString()
+  }
+
+  // let's doublecheck and make sure the key we are saving is the right type based on the decryption strategy
+  if (publicKey) {
+    if (!publicKey.startsWith('-----BEGIN RSA PUBLIC KEY-----')) {
+      if (log) {
+        log.error(`the public key provided is not a valid RSA Public key`)
+        program.error('')
+      }
+      else {
+        return false
+      }
+    }
   }
 
   if (extConfig?.config) {
@@ -50,12 +64,16 @@ export async function saveKey(options: saveOptions, logg = true) {
     if (!extConfig.config.plugins.CapacitorUpdater)
       extConfig.config.plugins.CapacitorUpdater = {}
 
-    extConfig.config.plugins.CapacitorUpdater.privateKey = privateKey
+    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
+    if (extConfig.config.plugins.CapacitorUpdater.privateKey)
+      delete extConfig.config.plugins.CapacitorUpdater.privateKey
+    extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
+
     // console.log('extConfig', extConfig)
     await writeConfig(extConfig)
   }
   if (log) {
-    log.success(`private key saved into ${extConfig.path} file in local directory`)
+    log.success(`public key saved into ${extConfig.path} file in local directory`)
     log.success(`your app will decode the zip archive with this key`)
   }
   return true
@@ -96,7 +114,8 @@ export async function createKey(options: Options, logg = true) {
   writeFileSync(baseKey, privateKey)
 
   const extConfig = await getConfig()
-  if (extConfig?.config) {
+
+  if (extConfig) {
     if (!extConfig.config.plugins) {
       extConfig.config.plugins = {
         extConfig: {},
@@ -108,19 +127,22 @@ export async function createKey(options: Options, logg = true) {
       extConfig.config.plugins.CapacitorUpdater = {}
     }
 
-    const flattenPrivateKey = privateKey.replace(/\\n/g, '\\n')
-    extConfig.config.plugins.CapacitorUpdater.privateKey = flattenPrivateKey
+    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
+    if (extConfig.config.plugins.CapacitorUpdater.privateKey)
+      delete extConfig.config.plugins.CapacitorUpdater.privateKey
+    extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
+
     // console.log('extConfig', extConfig)
     writeConfig(extConfig)
   }
 
-  if (logg) {
+  if (log) {
     log.success('Your RSA key has been generated')
-    log.success(`Public key saved in ${baseKeyPub}`)
+    log.success(`Private key saved in ${baseKey}`)
     log.success('This key will be use to encrypt your bundle before sending it to Capgo')
     log.success('Keep it safe')
     log.success('Than make it unreadable by Capgo and unmodifiable by anyone')
-    log.success(`Private key saved in ${extConfig.path}`)
+    log.success(`Public key saved in ${extConfig.path}`)
     log.success('Your app will be the only one having it')
     log.success('Only your users can decrypt your update')
     log.success('Only you can send them an update')
