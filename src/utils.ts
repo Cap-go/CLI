@@ -3,6 +3,7 @@ import { homedir, platform as osPlatform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { cwd, env, exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
+import { createHash } from 'node:crypto'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { createClient } from '@supabase/supabase-js'
@@ -15,6 +16,7 @@ import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } 
 import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
 import { confirm as confirmC, isCancel, log, select, spinner } from '@clack/prompts'
+import { promiseFiles } from 'node-dir'
 import { loadConfig } from './config'
 import type { Database } from './types/supabase.types'
 
@@ -499,6 +501,49 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     log.error(`Cannot get upload url ${formatError(error)}`)
   }
   return ''
+}
+
+export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
+  const allFiles = (await promiseFiles(path))
+    .map((file) => {
+      const buffer = readFileSync(file)
+      const hash = createHash('sha-256').update(buffer).digest('hex')
+      let filePath = file.replace(path, '')
+      if (filePath.startsWith('/'))
+        filePath = filePath.substring(1, filePath.length)
+      return { file: filePath, hash }
+    })
+  return allFiles
+}
+
+export type manifestType = Awaited<ReturnType<typeof generateManifest>>
+export interface uploadUrlsType {
+  path: string
+  hash: string
+  uploadLink: string
+  finalPath: string
+}
+export async function manifestUploadUrls(supabase: SupabaseClient<Database>, appId: string, name: string, manifest: manifestType): Promise<uploadUrlsType[]> {
+  const data = {
+    app_id: appId,
+    name,
+    version: 2,
+    manifest,
+  }
+  try {
+    const pathUploadLink = 'private/upload_link'
+    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    if (!res.data) {
+      log.error(`Cannot get uploads url ${formatError(res.error)}`)
+      program.error('')
+      return []
+    }
+    return res.data as { path: string, hash: string, uploadLink: string, finalPath: string }[]
+  }
+  catch (error) {
+    log.error(`Cannot get uploads url ${formatError(error)}`)
+  }
+  return []
 }
 
 async function prepareMultipart(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<{ key: string, uploadId: string, url: string } | null> {

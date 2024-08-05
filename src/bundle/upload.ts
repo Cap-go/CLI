@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto'
+import { randomUUID } from 'node:crypto'
 import { createReadStream, existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
@@ -10,11 +10,11 @@ import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
-import { promiseFiles } from 'node-dir'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
-import { type OptionsBase, OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import type { OptionsBase, manifestType, uploadUrlsType } from '../utils'
+import { OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, generateManifest, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, manifestUploadUrls, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -53,7 +53,6 @@ const UPLOAD_TIMEOUT = 120000
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
-type manifestType = Awaited<ReturnType<typeof generateManifest>>
 
 async function getBundle(config: CapacitorConfig, options: Options) {
   const pkg = await readPackageJson()
@@ -233,19 +232,6 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   }
 }
 
-async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
-  const allFiles = (await promiseFiles(path))
-    .map((file) => {
-      const buffer = readFileSync(file)
-      const hash = createHash('sha-256').update(buffer).digest('hex')
-      let filePath = file.replace(path, '')
-      if (filePath.startsWith('/'))
-        filePath = filePath.substring(1, filePath.length)
-      return { file: filePath, hash }
-    })
-  return allFiles
-}
-
 async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
   const spinner = spinnerC()
   spinner.start('Generating the update manifest')
@@ -267,21 +253,11 @@ async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: str
 }
 
 async function uploadPartial(supabase: SupabaseType, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
-  const data = {
-    app_id: appId,
-    name,
-    version: 2,
-    manifest,
-  }
-  let uploadResponse: { path: string, hash: string, uploadLink: string, finalPath: string }[]
-  try {
-    const pathUploadLink = 'private/upload_link'
-    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
-    uploadResponse = res.data as any
-  }
-  catch (error) {
-    log.error(`Cannot get upload url ${formatError(error)}`)
-    program.error('')
+  const uploadResponse: uploadUrlsType[] = await manifestUploadUrls(supabase, appId, name, manifest)
+
+  if (uploadResponse.length === 0 || uploadResponse.length !== manifest.length) {
+    log.error(`Cannot upload manifest, please try again later`)
+    return []
   }
 
   for (const manifestEntry of uploadResponse) {
