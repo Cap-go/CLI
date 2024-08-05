@@ -44,6 +44,7 @@ interface Options extends OptionsBase {
   ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
+  ignorePartial?: boolean
 }
 
 const alertMb = 20
@@ -559,7 +560,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = options.ivSessionKey
   }
 
-  const manifest = await prepareBundlePartialFiles(path, snag, orgId, appid)
+  const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -596,7 +597,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
-      finalManifest = await uploadPartial(supabase, manifest, path, options, appid, bundle)
+      finalManifest = options.ignorePartial ? null : await uploadPartial(supabase, manifest, path, options, appid, bundle)
     }
     catch (err) {
       log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
