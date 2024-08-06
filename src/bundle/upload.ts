@@ -275,12 +275,14 @@ async function uploadPartial(supabase: SupabaseType, manifest: manifestType, pat
     }
     catch (errorUpload) {
       if (errorUpload instanceof HTTPError) {
-        const body = await errorUpload.response.text()
-        log.error(`Response: ${formatError(body)}`)
+        errorUpload.response.text()
+          .then(body => log.error(`Response: ${formatError(body)}`))
+          .catch(() => log.error('Cannot get response body'))
       }
       else {
         console.error(errorUpload)
       }
+      return null
     }
   }
 

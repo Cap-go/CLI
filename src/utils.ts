@@ -535,7 +535,6 @@ export async function manifestUploadUrls(supabase: SupabaseClient<Database>, app
     const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
     if (!res.data) {
       log.error(`Cannot get uploads url ${formatError(res.error)}`)
-      program.error('')
       return []
     }
     return res.data as { path: string, hash: string, uploadLink: string, finalPath: string }[]
