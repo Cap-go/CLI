@@ -44,6 +44,7 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
   }
 
   log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)
+  log.info(`Keep in mind that you will not be able to reuse this bundle version, it's gone forever`)
 
   await deleteSpecificVersion(supabase, appId, bundleId)
   log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`)
