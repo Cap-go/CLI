@@ -12,7 +12,7 @@ import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@cl
 import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -44,9 +44,6 @@ interface Options extends OptionsBase {
   multipart?: boolean
   ignorePartial?: boolean
 }
-
-const alertMb = 20
-const UPLOAD_TIMEOUT = 120000
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
@@ -230,73 +227,6 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   }
 }
 
-// async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
-//   const spinner = spinnerC()
-//   spinner.start('Generating the update manifest')
-//   const manifest = await generateManifest(path)
-//   spinner.stop('Manifest generated successfully')
-
-//   await snag.track({
-//     channel: 'partial-update',
-//     event: 'Generate manifest',
-//     icon: '📂',
-//     user_id: orgId,
-//     tags: {
-//       'app-id': appid,
-//     },
-//     notify: false,
-//   }).catch()
-
-//   return manifest
-// }
-
-// async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
-//   const spinner = spinnerC()
-//   spinner.start('Preparing partial update')
-//   const uploadResponse: uploadUrlsType[] = await manifestUploadUrls(apikey, appId, name, manifest)
-
-//   if (uploadResponse.length === 0 || uploadResponse.length !== manifest.length) {
-//     log.error(`Cannot upload manifest, please try again later`)
-//     spinner.stop('Partial update failed')
-//     return []
-//   }
-//   spinner.message('Uploading partial update')
-//   for (const [index, manifestEntry] of uploadResponse.entries()) {
-//     const finalFilePath = `${path}/${manifestEntry.path}`
-//     spinner.message(`Uploading partial update ${index + 1}/${uploadResponse.length}`)
-//     const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
-//     const fileBuffer = await readBuffer(fileStream)
-
-//     try {
-//       await ky.put(manifestEntry.uploadLink, {
-//         timeout: options.timeout || UPLOAD_TIMEOUT,
-//         retry: 5,
-//         body: fileBuffer,
-//       })
-//     }
-//     catch (errorUpload) {
-//       if (errorUpload instanceof HTTPError) {
-//         errorUpload.response.text()
-//           .then(body => log.error(`Response: ${formatError(body)}`))
-//           .catch(() => log.error('Cannot get response body'))
-//       }
-//       else {
-//         console.error(errorUpload)
-//       }
-//       return null
-//     }
-//   }
-
-//   spinner.stop('Partial update uploaded successfully')
-//   return uploadResponse.map((entry) => {
-//     return {
-//       file_name: entry.path,
-//       s3_path: entry.finalPath,
-//       file_hash: entry.hash,
-//     }
-//   })
-// }
-
 async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, snag: LogSnag, orgId: string, appid: string) {
   let sessionKey
   let checksum = ''
@@ -357,7 +287,7 @@ It will be also visible in your dashboard\n`)
     zipped = res.encryptedData
   }
   const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
-  if (mbSize > alertMb) {
+  if (mbSize > ALERT_MB) {
     log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
     log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
     await snag.track({
@@ -539,6 +469,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = options.ivSessionKey
   }
 
+  // TODO: re enable this when we have the partial upload working better
   // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)

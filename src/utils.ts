@@ -25,6 +25,8 @@ export const baseKeyPub = `${baseKey}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
+export const ALERT_MB = 20
+export const UPLOAD_TIMEOUT = 120000
 const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]> =
