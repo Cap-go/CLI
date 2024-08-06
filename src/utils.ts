@@ -523,7 +523,7 @@ export interface uploadUrlsType {
   uploadLink: string
   finalPath: string
 }
-export async function manifestUploadUrls(supabase: SupabaseClient<Database>, appId: string, name: string, manifest: manifestType): Promise<uploadUrlsType[]> {
+export async function manifestUploadUrls(apikey: string, appId: string, name: string, manifest: manifestType): Promise<uploadUrlsType[]> {
   const data = {
     app_id: appId,
     name,
@@ -531,13 +531,28 @@ export async function manifestUploadUrls(supabase: SupabaseClient<Database>, app
     manifest,
   }
   try {
-    const pathUploadLink = 'private/upload_link'
-    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
-    if (!res.data) {
-      log.error(`Cannot get uploads url ${formatError(res.error)}`)
-      return []
-    }
-    return res.data as { path: string, hash: string, uploadLink: string, finalPath: string }[]
+    const dataD = await ky
+      .post(`${defaultApiHost}/private/upload_link`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': apikey,
+        },
+        body: JSON.stringify(data),
+      })
+      .then(res => res.json<uploadUrlsType[]>())
+      .catch((err) => {
+        console.error('Cannot get urls', err)
+        return [] as uploadUrlsType[]
+      })
+    if (dataD?.length > 0)
+      return dataD
+    // const pathUploadLink = 'private/upload_link'
+    // const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+    // if (!res.data) {
+    //   log.error(`Cannot get uploads url ${formatError(res.error)}`)
+    //   return []
+    // }
+    // return res.data as uploadUrlsType[]
   }
   catch (error) {
     log.error(`Cannot get uploads url ${formatError(error)}`)

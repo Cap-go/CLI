@@ -252,17 +252,20 @@ async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: str
   return manifest
 }
 
-async function uploadPartial(supabase: SupabaseType, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
-  const uploadResponse: uploadUrlsType[] = await manifestUploadUrls(supabase, appId, name, manifest)
+async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
+  const spinner = spinnerC()
+  spinner.start('Preparing partial update')
+  const uploadResponse: uploadUrlsType[] = await manifestUploadUrls(apikey, appId, name, manifest)
 
   if (uploadResponse.length === 0 || uploadResponse.length !== manifest.length) {
     log.error(`Cannot upload manifest, please try again later`)
+    spinner.stop('Partial update failed')
     return []
   }
-
-  for (const manifestEntry of uploadResponse) {
+  spinner.message('Uploading partial update')
+  for (const [index, manifestEntry] of uploadResponse.entries()) {
     const finalFilePath = `${path}/${manifestEntry.path}`
-
+    spinner.message(`Uploading partial update ${index + 1}/${uploadResponse.length}`)
     const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
     const fileBuffer = await readBuffer(fileStream)
 
@@ -286,7 +289,7 @@ async function uploadPartial(supabase: SupabaseType, manifest: manifestType, pat
     }
   }
 
-  log.info('Uploaded all files successfully')
+  spinner.stop('Partial update uploaded successfully')
   return uploadResponse.map((entry) => {
     return {
       file_name: entry.path,
@@ -538,7 +541,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.session_key = options.ivSessionKey
   }
 
-  const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
+  // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -573,16 +576,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   else if (zipped) {
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
-    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
-    try {
-      finalManifest = options.ignorePartial ? null : await uploadPartial(supabase, manifest, path, options, appid, bundle)
-    }
-    catch (err) {
-      log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
-    }
+    // let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    // try {
+    //   finalManifest = options.ignorePartial ? null : await uploadPartial(apikey, manifest, path, options, appid, bundle)
+    // }
+    // catch (err) {
+    //   log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    // }
 
     versionData.storage_provider = 'r2'
-    versionData.manifest = finalManifest
+    // versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       log.error(`Cannot update bundle ${formatError(dbError2)}`)
