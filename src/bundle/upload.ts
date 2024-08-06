@@ -307,8 +307,8 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   s.start(`Calculating checksum`)
   checksum = await getChecksum(zipped, 'crc32')
   s.stop(`Checksum: ${checksum}`)
-  // key should be undefined or a string if false it should ingore encryption
-  if (!key && !existsSync(baseKeyPub)) {
+  // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
+  if (key === false) {
     log.info(`Encryption ignored`)
   }
   else if (key || existsSync(baseKeyPub)) {
