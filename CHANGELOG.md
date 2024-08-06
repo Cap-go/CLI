@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.13.31](https://github.com/Cap-go/CLI/compare/v4.13.30...v4.13.31) (2024-08-06)
+
+
+### Bug Fixes
+
+* better message when delete bundle ([8151f45](https://github.com/Cap-go/CLI/commit/8151f45ca042b1f3e39cf854d5482e27bb3627f9))
+
 ### [4.13.30](https://github.com/Cap-go/CLI/compare/v4.13.29...v4.13.30) (2024-08-06)
 
 
