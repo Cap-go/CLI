@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { exit } from 'node:process'
+import { config, exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
@@ -10,9 +10,9 @@ import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { encryptSource } from '../api/crypto'
+import { encryptSource, signBundle } from '../api/crypto'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -395,6 +395,27 @@ async function setVersionInChannel(
   }
 }
 
+async function getBundleSignature(options: Options, config: CapacitorConfig, bundle: Buffer): Promise<string | null> {
+  try {
+    if (!existsSync(baseSignKey)) {
+      log.info('Private key not found, skipping signing')
+      return null
+    }
+    if (!config?.plugins?.CapacitorUpdater.signKey) {
+      log.error('Public key not found in capacitor config')
+      program.error('')
+    }
+
+    const privateKey = readFileSync(baseSignKey, 'utf-8')
+    const signature = signBundle(bundle, privateKey)
+    return signature
+  }
+  catch (error) {
+    log.error(`Cannot generate signature ${formatError(error)}`)
+    program.error('')
+  }
+}
+
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading`)
   const pm = getPMAndCommand()
@@ -514,6 +535,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     // }
 
     versionData.storage_provider = 'r2'
+    versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
     // versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {

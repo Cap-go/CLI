@@ -6,6 +6,7 @@ import {
   privateDecrypt,
   publicEncrypt,
   randomBytes,
+  sign,
 } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 
@@ -13,6 +14,13 @@ const algorithm = 'aes-128-cbc'
 const oaepHash = 'sha256'
 const formatB64 = 'base64'
 const padding = constants.RSA_PKCS1_OAEP_PADDING
+
+export function signBundle(bundle: Buffer, key: string): string {
+  return sign('sha256', bundle, {
+    key,
+    padding: constants.RSA_PKCS1_PADDING,
+  }).toString(formatB64)
+}
 
 export function decryptSource(source: Buffer, ivSessionKey: string, privateKey: string): Buffer {
   // console.log('\nivSessionKey', ivSessionKey)

@@ -1,4 +1,5 @@
 import { program } from 'commander'
+import { createSignKeyCommand, saveSignKeyCommand } from 'signing'
 import pack from '../package.json'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
@@ -263,11 +264,11 @@ channel
 
 const key = program
   .command('key')
-  .description('Manage key')
+  .description('Manage encryption key')
 
 key
   .command('save')
-  .description('Save base64 signing key in capacitor config, usefull for CI')
+  .description('Save base64 encryption key in capacitor config, usefull for CI')
   .action(saveKeyCommand)
   .option('-f, --force', 'force generate a new one')
   .option('--key', 'key path to save in capacitor config')
@@ -275,8 +276,26 @@ key
 
 key
   .command('create')
-  .description('Create a new signing key')
+  .description('Create a new encryption key')
   .action(createKeyCommand)
+  .option('-f, --force', 'force generate a new one')
+
+const signing = program
+  .command('sign')
+  .description('Manage encryption key')
+
+signing
+  .command('save')
+  .description('Save base64 signing key in capacitor config, usefull for CI')
+  .action(saveSignKeyCommand)
+  .option('-f, --force', 'force generate a new one')
+  .option('--key', 'key path to save in capacitor config')
+  .option('--key-data', 'key data to save in capacitor config')
+
+signing
+  .command('create')
+  .description('Create a new signing key')
+  .action(createSignKeyCommand)
   .option('-f, --force', 'force generate a new one')
 
 program

@@ -22,6 +22,8 @@ import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
 export const baseKeyPub = `${baseKey}.pub`
+export const baseSignKey = '.capgo_sign_key.priv'
+export const baseSignKeyPub = `.capgo_sign_key.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
