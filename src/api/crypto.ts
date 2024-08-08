@@ -2,7 +2,6 @@ import {
   constants,
   createCipheriv,
   createDecipheriv,
-  createPrivateKey,
   generateKeyPairSync,
   privateDecrypt,
   publicEncrypt,

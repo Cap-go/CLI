@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { config, exit } from 'node:process'
+import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
