@@ -16,7 +16,7 @@ const formatB64 = 'base64'
 const padding = constants.RSA_PKCS1_OAEP_PADDING
 
 export function signBundle(bundle: Buffer, key: string): string {
-  return sign('sha256', bundle, {
+  return sign('sha512', bundle, {
     key,
     padding: constants.RSA_PKCS1_PADDING,
   }).toString(formatB64)
@@ -86,10 +86,10 @@ export interface RSAKeys {
   publicKey: string
   privateKey: string
 }
-export function createRSA(format: 'pem' | 'der/pem' = 'pem'): RSAKeys {
+export function createRSA(format: 'pem' | 'der/pem' = 'pem', keySize = 2048): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
     // The standard secure default length for RSA keys is 2048 bits
-    modulusLength: 2048,
+    modulusLength: keySize,
   })
 
   // Generate RSA key pair

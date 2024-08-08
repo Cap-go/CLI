@@ -97,7 +97,7 @@ export async function createSignKey(options: Options, logg = true) {
     }
   }
 
-  const { publicKey, privateKey } = createRSA('der/pem')
+  const { publicKey, privateKey } = createRSA('der/pem', 4096)
   log.success('Your RSA key has been generated, saving')
 
   writeFileSync(baseSignKeyPub, publicKey)

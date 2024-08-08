@@ -408,6 +408,7 @@ async function getBundleSignature(options: Options, config: CapacitorConfig, bun
 
     const privateKey = readFileSync(baseSignKey, 'utf-8')
     const signature = signBundle(bundle, privateKey)
+    log.info('Bundle signed successfully')
     return signature
   }
   catch (error) {
@@ -524,6 +525,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
+    versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
     // let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
@@ -535,7 +537,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     // }
 
     versionData.storage_provider = 'r2'
-    versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
     // versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
