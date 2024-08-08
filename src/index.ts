@@ -1,6 +1,6 @@
 import { program } from 'commander'
-import { createSignKeyCommand, saveSignKeyCommand, signFileCommand } from 'signing'
 import pack from '../package.json'
+import { createSignKeyCommand, signFileCommand } from './signing'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
@@ -283,14 +283,6 @@ key
 const signing = program
   .command('sign')
   .description('Manage encryption key')
-
-signing
-  .command('save')
-  .description('Save base64 signing key in capacitor config, usefull for CI')
-  .action(saveSignKeyCommand)
-  .option('-f, --force', 'force generate a new one')
-  .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config')
 
 signing
   .command('create')

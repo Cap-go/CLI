@@ -8,27 +8,12 @@ import { createRSA, signBundle } from './api/crypto'
 import { baseSignKey, baseSignKeyPub, formatError, getConfig } from './utils'
 import { checkLatest } from './api/update'
 
-interface saveOptions {
-  key?: string
-  keyData?: string
-}
 interface signFileOptions {
   json?: boolean
   stdout?: boolean
 }
 interface Options {
   force?: boolean
-}
-
-export async function saveSignKey(options: saveOptions, logg = true) {
-  if (logg)
-    intro(`Save keys 🔑`)
-
-  return true
-}
-export async function saveSignKeyCommand(_options: saveOptions) {
-  intro(`Save keys 🔑`)
-  await checkLatest()
 }
 
 export async function signFileCommand(file: string, options: signFileOptions) {
