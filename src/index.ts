@@ -1,5 +1,5 @@
 import { program } from 'commander'
-import { createSignKeyCommand, saveSignKeyCommand } from 'signing'
+import { createSignKeyCommand, saveSignKeyCommand, signFileCommand } from 'signing'
 import pack from '../package.json'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
@@ -297,6 +297,13 @@ signing
   .description('Create a new signing key')
   .action(createSignKeyCommand)
   .option('-f, --force', 'force generate a new one')
+
+signing
+  .command('signFile [file]')
+  .description('Signs a file. Useful for uploading signed bundles to a custom backend')
+  .action(signFileCommand)
+  .option('--json', 'Returns the output in a JSON format')
+  .option('--stdout', 'Prints the output in a standard output, do not save in a file')
 
 program
   .command('upload [appId]')

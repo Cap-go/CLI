@@ -2,6 +2,7 @@ import {
   constants,
   createCipheriv,
   createDecipheriv,
+  createPrivateKey,
   generateKeyPairSync,
   privateDecrypt,
   publicEncrypt,
@@ -86,22 +87,36 @@ export interface RSAKeys {
   publicKey: string
   privateKey: string
 }
-export function createRSA(): RSAKeys {
+export function createRSA(format: 'pem' | 'der/pem' = 'pem'): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
     // The standard secure default length for RSA keys is 2048 bits
     modulusLength: 2048,
   })
 
   // Generate RSA key pair
-  return {
-    publicKey: publicKey.export({
-      type: 'pkcs1',
-      format: 'pem',
-    }) as string,
-    privateKey: privateKey.export({
-      type: 'pkcs1',
-      format: 'pem',
-    }) as string,
+  if (format === 'pem') {
+    return {
+      publicKey: publicKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+    }
+  }
+  else if (format === 'der/pem') {
+    return {
+      publicKey: publicKey.export({
+        type: 'spki',
+        format: 'der',
+      }).toString('base64'),
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }).toString('base64'),
+    }
   }
 }
 //  test AES

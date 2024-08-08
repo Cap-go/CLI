@@ -1,14 +1,20 @@
+/* eslint-disable no-console */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import process from 'node:process'
 import { program } from 'commander'
 import { confirm, intro, isCancel, log, outro } from '@clack/prompts'
 import { writeConfig } from './config'
-import { createRSA } from './api/crypto'
-import { baseSignKey, baseSignKeyPub, getConfig } from './utils'
+import { createRSA, signBundle } from './api/crypto'
+import { baseSignKey, baseSignKeyPub, formatError, getConfig } from './utils'
 import { checkLatest } from './api/update'
 
 interface saveOptions {
   key?: string
   keyData?: string
+}
+interface signFileOptions {
+  json?: boolean
+  stdout?: boolean
 }
 interface Options {
   force?: boolean
@@ -20,9 +26,70 @@ export async function saveSignKey(options: saveOptions, logg = true) {
 
   return true
 }
-export async function saveSignKeyCommand(options: saveOptions) {
+export async function saveSignKeyCommand(_options: saveOptions) {
   intro(`Save keys 🔑`)
   await checkLatest()
+}
+
+export async function signFileCommand(file: string, options: signFileOptions) {
+  const { json, stdout } = options
+
+  if (!json) {
+    await checkLatest()
+    intro(`Sign a bundle 🔏`)
+  }
+
+  const extConfig = await getConfig()
+
+  if (!extConfig?.config?.plugins?.CapacitorUpdater.signKey || !existsSync(baseSignKey) || !existsSync(baseSignKeyPub)) {
+    if (json) {
+      console.log(JSON.stringify({ error: 'Signing not configured properly' }))
+    }
+    else {
+      log.error('Signing not configured properly')
+    }
+  }
+
+  if (!existsSync(file)) {
+    if (json) {
+      console.log(JSON.stringify({ error: 'File does not exist' }))
+    }
+    else {
+      log.error('File does not exist')
+    }
+  }
+
+  try {
+    const data = readFileSync(file)
+    const privateKey = readFileSync(baseSignKey, 'utf-8')
+    const signature = signBundle(data, privateKey)
+
+    if (stdout) {
+      log.success('Generated signature:')
+      log.success(signature)
+    }
+    else if (json) {
+      console.log(JSON.stringify({ signature }))
+    }
+    else {
+      const path = `${file}.capgo_sign`
+      writeFileSync(path, signature)
+
+      log.success(`Saved signature to: ${path}`)
+    }
+
+    process.exit(0)
+  }
+  catch (error) {
+    if (json) {
+      console.log(JSON.stringify({ error: 'Error while generating signature. Run without --json to get more output' }))
+      process.exit(1)
+    }
+    else {
+      log.error(`Error while generating signature ${formatError(error)}`)
+      program.error('')
+    }
+  }
 }
 
 export async function createSignKey(options: Options, logg = true) {
@@ -45,7 +112,7 @@ export async function createSignKey(options: Options, logg = true) {
     }
   }
 
-  const { publicKey, privateKey } = createRSA()
+  const { publicKey, privateKey } = createRSA('der/pem')
   log.success('Your RSA key has been generated, saving')
 
   writeFileSync(baseSignKeyPub, publicKey)
