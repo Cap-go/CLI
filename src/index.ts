@@ -1,6 +1,6 @@
 import { program } from 'commander'
 import pack from '../package.json'
-import { createSignKeyCommand, signFileCommand } from './signing'
+import { createSignKeyCommand, exportPrivateKey, importPrivateKey, signFileCommand } from './signing'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
@@ -296,6 +296,17 @@ signing
   .action(signFileCommand)
   .option('--json', 'Returns the output in a JSON format')
   .option('--stdout', 'Prints the output in a standard output, do not save in a file')
+
+signing
+  .command('exportPrivateKey')
+  .description('Prints the private key as hex')
+  .action(exportPrivateKey)
+
+signing
+  .command('importPrivateKey')
+  .description('Imports the private key from a hex hex')
+  .action(importPrivateKey)
+  .option('--key <key>', 'Private key exported in a HEX format. Can be generated using "sing exportPrivateKey"')
 
 program
   .command('upload [appId]')

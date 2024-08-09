@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import process from 'node:process'
+import { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { confirm, intro, isCancel, log, outro } from '@clack/prompts'
 import { writeConfig } from './config'
-import { createRSA, signBundle } from './api/crypto'
+import { createRSA, signBundle, verifySignature } from './api/crypto'
 import { baseSignKey, baseSignKeyPub, formatError, getConfig } from './utils'
 import { checkLatest } from './api/update'
 
@@ -14,6 +15,43 @@ interface signFileOptions {
 }
 interface Options {
   force?: boolean
+}
+interface importOptions {
+  key?: string
+}
+
+export async function importPrivateKey(options: importOptions) {
+  if (!options.key) {
+    log.error('Key not provided')
+    program.error('')
+  }
+
+  try {
+    const key = Buffer.from(options.key, 'hex').toString('utf-8')
+    writeFileSync(baseSignKey, key)
+    log.success('Key imported')
+  }
+  catch (error) {
+    log.error(`Error while importing private key ${formatError(error)}`)
+    program.error('')
+  }
+}
+
+export async function exportPrivateKey() {
+  try {
+    const keyExists = existsSync(baseSignKey)
+    if (!keyExists) {
+      log.error('Private key not found')
+      program.error('')
+    }
+
+    const keyBuffer = readFileSync(baseSignKey)
+    console.log(keyBuffer.toString('hex'))
+  }
+  catch (error) {
+    log.error(`Error while importing private key ${formatError(error)}`)
+    program.error('')
+  }
 }
 
 export async function signFileCommand(file: string, options: signFileOptions) {
