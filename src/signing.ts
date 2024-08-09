@@ -5,7 +5,7 @@ import { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { confirm, intro, isCancel, log, outro } from '@clack/prompts'
 import { writeConfig } from './config'
-import { createRSA, signBundle, verifySignature } from './api/crypto'
+import { createRSA, signBundle } from './api/crypto'
 import { baseSignKey, baseSignKeyPub, formatError, getConfig } from './utils'
 import { checkLatest } from './api/update'
 
