@@ -1,11 +1,15 @@
 import {
+  KeyObject,
   constants,
   createCipheriv,
   createDecipheriv,
+  createVerify,
   generateKeyPairSync,
   privateDecrypt,
   publicEncrypt,
   randomBytes,
+  sign,
+  subtle,
 } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 
@@ -13,6 +17,32 @@ const algorithm = 'aes-128-cbc'
 const oaepHash = 'sha256'
 const formatB64 = 'base64'
 const padding = constants.RSA_PKCS1_OAEP_PADDING
+
+export function signBundle(bundle: Buffer, key: string): string {
+  return sign('sha512', bundle, {
+    key,
+    padding: constants.RSA_PKCS1_PADDING,
+  }).toString(formatB64)
+}
+
+export async function verifySignature(signature: string, signKey: string, bundle: Buffer) {
+  const publicKey = await subtle.importKey(
+    'spki', // Key format
+    Buffer.from(signKey, 'base64'), // Key data (ArrayBuffer)
+    {
+      name: 'RSA-PSS', // Algorithm (depends on your use case)
+      hash: 'SHA-512', // Hash function (depends on your use case, e.g. 'SHA-256')
+    },
+    true, // Extractable (prevent exporting)
+    ['verify'], // Key usage
+  )
+
+  const keyObject = KeyObject.from(publicKey)
+
+  const verifier = createVerify('sha512')
+  verifier.update(bundle)
+  return verifier.verify(keyObject, signature, 'base64')
+}
 
 export function decryptSource(source: Buffer, ivSessionKey: string, privateKey: string): Buffer {
   // console.log('\nivSessionKey', ivSessionKey)
@@ -78,22 +108,36 @@ export interface RSAKeys {
   publicKey: string
   privateKey: string
 }
-export function createRSA(): RSAKeys {
+export function createRSA(format: 'pem' | 'der/pem' = 'pem', keySize = 2048): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
     // The standard secure default length for RSA keys is 2048 bits
-    modulusLength: 2048,
+    modulusLength: keySize,
   })
 
   // Generate RSA key pair
-  return {
-    publicKey: publicKey.export({
-      type: 'pkcs1',
-      format: 'pem',
-    }) as string,
-    privateKey: privateKey.export({
-      type: 'pkcs1',
-      format: 'pem',
-    }) as string,
+  if (format === 'pem') {
+    return {
+      publicKey: publicKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+    }
+  }
+  else if (format === 'der/pem') {
+    return {
+      publicKey: publicKey.export({
+        type: 'spki',
+        format: 'der',
+      }).toString('base64'),
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }).toString('base64'),
+    }
   }
 }
 //  test AES

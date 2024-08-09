@@ -10,9 +10,9 @@ import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { encryptSource } from '../api/crypto'
+import { encryptSource, signBundle, verifySignature } from '../api/crypto'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -395,6 +395,41 @@ async function setVersionInChannel(
   }
 }
 
+async function getBundleSignature(options: Options, config: CapacitorConfig, bundle: Buffer): Promise<string | null> {
+  try {
+    const signKey = config?.plugins?.CapacitorUpdater.signKey
+    if (!existsSync(baseSignKey)) {
+      if (signKey) {
+        log.error('Public signature key found in CapacitorUpdater config but private key not found')
+        log.error('Cannot allow upload as updates will fail without a valid signature')
+        program.error('')
+      }
+      log.info('Private key not found, skipping signing')
+      return null
+    }
+    if (!signKey) {
+      log.error('Public key not found in capacitor config')
+      program.error('')
+    }
+
+    const privateKey = readFileSync(baseSignKey, 'utf-8')
+    const signature = signBundle(bundle, privateKey)
+    const signatureValid = await verifySignature(signature, signKey, bundle)
+    if (!signatureValid) {
+      log.error('The signature is not valid, perhaps you have mismatched key pair (?)')
+      log.error('Cannot allow upload as updates will fail without a valid signature')
+      program.error('')
+    }
+
+    log.info('Bundle signed successfully')
+    return signature
+  }
+  catch (error) {
+    log.error(`Cannot generate signature ${formatError(error)}`)
+    program.error('')
+  }
+}
+
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading`)
   const pm = getPMAndCommand()
@@ -468,6 +503,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }).catch()
     versionData.session_key = options.ivSessionKey
   }
+
+  if (zipped)
+    versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
 
   // TODO: re enable this when we have the partial upload working better
   // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
