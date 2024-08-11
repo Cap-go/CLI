@@ -22,10 +22,10 @@ export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
   }
 }
 
-export async function writeConfig(config: ExtConfigPairs): Promise<void> {
+export async function writeConfig(config: ExtConfigPairs, raw = false): Promise<void> {
   const oldConfig = await loadConfigCap()
 
-  const { extConfig } = oldConfig.app
+  let { extConfig } = oldConfig.app
   if (extConfig) {
     if (!extConfig.plugins) {
       extConfig.plugins = {
@@ -36,7 +36,10 @@ export async function writeConfig(config: ExtConfigPairs): Promise<void> {
     if (!extConfig.plugins.CapacitorUpdater)
       extConfig.plugins.CapacitorUpdater = {}
 
-    extConfig.plugins.CapacitorUpdater = config.config.plugins?.CapacitorUpdater
+    if (!raw)
+      extConfig.plugins.CapacitorUpdater = config.config.plugins?.CapacitorUpdater
+    else
+      extConfig = config.config
     writeConfigCap(extConfig, oldConfig.app.extConfigFilePath)
   }
 }
