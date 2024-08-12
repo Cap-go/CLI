@@ -1,7 +1,6 @@
 import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { type OptionsBase, formatError, getConfig } from '../utils'
-import { checkLatest } from '../api/update'
 import { writeConfig } from '../config'
 
 interface Options extends OptionsBase {
