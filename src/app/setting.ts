@@ -17,6 +17,11 @@ export async function setSetting(setting: string, options: Options) {
     exit(1)
   }
 
+  if (!options.bool && !options.string) {
+    log.error(`You MUST provide either bool or string as the value`)
+    exit(1)
+  }
+
   if (options.bool && options.bool !== 'true' && options.bool !== 'false') {
     log.error(`Invalid bool`)
     exit(1)
@@ -43,6 +48,7 @@ export async function setSetting(setting: string, options: Options) {
 
     baseObj[pathElements.at(-1)!] = finalValue
     await writeConfig(config, true)
+    log.success(`Set "${setting}" to "${finalValue}"`)
   }
   catch (error) {
     log.error(`Cannot set config in capacitor settings ${formatError(error)}`)
