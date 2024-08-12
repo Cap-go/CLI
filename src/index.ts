@@ -1,5 +1,6 @@
 import { program } from 'commander'
 import pack from '../package.json'
+import { setSetting } from './app/setting'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
@@ -83,6 +84,13 @@ app
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-d, --device <device>', 'the specific device to debug')
   .action(debugApp)
+
+app
+  .command('setting [path]')
+  .description('Modifies capacitor config programmatically')
+  .option('--bool <bool>', 'A value for the setting to modify as a boolean')
+  .option('--string <string>', 'A value for the setting to modify as a string')
+  .action(setSetting)
 
 // app
 //   .command('watch [port]')
