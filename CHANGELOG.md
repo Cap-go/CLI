@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.14.0](https://github.com/Cap-go/CLI/compare/v4.13.34...v4.14.0) (2024-08-16)
+
+
+### Features
+
+* auto setup options in cap config ([aae3740](https://github.com/Cap-go/CLI/commit/aae374001a3f20cfb3827474299dec8f6b7e6799))
+
 ### [4.13.34](https://github.com/Cap-go/CLI/compare/v4.13.33...v4.13.34) (2024-08-16)
 
 
