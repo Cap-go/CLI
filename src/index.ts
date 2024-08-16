@@ -50,7 +50,6 @@ program
   .action(initApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
 const app = program
   .command('app')

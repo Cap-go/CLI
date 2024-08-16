@@ -3,7 +3,7 @@ import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import { writeConfig } from './config'
 import { createRSA } from './api/crypto'
-import { baseKey, baseKeyPub, getConfig } from './utils'
+import { baseKey, baseKeyPub, getConfig, updateConfig } from './utils'
 import { checkLatest } from './api/update'
 
 interface saveOptions {
@@ -94,25 +94,8 @@ export async function createKey(options: Options, logg = true) {
     }
   }
   writeFileSync(baseKey, privateKey)
-
-  const extConfig = await getConfig()
-  if (extConfig?.config) {
-    if (!extConfig.config.plugins) {
-      extConfig.config.plugins = {
-        extConfig: {},
-        CapacitorUpdater: {},
-      }
-    }
-
-    if (!extConfig.config.plugins.CapacitorUpdater) {
-      extConfig.config.plugins.CapacitorUpdater = {}
-    }
-
-    const flattenPrivateKey = privateKey.replace(/\\n/g, '\\n')
-    extConfig.config.plugins.CapacitorUpdater.privateKey = flattenPrivateKey
-    // console.log('extConfig', extConfig)
-    writeConfig(extConfig)
-  }
+  const flattenPrivateKey = privateKey.replace(/\\n/g, '\\n')
+  const extConfig = await updateConfig({ privateKey: flattenPrivateKey })
 
   if (logg) {
     log.success('Your RSA key has been generated')

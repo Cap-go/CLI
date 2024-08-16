@@ -16,7 +16,7 @@ import { addAppInternal } from './app/add'
 import { checkLatest } from './api/update'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, useLogSnag, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -181,6 +181,8 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
     }
     else {
       await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, execOption as ExecSyncOptions)
+      const pkg = await readPackageJson()
+      await updateConfig({ version: pkg?.version || '1.0.0', appId, autoUpdate: true })
       s.stop(`Install Done ✅`)
     }
   }
@@ -415,17 +417,17 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const snag = useLogSnag()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const apikey = apikeyCommand || findSavedKey()
+  options.apikey = apikeyCommand || findSavedKey()
 
   const log = p.spinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
-    await login(apikey, options, false)
+    await login(options.apikey, options, false)
     log.stop('Login Done ✅')
   }
 
-  const supabase = await createSupabaseClient(apikey)
-  await verifyUser(supabase, apikey, ['upload', 'all', 'read', 'write'])
+  const supabase = await createSupabaseClient(options.apikey)
+  await verifyUser(supabase, options.apikey, ['upload', 'all', 'read', 'write'])
 
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
@@ -442,32 +444,32 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 3) {
-      await step3(orgId, snag, apikey, appId)
+      await step3(orgId, snag, options.apikey, appId)
       markStepDone(3)
     }
 
     if (stepToSkip < 4) {
-      await step4(orgId, snag, apikey, appId)
+      await step4(orgId, snag, options.apikey, appId)
       markStepDone(4)
     }
 
     if (stepToSkip < 5) {
-      await step5(orgId, snag, apikey, appId)
+      await step5(orgId, snag, options.apikey, appId)
       markStepDone(5)
     }
 
     if (stepToSkip < 6) {
-      await step6(orgId, snag, apikey, appId)
+      await step6(orgId, snag, options.apikey, appId)
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
-      await step7(orgId, snag, apikey, appId)
+      await step7(orgId, snag, options.apikey, appId)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
-      await step8(orgId, snag, apikey, appId)
+      await step8(orgId, snag, options.apikey, appId)
       markStepDone(8)
     }
 
@@ -476,7 +478,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       markStepDone(9)
     }
 
-    await step10(orgId, snag, apikey, appId)
+    await step10(orgId, snag, options.apikey, appId)
     await markStep(orgId, snag, 0)
     cleanupStepsDone()
   }

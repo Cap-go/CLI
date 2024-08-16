@@ -9,7 +9,7 @@ export interface CapacitorConfig {
   [key: string]: any
 }
 
-interface ExtConfigPairs {
+export interface ExtConfigPairs {
   config: CapacitorConfig
   path: string
 }
