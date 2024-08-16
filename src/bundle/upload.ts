@@ -76,7 +76,7 @@ function getApikey(options: Options) {
 }
 
 function getAppIdAndPath(appId: string | undefined, options: Options, config: CapacitorConfig) {
-  const finalAppId = appId || config?.appId
+  const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId
   const path = options.path || config?.webDir
 
   if (!finalAppId || !path) {
