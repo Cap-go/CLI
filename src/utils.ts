@@ -17,7 +17,8 @@ import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
 import { confirm as confirmC, isCancel, log, select, spinner } from '@clack/prompts'
 import { promiseFiles } from 'node-dir'
-import { loadConfig } from './config'
+import type { ExtConfigPairs } from './config'
+import { loadConfig, writeConfig } from './config'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
@@ -66,6 +67,30 @@ export async function getConfig() {
     log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
     program.error('')
   }
+}
+
+export async function updateConfig(newConfig: any): Promise<ExtConfigPairs> {
+  const extConfig = await getConfig()
+  if (extConfig?.config) {
+    if (!extConfig.config.plugins) {
+      extConfig.config.plugins = {
+        extConfig: {},
+        CapacitorUpdater: {},
+      }
+    }
+
+    if (!extConfig.config.plugins.CapacitorUpdater) {
+      extConfig.config.plugins.CapacitorUpdater = {}
+    }
+
+    extConfig.config.plugins.CapacitorUpdater = {
+      ...extConfig.config.plugins.CapacitorUpdater,
+      ...newConfig,
+    }
+    // console.log('extConfig', extConfig)
+    writeConfig(extConfig)
+  }
+  return extConfig
 }
 
 export async function getLocalConfig() {

@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "4.13.31",
+  "version": "4.14.0",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -68,7 +68,7 @@
     "commander": "12.1.0",
     "console-table-printer": "^2.12.1",
     "esbuild": "^0.23.0",
-    "eslint": "9.8.0",
+    "eslint": "9.9.0",
     "get-latest-version": "^5.1.0",
     "git-format-staged": "3.1.1",
     "husky": "^9.1.1",
