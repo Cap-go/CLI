@@ -166,19 +166,7 @@ export async function createSignKey(options: Options, logg = true) {
       log.success('KEEP IT SAFE AT ALL COST')
       log.success('It will be used to sign bundles before uploading them to capgo')
 
-      if (existsSync('.gitignore')) {
-        const addToIgnore = await confirm({ message: 'Git ignore found, would you like to add the private key into it?' })
-        if (isCancel(addToIgnore) || !addToIgnore) {
-          log.info('Ok, not adding to git ignore')
-        }
-        else {
-          let gitIgnore = readFileSync('.gitignore', 'utf-8')
-          gitIgnore = `${gitIgnore}\n${baseSignKey}`
-          writeFileSync('.gitignore', gitIgnore)
-          log.success('Added the private signing key to .gitignore')
-        }
-      }
-
+      await addToGitIgnore()
       outro(`Done ✅`)
     }
   }
@@ -193,6 +181,26 @@ export async function createSignKey(options: Options, logg = true) {
   }
 
   return true
+}
+
+async function addToGitIgnore() {
+  if (!existsSync('.gitignore')) {
+    return
+  }
+  let gitIgnore = readFileSync('.gitignore', 'utf-8')
+  if (gitIgnore.includes(baseSignKey)) {
+    return
+  }
+
+  const addToIgnore = await confirm({ message: 'Git ignore found, would you like to add the private key into it?' })
+  if (isCancel(addToIgnore) || !addToIgnore) {
+    log.info('Ok, not adding to git ignore')
+  }
+  else {
+    gitIgnore = `${gitIgnore}\n${baseSignKey}`
+    writeFileSync('.gitignore', gitIgnore)
+    log.success('Added the private signing key to .gitignore')
+  }
 }
 
 export async function createSignKeyCommand(options: Options) {
