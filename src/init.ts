@@ -7,6 +7,7 @@ import * as p from '@clack/prompts'
 import type LogSnag from 'logsnag'
 import semver from 'semver'
 import tmp from 'tmp'
+import { createSignKey } from './signing'
 import { markSnag, waitLog } from './app/debug'
 import { createKey } from './key'
 import { addChannel } from './channel/add'
@@ -316,6 +317,28 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
 
 async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const pm = getPMAndCommand()
+  const doEncrypt = await p.confirm({ message: `Automatically configure bundle siging in ${appId} updates?` })
+  await cancelCommand(doEncrypt, orgId, snag)
+  if (doEncrypt) {
+    const s = p.spinner()
+    s.start(`Running: ${pm.runner} @capgo/cli@latest sing create`)
+    const keyRes = await createSignKey({ force: true }, false)
+    if (!keyRes) {
+      s.stop('Error')
+      p.log.warn(`Cannot create signing key ❌`)
+      p.outro(`Bye 👋`)
+      exit(1)
+    }
+    else {
+      s.stop(`Signing key created 🔑`)
+    }
+    markSnag('onboarding-v2', orgId, snag, 'Use signing')
+  }
+  await markStep(orgId, snag, 6)
+}
+
+async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+  const pm = getPMAndCommand()
   const doBuild = await p.confirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, snag)
   if (doBuild) {
@@ -340,7 +363,7 @@ async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string
   await markStep(orgId, snag, 7)
 }
 
-async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step9(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
   await cancelCommand(doBundle, orgId, snag)
@@ -367,7 +390,7 @@ async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string
   await markStep(orgId, snag, 8)
 }
 
-async function step9(orgId: string, snag: LogSnag) {
+async function step10(orgId: string, snag: LogSnag) {
   const pm = getPMAndCommand()
   const doRun = await p.confirm({ message: `Run in device now ?` })
   await cancelCommand(doRun, orgId, snag)
@@ -396,7 +419,7 @@ async function step9(orgId: string, snag: LogSnag) {
   await markStep(orgId, snag, 9)
 }
 
-async function step10(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step11(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, snag)
   if (doRun) {
@@ -474,11 +497,16 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 9) {
-      await step9(orgId, snag)
+      await step9(orgId, snag, options.apikey, appId)
       markStepDone(9)
     }
 
-    await step10(orgId, snag, options.apikey, appId)
+    if (stepToSkip < 10) {
+      await step10(orgId, snag)
+      markStepDone(10)
+    }
+
+    await step11(orgId, snag, options.apikey, appId)
     await markStep(orgId, snag, 0)
     cleanupStepsDone()
   }
