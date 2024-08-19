@@ -17,6 +17,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
 import { checkIndexPosition, searchInDirectory } from './check'
+import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
 interface Options extends OptionsBase {
   bundle?: string
@@ -520,7 +521,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
 
   // TODO: re enable this when we have the partial upload working better
-  // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
+  const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -555,16 +556,23 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   else if (zipped) {
     await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
-    // let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
-    // try {
-    //   finalManifest = options.ignorePartial ? null : await uploadPartial(apikey, manifest, path, options, appid, bundle)
-    // }
-    // catch (err) {
-    //   log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
-    // }
+    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    try {
+      const spinner = spinnerC()
+      spinner.start('Uploading partial update')
+
+      const startTimePartial = performance.now()
+      finalManifest = !manifest ? null : await uploadPartial(apikey, manifest, path, options, extConfig.config, appid, bundle)
+      const endTimePartial = performance.now()
+      spinner.stop(`Finished uploading partial update. Took: ${(endTimePartial - startTimePartial).toFixed(2)} MS`)
+    }
+    catch (err) {
+      log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    }
 
     versionData.storage_provider = 'r2'
-    // versionData.manifest = finalManifest
+    if (finalManifest)
+      versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       log.error(`Cannot update bundle ${formatError(dbError2)}`)
