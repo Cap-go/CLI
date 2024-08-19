@@ -87,5 +87,11 @@
     "tsconfig-paths": "4.2.0",
     "typescript": "5.5.4",
     "node-dir": "^0.1.17"
+  },
+  "dependencies": {
+    "@types/eventsource": "^1.1.15",
+    "eventsource": "^2.0.2",
+    "sse.js": "^2.5.0",
+    "zod": "^3.23.8"
   }
 }
