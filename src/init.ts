@@ -459,7 +459,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 6) {
-      await step6(orgId, snag, options.apikey, appId)
+      // await step6(orgId, snag, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
       markStepDone(6)
     }
 
