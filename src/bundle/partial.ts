@@ -45,8 +45,8 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 }
 
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: any, config: CapacitorConfig, appId: string, name: string) {
-  const spinner = spinnerC()
-  spinner.start('Preparing partial update')
+  // const spinner = spinnerC()
+  // spinner.start('Preparing partial update')
 
   try {
     const baseUrl = config?.plugins?.CapacitorUpdater?.cloudflareBaseUrl ?? defaultApiHost
