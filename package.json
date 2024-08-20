@@ -90,7 +90,9 @@
   },
   "dependencies": {
     "@types/eventsource": "^1.1.15",
+    "@types/lodash": "^4.17.7",
     "eventsource": "^2.0.2",
+    "lodash": "^4.17.21",
     "sse.js": "^2.5.0",
     "zod": "^3.23.8"
   }

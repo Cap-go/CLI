@@ -546,10 +546,13 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
+      const spinner = spinnerC()
+      spinner.start('Uploading partial update')
+
       const startTimePartial = performance.now()
       finalManifest = !manifest ? null : await uploadPartial(apikey, manifest, path, options, extConfig.config, appid, bundle)
       const endTimePartial = performance.now()
-      console.log(JSON.stringify({ a: '$MAGIC', time: endTimePartial - startTimePartial }))
+      spinner.stop(`Finished uploading partial update. Took: ${(endTimePartial - startTimePartial).toFixed(2)} MS`)
     }
     catch (err) {
       log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)

@@ -6,6 +6,7 @@ import ky, { HTTPError } from 'ky'
 import EventSource from 'eventsource'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import z from 'zod'
+import chunk from 'lodash/chunk'
 import type { manifestType, uploadUrlsType } from '../utils'
 import { UPLOAD_TIMEOUT, defaultApiHost, formatError, generateManifest, manifestUploadUrls } from '../utils'
 import type { CapacitorConfig } from '../config'
@@ -18,11 +19,10 @@ import type { CapacitorConfig } from '../config'
 // }
 
 const responseSchema = z.object({
-  path: z.string(),
-  hash: z.string(),
+  id: z.number().min(0).max(9),
   finalPath: z.string(),
   uploadLink: z.string().url(),
-})
+}).array()
 
 export async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -45,19 +45,16 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 }
 
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: any, config: CapacitorConfig, appId: string, name: string) {
-  // const spinner = spinnerC()
-  // spinner.start('Preparing partial update')
-
   try {
     const baseUrl = config?.plugins?.CapacitorUpdater?.cloudflareBaseUrl ?? defaultApiHost
     const url = new URL(`${baseUrl}/private/partial_upload/v1`)
 
-    return Promise.all(manifest.map(async (entry) => {
+    const res = await Promise.all(chunk(manifest, 10).map(async (entries) => {
       const response = await ky.post(url, {
         json: {
           name,
           app_id: appId,
-          manifest: entry,
+          manifest: entries,
         },
         headers: {
           capgkey: apikey,
@@ -67,23 +64,31 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
       const responseJson = await response.json()
       const parsedResponse = responseSchema.parse(responseJson)
 
-      const finalFilePath = `${path}/${parsedResponse.path}`
-      // TODO: prevent directory traversal
-      const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
-      const fileBuffer = await readBuffer(fileStream)
+      return await Promise.all(parsedResponse.map(async (responseEntry) => {
+        const inputEntry = entries.at(responseEntry.id)
+        if (!inputEntry) {
+          throw new Error(`Cannot get inputEntry ${responseEntry.id} for ${JSON.stringify(entries)}`)
+        }
 
-      await ky.put(parsedResponse.uploadLink, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: fileBuffer,
-      })
+        const finalFilePath = `${path}/${inputEntry.file}`
+        // TODO: prevent directory traversal
+        const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
+        const fileBuffer = await readBuffer(fileStream)
 
-      return {
-        file_name: parsedResponse.path,
-        s3_path: parsedResponse.finalPath,
-        file_hash: parsedResponse.hash,
-      }
+        await ky.put(responseEntry.uploadLink, {
+          timeout: options.timeout || UPLOAD_TIMEOUT,
+          retry: 5,
+          body: fileBuffer,
+        })
+
+        return {
+          file_name: inputEntry.file,
+          s3_path: responseEntry.finalPath,
+          file_hash: inputEntry.hash,
+        }
+      }))
     }))
+    return res.flat(1)
   }
   catch (errorUpload) {
     if (errorUpload instanceof HTTPError) {
@@ -93,7 +98,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     }
 
     if (errorUpload instanceof z.ZodError) {
-      log.error(`Cannot get upload url for file ${entry.file}.\nError:\n${parsedResponseRaw.error}`)
+      log.error(`Cannot get upload url for partial update. Error:\n${JSON.stringify(errorUpload)}`)
     }
 
     else {
