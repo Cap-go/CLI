@@ -397,7 +397,9 @@ async function setVersionInChannel(
 
 async function getBundleSignature(options: Options, config: CapacitorConfig, bundle: Buffer): Promise<string | null> {
   try {
-    const signKey = config?.plugins?.CapacitorUpdater.signKey
+    const plugins = config?.plugins
+    const capacitorUpdaterConfig = (plugins || {}).CapacitorUpdater ?? {}
+    const signKey = capacitorUpdaterConfig.signKey
     if (!existsSync(baseSignKey)) {
       if (signKey) {
         log.error('Public signature key found in CapacitorUpdater config but private key not found')
