@@ -28,9 +28,9 @@ export async function encryptZip(zipPath: string, options: Options) {
   const keyPath = options.key || baseKeyPub
   // check if publicKey exist
 
-  let publicKey = options.keyData || ''
+  let publicEncryptionKey = options.keyData || ''
 
-  if (!existsSync(keyPath) && !publicKey) {
+  if (!existsSync(keyPath) && !publicEncryptionKey) {
     log.warning(`Cannot find public key ${keyPath} or as keyData option`)
     if (ciDetect.isCI) {
       log.error(`Error: Missing public key`)
@@ -41,16 +41,16 @@ export async function encryptZip(zipPath: string, options: Options) {
       log.error(`Error: Missing public key`)
       program.error('')
     }
-    publicKey = localConfig.signKey || ''
+    publicEncryptionKey = localConfig.encryptionKey || ''
   }
   else if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
-    publicKey = keyFile.toString()
+    publicEncryptionKey = keyFile.toString()
   }
 
   const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSource(zipFile, publicKey)
+  const encodedZip = encryptSource(zipFile, publicEncryptionKey)
   log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
