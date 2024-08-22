@@ -227,6 +227,7 @@ export interface Database {
         Row: {
           app_id: string
           created_at: string | null
+          default_upload_channel: string
           icon_url: string
           id: string | null
           last_version: string | null
@@ -239,6 +240,7 @@ export interface Database {
         Insert: {
           app_id: string
           created_at?: string | null
+          default_upload_channel?: string
           icon_url: string
           id?: string | null
           last_version?: string | null
@@ -251,6 +253,7 @@ export interface Database {
         Update: {
           app_id?: string
           created_at?: string | null
+          default_upload_channel?: string
           icon_url?: string
           id?: string | null
           last_version?: string | null
@@ -1639,6 +1642,13 @@ export interface Database {
             storage_percent: number
           }[]
         }
+      get_process_cron_stats_job_info: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          last_run: string
+          next_run: string
+        }[]
+      }
       get_total_app_storage_size_orgs: {
         Args: {
           org_id: string

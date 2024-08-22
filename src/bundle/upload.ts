@@ -430,6 +430,19 @@ async function getBundleSignature(options: Options, config: CapacitorConfig, bun
   }
 }
 
+export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType) {
+  const { error, data } = await supabase.from('apps')
+    .select('default_upload_channel')
+    .single()
+
+  if (error) {
+    log.error('Cannot find default upload channel')
+    return null
+  }
+
+  return data.default_upload_channel
+}
+
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading`)
   const pm = getPMAndCommand()
@@ -441,7 +454,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const extConfig = await getConfig()
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
   const bundle = await getBundle(extConfig.config, options)
-  const channel = options.channel || 'dev'
   const snag = useLogSnag()
 
   checkNotifyAppReady(options, path)
@@ -451,11 +463,13 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const localConfig = await getLocalConfig()
   const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
+  const channel = options.channel || await getDefaulUploadChannel(appid, supabase) || 'dev'
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
   await checkPlanValid(supabase, orgId, apikey, appid, true)
   await checkTrial(supabase, orgId, localConfig)
+
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
   await checkVersionExists(supabase, appid, bundle)
 
