@@ -357,41 +357,39 @@ async function setVersionInChannel(
   orgId: string,
   appid: string,
   localConfig: localConfigType,
-  permissions: OrganizationPerm,
 ) {
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
 
-  if (versionId && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-    const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
-      name: channel,
-      app_id: appid,
-      created_by: userId,
-      version: versionId,
-      owner_org: orgId,
-    })
-    if (dbError3) {
-      log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
-      program.error('')
-    }
-    const appidWeb = convertAppName(appid)
-    const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
-    if (data?.public)
-      log.info('Your update is now available in your public channel 🎉')
-    else if (data?.id)
-      log.info(`Link device to this bundle to try it: ${bundleUrl}`)
+  if (!versionId) {
+    log.warn('Cannot get version id, cannot set channel')
+    program.error('')
+  }
+  const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
+    name: channel,
+    app_id: appid,
+    created_by: userId,
+    version: versionId,
+    owner_org: orgId,
+  })
+  if (dbError3) {
+    log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
+    program.error('')
+  }
+  const appidWeb = convertAppName(appid)
+  const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
+  if (data?.public)
+    log.info('Your update is now available in your public channel 🎉')
+  else if (data?.id)
+    log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (displayBundleUrl) {
-      log.info(`Bundle url: ${bundleUrl}`)
-    }
-    else if (!versionId) {
-      log.warn('Cannot set bundle with upload key, use key with more rights for that')
-      program.error('')
-    }
-    else if (!hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-      log.warn('Cannot set channel as a upload organization member')
-    }
+  if (displayBundleUrl) {
+    log.info(`Bundle url: ${bundleUrl}`)
+  }
+  else if (!versionId) {
+    log.warn('Cannot set bundle with upload key, use key with more rights for that')
+    program.error('')
   }
 }
 
@@ -453,8 +451,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const localConfig = await getLocalConfig()
   const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
-  // Check we have app access to this appId
-  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
@@ -562,7 +558,15 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }
   }
 
-  await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, permissions)
+  // Check we have app access to this appId
+  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
+
+  if (hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+    await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig)
+  }
+  else {
+    log.warn('Cannot set channel as a upload organization member')
+  }
 
   await snag.track({
     channel: 'app',
