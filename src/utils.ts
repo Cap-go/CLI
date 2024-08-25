@@ -125,9 +125,6 @@ interface CapgoConfig {
   supaKey: string
   host: string
   hostWeb: string
-  signKey: string
-  encryptionKey: string
-  encryptionKeyV2: string
 }
 export async function getRemoteConfig() {
   // call host + /api/get_config and parse the result as json using axios

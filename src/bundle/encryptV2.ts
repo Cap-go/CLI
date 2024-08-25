@@ -46,17 +46,8 @@ export async function encryptZipV2(zipPath: string, options: Options) {
 
   if (!existsSync(keyPath) && !privateKey) {
     log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
-    if (ciDetect.isCI) {
-      log.error(`Error: Missing key`)
-      program.error('')
-    }
-    const res = await confirmC({ message: `Do you want to use our private key?` })
-    if (!res) {
-      log.error(`Error: Missing private key`)
-      program.error('')
-    }
-
-    privateKey = localConfig.encryptionKeyV2 || ''
+    log.error(`Error: Missing key`)
+    program.error('')
   }
   else if (existsSync(keyPath)) {
     // open with fs key path

@@ -257,17 +257,8 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // check if publicKey exist
     if (!keyDataV2 && !existsSync(privateKey)) {
       log.error(`Cannot find private key ${privateKey}`)
-      if (ciDetect.isCI) {
-        log.error('Cannot ask if user wants to use capgo public key on the cli')
-        program.error('')
-      }
-
-      const res = await confirmC({ message: 'Do you want to use our public key ?' })
-      if (!res) {
-        log.error(`Error: Missing public key`)
-        program.error('')
-      }
-      keyDataV2 = localConfig.encryptionKeyV2 || ''
+      log.error('Cannot ask if user wants to use capgo public key on the cli')
+      program.error('')
     }
     await snag.track({
       channel: 'app',
