@@ -8,9 +8,11 @@ import { initApp } from './init'
 import { listBundle } from './bundle/list'
 import { decryptZip } from './bundle/decrypt'
 import { encryptZip } from './bundle/encrypt'
+import { encryptZipV2 } from './bundle/encryptV2'
 import { addCommand } from './app/add'
 import { getInfo } from './app/info'
 import { createKeyCommand, saveKeyCommand } from './key'
+import { createKeyCommandV2, saveKeyCommandV2 } from './keyV2'
 import { deleteBundle } from './bundle/delete'
 import { setChannel } from './channel/set'
 import { currentBundle } from './channel/currentBundle'
@@ -131,6 +133,8 @@ bundle
   .option('--no-s3-ssl', 'Disable SSL for S3 upload')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--key-v2 <key>', 'custom path for private signing key')
+  .option('--key-data-v2  <keyData>', 'base64 private signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
@@ -197,6 +201,13 @@ bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
+  .option('--key <key>', 'custom path for private signing key')
+  .option('--key-data <keyData>', 'base64 private signing key')
+
+bundle
+  .command('encryptV2 [zipPath]')
+  .description('Encrypt a zip bundle using the new encryption method')
+  .action(encryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
   .option('--key-data <keyData>', 'base64 private signing key')
 
@@ -285,6 +296,24 @@ key
   .command('create')
   .description('Create a new encryption key')
   .action(createKeyCommand)
+  .option('-f, --force', 'force generate a new one')
+
+const keyV2 = program
+  .command('keyV2')
+  .description('Manage encryption key')
+
+keyV2
+  .command('save')
+  .description('Save base64 encryption key in capacitor config, usefull for CI')
+  .action(saveKeyCommandV2)
+  .option('-f, --force', 'force generate a new one')
+  .option('--key', 'key path to save in capacitor config')
+  .option('--key-data', 'key data to save in capacitor config')
+
+keyV2
+  .command('create')
+  .description('Create a new encryption key')
+  .action(createKeyCommandV2)
   .option('-f, --force', 'force generate a new one')
 
 const signing = program

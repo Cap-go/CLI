@@ -11,8 +11,9 @@ import ky, { HTTPError } from 'ky'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource, signBundle, verifySignature } from '../api/crypto'
+import { encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyPubV2, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -25,7 +26,9 @@ interface Options extends OptionsBase {
   displayIvSession?: boolean
   external?: string
   key?: boolean | string
+  keyV2?: boolean | string
   keyData?: string
+  keyDataV2?: string
   ivSessionKey?: string
   s3Region?: string
   s3Apikey?: string
@@ -232,6 +235,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   let checksum = ''
   let zipped: Buffer | null = null
   const key = options.key
+  const keyV2 = options.keyV2
 
   zipped = await zipFile(path)
   const s = spinnerC()
@@ -241,6 +245,50 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
   if (key === false) {
     log.info(`Encryption ignored`)
+  }
+  else if (keyV2 || existsSync(baseKeyPubV2)) {
+    const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyPubV2
+    let keyDataV2 = options.keyDataV2 || ''
+    // check if publicKey exist
+    if (!keyDataV2 && !existsSync(privateKey)) {
+      log.error(`Cannot find private key ${privateKey}`)
+      if (ciDetect.isCI) {
+        log.error('Cannot ask if user wants to use capgo public key on the cli')
+        program.error('')
+      }
+
+      const res = await confirmC({ message: 'Do you want to use our public key ?' })
+      if (!res) {
+        log.error(`Error: Missing public key`)
+        program.error('')
+      }
+      keyDataV2 = localConfig.encryptionKeyV2 || ''
+    }
+    await snag.track({
+      channel: 'app',
+      event: 'App encryption v2',
+      icon: '🔑',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+    // open with fs publicKey path
+    if (!keyDataV2) {
+      const keyFile = readFileSync(privateKey)
+      keyDataV2 = keyFile.toString()
+    }
+    // encrypt
+    log.info(`Encrypting your bundle`)
+    const res = encryptSourceV2(zipped, keyDataV2)
+    sessionKey = res.ivSessionKey
+    if (options.displayIvSession) {
+      log.info(`Your Iv Session key is ${sessionKey},
+    keep it safe, you will need it to decrypt your bundle.
+    It will be also visible in your dashboard\n`)
+    }
+    zipped = res.encryptedData
   }
   else if (key || existsSync(baseKeyPub)) {
     const publicKey = typeof key === 'string' ? key : baseKeyPub

@@ -7,8 +7,8 @@ import * as p from '@clack/prompts'
 import type LogSnag from 'logsnag'
 import semver from 'semver'
 import tmp from 'tmp'
+import { createKeyV2 } from './keyV2'
 import { markSnag, waitLog } from './app/debug'
-import { createKey } from './key'
 import { addChannel } from './channel/add'
 import { uploadBundle } from './bundle/upload'
 import { doLoginExists, login } from './login'
@@ -299,7 +299,7 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
   if (doEncrypt) {
     const s = p.spinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKey({ force: true }, false)
+    const keyRes = await createKeyV2({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
       p.log.warn(`Cannot create key ❌`)
@@ -309,7 +309,7 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
     else {
       s.stop(`key created 🔑`)
     }
-    markSnag('onboarding-v2', orgId, snag, 'Use encryption')
+    markSnag('onboarding-v2', orgId, snag, 'Use encryption v2')
   }
   await markStep(orgId, snag, 6)
 }
@@ -459,7 +459,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 6) {
-      // await step6(orgId, snag, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
+      await step6(orgId, snag, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
       markStepDone(6)
     }
 

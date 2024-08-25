@@ -22,7 +22,9 @@ import { loadConfig, writeConfig } from './config'
 import type { Database } from './types/supabase.types'
 
 export const baseKey = '.capgo_key'
+export const baseKeyV2 = '.capgo_key_v2'
 export const baseKeyPub = `${baseKey}.pub`
+export const baseKeyPubV2 = `${baseKeyV2}.pub`
 export const baseSignKey = '.capgo_sign_key.priv'
 export const baseSignKeyPub = `.capgo_sign_key.pub`
 export const defaultHost = 'https://capgo.app'
@@ -123,7 +125,9 @@ interface CapgoConfig {
   supaKey: string
   host: string
   hostWeb: string
+  signKey: string
   encryptionKey: string
+  encryptionKeyV2: string
 }
 export async function getRemoteConfig() {
   // call host + /api/get_config and parse the result as json using axios
