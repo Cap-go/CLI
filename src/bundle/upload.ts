@@ -11,9 +11,9 @@ import ky, { HTTPError } from 'ky'
 import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource, signBundle, verifySignature } from '../api/crypto'
-import { encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyPubV2, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -240,14 +240,19 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  checksum = await getChecksum(zipped, 'crc32')
+  if (keyV2 || existsSync(baseKeyV2)) {
+    checksum = await getChecksum(zipped, 'sha256')
+  }
+  else {
+    checksum = await getChecksum(zipped, 'crc32')
+  }
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
   if (key === false) {
     log.info(`Encryption ignored`)
   }
-  else if (keyV2 || existsSync(baseKeyPubV2)) {
-    const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyPubV2
+  else if (keyV2 || existsSync(baseKeyV2)) {
+    const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
     // check if publicKey exist
     if (!keyDataV2 && !existsSync(privateKey)) {
@@ -280,8 +285,9 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       keyDataV2 = keyFile.toString()
     }
     // encrypt
-    log.info(`Encrypting your bundle`)
+    log.info(`Encrypting your bundle with V2`)
     const res = encryptSourceV2(zipped, keyDataV2)
+    checksum = encryptChecksumV2(checksum, keyDataV2)
     sessionKey = res.ivSessionKey
     if (options.displayIvSession) {
       log.info(`Your Iv Session key is ${sessionKey},
