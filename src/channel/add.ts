@@ -64,7 +64,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       notify: false,
     }).catch()
   }
-  catch (error) {
+  catch {
     log.error(`Cannot create Channel 🙀`)
     return false
   }
