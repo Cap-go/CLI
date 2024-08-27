@@ -97,7 +97,7 @@ export function createRSA(format: 'pem' | 'der/pem' = 'pem', keySize = 2048): RS
       }) as string,
     }
   }
-  else if (format === 'der/pem') {
+  else {
     return {
       publicKey: publicKey.export({
         type: 'spki',
