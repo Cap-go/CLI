@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.14.13](https://github.com/Cap-go/CLI/compare/v4.14.12...v4.14.13) (2024-08-27)
+
+
+### Bug Fixes
+
+* downgrade version ([bfcb2b9](https://github.com/Cap-go/CLI/commit/bfcb2b982d94878ada7f8bb08c96c8626d847b69))
+
+### [4.14.12](https://github.com/Cap-go/CLI/compare/v4.14.11...v4.14.12) (2024-08-27)
+
+
+### Bug Fixes
+
+* lint and update packages ([7a5bb2d](https://github.com/Cap-go/CLI/commit/7a5bb2dd7ebb0c042223e85d536b7e3c2e921eb8))
+
+### [4.14.11](https://github.com/Cap-go/CLI/compare/v4.14.10...v4.14.11) (2024-08-27)
+
+### [4.14.10](https://github.com/Cap-go/CLI/compare/v4.14.9...v4.14.10) (2024-08-27)
+
+### [4.14.9](https://github.com/Cap-go/CLI/compare/v4.14.8...v4.14.9) (2024-08-27)
+
+
+### Bug Fixes
+
+* lint issue ([2b506b0](https://github.com/Cap-go/CLI/commit/2b506b0151c5c60801aeb8575313c0baf81dd3e1))
+
 ### [4.14.8](https://github.com/Cap-go/CLI/compare/v4.14.7...v4.14.8) (2024-08-22)
 
 ### [4.14.7](https://github.com/Cap-go/CLI/compare/v4.14.6...v4.14.7) (2024-08-22)
