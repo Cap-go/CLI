@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import * as p from '@clack/prompts'
 import { writeConfig } from './config'
 import { createRSA } from './api/crypto'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
@@ -67,6 +68,10 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
       log.info('Old private key deleted from config file')
+      const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with new channel to support old apps and faciliate migration?` })
+      if (doSetupChannel) {
+        extConfig.config.plugins.CapacitorUpdater.channel = 'encryption_v2'
+      }
     }
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
 
@@ -185,8 +190,13 @@ export async function createKeyV2(options: Options, logg = true) {
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
       log.info('Old private key deleted from config file')
+      const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with new channel to support old apps and faciliate migration?` })
+      if (doSetupChannel) {
+        extConfig.config.plugins.CapacitorUpdater.channel = 'encryption_v2'
+      }
     }
 
+    extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
     // console.log('extConfig', extConfig)
     writeConfig(extConfig)
   }
