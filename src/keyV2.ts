@@ -63,6 +63,11 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
     }
     if (!extConfig.config.plugins.CapacitorUpdater)
       extConfig.config.plugins.CapacitorUpdater = {}
+    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
+    if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
+      delete extConfig.config.plugins.CapacitorUpdater.privateKey
+      log.info('Old private key deleted from config file')
+    }
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)
@@ -177,9 +182,10 @@ export async function createKeyV2(options: Options, logg = true) {
     }
 
     // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
-    if (extConfig.config.plugins.CapacitorUpdater.privateKey)
+    if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
-    extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
+      log.info('Old private key deleted from config file')
+    }
 
     // console.log('extConfig', extConfig)
     writeConfig(extConfig)
