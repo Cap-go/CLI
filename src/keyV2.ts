@@ -1,9 +1,9 @@
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import { writeConfig } from './config'
 import { createRSA } from './api/crypto'
-import { baseKeyPubV2, baseKeyV2, getConfig } from './utils'
+import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 import { checkLatest } from './api/update'
 
 interface saveOptions {
@@ -63,23 +63,70 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
     }
     if (!extConfig.config.plugins.CapacitorUpdater)
       extConfig.config.plugins.CapacitorUpdater = {}
-
-    // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
-    if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
-      log.warn('Old private key found, deleting it')
-      delete extConfig.config.plugins.CapacitorUpdater.privateKey
-    }
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)
     await writeConfig(extConfig)
   }
-  if (log) {
+  if (logg) {
     log.success(`public key saved into ${extConfig.path} file in local directory`)
     log.success(`your app will decode the zip archive with this key`)
   }
   return true
 }
+
+export async function deleteOldPrivateKey(options: Options, logg = true): Promise<boolean> {
+  if (logg)
+    intro(`Deleting old private key 🗑️`)
+
+  const extConfig = await getConfig()
+
+  if (extConfig?.config?.plugins?.CapacitorUpdater?.privateKey) {
+    delete extConfig.config.plugins.CapacitorUpdater.privateKey
+    await writeConfig(extConfig)
+    // Delete the old private key file if it exists
+    if (existsSync(baseKey)) {
+      try {
+        unlinkSync(baseKey)
+        if (logg) {
+          log.success(`Old private key file deleted: ${baseKey}`)
+        }
+      }
+      catch {
+        if (logg) {
+          log.error(`Failed to delete old private key file: ${baseKey}`)
+        }
+      }
+    }
+
+    // Delete the old public key file if it exists
+    if (existsSync(baseKeyPub)) {
+      try {
+        unlinkSync(baseKeyPub)
+        if (logg) {
+          log.success(`Old public key file deleted: ${baseKeyPub}`)
+        }
+      }
+      catch {
+        if (logg) {
+          log.error(`Failed to delete old public key file: ${baseKeyPubV2}`)
+        }
+      }
+    }
+
+    if (logg) {
+      log.success(`Old private key deleted from ${extConfig.path} file`)
+    }
+    return true
+  }
+  else {
+    if (logg) {
+      log.info(`No old private key found in config file`)
+    }
+    return false
+  }
+}
+
 export async function saveKeyCommandV2(options: saveOptions) {
   intro(`Save keys 🔑`)
   await checkLatest()
@@ -156,4 +203,9 @@ export async function createKeyV2(options: Options, logg = true) {
 export async function createKeyCommandV2(options: Options) {
   await checkLatest()
   await createKeyV2(options)
+}
+
+export async function deleteOldKeyCommandV2(options: Options) {
+  await checkLatest()
+  await deleteOldPrivateKey(options)
 }

@@ -38,6 +38,7 @@ interface Options extends OptionsBase {
   s3Endpoint?: string
   bundleUrl?: boolean
   codeCheck?: boolean
+  oldEncryption?: boolean
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
@@ -250,7 +251,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   if (key === false) {
     log.info(`Encryption ignored`)
   }
-  else if (keyV2 || existsSync(baseKeyV2)) {
+  else if ((keyV2 || existsSync(baseKeyV2)) && !options.oldEncryption) {
     const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
     // check if publicKey exist

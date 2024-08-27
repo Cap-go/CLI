@@ -11,7 +11,7 @@ import { encryptZipV2 } from './bundle/encryptV2'
 import { addCommand } from './app/add'
 import { getInfo } from './app/info'
 import { createKeyCommand, saveKeyCommand } from './key'
-import { createKeyCommandV2, saveKeyCommandV2 } from './keyV2'
+import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './keyV2'
 import { deleteBundle } from './bundle/delete'
 import { setChannel } from './channel/set'
 import { currentBundle } from './channel/currentBundle'
@@ -315,6 +315,11 @@ keyV2
   .action(createKeyCommandV2)
   .option('-f, --force', 'force generate a new one')
 
+keyV2
+  .command('delete_old')
+  .description('Delete the old encryption key')
+  .action(deleteOldKeyCommandV2)
+
 program
   .command('upload [appId]')
   .alias('u')
@@ -324,6 +329,7 @@ program
   .option('-p, --path <path>', 'path of the folder to upload')
   .option('-c, --channel <channel>', 'channel to link to')
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
+  .option('--old-encryption', 'use old encryption')
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'base64 public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
