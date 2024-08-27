@@ -155,7 +155,7 @@ export async function setChannel(channel: string, appId: string, options: Option
         program.error('')
       }
     }
-    catch (e) {
+    catch {
       log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
       program.error('')
     }

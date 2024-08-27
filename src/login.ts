@@ -54,7 +54,7 @@ export async function login(apikey: string, options: Options, shouldExit = true)
     }).catch()
     log.success(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`)
   }
-  catch (e) {
+  catch {
     log.error(`Error while saving login`)
     exit(1)
   }

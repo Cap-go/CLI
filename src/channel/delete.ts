@@ -49,7 +49,7 @@ export async function deleteChannel(channelId: string, appId: string, options: O
       notify: false,
     }).catch()
   }
-  catch (error) {
+  catch {
     log.error(`Cannot delete Channel 🙀`)
   }
   outro(`Done ✅`)

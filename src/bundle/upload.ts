@@ -160,7 +160,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
         minUpdateVersion = lastMinUpdateVersion
         spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
-      catch (error) {
+      catch {
         log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
         program.error('')
       }
