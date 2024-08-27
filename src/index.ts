@@ -1,6 +1,5 @@
 import { program } from 'commander'
 import pack from '../package.json'
-import { createSignKeyCommand, exportPrivateKey, importPrivateKey, signFileCommand } from './signing'
 import { setSetting } from './app/setting'
 import { getUserId } from './user/account'
 import { zipBundle } from './bundle/zip'
@@ -281,8 +280,8 @@ channel
   .option('--no-emulator', 'Disable sending update to emulator devices')
 
 const key = program
-  .command('key')
-  .description('Manage encryption key')
+  .command('key_old')
+  .description('Manage old encryption key')
 
 key
   .command('save')
@@ -299,7 +298,7 @@ key
   .option('-f, --force', 'force generate a new one')
 
 const keyV2 = program
-  .command('keyV2')
+  .command('key')
   .description('Manage encryption key')
 
 keyV2
@@ -315,34 +314,6 @@ keyV2
   .description('Create a new encryption key')
   .action(createKeyCommandV2)
   .option('-f, --force', 'force generate a new one')
-
-const signing = program
-  .command('sign')
-  .description('Manage encryption key')
-
-signing
-  .command('create')
-  .description('Create a new signing key')
-  .action(createSignKeyCommand)
-  .option('-f, --force', 'force generate a new one')
-
-signing
-  .command('signFile [file]')
-  .description('Signs a file. Useful for uploading signed bundles to a custom backend')
-  .action(signFileCommand)
-  .option('--json', 'Returns the output in a JSON format')
-  .option('--stdout', 'Prints the output in a standard output, do not save in a file')
-
-signing
-  .command('exportPrivateKey')
-  .description('Prints the private key as hex')
-  .action(exportPrivateKey)
-
-signing
-  .command('importPrivateKey')
-  .description('Imports the private key from a hex hex')
-  .action(importPrivateKey)
-  .option('--key <key>', 'Private key exported in a HEX format. Can be generated using "sing exportPrivateKey"')
 
 program
   .command('upload [appId]')

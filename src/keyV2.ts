@@ -65,8 +65,10 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
       extConfig.config.plugins.CapacitorUpdater = {}
 
     // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
-    if (extConfig.config.plugins.CapacitorUpdater.privateKey)
+    if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
+      log.warn('Old private key found, deleting it')
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
+    }
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)
