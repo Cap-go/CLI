@@ -46,7 +46,7 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: any, config: CapacitorConfig, appId: string, name: string) {
   try {
     const baseUrl = config?.plugins?.CapacitorUpdater?.cloudflareBaseUrl ?? defaultApiHost
-    const url = new URL(`${baseUrl}/private/partial_upload/v1`)
+    const url = new URL(`${baseUrl}/private/partial_upload`)
 
     const res = await Promise.all(chunk(manifest, 10).map(async (entries) => {
       const response = await ky.post(url, {
