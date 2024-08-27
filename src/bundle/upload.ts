@@ -542,7 +542,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    // await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
+    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
