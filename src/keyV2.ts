@@ -70,7 +70,7 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
       log.info('Old private key deleted from config file')
       const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with new channel to support old apps and faciliate migration?` })
       if (doSetupChannel) {
-        extConfig.config.plugins.CapacitorUpdater.channel = 'encryption_v2'
+        extConfig.config.plugins.CapacitorUpdater.defaultChannel = 'encryption_v2'
       }
     }
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
@@ -192,7 +192,7 @@ export async function createKeyV2(options: Options, logg = true) {
       log.info('Old private key deleted from config file')
       const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with new channel to support old apps and faciliate migration?` })
       if (doSetupChannel) {
-        extConfig.config.plugins.CapacitorUpdater.channel = 'encryption_v2'
+        extConfig.config.plugins.CapacitorUpdater.defaultChannel = 'encryption_v2'
       }
     }
 
