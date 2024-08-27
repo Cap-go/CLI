@@ -18,32 +18,6 @@ const oaepHash = 'sha256'
 const formatB64 = 'base64'
 const padding = constants.RSA_PKCS1_OAEP_PADDING
 
-export function signBundle(bundle: Buffer, key: string): string {
-  return sign('sha512', bundle, {
-    key,
-    padding: constants.RSA_PKCS1_PADDING,
-  }).toString(formatB64)
-}
-
-export async function verifySignature(signature: string, signKey: string, bundle: Buffer) {
-  const publicKey = await subtle.importKey(
-    'spki', // Key format
-    Buffer.from(signKey, 'base64'), // Key data (ArrayBuffer)
-    {
-      name: 'RSA-PSS', // Algorithm (depends on your use case)
-      hash: 'SHA-512', // Hash function (depends on your use case, e.g. 'SHA-256')
-    },
-    true, // Extractable (prevent exporting)
-    ['verify'], // Key usage
-  )
-
-  const keyObject = KeyObject.from(publicKey)
-
-  const verifier = createVerify('sha512')
-  verifier.update(bundle)
-  return verifier.verify(keyObject, signature, 'base64')
-}
-
 export function decryptSource(source: Buffer, ivSessionKey: string, privateKey: string): Buffer {
   // console.log('\nivSessionKey', ivSessionKey)
   const [ivB64, sessionb64Encrypted] = ivSessionKey.split(':')
