@@ -54,7 +54,7 @@
     "@tomasklaen/checksum": "^1.1.0",
     "@types/adm-zip": "0.5.5",
     "@types/mime": "^4.0.0",
-    "@types/node": "^20.14.11",
+    "@types/node": "^22.0.0",
     "@types/npmcli__ci-detect": "^2.0.3",
     "@types/prettyjson": "^0.0.33",
     "@types/prompt-sync": "^4.2.3",
