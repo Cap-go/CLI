@@ -4,16 +4,15 @@ import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
-import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -163,7 +162,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
         minUpdateVersion = lastMinUpdateVersion
         spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
-      catch (error) {
+      catch {
         log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
         program.error('')
       }
@@ -257,7 +256,6 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // check if publicKey exist
     if (!keyDataV2 && !existsSync(privateKey)) {
       log.error(`Cannot find private key ${privateKey}`)
-      log.error('Cannot ask if user wants to use capgo public key on the cli')
       program.error('')
     }
     await snag.track({
@@ -293,17 +291,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // check if publicKey exist
     if (!keyData && !existsSync(publicKey)) {
       log.error(`Cannot find public key ${publicKey}`)
-      if (ciDetect.isCI) {
-        log.error('Cannot ask if user wants to use capgo public key on the cli')
-        program.error('')
-      }
-
-      const res = await confirmC({ message: 'Do you want to use our public key ?' })
-      if (!res) {
-        log.error(`Error: Missing public key`)
-        program.error('')
-      }
-      keyData = localConfig.signKey || ''
+      program.error('')
     }
     await snag.track({
       channel: 'app',

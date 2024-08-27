@@ -1,15 +1,11 @@
 import {
-  KeyObject,
   constants,
   createCipheriv,
   createDecipheriv,
-  createVerify,
   generateKeyPairSync,
   privateDecrypt,
   publicEncrypt,
   randomBytes,
-  sign,
-  subtle,
 } from 'node:crypto'
 import { Buffer } from 'node:buffer'
 

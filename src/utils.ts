@@ -110,7 +110,7 @@ export async function getLocalConfig() {
     }
     return capConfig
   }
-  catch (error) {
+  catch {
     return {
       host: defaultHost,
       hostWeb: defaultHostWeb,
@@ -1068,7 +1068,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
   try {
     castedRemoteNativePackages = (remoteNativePackages as any).version.native_packages
   }
-  catch (err) {
+  catch {
     // If we do not do this we will get an unreadable
     log.error(`Error parsing native packages`)
     program.error('')

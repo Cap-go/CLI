@@ -43,10 +43,13 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js"
   },
+  "dependencies": {
+    "@types/node-dir": "^0.0.37"
+  },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.23.0",
+    "@antfu/eslint-config": "^2.27.3",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
-    "@capacitor/cli": "^6.1.1",
+    "@capacitor/cli": "^6.1.2",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
     "@manypkg/find-root": "^2.2.1",
@@ -60,8 +63,8 @@
     "@types/prompt-sync": "^4.2.3",
     "@types/semver": "^7.5.8",
     "@types/tmp": "^0.2.6",
-    "@typescript-eslint/eslint-plugin": "^7.16.1",
-    "@typescript-eslint/parser": "^7.16.1",
+    "@typescript-eslint/eslint-plugin": "^8.3.0",
+    "@typescript-eslint/parser": "^8.3.0",
     "@vercel/ncc": "^0.38.1",
     "adm-zip": "^0.5.14",
     "ci-info": "^4.0.0",
@@ -77,6 +80,7 @@
     "ky": "^1.4.0",
     "logsnag": "1.0.0",
     "mime": "^4.0.4",
+    "node-dir": "^0.1.17",
     "open": "^10.1.0",
     "pkg": "5.8.1",
     "prettyjson": "^1.2.5",
@@ -85,7 +89,6 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typescript": "5.5.4",
-    "node-dir": "^0.1.17"
+    "typescript": "5.5.4"
   }
 }

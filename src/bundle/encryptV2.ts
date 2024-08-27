@@ -1,11 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import { program } from 'commander'
-import ciDetect from 'ci-info'
-import { confirm as confirmC, intro, log, outro } from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
-import { baseKey, getConfig, getLocalConfig } from '../utils'
+import { baseKey, getConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -16,10 +15,7 @@ export async function encryptZipV2(zipPath: string, options: Options) {
   intro(`Encryption`)
 
   await checkLatest()
-  const localConfig = await getLocalConfig()
   const extConfig = await getConfig()
-  // console.log('localConfig - ', localConfig)
-  // console.log('config - ', config)
 
   const hasPrivateKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.privateKey
   const hasPublicKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.publicKey
