@@ -8,7 +8,7 @@ import type LogSnag from 'logsnag'
 import semver from 'semver'
 import tmp from 'tmp'
 import { markSnag, waitLog } from './app/debug'
-import { createKey } from './key'
+// import { createKey } from './key'
 import { addChannel } from './channel/add'
 import { uploadBundle } from './bundle/upload'
 import { doLoginExists, login } from './login'
@@ -292,27 +292,27 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
   }
 }
 
-async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string) {
-  const pm = getPMAndCommand()
-  const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
-  await cancelCommand(doEncrypt, orgId, snag)
-  if (doEncrypt) {
-    const s = p.spinner()
-    s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKey({ force: true }, false)
-    if (!keyRes) {
-      s.stop('Error')
-      p.log.warn(`Cannot create key ❌`)
-      p.outro(`Bye 👋`)
-      exit(1)
-    }
-    else {
-      s.stop(`key created 🔑`)
-    }
-    markSnag('onboarding-v2', orgId, snag, 'Use encryption')
-  }
-  await markStep(orgId, snag, 6)
-}
+// async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+//   const pm = getPMAndCommand()
+//   const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
+//   await cancelCommand(doEncrypt, orgId, snag)
+//   if (doEncrypt) {
+//     const s = p.spinner()
+//     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
+//     const keyRes = await createKey({ force: true }, false)
+//     if (!keyRes) {
+//       s.stop('Error')
+//       p.log.warn(`Cannot create key ❌`)
+//       p.outro(`Bye 👋`)
+//       exit(1)
+//     }
+//     else {
+//       s.stop(`key created 🔑`)
+//     }
+//     markSnag('onboarding-v2', orgId, snag, 'Use encryption')
+//   }
+//   await markStep(orgId, snag, 6)
+// }
 
 async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string) {
   const pm = getPMAndCommand()
