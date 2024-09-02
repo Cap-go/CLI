@@ -91,7 +91,7 @@ export async function setChannel(channel: string, appId: string, options: Option
       version: undefined as any,
     }
     const pack = await readPackageJson()
-    const bundleVersion = latest ? pack?.version : bundle
+    const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || pack?.version) : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
         .from('app_versions')
