@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.14.15](https://github.com/Cap-go/CLI/compare/v4.14.14...v4.14.15) (2024-09-03)
+
+
+### Bug Fixes
+
+* add back the auto delete in the config ([8911097](https://github.com/Cap-go/CLI/commit/8911097e2b855d0fc322e1decb1f7a5cfef5fa1e))
+* allow easy migration ([41ef63e](https://github.com/Cap-go/CLI/commit/41ef63eea80d59c8877315ba87922aacca943858))
+* lint ([ce1633c](https://github.com/Cap-go/CLI/commit/ce1633ce761a354f652a3c2b0582c8edf390271e))
+* lint ([2d4594e](https://github.com/Cap-go/CLI/commit/2d4594e081646459117520b394bcd5ee3af72396))
+* make it easy to upload with old encryption ([94a5792](https://github.com/Cap-go/CLI/commit/94a5792a3681ccdf0b3bbcfe0914b9a23baf0ad9))
+* remove global key ([79ad44d](https://github.com/Cap-go/CLI/commit/79ad44d55242276844b5e268792c5580519def0f))
+* remove signing ([d643a55](https://github.com/Cap-go/CLI/commit/d643a553efa946722d28043b8c7fd9e2863821fd))
+* return type ([f9de81e](https://github.com/Cap-go/CLI/commit/f9de81e3ef95a1cfd8695139ca9bf49d1ac57c21))
+* text ([2a2016e](https://github.com/Cap-go/CLI/commit/2a2016eb8cbe0b20516ec6ad06952c30fe3c94f2))
+* use jsr ([5de8a33](https://github.com/Cap-go/CLI/commit/5de8a333c5fe9d74acad106968f15e6a5c5a69b2))
+
 ### [4.14.14](https://github.com/Cap-go/CLI/compare/v4.14.13...v4.14.14) (2024-09-02)
 
 ### [4.14.13](https://github.com/Cap-go/CLI/compare/v4.14.12...v4.14.13) (2024-08-27)
