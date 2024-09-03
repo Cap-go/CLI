@@ -4,15 +4,15 @@ import { exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import ciDetect from 'ci-info'
 import type LogSnag from 'logsnag'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import ky, { HTTPError } from 'ky'
-import { confirm as confirmC, intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { encryptSource, signBundle, verifySignature } from '../api/crypto'
+import { encryptSource } from '../api/crypto'
+import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseSignKey, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -25,7 +25,9 @@ interface Options extends OptionsBase {
   displayIvSession?: boolean
   external?: string
   key?: boolean | string
+  keyV2?: boolean | string
   keyData?: string
+  keyDataV2?: string
   ivSessionKey?: string
   s3Region?: string
   s3Apikey?: string
@@ -36,6 +38,7 @@ interface Options extends OptionsBase {
   s3Endpoint?: string
   bundleUrl?: boolean
   codeCheck?: boolean
+  oldEncryption?: boolean
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
   ignoreMetadataCheck?: boolean
@@ -232,15 +235,56 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   let checksum = ''
   let zipped: Buffer | null = null
   const key = options.key
+  const keyV2 = options.keyV2
 
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  checksum = await getChecksum(zipped, 'crc32')
+  if (keyV2 || existsSync(baseKeyV2)) {
+    checksum = await getChecksum(zipped, 'sha256')
+  }
+  else {
+    checksum = await getChecksum(zipped, 'crc32')
+  }
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
   if (key === false) {
     log.info(`Encryption ignored`)
+  }
+  else if ((keyV2 || existsSync(baseKeyV2)) && !options.oldEncryption) {
+    const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
+    let keyDataV2 = options.keyDataV2 || ''
+    // check if publicKey exist
+    if (!keyDataV2 && !existsSync(privateKey)) {
+      log.error(`Cannot find private key ${privateKey}`)
+      program.error('')
+    }
+    await snag.track({
+      channel: 'app',
+      event: 'App encryption v2',
+      icon: '🔑',
+      user_id: orgId,
+      tags: {
+        'app-id': appid,
+      },
+      notify: false,
+    }).catch()
+    // open with fs publicKey path
+    if (!keyDataV2) {
+      const keyFile = readFileSync(privateKey)
+      keyDataV2 = keyFile.toString()
+    }
+    // encrypt
+    log.info(`Encrypting your bundle with V2`)
+    const res = encryptSourceV2(zipped, keyDataV2)
+    checksum = encryptChecksumV2(checksum, keyDataV2)
+    sessionKey = res.ivSessionKey
+    if (options.displayIvSession) {
+      log.info(`Your Iv Session key is ${sessionKey},
+    keep it safe, you will need it to decrypt your bundle.
+    It will be also visible in your dashboard\n`)
+    }
+    zipped = res.encryptedData
   }
   else if (key || existsSync(baseKeyPub)) {
     const publicKey = typeof key === 'string' ? key : baseKeyPub
@@ -248,17 +292,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // check if publicKey exist
     if (!keyData && !existsSync(publicKey)) {
       log.error(`Cannot find public key ${publicKey}`)
-      if (ciDetect.isCI) {
-        log.error('Cannot ask if user wants to use capgo public key on the cli')
-        program.error('')
-      }
-
-      const res = await confirmC({ message: 'Do you want to use our public key ?' })
-      if (!res) {
-        log.error(`Error: Missing public key`)
-        program.error('')
-      }
-      keyData = localConfig.signKey || ''
+      program.error('')
     }
     await snag.track({
       channel: 'app',
@@ -393,43 +427,6 @@ async function setVersionInChannel(
   }
 }
 
-async function getBundleSignature(options: Options, config: CapacitorConfig, bundle: Buffer): Promise<string | null> {
-  try {
-    const plugins = config?.plugins
-    const capacitorUpdaterConfig = (plugins || {}).CapacitorUpdater ?? {}
-    const signKey = capacitorUpdaterConfig.signKey
-    if (!existsSync(baseSignKey)) {
-      if (signKey) {
-        log.error('Public signature key found in CapacitorUpdater config but private key not found')
-        log.error('Cannot allow upload as updates will fail without a valid signature')
-        program.error('')
-      }
-      log.info('Private key not found, skipping signing')
-      return null
-    }
-    if (!signKey) {
-      log.error('Public key not found in capacitor config')
-      program.error('')
-    }
-
-    const privateKey = readFileSync(baseSignKey, 'utf-8')
-    const signature = signBundle(bundle, privateKey)
-    const signatureValid = await verifySignature(signature, signKey, bundle)
-    if (!signatureValid) {
-      log.error('The signature is not valid, perhaps you have mismatched key pair (?)')
-      log.error('Cannot allow upload as updates will fail without a valid signature')
-      program.error('')
-    }
-
-    log.info('Bundle signed successfully')
-    return signature
-  }
-  catch (error) {
-    log.error(`Cannot generate signature ${formatError(error)}`)
-    program.error('')
-  }
-}
-
 export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
@@ -515,9 +512,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }).catch()
     versionData.session_key = options.ivSessionKey
   }
-
-  if (zipped)
-    versionData.signature = await getBundleSignature(options, extConfig.config, zipped)
 
   // TODO: re enable this when we have the partial upload working better
   // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
