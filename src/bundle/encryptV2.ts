@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
-import { encryptSource } from '../api/crypto'
+import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { baseKey, getConfig } from '../utils'
 
 interface Options {
@@ -11,7 +11,7 @@ interface Options {
   keyData?: string
 }
 
-export async function encryptZipV2(zipPath: string, options: Options) {
+export async function encryptZipV2(zipPath: string, checksum: string, options: Options) {
   intro(`Encryption`)
 
   await checkLatest()
@@ -58,7 +58,9 @@ export async function encryptZipV2(zipPath: string, options: Options) {
   }
 
   const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSource(zipFile, privateKey)
+  const encodedZip = encryptSourceV2(zipFile, privateKey)
+  const encodedChecksum = encryptChecksumV2(checksum, privateKey)
+  log.success(`Encoded Checksum: ${encodedChecksum}`)
   log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
   // write decodedZip in a file
   writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import { program } from 'commander'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
@@ -9,6 +9,7 @@ import type {
   OptionsBase,
 } from '../utils'
 import {
+  baseKeyV2,
   formatError,
   getConfig,
   readPackageJson,
@@ -26,6 +27,7 @@ interface Options extends OptionsBase {
   codeCheck?: boolean
   name?: string
   json?: boolean
+  keyV2?: boolean
 }
 
 export async function zipBundle(appId: string, options: Options) {
@@ -87,7 +89,13 @@ export async function zipBundle(appId: string, options: Options) {
     const s = spinner()
     if (!json)
       s.start(`Calculating checksum`)
-    const checksum = await getChecksum(zipped, 'crc32')
+    let checksum = ''
+    if (options.keyV2 || existsSync(baseKeyV2)) {
+      checksum = await getChecksum(zipped, 'sha256')
+    }
+    else {
+      checksum = await getChecksum(zipped, 'crc32')
+    }
     if (!json)
       s.stop(`Checksum: ${checksum}`)
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024)

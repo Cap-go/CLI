@@ -204,7 +204,7 @@ bundle
   .option('--key-data <keyData>', 'base64 private signing key')
 
 bundle
-  .command('encryptV2 [zipPath]')
+  .command('encryptV2 [zipPath] [checksum]')
   .description('Encrypt a zip bundle using the new encryption method')
   .action(encryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
@@ -219,6 +219,7 @@ bundle
   .option('-n, --name <name>', 'name of the zip file')
   .option('-j, --json', 'output in JSON')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
+  .option('--key-v2', 'use encryption v2')
 
 const channel = program
   .command('channel')

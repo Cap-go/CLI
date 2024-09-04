@@ -1,11 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import { program } from 'commander'
-import ciDetect from 'ci-info'
-import { confirm as confirmC, intro, log, outro } from '@clack/prompts'
+import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptSource } from '../api/crypto'
-import { baseKeyPub, getLocalConfig } from '../utils'
+import { baseKeyPub } from '../utils'
 
 interface Options {
   key?: string
@@ -16,7 +15,6 @@ export async function encryptZip(zipPath: string, options: Options) {
   intro(`Encryption`)
 
   await checkLatest()
-  const localConfig = await getLocalConfig()
 
   // write in file .capgo the apikey in home directory
 
@@ -30,20 +28,7 @@ export async function encryptZip(zipPath: string, options: Options) {
 
   let publicEncryptionKey = options.keyData || ''
 
-  if (!existsSync(keyPath) && !publicEncryptionKey) {
-    log.warning(`Cannot find public key ${keyPath} or as keyData option`)
-    if (ciDetect.isCI) {
-      log.error(`Error: Missing public key`)
-      program.error('')
-    }
-    const res = await confirmC({ message: 'Do you want to use our public key ?' })
-    if (!res) {
-      log.error(`Error: Missing public key`)
-      program.error('')
-    }
-    publicEncryptionKey = localConfig.encryptionKey || ''
-  }
-  else if (existsSync(keyPath)) {
+  if (existsSync(keyPath)) {
     // open with fs publicKey path
     const keyFile = readFileSync(keyPath)
     publicEncryptionKey = keyFile.toString()
