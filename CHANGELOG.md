@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.15.0](https://github.com/Cap-go/CLI/compare/v4.14.16...v4.15.0) (2024-09-08)
+
+
+### Features
+
+* add 'encrypted-checksum' flag into upload ([f40f9e4](https://github.com/Cap-go/CLI/commit/f40f9e4a0c253def57e6c686c3471c60b132c38f))
+
 ### [4.14.16](https://github.com/Cap-go/CLI/compare/v4.14.15...v4.14.16) (2024-09-04)
 
 
