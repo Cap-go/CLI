@@ -149,6 +149,7 @@ bundle
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
   .option('--multipart', 'Uses multipart protocol to upload data to S3')
   .option('--ignore-partial', 'Does not upload partial files to S3')
+  .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
 
 bundle
   .command('compatibility [appId]')

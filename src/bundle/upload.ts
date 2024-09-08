@@ -46,6 +46,7 @@ interface Options extends OptionsBase {
   timeout?: number
   multipart?: boolean
   ignorePartial?: boolean
+  encryptedChecksum?: string
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -511,6 +512,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       notify: false,
     }).catch()
     versionData.session_key = options.ivSessionKey
+    versionData.checksum = options.encryptedChecksum
   }
 
   // TODO: re enable this when we have the partial upload working better
