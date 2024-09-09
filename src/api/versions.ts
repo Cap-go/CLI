@@ -1,14 +1,14 @@
 import { exit } from 'node:process'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { log } from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import { log } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
-
+import type { SupabaseClient } from '@supabase/supabase-js'
 // import { definitions } from '../types/types_supabase';
 import { getHumanDate } from '../utils'
+
 import { checkVersionNotUsedInChannel } from './channels'
 import { checkVersionNotUsedInDeviceOverride } from './devices_override'
+import type { Database } from '../types/supabase.types'
 
 export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid: string, bundle: string) {
   const { error: delAppSpecVersionError } = await supabase

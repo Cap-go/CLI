@@ -1,10 +1,10 @@
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { createChannel, findUnknownVersion } from '../api/channels'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, OrganizationPerm, useLogSnag, verifyUser } from '../utils'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   default?: boolean

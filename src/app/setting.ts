@@ -1,7 +1,7 @@
 import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { type OptionsBase, formatError, getConfig } from '../utils'
 import { writeConfig } from '../config'
+import { formatError, getConfig, type OptionsBase } from '../utils'
 
 interface Options extends OptionsBase {
   bool?: string

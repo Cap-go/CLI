@@ -1,22 +1,22 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
-import type { ExecSyncOptions } from 'node:child_process'
 import { execSync, spawnSync } from 'node:child_process'
-import { exit } from 'node:process'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { exit } from 'node:process'
 import * as p from '@clack/prompts'
-import type LogSnag from 'logsnag'
 import semver from 'semver'
 import tmp from 'tmp'
-import { createKeyV2 } from './keyV2'
-import { markSnag, waitLog } from './app/debug'
-import { addChannel } from './channel/add'
-import { uploadBundle } from './bundle/upload'
-import { doLoginExists, login } from './login'
-import { addAppInternal } from './app/add'
+import type LogSnag from 'logsnag'
+import type { ExecSyncOptions } from 'node:child_process'
 import { checkLatest } from './api/update'
+import { addAppInternal } from './app/add'
+import { markSnag, waitLog } from './app/debug'
+import { uploadBundle } from './bundle/upload'
+import { addChannel } from './channel/add'
+import { createKeyV2 } from './keyV2'
+import { doLoginExists, login } from './login'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, useLogSnag, verifyUser } from './utils'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, useLogSnag, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -34,7 +34,8 @@ function readTmpObj() {
   if (!tmpObject) {
     tmpObject = readdirSync(tmp.tmpdir)
       .map((name) => { return { name, full: `${tmp.tmpdir}/${name}` } })
-      .find(obj => obj.name.startsWith('capgocli'))?.full
+      .find(obj => obj.name.startsWith('capgocli'))
+      ?.full
       ?? tmp.fileSync({ prefix: 'capgocli' }).name
   }
 }

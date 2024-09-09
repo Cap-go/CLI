@@ -1,24 +1,24 @@
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import { getVersionData } from '../api/versions'
-import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
-import { checkVersionNotUsedInChannel } from '../api/channels'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import type {
-  OptionsBase,
-} from '../utils'
+import { checkVersionNotUsedInChannel } from '../api/channels'
+import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
+import { getVersionData } from '../api/versions'
 import {
-  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
   getOrganizationId,
+  OrganizationPerm,
   readPackageJson,
   useLogSnag,
   verifyUser,
+} from '../utils'
+import type {
+  OptionsBase,
 } from '../utils'
 
 interface Options extends OptionsBase {

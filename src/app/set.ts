@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import mime from 'mime'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import type { Options } from '../api/app'
+import { program } from 'commander'
+import mime from 'mime'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganization, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganization, OrganizationPerm, verifyUser } from '../utils'
+import type { Options } from '../api/app'
 
 export async function setApp(appId: string, options: Options) {
   intro(`Set app`)

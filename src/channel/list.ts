@@ -1,10 +1,10 @@
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
+import { createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, useLogSnag, verifyUser } from '../utils'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
 
 export async function listChannels(appId: string, options: OptionsBase) {
   intro(`List channels`)

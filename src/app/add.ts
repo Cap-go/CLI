@@ -1,14 +1,10 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import mime from 'mime'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import { checkLatest } from '../api/update'
-import type { Options } from '../api/app'
+import { program } from 'commander'
+import mime from 'mime'
 import { checkAppExists, newIconPath } from '../api/app'
-import type {
-  Organization,
-} from '../utils'
+import { checkLatest } from '../api/update'
 import {
   checkPlanValid,
   createSupabaseClient,
@@ -17,6 +13,10 @@ import {
   getConfig,
   getOrganization,
   verifyUser,
+} from '../utils'
+import type { Options } from '../api/app'
+import type {
+  Organization,
 } from '../utils'
 
 export async function addApp(appId: string, options: Options, throwErr = true) {

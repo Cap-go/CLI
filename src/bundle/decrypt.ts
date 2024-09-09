@@ -1,10 +1,10 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
 import { decryptSource } from '../api/crypto'
-import { baseKey, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
+import { baseKey, getConfig } from '../utils'
 
 interface Options {
   key?: string

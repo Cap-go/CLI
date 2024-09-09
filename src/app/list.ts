@@ -1,12 +1,12 @@
 import { exit } from 'node:process'
+import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { intro, log, outro } from '@clack/prompts'
+import { checkLatest } from '../api/update'
+import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
-import { checkLatest } from '../api/update'
 
 function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
   if (!data.length) {

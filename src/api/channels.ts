@@ -1,10 +1,10 @@
 import { exit } from 'node:process'
-import type { SupabaseClient } from '@supabase/supabase-js'
+import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatError } from '../utils'
+import type { Database } from '../types/supabase.types'
 
 export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: channelFound, error: errorChannel } = await supabase
@@ -51,7 +51,8 @@ export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: st
     .eq('app_id', appId)
     .eq('name', 'unknown')
     .throwOnError()
-    .single().then(({ data, error }) => {
+    .single()
+    .then(({ data, error }) => {
       if (error) {
         log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
         program.error('')
