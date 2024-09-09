@@ -1,12 +1,12 @@
 import { exit } from 'node:process'
-import ky from 'ky'
-import { program } from 'commander'
-import type LogSnag from 'logsnag'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
+import { program } from 'commander'
+import ky from 'ky'
+import type LogSnag from 'logsnag'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import { OrganizationPerm, convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, OrganizationPerm, useLogSnag, verifyUser } from '../utils'
+import type { Database } from '../types/supabase.types'
 
 function wait(ms: number) {
   return new Promise((resolve) => {

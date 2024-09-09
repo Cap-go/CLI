@@ -1,9 +1,9 @@
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, isCancel, log, outro, select } from '@clack/prompts'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, OrganizationPerm, useLogSnag, verifyUser } from '../utils'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
 
 export async function deleteApp(appId: string, options: OptionsBase) {
   intro(`Deleting`)

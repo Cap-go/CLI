@@ -1,9 +1,9 @@
+import { intro, log } from '@clack/prompts'
 import { program } from 'commander'
 import { Table } from 'console-table-printer'
-import { intro, log } from '@clack/prompts'
-import type { OptionsBase } from '../utils'
-import { OrganizationPerm, checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import type { OptionsBase } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string

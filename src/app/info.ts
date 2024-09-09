@@ -1,9 +1,9 @@
-import { exit, version as nodeVersion } from 'node:process'
 import { platform, version } from 'node:os'
-import getLatest from 'get-latest-version'
+import { exit, version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
-import { getConfig, readPackageJson } from '../utils'
+import getLatest from 'get-latest-version'
 import pack from '../../package.json'
+import { getConfig, readPackageJson } from '../utils'
 
 async function getLatestDependencies(installedDependencies: { [key: string]: string }) {
   const latestDependencies: { [key: string]: string } = {}

@@ -1,23 +1,23 @@
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import type {
-  OptionsBase,
-} from '../utils'
 import {
-  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
   getOrganizationId,
+  OrganizationPerm,
   readPackageJson,
   updateOrCreateChannel,
   useLogSnag,
   verifyUser,
+} from '../utils'
+import type { Database } from '../types/supabase.types'
+import type {
+  OptionsBase,
 } from '../utils'
 
 interface Options extends OptionsBase {

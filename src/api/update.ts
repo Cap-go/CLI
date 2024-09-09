@@ -1,5 +1,5 @@
-import getLatest from 'get-latest-version'
 import { log } from '@clack/prompts'
+import getLatest from 'get-latest-version'
 import pack from '../../package.json'
 
 export async function checkLatest() {

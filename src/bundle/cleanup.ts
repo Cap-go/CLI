@@ -1,14 +1,14 @@
 import { exit } from 'node:process'
+import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import semver from 'semver/preload'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils'
-import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
+import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, OrganizationPerm, verifyUser } from '../utils'
+import type { Database } from '../types/supabase.types'
+import type { OptionsBase } from '../utils'
 
 interface Options extends OptionsBase {
   version: string

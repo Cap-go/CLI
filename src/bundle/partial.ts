@@ -1,11 +1,11 @@
 import { createReadStream } from 'node:fs'
-import { createGzip } from 'node:zlib'
 import { buffer as readBuffer } from 'node:stream/consumers'
-import type LogSnag from 'logsnag'
-import ky, { HTTPError } from 'ky'
+import { createGzip } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
+import ky, { HTTPError } from 'ky'
+import type LogSnag from 'logsnag'
+import { formatError, generateManifest, manifestUploadUrls, UPLOAD_TIMEOUT } from '../utils'
 import type { manifestType, uploadUrlsType } from '../utils'
-import { UPLOAD_TIMEOUT, formatError, generateManifest, manifestUploadUrls } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -53,9 +53,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     }
     catch (errorUpload) {
       if (errorUpload instanceof HTTPError) {
-        errorUpload.response.text()
-          .then(body => log.error(`Response: ${formatError(body)}`))
-          .catch(() => log.error('Cannot get response body'))
+        errorUpload.response.text().then(body => log.error(`Response: ${formatError(body)}`)).catch(() => log.error('Cannot get response body'))
       }
       else {
         console.error(errorUpload)

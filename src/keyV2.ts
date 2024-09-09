@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import * as p from '@clack/prompts'
-import { writeConfig } from './config'
+import { program } from 'commander'
 import { createRSA } from './api/crypto'
-import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 import { checkLatest } from './api/update'
+import { writeConfig } from './config'
+import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 
 interface saveOptions {
   key?: string

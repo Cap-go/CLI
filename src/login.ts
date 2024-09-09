@@ -1,10 +1,10 @@
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import { createSupabaseClient, useLogSnag, verifyUser } from './utils'
+import { program } from 'commander'
 import { checkLatest } from './api/update'
+import { createSupabaseClient, useLogSnag, verifyUser } from './utils'
 
 interface Options {
   local: boolean

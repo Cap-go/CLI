@@ -1,13 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import { program } from 'commander'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { intro, log, outro, spinner } from '@clack/prompts'
+import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { program } from 'commander'
 import { checkLatest } from '../api/update'
-import type {
-  OptionsBase,
-} from '../utils'
 import {
   baseKeyV2,
   formatError,
@@ -18,6 +15,9 @@ import {
   zipFile,
 } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
+import type {
+  OptionsBase,
+} from '../utils'
 
 const alertMb = 20
 

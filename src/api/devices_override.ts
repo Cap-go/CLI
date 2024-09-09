@@ -1,9 +1,9 @@
 import { exit } from 'node:process'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { program } from 'commander'
 import { confirm as confirmC, intro, log, spinner } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
+import { program } from 'commander'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { formatError } from '../utils'
+import type { Database } from '../types/supabase.types'
 
 export async function checkVersionNotUsedInDeviceOverride(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
   const { data: deviceFound, error: errorDevice } = await supabase
