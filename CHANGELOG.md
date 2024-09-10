@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.16.0](https://github.com/Cap-go/CLI/compare/v4.15.2...v4.16.0) (2024-09-10)
+
+
+### Features
+
+* add in the CLI to ask file path if not found for main ([5a7ed1d](https://github.com/Cap-go/CLI/commit/5a7ed1d32ea36d3db3f32390d327403dc1ad2410))
+
 ### [4.15.2](https://github.com/Cap-go/CLI/compare/v4.15.1...v4.15.2) (2024-09-10)
 
 
