@@ -250,19 +250,22 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
         mainFilePath = await findMainFileForProjectType(projectType, isTypeScript)
       }
 
-      if (!mainFilePath) {
-        s.stop('Error')
-        if (projectType === 'nextjs-js' || projectType === 'nextjs-ts') {
-          p.log.warn(`You might not be using app router configuration or the latest version of Next.js`)
-        }
-        else {
-          p.log.warn(`Cannot find the latest version of ${projectType}, you might need to upgrade to the latest version of ${projectType}`)
-        }
-        p.outro(`Bye 👋`)
-        exit()
-      }
-
       // Open main file and inject codeInject
+      if (!mainFilePath || !existsSync(mainFilePath)) {
+        s.stop('Cannot find main file to install Updater plugin')
+        const userProvidedPath = await p.text({
+          message: `Provide the correct relative path to your main file:`,
+          validate: (value) => {
+            if (!existsSync(value))
+              return 'File does not exist. Please provide a valid path.'
+          },
+        })
+        if (p.isCancel(userProvidedPath)) {
+          p.cancel('Operation cancelled.')
+          exit(1)
+        }
+        mainFilePath = userProvidedPath
+      }
       const mainFile = readFileSync(mainFilePath, 'utf8')
       const mainFileContent = mainFile.toString()
       const matches = mainFileContent.match(regexImport)
