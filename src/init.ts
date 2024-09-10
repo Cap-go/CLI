@@ -150,7 +150,7 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
     let versionToInstall = 'latest'
     const pack = await readPackageJson()
     let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
-    coreVersion = coreVersion?.replace('^', '').replace('~', '')
+    coreVersion = semver.coerce(coreVersion?.replace('^', '').replace('~', ''), { includePrerelease: true })
     if (!coreVersion) {
       s.stop('Error')
       p.log.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
