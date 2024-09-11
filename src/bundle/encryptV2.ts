@@ -4,7 +4,7 @@ import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import { checkLatest } from '../api/update'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { baseKey, getConfig } from '../utils'
+import { baseKeyV2, getConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -34,7 +34,7 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
     log.warning(`Warning: Missing Public Key in config`)
   }
 
-  const keyPath = options.key || baseKey
+  const keyPath = options.key || baseKeyV2
   // check if publicKey exist
 
   // let publicKey = options.keyData || ''
