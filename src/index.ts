@@ -131,9 +131,9 @@ bundle
   .option('--s3-port <port>', 'Port for your S3 endpoint')
   .option('--no-s3-ssl', 'Disable SSL for S3 upload')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'public signing key')
   .option('--key-v2 <key>', 'custom path for private signing key')
-  .option('--key-data-v2  <keyData>', 'base64 private signing key')
+  .option('--key-data-v2  <keyData>', 'private signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
@@ -195,21 +195,21 @@ bundle
   .description('Decrypt a signed zip bundle')
   .action(decryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
+  .option('--key-data <keyData>', 'private signing key')
 
 bundle
   .command('encrypt [zipPath]')
   .description('Encrypt a zip bundle')
   .action(encryptZip)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
+  .option('--key-data <keyData>', 'private signing key')
 
 bundle
   .command('encryptV2 [zipPath] [checksum]')
   .description('Encrypt a zip bundle using the new encryption method')
   .action(encryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'base64 private signing key')
+  .option('--key-data <keyData>', 'private signing key')
 
 bundle
   .command('zip [appId]')
@@ -333,7 +333,7 @@ program
   .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
   .option('--old-encryption', 'use old encryption')
   .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'base64 public signing key')
+  .option('--key-data <keyData>', 'public signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
