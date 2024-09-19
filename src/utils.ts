@@ -338,13 +338,13 @@ export function findSavedKey(quiet = false) {
   let keyPath = `${userHomeDir}/.capgo`
   if (existsSync(keyPath)) {
     if (!quiet)
-      log.info(`Use global apy key ${keyPath}`)
+      log.info(`Use global API key ${keyPath}`)
     key = readFileSync(keyPath, 'utf8').trim()
   }
   keyPath = `.capgo`
   if (!key && existsSync(keyPath)) {
     if (!quiet)
-      log.info(`Use local apy key ${keyPath}`)
+      log.info(`Use local API key ${keyPath}`)
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
