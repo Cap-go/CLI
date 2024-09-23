@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.17.0](https://github.com/Cap-go/CLI/compare/v4.16.6...v4.17.0) (2024-09-23)
+
+
+### Features
+
+* add json output for encryptionv2 ([23de60e](https://github.com/Cap-go/CLI/commit/23de60e975e60a2b83b83f0ecda584f6f7374a51))
+
 ### [4.16.6](https://github.com/Cap-go/CLI/compare/v4.16.5...v4.16.6) (2024-09-23)
 
 
