@@ -273,7 +273,7 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
 
       if (!last) {
         s.stop('Error')
-        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/installation/`)
+        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
         p.outro(`Bye 👋`)
         exit()
       }
