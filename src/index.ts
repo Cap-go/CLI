@@ -219,7 +219,6 @@ bundle
   .action(decryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
   .option('--key-data <keyData>', 'private signing key')
-  .option('-j, --json', 'output in JSON')
   .option('--checksum <checksum>', 'checksum of the bundle, to verify the integrity of the bundle')
 
 bundle
