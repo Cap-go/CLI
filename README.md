@@ -13,9 +13,11 @@ Before use the CLI, you should register here : https://capgo.app/
 
 Then go to your account in `apikey` section and click in the `all` key to copy it.
 
+Follow the documentation here : "https://capacitorjs.com/docs/getting-started/
+
 ### **Init**
 
-`npx @capgo/cli init [apikey]`
+`npx @capgo/cli@latest init [apikey]`
 
 This method is here to onboard you step by step.
 
@@ -49,7 +51,7 @@ This command will also be useful for bug report.
 
 `npx @capgo/cli app add [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 > 💡 All option will be guessed in your config if not provided.
 
@@ -73,7 +75,7 @@ Example of `capacitor.config.json` for appId and AppName, the icon is guess in t
 
 `npx @capgo/cli app set [appId]`
 
-`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -86,7 +88,7 @@ Optionally, you can give:
 
 `npx @capgo/cli app list [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -96,7 +98,7 @@ Optionally, you can give:
 
 `npx @capgo/cli app delete [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -107,12 +109,27 @@ Optionally, you can give:
 
 `npx @capgo/cli app debug [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
 * `--apikey [key]` API key to link to your account.
 * `--device` with the specific device you want to debug
+
+### Setting
+
+`npx @capgo/cli app setting [path]`
+
+Edit the Capacitor config.
+
+`[path]` - path of the setting that you would like to change. For example, to change the `appId`, provide `appId`.
+If you wish to disable auto update in the `capacitor-updater` provide `plugins.CapacitorUpdater.autoUpdate`
+
+You MUST provide either `--string` or `--bool`!
+
+Options:
+ - `--string <string>` - sets the setting to a string
+ - `--bool <true | false>` - sets the setting to a boolean
 
 ## Bundle
 
@@ -120,7 +137,7 @@ Optionally, you can give:
 
 `npx @capgo/cli bundle upload [appId]`
 
-`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -137,7 +154,7 @@ Optionally, you can give:
 * `--s3-apisecret [secretkey]` API secret necessary for uploading to S3.
 * `--s3-region [region]` to set the region of the AWS S3 account of the two previous API keys.
 * `--s3-bucket-name [bucketName]` to set the name of the AWS S3 bucket to which upload.
-* `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132).
+* `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132/).
 * `--no-code-check` to ignore the code check and send the bundle anyway.
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
@@ -156,13 +173,13 @@ Example of `package.json` for version
 
 > ⛔ Version should be greater than “0.0.0”.
 
-> 💡 Don't forget to update the version number each time you send one, or the device will don't see the update.
+> 💡 Don't forget to update the version number each time you send one, version number cannot be overrode, or reused after deletion for security reason.
 
 ### **List**
 
 `npx @capgo/cli bundle list [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -172,7 +189,7 @@ Optionally, you can give:
 
 `npx @capgo/cli bundle delete [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -185,7 +202,7 @@ in a SemVer range for a major version to Cloud
 
 `npx @capgo/cli bundle cleanup [appId] --bundle=[majorVersion] --keep=[numberToKeep]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -205,14 +222,31 @@ This command will ignore bundles which are currently in use in any channel.
 
 ### **Encrypt**
 
+> **Warning**: This command is deprecated and will be removed in the next major release. Please use the new encryption system.
 `npx @capgo/cli bundle encrypt [path/to/zip]`
 
-This command is used when you use external source to store your code or for test purpose. 
+This command is used when you use external source to store your code or for test purpose.
 
 Optionally, you can give:
 
 `--key [/path/to/my/private_key]` the path of your private key.
-`--key-data [privateKey]` the private key data, if you want to use inline. 
+`--key-data [privateKey]` the private key data, if you want to use inline.
+The command will print your `ivSessionKey`y and generate an encrypted zip, to use it with the upload command or decryt command.
+
+### **Encrypt V2**
+
+`npx @capgo/cli bundle encryptV2 [path/to/zip] [checksum]`
+
+This command is used when you use external source to store your code or for test purpose.
+The checksum is the sha256 of the bundle (generated by --key-v2), it is used to verify the integrity of the file after decryption.
+It will be enncrypted with the private key and sent along with the bundle.
+In encryption v2 the checksum is upgraded to become a "signature" of the bundle.
+
+Optionally, you can give:
+
+`--key [/path/to/my/private_key]` the path of your private key.
+`--key-data [privateKey]` the private key data, if you want to use inline.
+`--json` to output info as json.
 The command will print your `ivSessionKey`y and generate an encrypted zip, to use it with the upload command or decryt command.
 
 ### **Decrypt**
@@ -225,17 +259,42 @@ Optionally, you can give:
 
 `--key-data [privateKey]` the private key data, if you want to use inline. This command is mainly used for test purpose, it will decrypt the zip and print the base64 decrypted session key in the console.
 
+### **Decrypt V2**
+
+`npx @capgo/cli bundle decryptV2 [path/to/zip]  [ivSessionKey]`
+
+Optionally, you can give:
+
+`--key [/path/to/my/private_key]` the path of your private key.
+`--key-data [privateKey]` the private key data, if you want to use inline. This command is mainly used for test purpose, it will decrypt the zip and print the base64 decrypted session key in the console.
+`--checksum [checksum]` the checksum of the file, it will verify the checksum after decryption.
+
 ### **Zip**
 
 `npx @capgo/cli bundle zip [appId]`
 
-`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
 * `--path [/path/to/my/bundle]` to upload a specific folder.
 * `--bundle [1.0.0]` to set the bundle version number of the filename.
 * `--name [myapp]` to override the filename.
+* `--json` to output info as json.
+* `--no-code-check` to ignore the code check and send the bundle anyway.
+* `--key-v2` to use the new encryption system. This is required as new encryption system use better checksums to verify the integrity of the file.
+
+### **Compatibility**
+
+`npx @capgo/cli bundle compatibility [appId] -c [channelId]`
+
+`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
+`[channelId]` the name of your new channel.
+
+Optionally, you can give:
+
+* `--apikey [key]` API key to link to your account.
+* `--text` use text instead of emojis in the table
 
 ## Channel
 
@@ -243,19 +302,19 @@ Optionally, you can give:
 
 `npx @capgo/cli channel add [channelId] [appId]`
 
-`[channelId]` the name of your new channel. `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[channelId]` the name of your new channel. `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 ### **Delete**
 
 `npx @capgo/cli channel delete [channelId] [appId]`
 
-`[channelId]` the name of your channel you want to delete. `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[channelId]` the name of your channel you want to delete. `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 ### **List**
 
 `npx @capgo/cli channel list [appId]`
 
-`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -265,7 +324,7 @@ Optionally, you can give:
 
 `npx @capgo/cli channel set [channelId] [appId]`
 
-`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init).
+`[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
 Optionally, you can give:
 
@@ -282,7 +341,67 @@ Optionally, you can give:
 * `--no-android` disallows the channel to send version to android devices.
 * `--self-assign` allows devices to self assign to this channel.
 * `--no-self-assign` disallows devices to self assign to this channel.
+* `--disable-auto-update STRATEGY`  Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none.
 * `--apikey [key]` API key to link to your account.
+
+## Disable updates strategy
+
+There are a few ways to handle disabling updates for too old versions.\
+Capgo cannot update native code thus an update from a version with the old native code to a version with the updated native code should not be possible.
+There are a couple of ways to achieve that.
+
+First, the `major` strategy. It prevents an update from `0.0.0` -> `1.0.0`. The major is the highlighted number (**1**.0.0 and **0**.0.0).\
+Second is the `minor` strategy. It prevents an update from `0.0.0` -> `1.1.0` or an update from `1.1.0` to `1.2.0`.
+**BE AWARE** this strategy does not prevent an update from `0.1.0` -> `1.1.0`
+
+Third, the `patch` strategy. It was added into capgo as a very strict mode. It's not recomended to be used unless you fully understand how it works.
+In order for it to accept a update the following conditions must be meet:
+ - The major is the same between the new and the old version
+ - The minor is the same between the new and the old version
+ - The patch of the new version if greater then the patch of the old version
+
+Here is an example of which scenarios the update is allowed or denied
+
+ - 0.0.311 -> 0.0.314 ✅
+ - 0.0.0 -> 0.0.314 ✅
+ - 0.0.316 -> 0.0.314 ❌
+ - 0.1.312 -> 0.0.314 ❌
+ - 1.0.312 -> 0.0.314 ❌
+
+Lastly the most complicated strategy. The `metadata` strategy.\
+First you need to know that initially after you enable it the updates **WILL** fail as the channel is lacking the required metadata.\
+If the channel is lacking metadata you will see a message like this:
+<img src="/fail-metadata.webp" alt="Cannot find metadata"/>
+
+If you see something like this you know that you have to go to the current bundle for the failing channel and set the metadata.\
+First, figure out what channel is failing. You can do that by looking at the `misconfigured` column
+<img src="/misconfigured-table.webp" alt="Misconfigured table"/>
+
+Then go to the failing channel and click on `Bundle number`. This should take you to the bundle page.
+<img src="/fail-channel-show.webp" alt="Locate failing channel"/>
+
+Once there fill the `Minimal update version` field. This should be a [semver](https://devhints.io/semver/).\
+If the value you pass is not a semver you will get an error, but if everything goes correctly you should see something like this:
+<img src="/set-min-update-version.webp" alt="Set min version"/>
+
+Now, you likely do not want to set this data manually every time you update. Fortunately, the CLI will prevent you from sending an update without this metadata
+<img src="/cli-fail-no-metadata.webp" alt="CLI fail no metadata"/>
+
+To properly upload a bundle when using the `metadata` option you need to pass the `--min-update-version` with the valid semver. Something like this:
+<img src="/cli-upload-with-metadata.webp" alt="CLI upload with metadata"/>
+
+The `--min-update-version` is not the ONLY way to do compatibility.
+There also exists the `--auto-min-update-version`. Here is how it works.
+
+First, it takes a look at the version curently uploaded to the channel. It checks compatibility same as `bundle compatibility` command would.
+Second, if the new version is 100% compatible it reuses the `min_update_version` from the latest version in the channel.
+If not, then it sets the `min_update_version` to the bundle number of the newly uploaded version.
+
+You will always get an information what is the `min_update_version` when using this option. It will look something like this:
+<img src="/min_update_version_info.webp" alt="Min update version"/>
+
+If the new version is not compatible it should look something like this
+<img src="/min_update_version_not_compatible.webp" alt="Min update version not compatible"/>
 
 ## End-to-End encryption (Trustless)
 
@@ -294,11 +413,13 @@ See below for more information about the encryption system.
 
 <figure><img src="/crypto_explained.png" alt=""><figcaption><p>Ecryption schema</p></figcaption></figure>
 
+Ecryption schema
+
 ### Create key for your app
 
 `npx @capgo/cli key create`
 
-Optionally, you can give: `--force` to overwrite the existing key. This command will create for you a key pair in your app, and will ask you to save the private key in a safe place. It's recommended to not git commit the private and public key, and to not share it with anyone.
+Optionally, you can give: `--force` to overwrite the existing key. This command will create for you a key pair in your app, and will ask you to save the private key in a safe place. It's recommended to not git commit the private key, and to not share it with anyone.
 
 > After your local test, remove the key from the config file and add it on the CI step with `key save`
 
@@ -311,6 +432,19 @@ Optionally, you can give:
 `--key [/path/to/my/private_key]` the path of your private key.
 
 `--key-data [privateKey]` the private key data, if you want to use inline. This command is useful if you followed the recommendation and didn't commit the key in your app, and in the config.
+
+## Ci integration
+
+To automate your work, I recommend you make GitHub action do the job of pushing to our server
+
+[GitHub action tutorial](https://capgo.app/blog/automatic-build-and-release-with-github-actions/)
+
+## Our demo app
+
+[GitHub - Cap-go/demo-app](https://github.com/Cap-go/demo-app/)
+
+Don’t forget to configure CI env variable with your API key
+
 ## Dev contribution
 
 1. Install development dependencies
