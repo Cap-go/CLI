@@ -6,6 +6,7 @@ import { zipBundle } from './bundle/zip'
 import { initApp } from './init'
 import { listBundle } from './bundle/list'
 import { decryptZip } from './bundle/decrypt'
+import { decryptZipV2 } from './bundle/decryptV2'
 import { encryptZip } from './bundle/encrypt'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { addCommand } from './app/add'
@@ -211,6 +212,15 @@ bundle
   .option('--key <key>', 'custom path for private signing key')
   .option('--key-data <keyData>', 'private signing key')
   .option('-j, --json', 'output in JSON')
+
+bundle
+  .command('decryptV2 [zipPath] [checksum]')
+  .description('Decrypt a zip bundle using the new encryption method')
+  .action(decryptZipV2)
+  .option('--key <key>', 'custom path for private signing key')
+  .option('--key-data <keyData>', 'private signing key')
+  .option('-j, --json', 'output in JSON')
+  .option('--checksum <checksum>', 'checksum of the bundle, to verify the integrity of the bundle')
 
 bundle
   .command('zip [appId]')

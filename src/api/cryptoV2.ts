@@ -55,6 +55,18 @@ export function encryptChecksumV2(checksum: string, key: string): string {
   return checksumEncrypted
 }
 
+export function decryptChecksumV2(checksum: string, key: string): string {
+  const checksumDecrypted = publicDecrypt(
+    {
+      key,
+      padding,
+    },
+    Buffer.from(checksum, formatB64),
+  ).toString(formatB64)
+
+  return checksumDecrypted
+}
+
 export function encryptSourceV2(source: Buffer, key: string): Encoded {
   const initVector = randomBytes(16)
   const sessionKey = randomBytes(16)

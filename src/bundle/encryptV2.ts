@@ -83,11 +83,13 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
   const encodedZip = encryptSourceV2(zipFile, privateKey)
   const encodedChecksum = encryptChecksumV2(checksum, privateKey)
 
+  const filename_encrypted = `${zipPath}_encrypted.zip`
   if (json) {
     // Keep the console log and stringify for user who parse the output
     // eslint-disable-next-line no-console
     console.log(JSON.stringify({
       checksum: encodedChecksum,
+      filename: filename_encrypted,
       ivSessionKey: encodedZip.ivSessionKey,
     }, null, 2))
   }
@@ -97,9 +99,9 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
   }
 
   // write decodedZip in a file
-  writeFileSync(`${zipPath}_encrypted.zip`, encodedZip.encryptedData)
+  writeFileSync(filename_encrypted, encodedZip.encryptedData)
   if (!json) {
-    log.success(`Encrypted zip saved at ${zipPath}_encrypted.zip`)
+    log.success(`Encrypted zip saved at ${filename_encrypted}`)
     outro(`Done ✅`)
   }
   exit()
