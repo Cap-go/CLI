@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.18.0](https://github.com/Cap-go/CLI/compare/v4.17.0...v4.18.0) (2024-09-25)
+
+
+### Features
+
+* add decryptv2 command ([8783ec6](https://github.com/Cap-go/CLI/commit/8783ec65b3744ca5f641928c1fe7ddfbd4cb064d))
+
 ## [4.17.0](https://github.com/Cap-go/CLI/compare/v4.16.6...v4.17.0) (2024-09-23)
 
 
