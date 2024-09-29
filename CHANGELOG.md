@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.19.0](https://github.com/Cap-go/CLI/compare/v4.18.2...v4.19.0) (2024-09-29)
+
+
+### Features
+
+* add tus upload option ([c834762](https://github.com/Cap-go/CLI/commit/c834762f8367f89ab18a7dce0f781f84f43439a4))
+
 ### [4.18.2](https://github.com/Cap-go/CLI/compare/v4.18.1...v4.18.2) (2024-09-25)
 
 
