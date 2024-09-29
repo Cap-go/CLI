@@ -684,7 +684,7 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
       notify: false,
     }).catch()
     const upload = new tus.Upload(data as any, {
-      endpoint: 'https://api-preprod.capgo.app/private/files/upload/attachments/',
+      endpoint: 'https://api.capgo.app/private/files/upload/attachments/',
       metadata: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/zip',
