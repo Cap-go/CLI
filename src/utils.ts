@@ -15,8 +15,9 @@ import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import AdmZip from 'adm-zip'
 import JSZip from 'jszip'
-import { confirm as confirmC, isCancel, log, select, spinner } from '@clack/prompts'
+import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
 import { promiseFiles } from 'node-dir'
+import * as tus from 'tus-js-client'
 import type { ExtConfigPairs } from './config'
 import { loadConfig, writeConfig } from './config'
 import type { Database } from './types/supabase.types'
@@ -669,6 +670,59 @@ async function finishMultipartDownload(key: string, uploadId: string, url: strin
   // console.log(await response.json())
 }
 
+export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>): Promise<boolean> {
+  return new Promise(async (resolve, reject) => {
+    const snag = useLogSnag()
+    await snag.track({
+      channel: 'app',
+      event: 'App TUS upload',
+      icon: '⏫',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+      },
+      notify: false,
+    }).catch()
+    const upload = new tus.Upload(data as any, {
+      endpoint: 'https://api-preprod.capgo.app/private/files/upload/attachments/',
+      metadata: {
+        filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
+        filetype: 'application/zip',
+      },
+      headers: {
+        Authorization: apikey,
+      },
+      // Callback for errors which cannot be fixed using retries
+      onError(error) {
+        log.error(`Failed because: ${error}`)
+        reject(error)
+      },
+      // Callback for reporting upload progress
+      onProgress(bytesUploaded, bytesTotal) {
+        const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
+        spinner.message(`Uploaded ${percentage}%`)
+      },
+      // Callback for once the upload is completed
+      async onSuccess() {
+        await snag.track({
+          channel: 'app',
+          event: 'App TUS done',
+          icon: '⏫',
+          user_id: orgId,
+          tags: {
+            'app-id': appId,
+          },
+          notify: false,
+        }).catch()
+        resolve(true)
+      },
+    })
+
+    // Start the upload
+    upload.start()
+  })
+}
+
 const PART_SIZE = 10 * 1024 * 1024
 export async function uploadMultipart(supabase: SupabaseClient<Database>, appId: string, name: string, data: Buffer, orgId: string): Promise<boolean> {
   try {
@@ -1105,7 +1159,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
 }
 
 export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
-  const s = spinner()
+  const s = spinnerC()
   s.start(`Checking bundle checksum compatibility with channel ${channel}`)
   const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
 

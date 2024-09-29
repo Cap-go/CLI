@@ -43,9 +43,6 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js"
   },
-  "dependencies": {
-    "@types/node-dir": "^0.0.37"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^2.27.3",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
@@ -58,6 +55,7 @@
     "@types/adm-zip": "0.5.5",
     "@types/mime": "^4.0.0",
     "@types/node": "^22.5.0",
+    "@types/node-dir": "^0.0.37",
     "@types/npmcli__ci-detect": "^2.0.3",
     "@types/prettyjson": "^0.0.33",
     "@types/prompt-sync": "^4.2.3",
@@ -89,6 +87,7 @@
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
+    "tus-js-client": "^4.2.3",
     "typescript": "5.6.2"
   }
 }

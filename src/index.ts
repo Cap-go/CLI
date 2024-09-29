@@ -139,6 +139,7 @@ bundle
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
+  .option('--tus', 'Upload the bundle using tus')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
   .option(
     '--min-update-version <minUpdateVersion>',

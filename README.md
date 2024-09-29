@@ -60,6 +60,7 @@ Optionally, you can give:
 * `--icon [/path/to/my/icon]` to have a custom icon display in Capgo web app.
 * `--name [test]` to have a custom name in the list.
 * `--apikey [key]` API key to link to your account.
+* `--retention [retention]` retention period of app bundle in days, 0 by default = infinite.
 
 Example of `capacitor.config.json` for appId and AppName, the icon is guess in the resources folder
 
@@ -139,23 +140,38 @@ Options:
 
 `[appId]` is your app ID, the format is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
-Optionally, you can give:
+Options:
 
-* `--apikey [key]` API key to link to your account.
-* `--path [/path/to/my/bundle]` to upload a specific folder.
-* `--channel [test]` to upload to a specific channel.
-* `--external="https://mydomain.com/myapp.zip"` to link to an external URL instead of upload to Capgo cloud, it should be a zip URL in HTTPS.
-* `--key [/path/to/my/private_key]` the path of your private key.
-* `--key-data [privateKey]` the private key data, if you want to use inline.
-* `--no-key` to ignore the signing key and send clear update.
-* `--bundle [1.0.0]` to set the bundle version number of the file to upload.
-* `--iv-session-key [key]` to send a custom session key to the cloud.
-* `--s3-apikey [key]` API key to upload to an AWS S3 account directly.
-* `--s3-apisecret [secretkey]` API secret necessary for uploading to S3.
-* `--s3-region [region]` to set the region of the AWS S3 account of the two previous API keys.
-* `--s3-bucket-name [bucketName]` to set the name of the AWS S3 bucket to which upload.
-* `--bundle-url` prints bundle url into stdout. Useful when [parsing bundle url from shell](https://github.com/Cap-go/CLI/pull/132/).
-* `--no-code-check` to ignore the code check and send the bundle anyway.
+* `--apikey <apikey>` API key to link to your account.
+* `--path <path>` Path of the folder to upload.
+* `--channel <channel>` Channel to link to.
+* `--external <url>` Link to external URL instead of uploading to Capgo Cloud.
+* `--iv-session-key <key>` Set the IV and session key for bundle URL external.
+* `--s3-region <region>` Region for your S3 bucket.
+* `--s3-apikey <apikey>` API key for your S3 endpoint.
+* `--s3-apisecret <apisecret>` API secret for your S3 endpoint.
+* `--s3-endpoint <s3Endpoint>` URL of S3 endpoint.
+* `--s3-bucket-name <bucketName>` Name for your AWS S3 bucket.
+* `--s3-port <port>` Port for your S3 endpoint.
+* `--no-s3-ssl` Disable SSL for S3 upload.
+* `--key <key>` Custom path for public signing key.
+* `--key-data <keyData>` Public signing key.
+* `--key-v2 <key>` Custom path for private signing key.
+* `--key-data-v2 <keyData>` Private signing key.
+* `--bundle-url` Prints bundle URL into stdout.
+* `--no-key` Ignore signing key and send clear update.
+* `--no-code-check` Ignore checking if notifyAppReady() is called in source code and index present in root folder.
+* `--display-iv-session` Show in the console the IV and session key used to encrypt the update.
+* `--tus` Upload the bundle using TUS protocol.
+* `--bundle <bundle>` Bundle version number of the bundle to upload.
+* `--min-update-version <minUpdateVersion>` Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel.
+* `--auto-min-update-version` Set the min update version based on native packages.
+* `--ignore-metadata-check` Ignores the metadata (node_modules) check when uploading.
+* `--ignore-checksum-check` Ignores the checksum check when uploading.
+* `--timeout <timeout>` Timeout for the upload process in seconds.
+* `--multipart` Uses multipart protocol to upload data to S3.
+* `--ignore-partial` Does not upload partial files to S3.
+* `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
 
@@ -341,7 +357,7 @@ Optionally, you can give:
 * `--no-android` disallows the channel to send version to android devices.
 * `--self-assign` allows devices to self assign to this channel.
 * `--no-self-assign` disallows devices to self assign to this channel.
-* `--disable-auto-update STRATEGY`  Disable auto update strategy for this channel.The possible options are: major, minor, metadata, none.
+* `--disable-auto-update STRATEGY`  Disable auto update strategy for this channel. The possible options are: major, minor, metadata, none.
 * `--apikey [key]` API key to link to your account.
 
 ## Disable updates strategy

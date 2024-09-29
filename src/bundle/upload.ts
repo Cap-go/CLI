@@ -12,7 +12,7 @@ import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -45,6 +45,7 @@ interface Options extends OptionsBase {
   ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
+  tus?: boolean
   ignorePartial?: boolean
   encryptedChecksum?: string
 }
@@ -340,12 +341,16 @@ It will be also visible in your dashboard\n`)
   return { zipped, sessionKey, checksum }
 }
 
-async function uploadBundleToCapgoCloud(supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
+async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
 
   try {
+    if (options.tus !== undefined && options.tus) {
+      log.info(`Uploading bundle as tus`)
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
+    }
     if (options.multipart !== undefined && options.multipart) {
       log.info(`Uploading bundle as multipart`)
       await uploadMultipart(supabase, appid, bundle, zipped, orgId)
@@ -549,7 +554,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    await uploadBundleToCapgoCloud(supabase, appid, bundle, orgId, zipped, options)
+    await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
 
     // let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     // try {
