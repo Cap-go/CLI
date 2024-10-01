@@ -601,9 +601,9 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
 }
 
 export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>): Promise<boolean> {
-  return new Promise(async (resolve, reject) => {
+  return new Promise((resolve, reject) => {
     const snag = useLogSnag()
-    await snag.track({
+    snag.track({
       channel: 'app',
       event: 'App TUS upload',
       icon: '⏫',
