@@ -11,12 +11,13 @@ import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import type { OptionsBase } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadMultipart, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import type { OptionsBase, manifestType } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
 import { checkIndexPosition, searchInDirectory } from './check'
+import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
 interface Options extends OptionsBase {
   bundle?: string
@@ -45,8 +46,8 @@ interface Options extends OptionsBase {
   ignoreChecksumCheck?: boolean
   timeout?: number
   multipart?: boolean
+  partial?: boolean
   tus?: boolean
-  ignorePartial?: boolean
   encryptedChecksum?: string
 }
 
@@ -348,12 +349,12 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
 
   try {
     if (options.tus !== undefined && options.tus) {
-      log.info(`Uploading bundle as tus`)
+      log.info(`Uploading bundle as TUS`)
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
     }
     if (options.multipart !== undefined && options.multipart) {
-      log.info(`Uploading bundle as multipart`)
-      await uploadMultipart(supabase, appid, bundle, zipped, orgId)
+      log.info(`Uploading bundle as TUS, multipart is deprecated`)
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
     }
     else {
       const url = await uploadUrl(supabase, appid, bundle)
@@ -372,7 +373,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-    log.error(`Cannot upload bundle ( try again with --multipart option) ${formatError(errorUpload)}`)
+    log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
     if (errorUpload instanceof HTTPError) {
       const body = await errorUpload.response.text()
       log.error(`Response: ${formatError(body)}`)
@@ -440,6 +441,9 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
 
   if (error) {
     log.error('Cannot find default upload channel')
+    // you can set it here:  https://web.capgo.app/app/p/[appId]/settings
+    const appIdUrl = convertAppName(appId)
+    log.info(`You can set it here:  https://web.capgo.app/app/p/${appIdUrl}/settings`)
     return null
   }
 
@@ -521,7 +525,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
 
   // TODO: re enable this when we have the partial upload working better
-  // const manifest = options.ignorePartial ? null : await prepareBundlePartialFiles(path, snag, orgId, appid)
+  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, snag, orgId, appid) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -556,16 +560,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   else if (zipped) {
     await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
 
-    // let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
-    // try {
-    //   finalManifest = options.ignorePartial ? null : await uploadPartial(apikey, manifest, path, options, appid, bundle)
-    // }
-    // catch (err) {
-    //   log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
-    // }
+    let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
+    try {
+      finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
+    }
+    catch (err) {
+      log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+    }
 
     versionData.storage_provider = 'r2'
-    // versionData.manifest = finalManifest
+    versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2) {
       log.error(`Cannot update bundle ${formatError(dbError2)}`)

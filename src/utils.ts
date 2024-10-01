@@ -554,59 +554,6 @@ export interface uploadUrlsType {
   uploadLink: string
   finalPath: string
 }
-export async function manifestUploadUrls(apikey: string, appId: string, name: string, manifest: manifestType): Promise<uploadUrlsType[]> {
-  const data = {
-    app_id: appId,
-    name,
-    version: 2,
-    manifest,
-  }
-  try {
-    const dataD = await ky
-      .post(`${defaultApiHost}/private/upload_link`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'capgkey': apikey,
-        },
-        body: JSON.stringify(data),
-      })
-      .then(res => res.json<uploadUrlsType[]>())
-      .catch((err) => {
-        console.error('Cannot get urls', err)
-        return [] as uploadUrlsType[]
-      })
-    if (dataD?.length > 0)
-      return dataD
-    // const pathUploadLink = 'private/upload_link'
-    // const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
-    // if (!res.data) {
-    //   log.error(`Cannot get uploads url ${formatError(res.error)}`)
-    //   return []
-    // }
-    // return res.data as uploadUrlsType[]
-  }
-  catch (error) {
-    log.error(`Cannot get uploads url ${formatError(error)}`)
-  }
-  return []
-}
-
-async function prepareMultipart(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<{ key: string, uploadId: string, url: string } | null> {
-  const data = {
-    app_id: appId,
-    name,
-    version: 1,
-  }
-  try {
-    const pathUploadLink = 'private/upload_link'
-    const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
-    return res.data as any
-  }
-  catch (error) {
-    log.error(`Cannot get upload url ${formatError(error)}`)
-    return null
-  }
-}
 
 export async function zipFile(filePath: string): Promise<Buffer> {
   if (osPlatform() === 'win32') {
@@ -651,23 +598,6 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   // Generate the ZIP file as a Buffer
   const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE', compressionOptions: { level: 6 } })
   return zipBuffer
-}
-
-async function finishMultipartDownload(key: string, uploadId: string, url: string, parts: any[]) {
-  const metadata = {
-    action: 'mpu-complete',
-    uploadId,
-    key,
-  }
-
-  await ky.post(url, {
-    json: {
-      parts,
-    },
-    searchParams: new URLSearchParams({ body: btoa(JSON.stringify(metadata)) }),
-  })
-
-  // console.log(await response.json())
 }
 
 export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>): Promise<boolean> {
@@ -723,54 +653,6 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
   })
 }
 
-const PART_SIZE = 10 * 1024 * 1024
-export async function uploadMultipart(supabase: SupabaseClient<Database>, appId: string, name: string, data: Buffer, orgId: string): Promise<boolean> {
-  try {
-    const snag = useLogSnag()
-    await snag.track({
-      channel: 'app',
-      event: 'App Multipart Prepare',
-      icon: '⏫',
-      user_id: orgId,
-      tags: {
-        'app-id': appId,
-      },
-      notify: false,
-    }).catch()
-    const multipartPrep = await prepareMultipart(supabase, appId, name)
-    if (!multipartPrep) {
-      // Just pass the error
-      return false
-    }
-
-    const fileSize = data.length
-    const partCount = Math.ceil(fileSize / PART_SIZE)
-
-    const uploadPromises = Array.from({ length: partCount }, (_, index) =>
-      uploadPart(data, PART_SIZE, multipartPrep.url, multipartPrep.key, multipartPrep.uploadId, index))
-
-    const parts = await Promise.all(uploadPromises)
-
-    await finishMultipartDownload(multipartPrep.key, multipartPrep.uploadId, multipartPrep.url, parts)
-
-    await snag.track({
-      channel: 'app',
-      event: 'App Multipart done',
-      icon: '⏫',
-      user_id: orgId,
-      tags: {
-        'app-id': appId,
-      },
-      notify: false,
-    }).catch()
-    return true
-  }
-  catch (e) {
-    log.error(`Could not upload via multipart ${formatError(e)}`)
-    return false
-  }
-}
-
 export async function deletedFailedVersion(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<void> {
   const data = {
     app_id: appId,
@@ -785,34 +667,6 @@ export async function deletedFailedVersion(supabase: SupabaseClient<Database>, a
     log.error(`Cannot delete failed version ${formatError(error)}`)
     return Promise.reject(new Error('Cannot delete failed version'))
   }
-}
-
-async function uploadPart(
-  data: Buffer,
-  partsize: number,
-  url: string,
-  key: string,
-  uploadId: string,
-  index: number,
-) {
-  const dataToUpload = data.subarray(
-    partsize * index,
-    partsize * (index + 1),
-  )
-
-  const metadata = {
-    action: 'mpu-uploadpart',
-    uploadId,
-    partNumber: index + 1,
-    key,
-  }
-
-  const response = await ky.put(url, {
-    body: dataToUpload,
-    searchParams: new URLSearchParams({ body: btoa(JSON.stringify(metadata)) }),
-  })
-
-  return await response.json()
 }
 
 export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {

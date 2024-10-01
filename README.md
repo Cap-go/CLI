@@ -169,7 +169,6 @@ Options:
 * `--ignore-metadata-check` Ignores the metadata (node_modules) check when uploading.
 * `--ignore-checksum-check` Ignores the checksum check when uploading.
 * `--timeout <timeout>` Timeout for the upload process in seconds.
-* `--multipart` Uses multipart protocol to upload data to S3.
 * `--ignore-partial` Does not upload partial files to S3.
 * `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
 

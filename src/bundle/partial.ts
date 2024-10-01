@@ -1,11 +1,12 @@
 import { createReadStream } from 'node:fs'
 import { createGzip } from 'node:zlib'
 import { buffer as readBuffer } from 'node:stream/consumers'
+import { join } from 'node:path'
 import type LogSnag from 'logsnag'
-import ky, { HTTPError } from 'ky'
 import { log, spinner as spinnerC } from '@clack/prompts'
-import type { manifestType, uploadUrlsType } from '../utils'
-import { UPLOAD_TIMEOUT, formatError, generateManifest, manifestUploadUrls } from '../utils'
+import * as tus from 'tus-js-client'
+import type { manifestType } from '../utils'
+import { generateManifest, useLogSnag } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -27,49 +28,82 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
   return manifest
 }
 
-export async function uploadPartial(apikey: string, manifest: manifestType, path: string, options: Options, appId: string, name: string) {
+export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
+  let totalBytes = 0
+  let uploadedBytes = 0
   const spinner = spinnerC()
   spinner.start('Preparing partial update')
-  const uploadResponse: uploadUrlsType[] = await manifestUploadUrls(apikey, appId, name, manifest)
+  const snag = useLogSnag()
 
-  if (uploadResponse.length === 0 || uploadResponse.length !== manifest.length) {
-    log.error(`Cannot upload manifest, please try again later`)
-    spinner.stop('Partial update failed')
-    return []
-  }
-  spinner.message('Uploading partial update')
-  for (const [index, manifestEntry] of uploadResponse.entries()) {
-    const finalFilePath = `${path}/${manifestEntry.path}`
-    spinner.message(`Uploading partial update ${index + 1}/${uploadResponse.length}`)
+  await snag.track({
+    channel: 'app',
+    event: 'App Partial TUS upload',
+    icon: '⏫',
+    user_id: orgId,
+    tags: {
+      'app-id': appId,
+    },
+    notify: false,
+  }).catch()
+
+  const uploadFiles = manifest.map(async (file) => {
+    const finalFilePath = join(path, file.file)
     const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
     const fileBuffer = await readBuffer(fileStream)
+    totalBytes += fileBuffer.length
 
-    try {
-      await ky.put(manifestEntry.uploadLink, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: fileBuffer,
+    return new Promise((resolve, reject) => {
+      const upload = new tus.Upload(fileBuffer as any, {
+        endpoint: 'https://api.capgo.app/private/files/upload/attachments/',
+        metadata: {
+          filename: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
+          filetype: 'application/gzip',
+        },
+        headers: {
+          Authorization: apikey,
+        },
+        onError(error) {
+          log.error(`Failed to upload ${file.file}: ${error}`)
+          reject(error)
+        },
+        onProgress(bytesUploaded) {
+          uploadedBytes += bytesUploaded
+          const percentage = ((uploadedBytes / totalBytes) * 100).toFixed(2)
+          spinner.message(`Uploading partial update: ${percentage}%`)
+        },
+        onSuccess() {
+          resolve({
+            file_name: file.file,
+            s3_path: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
+            file_hash: file.hash,
+          })
+        },
       })
-    }
-    catch (errorUpload) {
-      if (errorUpload instanceof HTTPError) {
-        errorUpload.response.text()
-          .then(body => log.error(`Response: ${formatError(body)}`))
-          .catch(() => log.error('Cannot get response body'))
-      }
-      else {
-        console.error(errorUpload)
-      }
-      return null
-    }
-  }
 
-  spinner.stop('Partial update uploaded successfully')
-  return uploadResponse.map((entry) => {
-    return {
-      file_name: entry.path,
-      s3_path: entry.finalPath,
-      file_hash: entry.hash,
-    }
+      upload.start()
+    })
   })
+
+  try {
+    const results = await Promise.all(uploadFiles)
+    spinner.stop('Partial update uploaded successfully')
+
+    await snag.track({
+      channel: 'app',
+      event: 'App Partial TUS done',
+      icon: '⏫',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+      },
+      notify: false,
+    }).catch()
+
+    return results
+  }
+  catch (error) {
+    spinner.stop('Partial update failed')
+    log.error(`Error uploading partial update: ${error}`)
+    return null
+  }
 }
