@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.20.0](https://github.com/Cap-go/CLI/compare/v4.19.2...v4.20.0) (2024-10-01)
+
+
+### Features
+
+* add partial thanks to TUS ([8e55c2a](https://github.com/Cap-go/CLI/commit/8e55c2aaf38c20475dd349f71c7fbdb43dca2730))
+
 ### [4.19.2](https://github.com/Cap-go/CLI/compare/v4.19.1...v4.19.2) (2024-09-30)
 
 
