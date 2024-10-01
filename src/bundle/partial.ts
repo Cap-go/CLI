@@ -29,28 +29,17 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 }
 
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
-  let totalBytes = 0
-  let uploadedBytes = 0
   const spinner = spinnerC()
   spinner.start('Preparing partial update')
   const snag = useLogSnag()
 
-  await snag.track({
-    channel: 'app',
-    event: 'App Partial TUS upload',
-    icon: '⏫',
-    user_id: orgId,
-    tags: {
-      'app-id': appId,
-    },
-    notify: false,
-  }).catch()
+  let uploadedFiles = 0
+  const totalFiles = manifest.length
 
   const uploadFiles = manifest.map(async (file) => {
     const finalFilePath = join(path, file.file)
     const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
     const fileBuffer = await readBuffer(fileStream)
-    totalBytes += fileBuffer.length
 
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(fileBuffer as any, {
@@ -66,12 +55,13 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
           log.error(`Failed to upload ${file.file}: ${error}`)
           reject(error)
         },
-        onProgress(bytesUploaded) {
-          uploadedBytes += bytesUploaded
-          const percentage = ((uploadedBytes / totalBytes) * 100).toFixed(2)
+        onProgress() {
+          // Update progress based on number of files
+          const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
           spinner.message(`Uploading partial update: ${percentage}%`)
         },
         onSuccess() {
+          uploadedFiles++
           resolve({
             file_name: file.file,
             s3_path: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
