@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.20.1](https://github.com/Cap-go/CLI/compare/v4.20.0...v4.20.1) (2024-10-01)
+
+
+### Bug Fixes
+
+* make partial percent by number of file instead of size for now ([b1d2bb5](https://github.com/Cap-go/CLI/commit/b1d2bb5a2ee9e95cd836c018f7217da0be73dde9))
+
 ## [4.20.0](https://github.com/Cap-go/CLI/compare/v4.19.2...v4.20.0) (2024-10-01)
 
 
