@@ -351,6 +351,15 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     if (options.tus !== undefined && options.tus) {
       log.info(`Uploading bundle as TUS`)
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
+      const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
+      const { error: changeError } = await supabase
+        .from('app_versions')
+        .update({ r2_path: filePath })
+        .eq('id', bundle)
+      if (changeError) {
+        log.error(`Cannot finish TUS upload ${formatError(changeError)}`)
+        program.error('')
+      }
     }
     if (options.multipart !== undefined && options.multipart) {
       log.info(`Uploading bundle as TUS, multipart is deprecated`)
