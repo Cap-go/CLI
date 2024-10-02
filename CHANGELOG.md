@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.20.5](https://github.com/Cap-go/CLI/compare/v4.20.4...v4.20.5) (2024-10-02)
+
+
+### Bug Fixes
+
+* add finish step for TUS ([b822cc8](https://github.com/Cap-go/CLI/commit/b822cc8594f3c574fd1f580ece62cd67e9b0069e))
+
 ### [4.20.4](https://github.com/Cap-go/CLI/compare/v4.20.3...v4.20.4) (2024-10-01)
 
 ### [4.20.3](https://github.com/Cap-go/CLI/compare/v4.20.2...v4.20.3) (2024-10-01)
