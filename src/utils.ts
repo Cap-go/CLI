@@ -6,7 +6,7 @@ import type { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import { program } from 'commander'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { createClient } from '@supabase/supabase-js'
+import { FunctionsHttpError, createClient } from '@supabase/supabase-js'
 import prettyjson from 'prettyjson'
 import { LogSnag } from 'logsnag'
 import ky from 'ky'
@@ -526,6 +526,19 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
   try {
     const pathUploadLink = 'private/upload_link'
     const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
+
+    if (res.error) {
+      // Handle error case
+      if (res.error instanceof FunctionsHttpError) {
+        const errorBody = await res.error.context.json()
+        log.error(`Upload URL error: ${errorBody.status || JSON.stringify(errorBody)}`)
+      }
+      else {
+        log.error(`Cannot get upload url: ${res.error.message}`)
+      }
+      return ''
+    }
+
     return res.data.url
   }
   catch (error) {
@@ -624,8 +637,14 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
       },
       // Callback for errors which cannot be fixed using retries
       onError(error) {
-        log.error(`Failed because: ${error}`)
-        reject(error)
+        if (error instanceof tus.DetailedError) {
+          const body = error.originalResponse?.getBody()
+          const jsonBody = JSON.parse(body || '{"error": "unknown error"}')
+          reject(jsonBody.status || jsonBody.error || jsonBody.message || 'unknown error')
+        }
+        else {
+          reject(error.message || error.toString() || 'unknown error')
+        }
       },
       // Callback for reporting upload progress
       onProgress(bytesUploaded, bytesTotal) {
@@ -661,11 +680,28 @@ export async function deletedFailedVersion(supabase: SupabaseClient<Database>, a
   try {
     const pathFailed = 'private/delete_failed_version'
     const res = await supabase.functions.invoke(pathFailed, { body: JSON.stringify(data), method: 'DELETE' })
-    return res.data.status
+
+    if (res.error) {
+      if (res.error instanceof FunctionsHttpError) {
+        const errorBody = await res.error.context.json()
+        log.error(`Cannot delete failed version: ${errorBody.status || JSON.stringify(errorBody)}`)
+      }
+      else {
+        log.error(`Cannot delete failed version: ${res.error.message}`)
+      }
+      return
+    }
+
+    return res.data?.status
   }
   catch (error) {
-    log.error(`Cannot delete failed version ${formatError(error)}`)
-    return Promise.reject(new Error('Cannot delete failed version'))
+    if (error instanceof FunctionsHttpError) {
+      const errorBody = await error.context.json()
+      log.error(`Cannot delete failed version: ${errorBody.message || JSON.stringify(errorBody)}`)
+    }
+    else {
+      log.error(`Cannot delete failed version: ${formatError(error)}`)
+    }
   }
 }
 

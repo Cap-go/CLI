@@ -349,7 +349,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
 
   try {
     if (options.tus !== undefined && options.tus) {
-      log.info(`Uploading bundle as TUS`)
+      log.info(`Uploading bundle with TUS protocol`)
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
@@ -362,7 +362,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       }
     }
     if (options.multipart !== undefined && options.multipart) {
-      log.info(`Uploading bundle as TUS, multipart is deprecated`)
+      log.info(`Uploading bundle with TUS protocol, multipart is deprecated`)
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
     }
     else {
@@ -382,10 +382,12 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-    log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
     if (errorUpload instanceof HTTPError) {
-      const body = await errorUpload.response.text()
-      log.error(`Response: ${formatError(body)}`)
+      const body = await errorUpload.response.json<{ error?: string, status?: string, message?: string }>()
+      log.error(`Response Error: ${body.error || body.status || body.message}`)
+    }
+    else {
+      log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
     }
     // call delete version on path /delete_failed_version to delete the version
     await deletedFailedVersion(supabase, appid, bundle)
