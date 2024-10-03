@@ -355,10 +355,11 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       const { error: changeError } = await supabase
         .from('app_versions')
         .update({ r2_path: filePath })
-        .eq('id', bundle)
+        .eq('name', bundle)
+        .eq('app_id', appid)
       if (changeError) {
         log.error(`Cannot finish TUS upload ${formatError(changeError)}`)
-        program.error('')
+        Promise.reject(new Error('Cannot finish TUS upload'))
       }
     }
     if (options.multipart !== undefined && options.multipart) {
@@ -369,7 +370,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       const url = await uploadUrl(supabase, appid, bundle)
       if (!url) {
         log.error(`Cannot get upload url`)
-        program.error('')
+        Promise.reject(new Error('Cannot get upload url'))
       }
       await ky.put(url, {
         timeout: options.timeout || UPLOAD_TIMEOUT,

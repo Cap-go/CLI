@@ -30,7 +30,7 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
   const spinner = spinnerC()
-  spinner.start('Preparing partial update')
+  spinner.start('Preparing partial update with TUS protocol')
   const snag = useLogSnag()
 
   let uploadedFiles = 0
@@ -76,7 +76,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
   try {
     const results = await Promise.all(uploadFiles)
-    spinner.stop('Partial update uploaded successfully')
+    spinner.stop('Partial update uploaded successfully with TUS protocol')
 
     await snag.track({
       channel: 'app',
