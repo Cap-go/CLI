@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.21.0](https://github.com/Cap-go/CLI/compare/v4.20.8...v4.21.0) (2024-10-07)
+
+
+### Features
+
+* use new domain for files ([36666f6](https://github.com/Cap-go/CLI/commit/36666f687fa613167133a4669479ca3d8eb6b616))
+
 ### [4.20.8](https://github.com/Cap-go/CLI/compare/v4.20.7...v4.20.8) (2024-10-07)
 
 ### [4.20.7](https://github.com/Cap-go/CLI/compare/v4.20.6...v4.20.7) (2024-10-03)
