@@ -551,13 +551,15 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
   if (!fileConfig.TUSUpload) {
-    options.tus =  false
-  } else {
+    options.tus = false
+  }
+  else {
     options.tus = options.tus || fileConfig.TUSUploadForced
   }
   if (!fileConfig.partialUpload) {
     options.partial = false
-  } else {
+  }
+  else {
     options.partial = options.partial || fileConfig.partialUploadForced
   }
 
