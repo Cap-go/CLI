@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.21.2](https://github.com/Cap-go/CLI/compare/v4.21.1...v4.21.2) (2024-10-07)
+
+
+### Bug Fixes
+
+* add timing to upload ([e8fbec6](https://github.com/Cap-go/CLI/commit/e8fbec68661b45243dcb0b5a9a8c1b6319c37f2a))
+* override code ([36a9928](https://github.com/Cap-go/CLI/commit/36a99286ff5f6f7174f32614db68db58e727cbe1))
+
 ### [4.21.1](https://github.com/Cap-go/CLI/compare/v4.21.0...v4.21.1) (2024-10-07)
 
 
