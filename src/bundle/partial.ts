@@ -90,11 +90,23 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
       },
       notify: false,
     }).catch()
-
+    await snag.track({
+      channel: 'performance',
+      event: 'Partial upload performance',
+      icon: '🚄',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+        time: uploadTime,
+      },
+      notify: false,
+    }).catch()
     return results
   }
   catch (error) {
-    spinner.stop('Partial update failed')
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Failed to upload Partial bundle ( after ${uploadTime} seconds)`)
     log.error(`Error uploading partial update: ${error}`)
     return null
   }

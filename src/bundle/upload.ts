@@ -342,14 +342,16 @@ It will be also visible in your dashboard\n`)
   return { zipped, sessionKey, checksum }
 }
 
-async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
+async function uploadBundleToCapgoCloud(snag: LogSnag, apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
+  let isTus = false
   try {
     if (options.tus !== undefined && options.tus) {
       log.info(`Uploading bundle with TUS protocol`)
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
+      isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
         .from('app_versions')
@@ -397,6 +399,17 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
   spinner.stop(`Bundle uploaded 💪 in (${uploadTime} seconds)`)
+  await snag.track({
+    channel: 'performance',
+    event: isTus ? 'TUS upload zip performance' : 'Upload zip performance',
+    icon: '🚄',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+      time: uploadTime,
+    },
+    notify: false,
+  }).catch()
 }
 
 async function setVersionInChannel(
@@ -572,7 +585,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+    await uploadBundleToCapgoCloud(snag, apikey, supabase, appid, bundle, orgId, zipped, options)
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
