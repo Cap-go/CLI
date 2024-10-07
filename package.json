@@ -64,7 +64,7 @@
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vercel/ncc": "^0.38.1",
-    "adm-zip": "0.5.14",
+    "adm-zip": "0.5.16",
     "ci-info": "^4.0.0",
     "commander": "12.1.0",
     "console-table-printer": "^2.12.1",
