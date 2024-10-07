@@ -550,8 +550,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
 
   // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
-  options.partial = (options.partial && fileConfig.partialUpload) || fileConfig.partialUploadForced
-  options.tus = (options.tus && fileConfig.TUSUpload) || fileConfig.TUSUploadForced
+  if (!fileConfig.TUSUpload) {
+    options.tus =  false
+  } else {
+    options.tus = options.tus || fileConfig.TUSUploadForced
+  }
+  if (!fileConfig.partialUpload) {
+    options.partial = false
+  } else {
+    options.partial = options.partial || fileConfig.partialUploadForced
+  }
 
   // TODO: re enable this when we have the partial upload working better
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, snag, orgId, appid) : []
