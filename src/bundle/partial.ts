@@ -97,7 +97,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
       user_id: orgId,
       tags: {
         'app-id': appId,
-        time: uploadTime,
+        'time': uploadTime,
       },
       notify: false,
     }).catch()

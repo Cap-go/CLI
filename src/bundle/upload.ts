@@ -406,7 +406,7 @@ async function uploadBundleToCapgoCloud(snag: LogSnag, apikey: string, supabase:
     user_id: orgId,
     tags: {
       'app-id': appid,
-      time: uploadTime,
+      'time': uploadTime,
     },
     notify: false,
   }).catch()

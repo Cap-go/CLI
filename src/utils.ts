@@ -129,7 +129,7 @@ interface CapgoConfig {
   hostWeb: string
 }
 export async function getRemoteConfig() {
-  // call host + /api/get_config and parse the result as json using axios
+  // call host + /api/get_config and parse the result as json using ky
   const localConfig = await getLocalConfig()
   return ky
     .get(`${defaultApiHost}/private/config`)
@@ -149,8 +149,7 @@ interface CapgoFilesConfig {
 }
 
 export async function getRemoteFileConfig() {
-  // call host + /api/get_config and parse the result as json using axios
-  const localConfig = await getLocalConfig()
+  // call host + /api/get_config and parse the result as json using ky
   return ky
     .get(`${defaultFileHost}/files/config`)
     .then(res => res.json<CapgoFilesConfig>())
@@ -651,13 +650,14 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
       },
       notify: false,
     }).catch()
-    const fileSize = data.length
-    const maxFileSize = 2 * 1024 * 1024
-    const multipart = fileSize > maxFileSize ? Math.ceil(fileSize / maxFileSize) : 1
+    // TODO: debug multipart TUS upload
+    // const fileSize = data.length
+    // const maxFileSize = 2 * 1024 * 1024
+    // const multipart = fileSize > maxFileSize ? Math.ceil(fileSize / maxFileSize) : 1
 
     const upload = new tus.Upload(data as any, {
       endpoint: `${defaultFileHost}/files/upload/attachments/`,
-      parallelUploads: multipart,
+      // parallelUploads: multipart,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/gzip',
