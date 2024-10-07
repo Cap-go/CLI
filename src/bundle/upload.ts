@@ -12,7 +12,7 @@ import type { Database } from '../types/supabase.types'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import type { OptionsBase, manifestType } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
@@ -346,7 +346,6 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
-
   try {
     if (options.tus !== undefined && options.tus) {
       log.info(`Uploading bundle with TUS protocol`)
@@ -397,7 +396,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
 
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-  spinner.stop(`Bundle Uploaded 💪 (${uploadTime} seconds)`)
+  spinner.stop(`Bundle uploaded 💪 in (${uploadTime} seconds)`)
 }
 
 async function setVersionInChannel(
@@ -452,7 +451,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
     .single()
 
   if (error) {
-    log.error('Cannot find default upload channel')
+    log.warn('Cannot find default upload channel')
     // you can set it here:  https://web.capgo.app/app/p/[appId]/settings
     const appIdUrl = convertAppName(appId)
     log.info(`You can set it here:  https://web.capgo.app/app/p/${appIdUrl}/settings`)
@@ -471,6 +470,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   const apikey = getApikey(options)
   const extConfig = await getConfig()
+  const fileConfig = await getRemoteFileConfig()
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
   const bundle = await getBundle(extConfig.config, options)
   const snag = useLogSnag()
@@ -536,6 +536,10 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.checksum = options.encryptedChecksum
   }
 
+  // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
+  options.partial = (options.partial && fileConfig.partialUpload) || fileConfig.partialUploadForced
+  options.tus = (options.tus && fileConfig.TUSUpload) || fileConfig.TUSUploadForced
+
   // TODO: re enable this when we have the partial upload working better
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, snag, orgId, appid) : []
 
@@ -558,10 +562,8 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       port: s3Port,
       useSSL: s3SSL,
       bucket: s3BucketName,
-      credentials: {
-        accessKeyId: s3Apikey,
-        secretAccessKey: s3Apisecret,
-      },
+      accessKey: s3Apikey,
+      secretKey: s3Apisecret,
     })
     const fileName = `${appid}-${bundle}`
     const encodeFileName = encodeURIComponent(fileName)

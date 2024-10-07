@@ -29,6 +29,7 @@ export const baseKeyPubV2 = `${baseKeyV2}.pub`
 export const baseSignKey = '.capgo_sign_key.priv'
 export const baseSignKeyPub = `.capgo_sign_key.pub`
 export const defaultHost = 'https://capgo.app'
+export const defaultFileHost = 'https://files.capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
 export const ALERT_MB = 20
@@ -137,6 +138,30 @@ export async function getRemoteConfig() {
     .catch(() => {
       log.info(`Local config ${formatError(localConfig)}`)
       return localConfig
+    })
+}
+
+interface CapgoFilesConfig {
+  partialUpload: boolean
+  partialUploadForced: boolean
+  TUSUpload: boolean
+  TUSUploadForced: boolean
+}
+
+export async function getRemoteFileConfig() {
+  // call host + /api/get_config and parse the result as json using axios
+  const localConfig = await getLocalConfig()
+  return ky
+    .get(`${defaultFileHost}/files/config`)
+    .then(res => res.json<CapgoFilesConfig>())
+    .catch((error) => {
+      log.info(`Files config error ${formatError(error)}`)
+      return {
+        partialUpload: false,
+        TUSUpload: false,
+        partialUploadForced: false,
+        TUSUploadForced: false,
+      }
     })
 }
 
@@ -626,8 +651,17 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
       },
       notify: false,
     }).catch()
+    const fileSize = data.length
+    const maxFileSize = 2 * 1024 * 1024
+    const multipart = fileSize > maxFileSize ? Math.ceil(fileSize / maxFileSize) : 1
+
     const upload = new tus.Upload(data as any, {
-      endpoint: 'https://api.capgo.app/private/files/upload/attachments/',
+      endpoint: `${defaultFileHost}/files/upload/attachments/`,
+      parallelUploads: multipart,
+      metadataForPartialUploads: {
+        filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
+        filetype: 'application/gzip',
+      },
       metadata: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/zip',

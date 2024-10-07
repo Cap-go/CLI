@@ -6,7 +6,7 @@ import type LogSnag from 'logsnag'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
 import type { manifestType } from '../utils'
-import { generateManifest, useLogSnag } from '../utils'
+import { defaultFileHost, generateManifest, useLogSnag } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -32,6 +32,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
   const snag = useLogSnag()
+  const startTime = performance.now()
 
   let uploadedFiles = 0
   const totalFiles = manifest.length
@@ -43,10 +44,9 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(fileBuffer as any, {
-        endpoint: 'https://api.capgo.app/private/files/upload/attachments/',
+        endpoint: `${defaultFileHost}/files/upload/attachments/`,
         metadata: {
           filename: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
-          filetype: 'application/gzip',
         },
         headers: {
           Authorization: apikey,
@@ -76,7 +76,9 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
   try {
     const results = await Promise.all(uploadFiles)
-    spinner.stop('Partial update uploaded successfully with TUS protocol')
+    const endTime = performance.now()
+    const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
+    spinner.stop(`Partial update uploaded successfully 💪 in (${uploadTime} seconds)`)
 
     await snag.track({
       channel: 'app',
