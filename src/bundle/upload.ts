@@ -18,6 +18,7 @@ import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
+import pack from '../../package.json'
 
 interface Options extends OptionsBase {
   bundle?: string
@@ -475,7 +476,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
 }
 
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
-  intro(`Uploading`)
+  intro(`Uploading with CLI version ${pack.version}`)
   const pm = getPMAndCommand()
   await checkLatest()
 
