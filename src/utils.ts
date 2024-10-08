@@ -3,8 +3,8 @@ import { homedir, platform as osPlatform } from 'node:os'
 import { join, resolve, sep } from 'node:path'
 import { cwd, env, exit } from 'node:process'
 import type { Buffer } from 'node:buffer'
-import { createHash } from 'node:crypto'
 import { program } from 'commander'
+import { checksum as getChecksum } from '@tomasklaen/checksum'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { FunctionsHttpError, createClient } from '@supabase/supabase-js'
 import prettyjson from 'prettyjson'
@@ -572,15 +572,15 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
 }
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
-  const allFiles = (await promiseFiles(path))
-    .map((file) => {
+  const allFiles = await Promise.all((await promiseFiles(path)).map(async (file) => {
       const buffer = readFileSync(file)
-      const hash = createHash('sha-256').update(buffer).digest('hex')
+      const hash = await getChecksum(buffer, 'sha256')
+      // const hash = createHash('sha-256').update(buffer).digest('hex')
       let filePath = file.replace(path, '')
       if (filePath.startsWith('/'))
         filePath = filePath.substring(1, filePath.length)
       return { file: filePath, hash }
-    })
+    }))
   return allFiles
 }
 
