@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.21.7](https://github.com/Cap-go/CLI/compare/v4.21.6...v4.21.7) (2024-10-08)
+
+
+### Bug Fixes
+
+* use brotli instead of gzip ([9d78254](https://github.com/Cap-go/CLI/commit/9d78254db2857e6fe8998448203a6c04f8c66d22))
+
 ### [4.21.6](https://github.com/Cap-go/CLI/compare/v4.21.5...v4.21.6) (2024-10-08)
 
 
