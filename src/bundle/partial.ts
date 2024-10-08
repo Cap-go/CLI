@@ -1,5 +1,5 @@
 import { createReadStream } from 'node:fs'
-import { createGzip } from 'node:zlib'
+import { createBrotliCompress } from 'node:zlib'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { join } from 'node:path'
 import type LogSnag from 'logsnag'
@@ -39,7 +39,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
   const uploadFiles = manifest.map(async (file) => {
     const finalFilePath = join(path, file.file)
-    const fileStream = createReadStream(finalFilePath).pipe(createGzip({ level: 9 }))
+    const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
     return new Promise((resolve, reject) => {
