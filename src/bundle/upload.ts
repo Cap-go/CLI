@@ -16,9 +16,9 @@ import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, chec
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import type { CapacitorConfig } from '../config'
+import pack from '../../package.json'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
-import pack from '../../package.json'
 
 interface Options extends OptionsBase {
   bundle?: string
