@@ -573,14 +573,14 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
   const allFiles = await Promise.all((await promiseFiles(path)).map(async (file) => {
-      const buffer = readFileSync(file)
-      const hash = await getChecksum(buffer, 'sha256')
-      // const hash = createHash('sha-256').update(buffer).digest('hex')
-      let filePath = file.replace(path, '')
-      if (filePath.startsWith('/'))
-        filePath = filePath.substring(1, filePath.length)
-      return { file: filePath, hash }
-    }))
+    const buffer = readFileSync(file)
+    const hash = await getChecksum(buffer, 'sha256')
+    // const hash = createHash('sha-256').update(buffer).digest('hex')
+    let filePath = file.replace(path, '')
+    if (filePath.startsWith('/'))
+      filePath = filePath.substring(1, filePath.length)
+    return { file: filePath, hash }
+  }))
   return allFiles
 }
 
