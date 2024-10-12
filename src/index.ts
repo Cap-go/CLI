@@ -139,7 +139,6 @@ bundle
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('--tus', 'Upload the bundle using tus')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
   .option(
     '--min-update-version <minUpdateVersion>',
@@ -149,8 +148,9 @@ bundle
   .option('--ignore-metadata-check', 'Ignores the metadata (node_modules) check when uploading')
   .option('--ignore-checksum-check', 'Ignores the checksum check when uploading')
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
-  .option('--multipart', 'Uses multipart protocol to upload data to S3')
-  .option('--partial', 'Upload partial files to S3')
+  .option('--multipart', 'Uses multipart protocol to upload data to S3, Deprecated, use tus instead')
+  .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
+  .option('--partial', 'Upload partial files to Capgo cloud')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
 
 bundle

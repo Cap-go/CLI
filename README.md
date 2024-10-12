@@ -147,10 +147,10 @@ Options:
 * `--channel <channel>` Channel to link to.
 * `--external <url>` Link to external URL instead of uploading to Capgo Cloud.
 * `--iv-session-key <key>` Set the IV and session key for bundle URL external.
-* `--s3-region <region>` Region for your S3 bucket.
+* `--s3-endpoint <s3Endpoint>` URL of S3 endpoint. Do not work with Partial upload, or external option.
+* `--s3-region <region>` Region for your S3 bucket. 
 * `--s3-apikey <apikey>` API key for your S3 endpoint.
 * `--s3-apisecret <apisecret>` API secret for your S3 endpoint.
-* `--s3-endpoint <s3Endpoint>` URL of S3 endpoint.
 * `--s3-bucket-name <bucketName>` Name for your AWS S3 bucket.
 * `--s3-port <port>` Port for your S3 endpoint.
 * `--no-s3-ssl` Disable SSL for S3 upload.
@@ -162,14 +162,15 @@ Options:
 * `--no-key` Ignore signing key and send clear update.
 * `--no-code-check` Ignore checking if notifyAppReady() is called in source code and index present in root folder.
 * `--display-iv-session` Show in the console the IV and session key used to encrypt the update.
-* `--tus` Upload the bundle using TUS protocol.
 * `--bundle <bundle>` Bundle version number of the bundle to upload.
 * `--min-update-version <minUpdateVersion>` Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel.
 * `--auto-min-update-version` Set the min update version based on native packages.
 * `--ignore-metadata-check` Ignores the metadata (node_modules) check when uploading.
 * `--ignore-checksum-check` Ignores the checksum check when uploading.
 * `--timeout <timeout>` Timeout for the upload process in seconds.
-* `--ignore-partial` Does not upload partial files to S3.
+* `--partial` Does not upload partial files to Capgo cloud.
+* `--tus` Upload the bundle using tus protocol.
+* `--multipart` Uses multipart protocol to upload data to S3, Deprecated, use TUS instead.
 * `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
