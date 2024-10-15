@@ -4,7 +4,7 @@ import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clac
 import { program } from 'commander'
 import ky from 'ky'
 import { checkLatest } from '../api/update'
-import { convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
+import { convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -58,8 +58,9 @@ interface LogData {
 }
 export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData[]> {
   try {
+    const localConfig = await getLocalConfig()
     const dataD = await ky
-      .post(`${defaultApiHost}/private/stats`, {
+      .post(`${localConfig.hostApi}/private/stats`, {
         headers: {
           'Content-Type': 'application/json',
           'capgkey': apikey,
@@ -80,7 +81,7 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
   return []
 }
 
-async function displayError(data: LogData, channel: string, orgId: string, apikey: string, baseUrl: string) {
+async function displayError(data: LogData, channel: string, orgId: string, apikey: string, baseAppUrl: string, baseUrl: string) {
   log.info(`Log from Device: ${data.device_id}`)
   if (data.action === 'get') {
     log.info('Update Sent your your device, wait until event download complete')
@@ -106,10 +107,10 @@ async function displayError(data: LogData, channel: string, orgId: string, apike
     return false
   }
   else if (data.action === 'NoChannelOrOverride') {
-    log.error(`No default channel or override (channel/device) found, please create it here ${baseUrl}`)
+    log.error(`No default channel or override (channel/device) found, please create it here ${baseAppUrl}`)
   }
   else if (data.action === 'needPlanUpgrade') {
-    log.error('Your are out of quota, please upgrade your plan here https://web.capgo.app/dashboard/settings/plans')
+    log.error(`Your are out of quota, please upgrade your plan here ${baseUrl}/dashboard/settings/plans`)
   }
   else if (data.action === 'missingBundle') {
     log.error('Your bundle is missing, please check how you build your app')
@@ -123,10 +124,10 @@ async function displayError(data: LogData, channel: string, orgId: string, apike
     log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
   }
   else if (data.action === 'disablePlatformIos') {
-    log.error(`iOS is disabled in the default channel and your device ${data.device_id} is an iOS device ${baseUrl}`)
+    log.error(`iOS is disabled in the default channel and your device ${data.device_id} is an iOS device ${baseAppUrl}`)
   }
   else if (data.action === 'disablePlatformAndroid') {
-    log.error(`Android is disabled in the default channel and your device ${data.device_id} is an Android device ${baseUrl}`)
+    log.error(`Android is disabled in the default channel and your device ${data.device_id} is an Android device ${baseAppUrl}`)
   }
   else if (data.action === 'disableAutoUpdateToMajor') {
     log.error(`The version number you uploaded to your default channel in Capgo, is a major version higher (ex: 1.0.0 in device to 2.0.0 in Capgo) than the present in the device ${data.device_id}.`)
@@ -146,19 +147,19 @@ Are lower than the version number you uploaded to Capgo.`)
     log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
   }
   else if (data.action === 'disableDevBuild') {
-    log.error(`Dev build is disabled in the default channel. ${baseUrl}`)
+    log.error(`Dev build is disabled in the default channel. ${baseAppUrl}`)
     log.error('Set your channel to allow it if you wanna test your app')
   }
   else if (data.action === 'disableEmulator') {
-    log.error(`Emulator is disabled in the default channel. ${baseUrl}`)
+    log.error(`Emulator is disabled in the default channel. ${baseAppUrl}`)
     log.error('Set your channel to allow it if you wanna test your app')
   }
   else if (data.action === 'cannotGetBundle') {
-    log.error(`We cannot get your bundle from the default channel. ${baseUrl}`)
+    log.error(`We cannot get your bundle from the default channel. ${baseAppUrl}`)
     log.error('Are you sure your default channel has a bundle set?')
   }
   else if (data.action === 'set_fail') {
-    log.error(`Your bundle seems to be corrupted, try to download from ${baseUrl} to identify the issue`)
+    log.error(`Your bundle seems to be corrupted, try to download from ${baseAppUrl} to identify the issue`)
   }
   else if (data.action === 'reset') {
     log.error('Your device has been reset to the builtin bundle, did notifyAppReady() is present in the code builded and uploaded to Capgo ?')
@@ -180,7 +181,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   let loop = true
   const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
-  const baseUrl = `${config.hostWeb}/app/p/${appIdUrl}`
+  const baseAppUrl = `${config.hostWeb}/app/p/${appIdUrl}`
   await markSnag(channel, orgId, apikey, 'Use waitlog')
   const query: QueryStats = {
     appId,
@@ -200,7 +201,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
     if (data.length > 0) {
       after = data[0].created_at
       for (const d of data) {
-        loop = await displayError(d, channel, orgId, apikey, baseUrl)
+        loop = await displayError(d, channel, orgId, apikey, baseAppUrl, config.hostWeb)
         if (!loop)
           break
       }
@@ -238,8 +239,6 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
     outro(`Done ✅`)
   }
   else {
-    // const appIdUrl = convertAppName(appId)
-    // log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
     outro(`Canceled ❌`)
   }
   outro(`Done ✅`)

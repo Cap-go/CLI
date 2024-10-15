@@ -160,9 +160,12 @@ export async function updateConfig(newConfig: any): Promise<ExtConfigPairs> {
 export async function getLocalConfig() {
   try {
     const extConfig = await getConfig()
-    const capConfig: Partial<CapgoConfig> = {
+    const capConfig: CapgoConfig = {
       host: (extConfig?.config?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
       hostWeb: (extConfig?.config?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
+      hostFilesApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localFilesHost || defaultFileHost) as string,
+      hostApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localApiHost || defaultApiHost) as string,
+
     }
 
     if (extConfig?.config?.plugins?.CapacitorUpdater?.localSupa && extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon) {
@@ -176,6 +179,8 @@ export async function getLocalConfig() {
     return {
       host: defaultHost,
       hostWeb: defaultHostWeb,
+      hostFilesApi: defaultFileHost,
+      hostApi: defaultApiHost,
     }
   }
 }
@@ -183,16 +188,18 @@ export async function getLocalConfig() {
 const nativeFileRegex = /([A-Za-z0-9]+)\.(java|swift|kt|scala)$/
 
 interface CapgoConfig {
-  supaHost: string
-  supaKey: string
+  supaHost?: string
+  supaKey?: string
   host: string
   hostWeb: string
+  hostFilesApi: string
+  hostApi: string
 }
 export async function getRemoteConfig() {
   // call host + /api/get_config and parse the result as json using ky
   const localConfig = await getLocalConfig()
   return ky
-    .get(`${defaultApiHost}/private/config`)
+    .get(`${localConfig.hostApi}/private/config`)
     .then(res => res.json<CapgoConfig>())
     .then(data => ({ ...data, ...localConfig } as CapgoConfig))
     .catch(() => {
@@ -209,9 +216,10 @@ interface CapgoFilesConfig {
 }
 
 export async function getRemoteFileConfig() {
+  const localConfig = await getLocalConfig()
   // call host + /api/get_config and parse the result as json using ky
   return ky
-    .get(`${defaultFileHost}/files/config`)
+    .get(`${localConfig.hostFilesApi}/files/config`)
     .then(res => res.json<CapgoFilesConfig>())
     .catch((error) => {
       log.info(`Files config error ${formatError(error)}`)
@@ -718,7 +726,7 @@ export async function zipFile(filePath: string): Promise<Buffer> {
   return zipBuffer
 }
 
-export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>): Promise<boolean> {
+export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig): Promise<boolean> {
   return new Promise((resolve, reject) => {
     sendEvent(apikey, {
       channel: 'app',
@@ -736,7 +744,7 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
     // const multipart = fileSize > maxFileSize ? Math.ceil(fileSize / maxFileSize) : 1
 
     const upload = new tus.Upload(data as any, {
-      endpoint: `${defaultFileHost}/files/upload/attachments/`,
+      endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
       // parallelUploads: multipart,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,

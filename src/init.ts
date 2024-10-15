@@ -18,7 +18,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -402,7 +402,7 @@ async function step9(orgId: string, apikey: string) {
   await markStep(orgId, apikey, 9)
 }
 
-async function step10(orgId: string, apikey: string, appId: string) {
+async function step10(orgId: string, apikey: string, appId: string, hostWeb: string) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
@@ -411,7 +411,7 @@ async function step10(orgId: string, apikey: string, appId: string) {
   }
   else {
     const appIdUrl = convertAppName(appId)
-    p.log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
+    p.log.info(`Check logs in ${hostWeb}/app/p/${appIdUrl}/logs to see if update works.`)
   }
   await markStep(orgId, apikey, 10)
 }
@@ -421,6 +421,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   p.intro(`Capgo onboarding 🛫`)
   await checkLatest()
   const extConfig = await getConfig()
+  const localConfig = await getLocalConfig()
   appId = appId || extConfig?.config?.appId
   options.apikey = apikeyCommand || findSavedKey()
 
@@ -483,7 +484,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       markStepDone(9)
     }
 
-    await step10(orgId, options.apikey, appId)
+    await step10(orgId, options.apikey, appId, localConfig.hostWeb)
     await markStep(orgId, options.apikey, 0)
     cleanupStepsDone()
   }

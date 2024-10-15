@@ -350,7 +350,8 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   try {
     if (options.tus !== undefined && options.tus) {
       log.info(`Uploading bundle with TUS protocol`)
-      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner)
+      const localConfig = await getLocalConfig()
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig)
       isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
@@ -458,16 +459,15 @@ async function setVersionInChannel(
   }
 }
 
-export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType) {
+export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
     .single()
 
   if (error) {
     log.warn('Cannot find default upload channel')
-    // you can set it here:  https://web.capgo.app/app/p/[appId]/settings
     const appIdUrl = convertAppName(appId)
-    log.info(`You can set it here:  https://web.capgo.app/app/p/${appIdUrl}/settings`)
+    log.info(`You can set it here:  ${hostWeb}/app/p/${appIdUrl}/settings`)
     return null
   }
 
@@ -494,7 +494,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const localConfig = await getLocalConfig()
   const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
-  const channel = options.channel || await getDefaulUploadChannel(appid, supabase) || 'dev'
+  const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
