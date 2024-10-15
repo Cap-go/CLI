@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.21.12](https://github.com/Cap-go/CLI/compare/v4.21.11...v4.21.12) (2024-10-15)
+
+
+### Bug Fixes
+
+* allow all url override ([d061670](https://github.com/Cap-go/CLI/commit/d061670e3142becb3d04048558a24550cedd7642))
+* make the CLI lighter ([b93337c](https://github.com/Cap-go/CLI/commit/b93337ca7f3f285c2212dd4f7b6e430dc11816cf))
+
 ### [4.21.11](https://github.com/Cap-go/CLI/compare/v4.21.10...v4.21.11) (2024-10-15)
 
 
