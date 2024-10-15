@@ -1,7 +1,7 @@
 import { platform, version } from 'node:os'
 import { exit, version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
-import getLatest from 'get-latest-version'
+import latestVersion from 'latest-version'
 import pack from '../../package.json'
 import { getConfig, readPackageJson } from '../utils'
 
@@ -11,7 +11,7 @@ async function getLatestDependencies(installedDependencies: { [key: string]: str
   for (const dependency in installedDependencies) {
     if (Object.prototype.hasOwnProperty.call(installedDependencies, dependency)) {
       // get in npm the last version of the dependency
-      all.push(getLatest(dependency))
+      all.push(latestVersion(dependency))
     }
   }
   await Promise.all(all)

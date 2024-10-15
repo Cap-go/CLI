@@ -6,6 +6,6 @@ export async function getUserId(options: Options) {
   intro(`Getting user id`)
   options.apikey = options.apikey || findSavedKey()
   const supabase = await createSupabaseClient(options.apikey)
-  const userId = await verifyUser(supabase, options.apikey, ['read'])
+  const userId = await verifyUser(supabase, options.apikey, ['read', 'all', 'write'])
   outro(`Done ✅: ${userId}`)
 }

@@ -5,11 +5,11 @@ import type { ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { join, relative, resolve, sep } from 'node:path'
+import { dirname, join, relative, resolve, sep } from 'node:path'
 import { cwd, exit } from 'node:process'
+import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
-import { findRootSync } from '@manypkg/find-root'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
@@ -103,8 +103,18 @@ export function wait(ms: number) {
   })
 }
 
-export async function readPackageJson() {
-  const packageJson = readFileSync(join(cwd(), PACKNAME))
+function findRoot(dir: string) {
+  if (isMonorepo(dir)) {
+    return findMonorepoRoot(dir)
+  }
+  else if (isNXMonorepo(dir)) {
+    return findNXMonorepoRoot(dir)
+  }
+  return dir
+}
+
+export async function readPackageJson(f: string = findRoot(cwd())) {
+  const packageJson = readFileSync(join(f, PACKNAME))
   return JSON.parse(packageJson as any)
 }
 
@@ -241,10 +251,12 @@ export async function checkKey(supabase: SupabaseClient<Database>, apikey: strin
     log.error(`Invalid API key or insufficient permissions.`)
     // create a string from keymode array with comma and space and "or" for the last one
     const keymodeStr = keymode.map((k, i) => {
+      if (keymode.length === 1)
+        return `"${k}"`
       if (i === keymode.length - 1)
-        return `or ${k}`
+        return `or "${k}"`
 
-      return `${k}, `
+      return `"${k}", `
     }).join('')
     log.error(`Your key should be: ${keymodeStr} mode.`)
     program.error('')
@@ -508,7 +520,8 @@ export async function findProjectType() {
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
     if (f.includes('package.json')) {
-      const packageJson = await readPackageJson()
+      const folder = dirname(f)
+      const packageJson = await readPackageJson(folder)
       if (packageJson.dependencies) {
         if (packageJson.dependencies.react) {
           log.info('Found react project test')
@@ -978,11 +991,11 @@ let pmRunner: PackageManagerRunner = 'npx'
 export function getPMAndCommand() {
   if (pmFetched)
     return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
-  const dir = findRootSync(cwd())
-  pm = findPackageManagerType(dir.rootDir, 'npm')
+  const dir = findRoot(cwd())
+  pm = findPackageManagerType(dir, 'npm')
   pmCommand = findInstallCommand(pm)
   pmFetched = true
-  pmRunner = findPackageManagerRunner(dir.rootDir)
+  pmRunner = findPackageManagerRunner(dir)
   return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
@@ -1002,8 +1015,8 @@ function readDirRecursively(dir: string): string[] {
 }
 
 export async function getLocalDepenencies() {
-  const dir = findRootSync(cwd())
-  const packageJsonPath = join(cwd(), 'package.json')
+  const dir = findRoot(cwd())
+  const packageJsonPath = join(dir, PACKNAME)
 
   if (!existsSync(packageJsonPath)) {
     log.error('Missing package.json, you need to be in a capacitor project')
@@ -1035,7 +1048,7 @@ export async function getLocalDepenencies() {
 
   const nodeModulesPath = join(cwd(), 'node_modules')
   if (!existsSync(nodeModulesPath)) {
-    const pm = findPackageManagerType(dir.rootDir, 'npm')
+    const pm = findPackageManagerType(dir, 'npm')
     const installCmd = findInstallCommand(pm)
     log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
     program.error('')
@@ -1050,7 +1063,7 @@ export async function getLocalDepenencies() {
 
       if (!dependencyFolderExists) {
         anyInvalid = true
-        const pm = findPackageManagerType(dir.rootDir, 'npm')
+        const pm = findPackageManagerType(dir, 'npm')
         const installCmd = findInstallCommand(pm)
         log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
         return { name: key, version: value }
