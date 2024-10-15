@@ -43,11 +43,6 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js"
   },
-  "dependencies": {
-    "@sauber/table": "npm:@jsr/sauber__table",
-    "@types/tmp": "^0.2.6",
-    "tmp": "^0.2.3"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^3.7.3",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
@@ -55,11 +50,13 @@
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.7.0",
     "@manypkg/find-root": "^2.2.3",
+    "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
     "@supabase/supabase-js": "^2.45.2",
     "@tomasklaen/checksum": "^1.1.0",
     "@types/node": "^22.5.0",
     "@types/prettyjson": "^0.0.33",
+    "@types/tmp": "^0.2.6",
     "@typescript-eslint/eslint-plugin": "^8.3.0",
     "@typescript-eslint/parser": "^8.3.0",
     "@vercel/ncc": "^0.38.1",
@@ -76,6 +73,7 @@
     "open": "^10.1.0",
     "pkg": "5.8.1",
     "prettyjson": "^1.2.5",
+    "tmp": "^0.2.3",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
