@@ -1,22 +1,21 @@
+import type { Buffer } from 'node:buffer'
+import type { CapacitorConfig } from '../config'
+import type { Database } from '../types/supabase.types'
+import type { manifestType, OptionsBase } from '../utils'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import type { Buffer } from 'node:buffer'
-import { program } from 'commander'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
-import type LogSnag from 'logsnag'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
-import ky, { HTTPError } from 'ky'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
-import type { Database } from '../types/supabase.types'
+import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { program } from 'commander'
+import ky, { HTTPError } from 'ky'
+import pack from '../../package.json'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import type { OptionsBase, manifestType } from '../utils'
-import { ALERT_MB, OrganizationPerm, UPLOAD_TIMEOUT, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, readPackageJson, regexSemver, updateOrCreateChannel, updateOrCreateVersion, uploadTUS, uploadUrl, useLogSnag, verifyUser, zipFile } from '../utils'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
-import type { CapacitorConfig } from '../config'
-import pack from '../../package.json'
+import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -234,7 +233,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   }
 }
 
-async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, snag: LogSnag, orgId: string, appid: string) {
+async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, apikey: string, orgId: string, appid: string) {
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
@@ -263,7 +262,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       log.error(`Cannot find private key ${privateKey}`)
       program.error('')
     }
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'app',
       event: 'App encryption v2',
       icon: '🔑',
@@ -272,7 +271,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
         'app-id': appid,
       },
       notify: false,
-    }).catch()
+    })
     // open with fs publicKey path
     if (!keyDataV2) {
       const keyFile = readFileSync(privateKey)
@@ -298,7 +297,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       log.error(`Cannot find public key ${publicKey}`)
       program.error('')
     }
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'app',
       event: 'App encryption',
       icon: '🔑',
@@ -307,7 +306,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
         'app-id': appid,
       },
       notify: false,
-    }).catch()
+    })
     // open with fs publicKey path
     if (!keyData) {
       const keyFile = readFileSync(publicKey)
@@ -328,7 +327,7 @@ It will be also visible in your dashboard\n`)
   if (mbSize > ALERT_MB) {
     log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
     log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'app-error',
       event: 'App Too Large',
       icon: '🚛',
@@ -337,13 +336,13 @@ It will be also visible in your dashboard\n`)
         'app-id': appid,
       },
       notify: false,
-    }).catch()
+    })
   }
 
   return { zipped, sessionKey, checksum }
 }
 
-async function uploadBundleToCapgoCloud(snag: LogSnag, apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
+async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
@@ -400,7 +399,7 @@ async function uploadBundleToCapgoCloud(snag: LogSnag, apikey: string, supabase:
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
   spinner.stop(`Bundle uploaded 💪 in (${uploadTime} seconds)`)
-  await snag.track({
+  await sendEvent(apikey, {
     channel: 'performance',
     event: isTus ? 'TUS upload zip performance' : 'Upload zip performance',
     icon: '🚄',
@@ -410,7 +409,7 @@ async function uploadBundleToCapgoCloud(snag: LogSnag, apikey: string, supabase:
       'time': uploadTime,
     },
     notify: false,
-  }).catch()
+  })
 }
 
 async function setVersionInChannel(
@@ -487,7 +486,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const fileConfig = await getRemoteFileConfig()
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
   const bundle = await getBundle(extConfig.config, options)
-  const snag = useLogSnag()
 
   checkNotifyAppReady(options, path)
 
@@ -527,7 +525,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   let zipped: Buffer | null = null
   if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, snag, orgId, appid)
+    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
     versionData.session_key = sessionKey
     versionData.checksum = checksum
     zipped = _zipped
@@ -536,7 +534,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }
   }
   else {
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'app',
       event: 'App external',
       icon: '📤',
@@ -545,7 +543,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
         'app-id': appid,
       },
       notify: false,
-    }).catch()
+    })
     versionData.session_key = options.ivSessionKey
     versionData.checksum = options.encryptedChecksum
   }
@@ -565,7 +563,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
 
   // TODO: re enable this when we have the partial upload working better
-  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, snag, orgId, appid) : []
+  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -596,7 +594,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    await uploadBundleToCapgoCloud(snag, apikey, supabase, appid, bundle, orgId, zipped, options)
+    await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
@@ -625,7 +623,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     log.warn('Cannot set channel as a upload organization member')
   }
 
-  await snag.track({
+  await sendEvent(apikey, {
     channel: 'app',
     event: 'App Uploaded',
     icon: '⏫',
@@ -634,7 +632,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       'app-id': appid,
     },
     notify: false,
-  }).catch()
+  })
   if (shouldExit) {
     outro('Time to share your update to the world 🌍')
     exit()

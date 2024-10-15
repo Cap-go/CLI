@@ -1,20 +1,21 @@
-import { existsSync, readFileSync } from 'node:fs'
-import { exit } from 'node:process'
-import mime from 'mime'
-import { program } from 'commander'
-import { intro, log, outro } from '@clack/prompts'
-import { checkLatest } from '../api/update'
+import type Buffer from 'node:buffer'
 import type { Options } from '../api/app'
-import { checkAppExists, newIconPath } from '../api/app'
 import type {
   Organization,
 } from '../utils'
+import { existsSync, readFileSync } from 'node:fs'
+import { exit } from 'node:process'
+import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
+import { checkAppExists, newIconPath } from '../api/app'
+import { checkLatest } from '../api/update'
 import {
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
+  getContentType,
   getOrganization,
   verifyUser,
 } from '../utils'
@@ -74,18 +75,18 @@ export async function addAppInternal(appId: string, options: Options, organizati
   if (throwErr)
     log.info(`Adding ${appId} to Capgo`)
 
-  let iconBuff
-  let iconType
+  let iconBuff: Buffer | null = null
+  let iconType: string | null = null
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)
-    const contentType = mime.getType(icon)
+    const contentType = getContentType(icon)
     iconType = contentType || 'image/png'
     log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
-    const contentType = mime.getType(newIconPath)
+    const contentType = getContentType(newIconPath)
     iconType = contentType || 'image/png'
     log.warn(`Found app icon ${newIconPath}`)
   }

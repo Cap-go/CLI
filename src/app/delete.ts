@@ -1,16 +1,15 @@
-import { exit } from 'node:process'
-import { program } from 'commander'
-import { intro, isCancel, log, outro, select } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { exit } from 'node:process'
+import { intro, isCancel, log, outro, select } from '@clack/prompts'
+import { program } from 'commander'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 export async function deleteApp(appId: string, options: OptionsBase) {
   intro(`Deleting`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')
@@ -94,7 +93,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
     program.error('')
   }
   const orgId = await getOrganizationId(supabase, appId)
-  await snag.track({
+  await sendEvent(options.apikey, {
     channel: 'app',
     event: 'App Deleted',
     icon: '🗑️',

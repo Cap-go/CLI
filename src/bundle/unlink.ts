@@ -1,23 +1,23 @@
-import { exit } from 'node:process'
-import { program } from 'commander'
-import { intro, log, outro } from '@clack/prompts'
-import { getVersionData } from '../api/versions'
-import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
-import { checkVersionNotUsedInChannel } from '../api/channels'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
   OptionsBase,
 } from '../utils'
+import { exit } from 'node:process'
+import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { checkVersionNotUsedInChannel } from '../api/channels'
+import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
+import { getVersionData } from '../api/versions'
 import {
-  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
   getOrganizationId,
+  OrganizationPerm,
   readPackageJson,
-  useLogSnag,
+  sendEvent,
   verifyUser,
 } from '../utils'
 
@@ -30,7 +30,6 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const snag = useLogSnag()
   let { bundle } = options
 
   const pack = await readPackageJson()
@@ -68,7 +67,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
     const versionData = await getVersionData(supabase, appId, bundle)
     await checkVersionNotUsedInChannel(supabase, appId, versionData)
     await checkVersionNotUsedInDeviceOverride(supabase, appId, versionData)
-    await snag.track({
+    await sendEvent(options.apikey, {
       channel: 'bundle',
       event: 'Unlink bundle',
       icon: '✅',

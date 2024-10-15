@@ -1,9 +1,9 @@
-import { exit } from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
-import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
+import { exit } from 'node:process'
+import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
+import { Table } from '@sauber/table'
+import { program } from 'commander'
 import { formatError } from '../utils'
 
 export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
@@ -51,7 +51,8 @@ export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: st
     .eq('app_id', appId)
     .eq('name', 'unknown')
     .throwOnError()
-    .single().then(({ data, error }) => {
+    .single()
+    .then(({ data, error }) => {
       if (error) {
         log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
         program.error('')
@@ -98,34 +99,37 @@ interface Channel {
   version?: version
 }
 export function displayChannels(data: Channel[]) {
-  const t = new Table({
-    title: 'Channels',
-    charLength: { '❌': 2, '✅': 2 },
-  })
+  const t = new Table()
+  t.theme = Table.roundTheme
+  t.headers = ['Name', 'Version', 'Public', 'iOS', 'Android', 'Auto Update', 'Native Auto Update', 'Device Self Set', 'Progressive Deploy', 'Secondary Version', 'Secondary Version Percentage', 'AB Testing', 'AB Testing Version', 'AB Testing Percentage', 'Emulator', 'Dev']
+  t.rows = [
+    ['a', 0, true],
+    ['bb', 10, false],
+  ]
 
   // add rows with color
   data.reverse().forEach((row) => {
-    t.addRow({
-      'Name': row.name,
-      ...(row.version ? { Version: row.version.name } : undefined),
-      'Public': row.public ? '✅' : '❌',
-      'iOS': row.ios ? '✅' : '❌',
-      'Android': row.android ? '✅' : '❌',
-      '⬆️ limit': row.disable_auto_update,
-      '⬇️ under native': row.disable_auto_update_under_native ? '❌' : '✅',
-      'Self assign': row.allow_device_self_set ? '✅' : '❌',
-      'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
-      ...(row.enable_progressive_deploy && row.second_version ? { 'Next version': row.second_version.name } : undefined),
-      ...(row.enable_progressive_deploy && row.second_version ? { 'Next %': row.secondary_version_percentage } : undefined),
-      'AB Testing': row.enable_ab_testing ? '✅' : '❌',
-      ...(row.enable_ab_testing && row.second_version ? { 'Version B': row.second_version.name } : undefined),
-      ...(row.enable_ab_testing && row.second_version ? { 'A/B %': `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` } : undefined),
-      'Emulator': row.allow_emulator ? '✅' : '❌',
-      'Dev 📱': row.allow_dev ? '✅' : '❌',
-    })
+    t.rows.push([
+      row.name,
+      row.version?.name,
+      row.public ? '✅' : '❌',
+      row.ios ? '✅' : '❌',
+      row.android ? '✅' : '❌',
+      row.disable_auto_update,
+      row.disable_auto_update_under_native ? '❌' : '✅',
+      row.allow_device_self_set ? '✅' : '❌',
+      row.enable_progressive_deploy ? '✅' : '❌',
+      row.enable_progressive_deploy && row.second_version ? row.second_version.name : undefined,
+      row.enable_progressive_deploy && row.second_version ? row.secondary_version_percentage : undefined,
+      row.enable_ab_testing ? '✅' : '❌',
+      row.enable_ab_testing && row.second_version ? row.second_version.name : undefined,
+      row.enable_ab_testing && row.second_version ? `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` : undefined,
+      row.allow_emulator ? '✅' : '❌',
+      row.allow_dev ? '✅' : '❌',
+    ])
   })
-
-  log.success(t.render())
+  log.success('Channels')
+  log.success(t.toString())
 }
 
 export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {

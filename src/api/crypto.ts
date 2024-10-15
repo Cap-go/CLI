@@ -1,3 +1,4 @@
+import { Buffer } from 'node:buffer'
 import {
   constants,
   createCipheriv,
@@ -7,7 +8,6 @@ import {
   publicEncrypt,
   randomBytes,
 } from 'node:crypto'
-import { Buffer } from 'node:buffer'
 
 const algorithm = 'aes-128-cbc'
 const oaepHash = 'sha256'

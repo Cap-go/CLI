@@ -1,9 +1,9 @@
-import { exit } from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
-import { log } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
+import { exit } from 'node:process'
+import { log } from '@clack/prompts'
+import { Table } from '@sauber/table'
+import { program } from 'commander'
 
 // import { definitions } from '../types/types_supabase';
 import { getHumanDate } from '../utils'
@@ -39,21 +39,21 @@ export function displayBundles(data: (Database['public']['Tables']['app_versions
 
     exit(1)
   }
-  const t = new Table({
-    title: 'Bundles',
-    charLength: { '❌': 2, '✅': 2 },
-  })
+  const t = new Table()
+  t.theme = Table.roundTheme
+  t.headers = ['Version', 'Created', 'Keep']
 
   // add rows with color
   data.reverse().forEach((row) => {
-    t.addRow({
-      Version: row.name,
-      Created: getHumanDate(row.created_at),
-      ...(row.keep != null ? { Keep: row.keep } : {}),
-    })
+    t.rows.push([
+      row.name,
+      getHumanDate(row.created_at),
+      row.keep != null ? row.keep : '',
+    ])
   })
 
-  log.success(t.render())
+  log.success('Bundles')
+  log.success(t.toString())
 }
 
 export async function getActiveAppVersions(supabase: SupabaseClient<Database>, appid: string) {

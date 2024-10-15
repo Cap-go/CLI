@@ -1,20 +1,19 @@
+import type { manifestType } from '../utils'
 import { createReadStream } from 'node:fs'
-import { createBrotliCompress } from 'node:zlib'
-import { buffer as readBuffer } from 'node:stream/consumers'
 import { join } from 'node:path'
-import type LogSnag from 'logsnag'
+import { buffer as readBuffer } from 'node:stream/consumers'
+import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
-import type { manifestType } from '../utils'
-import { defaultFileHost, generateManifest, useLogSnag } from '../utils'
+import { defaultFileHost, generateManifest, sendEvent } from '../utils'
 
-export async function prepareBundlePartialFiles(path: string, snag: LogSnag, orgId: string, appid: string) {
+export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
   const spinner = spinnerC()
   spinner.start('Generating the update manifest')
   const manifest = await generateManifest(path)
   spinner.stop('Manifest generated successfully')
 
-  await snag.track({
+  await sendEvent(apikey, {
     channel: 'partial-update',
     event: 'Generate manifest',
     icon: '📂',
@@ -23,7 +22,7 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
       'app-id': appid,
     },
     notify: false,
-  }).catch()
+  })
 
   return manifest
 }
@@ -31,7 +30,6 @@ export async function prepareBundlePartialFiles(path: string, snag: LogSnag, org
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
-  const snag = useLogSnag()
   const startTime = performance.now()
 
   let uploadedFiles = 0
@@ -80,7 +78,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Partial update uploaded successfully 💪 in (${uploadTime} seconds)`)
 
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'app',
       event: 'App Partial TUS done',
       icon: '⏫',
@@ -89,8 +87,8 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
         'app-id': appId,
       },
       notify: false,
-    }).catch()
-    await snag.track({
+    })
+    await sendEvent(apikey, {
       channel: 'performance',
       event: 'Partial upload performance',
       icon: '🚄',
@@ -100,7 +98,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
         'time': uploadTime,
       },
       notify: false,
-    }).catch()
+    })
     return results
   }
   catch (error) {

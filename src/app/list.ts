@@ -1,33 +1,29 @@
-import { exit } from 'node:process'
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { intro, log, outro } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
+import { exit } from 'node:process'
+import { intro, log, outro } from '@clack/prompts'
+import { Table } from '@sauber/table'
+import { program } from 'commander'
 import { checkLatest } from '../api/update'
+import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
 
 function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
   if (!data.length) {
     log.error('No apps found')
     exit(1)
   }
-  const t = new Table({
-    title: 'Apps',
-    charLength: { '❌': 2, '✅': 2 },
-  })
+  const t = new Table()
+  t.headers = ['Name', 'id', 'Created']
+  t.rows = []
 
   // add rows with color
   data.reverse().forEach((row) => {
-    t.addRow({
-      Name: row.name,
-      id: row.app_id,
-      Created: getHumanDate(row.created_at),
-    })
+    t.rows.push([row.name ?? '', row.app_id, getHumanDate(row.created_at)])
   })
 
-  log.success(t.render())
+  log.success('Apps')
+  log.success(t.toString())
 }
 
 export async function getActiveApps(supabase: SupabaseClient<Database>) {

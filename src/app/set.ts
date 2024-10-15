@@ -1,12 +1,11 @@
+import type { Options } from '../api/app'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import mime from 'mime'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import type { Options } from '../api/app'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganization, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getContentType, getOrganization, OrganizationPerm, verifyUser } from '../utils'
 
 export async function setApp(appId: string, options: Options) {
   intro(`Set app`)
@@ -48,13 +47,13 @@ export async function setApp(appId: string, options: Options) {
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)
-    const contentType = mime.getType(icon)
+    const contentType = getContentType(icon)
     iconType = contentType || 'image/png'
     log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
-    const contentType = mime.getType(newIconPath)
+    const contentType = getContentType(newIconPath)
     iconType = contentType || 'image/png'
     log.warn(`Found app icon ${newIconPath}`)
   }

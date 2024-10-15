@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import { checkLatest } from '../api/update'
+import { program } from 'commander'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
+import { checkLatest } from '../api/update'
 import { baseKeyV2, formatError, getConfig } from '../utils'
 
 interface Options {

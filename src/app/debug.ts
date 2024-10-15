@@ -1,12 +1,10 @@
-import { exit } from 'node:process'
-import ky from 'ky'
-import { program } from 'commander'
-import type LogSnag from 'logsnag'
-import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { exit } from 'node:process'
+import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
+import { program } from 'commander'
+import ky from 'ky'
 import { checkLatest } from '../api/update'
-import { OrganizationPerm, convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { convertAppName, createSupabaseClient, defaultApiHost, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -19,19 +17,19 @@ export interface OptionsBaseDebug {
   device?: string
 }
 
-export async function markSnag(channel: string, orgId: string, snag: LogSnag, event: string, icon = '✅') {
-  await snag.track({
+export async function markSnag(channel: string, orgId: string, apikey: string, event: string, icon = '✅') {
+  await sendEvent(apikey, {
     channel,
     event,
     icon,
     user_id: orgId,
     notify: false,
-  }).catch()
+  })
 }
 
-export async function cancelCommand(channel: string, command: boolean | symbol, orgId: string, snag: LogSnag) {
+export async function cancelCommand(channel: string, command: boolean | symbol, orgId: string, apikey: string) {
   if (isCancel(command)) {
-    await markSnag(channel, orgId, snag, 'canceled', '🤷')
+    await markSnag(channel, orgId, apikey, 'canceled', '🤷')
     exit()
   }
 }
@@ -82,17 +80,17 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
   return []
 }
 
-async function displayError(data: LogData, channel: string, orgId: string, snag: LogSnag, baseUrl: string) {
+async function displayError(data: LogData, channel: string, orgId: string, apikey: string, baseUrl: string) {
   log.info(`Log from Device: ${data.device_id}`)
   if (data.action === 'get') {
     log.info('Update Sent your your device, wait until event download complete')
-    await markSnag(channel, orgId, snag, 'done')
+    await markSnag(channel, orgId, apikey, 'done')
   }
   else if (data.action.startsWith('download_')) {
     const action = data.action.split('_')[1]
     if (action === 'complete') {
       log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-      await markSnag(channel, orgId, snag, 'downloaded')
+      await markSnag(channel, orgId, apikey, 'downloaded')
     }
     else if (action === 'fail') {
       log.error('Your bundle has failed to download on your device.')
@@ -104,7 +102,7 @@ async function displayError(data: LogData, channel: string, orgId: string, snag:
   }
   else if (data.action === 'set') {
     log.info('Your bundle has been set on your device ❤️')
-    await markSnag(channel, orgId, snag, 'set')
+    await markSnag(channel, orgId, apikey, 'set')
     return false
   }
   else if (data.action === 'NoChannelOrOverride') {
@@ -178,12 +176,12 @@ Are lower than the version number you uploaded to Capgo.`)
   return true
 }
 
-export async function waitLog(channel: string, apikey: string, appId: string, snag: LogSnag, orgId: string, deviceId?: string) {
+export async function waitLog(channel: string, apikey: string, appId: string, orgId: string, deviceId?: string) {
   let loop = true
   const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
   const baseUrl = `${config.hostWeb}/app/p/${appIdUrl}`
-  await markSnag(channel, orgId, snag, 'Use waitlog')
+  await markSnag(channel, orgId, apikey, 'Use waitlog')
   const query: QueryStats = {
     appId,
     devicesId: deviceId ? [deviceId] : undefined,
@@ -202,7 +200,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, sn
     if (data.length > 0) {
       after = data[0].created_at
       for (const d of data) {
-        loop = await displayError(d, channel, orgId, snag, baseUrl)
+        loop = await displayError(d, channel, orgId, apikey, baseUrl)
         if (!loop)
           break
       }
@@ -230,22 +228,13 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   }
 
   const supabase = await createSupabaseClient(options.apikey)
-  const snag = useLogSnag()
-
-  const userId = await verifyUser(supabase, options.apikey)
-
-  log.info(`Getting active bundle in Capgo`)
-
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
-
   const orgId = await getOrganizationId(supabase, appId)
 
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })
-  await cancelCommand('debug', doRun, userId, snag)
+  await cancelCommand('debug', doRun, orgId, options.apikey)
   if (doRun) {
     log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
-    await waitLog('debug', options.apikey, appId, snag, orgId, deviceId)
+    await waitLog('debug', options.apikey, appId, orgId, deviceId)
     outro(`Done ✅`)
   }
   else {

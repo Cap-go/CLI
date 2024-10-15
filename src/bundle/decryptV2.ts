@@ -1,11 +1,11 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { program } from 'commander'
 import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
-import { baseKeyPubV2, getConfig } from '../utils'
 import { checkLatest } from '../api/update'
+import { baseKeyPubV2, getConfig } from '../utils'
 
 interface Options {
   key?: string

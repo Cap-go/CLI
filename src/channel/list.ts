@@ -1,17 +1,16 @@
+import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
-import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 export async function listChannels(appId: string, options: OptionsBase) {
   intro(`List channels`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey)
     log.error('Missing API key, you need to provide a API key to upload your bundle')
@@ -34,7 +33,7 @@ export async function listChannels(appId: string, options: OptionsBase) {
   log.info(`Active channels in Capgo: ${allVersions?.length}`)
 
   displayChannels(allVersions)
-  await snag.track({
+  await sendEvent(options.apikey, {
     channel: 'channel',
     event: 'List channel',
     icon: '✅',

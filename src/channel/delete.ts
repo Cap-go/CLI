@@ -1,17 +1,16 @@
+import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel } from '../api/channels'
-import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, useLogSnag, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
   intro(`Delete channel`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')
@@ -36,7 +35,7 @@ export async function deleteChannel(channelId: string, appId: string, options: O
     }
     const orgId = await getOrganizationId(supabase, appId)
     log.success(`Channel deleted`)
-    await snag.track({
+    await sendEvent(options.apikey, {
       channel: 'channel',
       event: 'Delete channel',
       icon: '✅',

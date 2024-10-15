@@ -1,26 +1,23 @@
-import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
-import { homedir, platform as osPlatform } from 'node:os'
-import { join, resolve, sep } from 'node:path'
-import { cwd, env, exit } from 'node:process'
-import type { Buffer } from 'node:buffer'
-import { program } from 'commander'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import { FunctionsHttpError, createClient } from '@supabase/supabase-js'
-import prettyjson from 'prettyjson'
-import { LogSnag } from 'logsnag'
-import ky from 'ky'
-import { findRootSync } from '@manypkg/find-root'
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
-import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-import AdmZip from 'adm-zip'
-import JSZip from 'jszip'
-import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
-import { promiseFiles } from 'node-dir'
-import * as tus from 'tus-js-client'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Buffer } from 'node:buffer'
 import type { ExtConfigPairs } from './config'
-import { loadConfig, writeConfig } from './config'
 import type { Database } from './types/supabase.types'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { homedir } from 'node:os'
+import { join, relative, resolve, sep } from 'node:path'
+import { cwd, exit } from 'node:process'
+import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
+import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
+import { findRootSync } from '@manypkg/find-root'
+import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
+import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { program } from 'commander'
+import JSZip from 'jszip'
+import ky from 'ky'
+import prettyjson from 'prettyjson'
+import * as tus from 'tus-js-client'
+import { loadConfig, writeConfig } from './config'
 
 export const baseKey = '.capgo_key'
 export const baseKeyV2 = '.capgo_key_v2'
@@ -42,6 +39,59 @@ export type Organization = ArrayElement<Database['public']['Functions']['get_org
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
+
+type TagKey = Lowercase<string>
+/** Tag Type */
+type Tags = Record<TagKey, string | number | boolean>
+type Parser = 'markdown' | 'text'
+/**
+ * Options for publishing LogSnag events
+ */
+interface TrackOptions {
+  /**
+   * Channel name
+   * example: "waitlist"
+   */
+  channel: string
+  /**
+   * Event name
+   * example: "User Joined"
+   */
+  event: string
+  /**
+   * Event description
+   * example: "joe@example.com joined waitlist"
+   */
+  description?: string
+  /**
+   * User ID
+   * example: "user-123"
+   */
+  user_id?: string
+  /**
+   * Event icon (emoji)
+   * must be a single emoji
+   * example: "🎉"
+   */
+  icon?: string
+  /**
+   * Event tags
+   * example: { username: "mattie" }
+   */
+  tags?: Tags
+  /**
+   * Send push notification
+   */
+  notify?: boolean
+  /**
+   * Parser for description
+   */
+  parser?: Parser
+  /**
+   * Event timestamp
+   */
+  timestamp?: number | Date
+}
 
 export interface OptionsBase {
   apikey: string
@@ -397,6 +447,24 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
   }
 }
 
+export function getContentType(filename: string): string | null {
+  const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp)$/i
+  const match = filename.match(imageExtensions)
+  if (match) {
+    const ext = match[1].toLowerCase()
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg'
+      case 'png':
+        return 'image/png'
+      case 'webp':
+        return 'image/webp'
+    }
+  }
+  return null
+}
+
 export async function findProjectType() {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
@@ -419,7 +487,7 @@ export async function findProjectType() {
       log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js'
     }
-    if (f.includes('nuxt.config.js' || f.includes('nuxt.config.ts'))) {
+    if (f.includes('nuxt.config.js') || f.includes('nuxt.config.ts')) {
       log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
@@ -571,16 +639,31 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
   return ''
 }
 
+async function* walkDirectory(dir: string): AsyncGenerator<string> {
+  const entries = readdirSync(dir, { withFileTypes: true })
+  for (const entry of entries) {
+    const fullPath = join(dir, entry.name)
+    if (entry.isDirectory()) {
+      yield * walkDirectory(fullPath)
+    }
+    else {
+      yield fullPath
+    }
+  }
+}
+
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
-  const allFiles = await Promise.all((await promiseFiles(path)).map(async (file) => {
+  const allFiles: { file: string, hash: string }[] = []
+
+  for await (const file of walkDirectory(path)) {
     const buffer = readFileSync(file)
     const hash = await getChecksum(buffer, 'sha256')
-    // const hash = createHash('sha-256').update(buffer).digest('hex')
-    let filePath = file.replace(path, '')
+    let filePath = relative(path, file)
     if (filePath.startsWith('/'))
-      filePath = filePath.substring(1, filePath.length)
-    return { file: filePath, hash }
-  }))
+      filePath = filePath.substring(1)
+    allFiles.push({ file: filePath, hash })
+  }
+
   return allFiles
 }
 
@@ -593,22 +676,7 @@ export interface uploadUrlsType {
 }
 
 export async function zipFile(filePath: string): Promise<Buffer> {
-  if (osPlatform() === 'win32') {
-    return zipFileWindows(filePath)
-  }
-  else {
-    return zipFileUnix(filePath)
-  }
-}
-
-export function zipFileUnix(filePath: string) {
-  const zip = new AdmZip()
-  zip.addLocalFolder(filePath)
-  return zip.toBuffer()
-}
-
-export async function zipFileWindows(filePath: string): Promise<Buffer> {
-  log.info('Zipping file windows mode')
+  log.info('Zipping file')
   const zip = new JSZip()
 
   // Helper function to recursively add files and folders to the ZIP archive
@@ -639,8 +707,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
 
 export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>): Promise<boolean> {
   return new Promise((resolve, reject) => {
-    const snag = useLogSnag()
-    snag.track({
+    sendEvent(apikey, {
       channel: 'app',
       event: 'App TUS upload',
       icon: '⏫',
@@ -649,7 +716,7 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
         'app-id': appId,
       },
       notify: false,
-    }).catch()
+    })
     // TODO: debug multipart TUS upload
     // const fileSize = data.length
     // const maxFileSize = 2 * 1024 * 1024
@@ -687,7 +754,7 @@ export function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: st
       },
       // Callback for once the upload is completed
       async onSuccess() {
-        await snag.track({
+        await sendEvent(apikey, {
           channel: 'app',
           event: 'App TUS done',
           icon: '⏫',
@@ -788,12 +855,24 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export function useLogSnag(): LogSnag {
-  const logsnag = new LogSnag({
-    token: env.CAPGO_LOGSNAG ?? 'c124f5e9d0ce5bdd14bbb48f815d5583',
-    project: env.CAPGO_LOGSNAG_PROJECT ?? 'capgo',
-  })
-  return logsnag
+export async function sendEvent(apikey: string, payload: TrackOptions): Promise<void> {
+  try {
+    const config = await getRemoteConfig()
+    const response = await ky.post(`${config.host}/private/events`, {
+      json: payload,
+      headers: {
+        Authorization: `Bearer ${apikey}`,
+      },
+      timeout: 10000, // 10 seconds timeout
+      retry: 3,
+    }).json<{ error?: string }>()
+
+    if (response.error) {
+      log.error(`Failed to send LogSnag event: ${response.error}`)
+    }
+  }
+  catch {
+  }
 }
 
 export async function getOrganization(supabase: SupabaseClient<Database>, roles: string[]): Promise<Organization> {

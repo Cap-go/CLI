@@ -1,20 +1,19 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, writeFileSync } from 'node:fs'
-import { exit } from 'node:process'
-import { program } from 'commander'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
-import { intro, log, outro, spinner } from '@clack/prompts'
-import { checkLatest } from '../api/update'
 import type {
   OptionsBase,
 } from '../utils'
+import { randomUUID } from 'node:crypto'
+import { existsSync, writeFileSync } from 'node:fs'
+import { exit } from 'node:process'
+import { intro, log, outro, spinner } from '@clack/prompts'
+import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { program } from 'commander'
+import { checkLatest } from '../api/update'
 import {
   baseKeyV2,
   formatError,
   getConfig,
   readPackageJson,
   regexSemver,
-  useLogSnag,
   zipFile,
 } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -34,7 +33,6 @@ export async function zipBundle(appId: string, options: Options) {
   try {
     let { bundle, path } = options
     const { json } = options
-    const snag = useLogSnag()
     if (!json)
       await checkLatest()
 
@@ -103,15 +101,6 @@ export async function zipBundle(appId: string, options: Options) {
     if (mbSize > alertMb && !json) {
       log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
       log.warn(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
-      await snag.track({
-        channel: 'app-error',
-        event: 'App Too Large',
-        icon: '🚛',
-        tags: {
-          'app-id': appId,
-        },
-        notify: false,
-      }).catch()
     }
     const s2 = spinner()
     const name = options.name || `${appId}_${bundle}.zip`
@@ -120,16 +109,6 @@ export async function zipBundle(appId: string, options: Options) {
     writeFileSync(name, zipped)
     if (!json)
       s2.stop(`Saved to ${name}`)
-
-    await snag.track({
-      channel: 'app',
-      event: 'App zip',
-      icon: '⏫',
-      tags: {
-        'app-id': appId,
-      },
-      notify: false,
-    }).catch()
 
     if (!json)
       outro(`Done ✅`)

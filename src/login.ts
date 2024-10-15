@@ -1,10 +1,10 @@
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { exit } from 'node:process'
-import { program } from 'commander'
 import { intro, log, outro } from '@clack/prompts'
-import { createSupabaseClient, useLogSnag, verifyUser } from './utils'
+import { program } from 'commander'
 import { checkLatest } from './api/update'
+import { createSupabaseClient, sendEvent, verifyUser } from './utils'
 
 interface Options {
   local: boolean
@@ -29,7 +29,6 @@ export async function login(apikey: string, options: Options, shouldExit = true)
   // write in file .capgo the apikey in home directory
   try {
     const { local } = options
-    const snag = useLogSnag()
 
     if (local) {
       if (!existsSync('.git')) {
@@ -45,7 +44,7 @@ export async function login(apikey: string, options: Options, shouldExit = true)
     }
     const supabase = await createSupabaseClient(apikey)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
-    await snag.track({
+    await sendEvent(apikey, {
       channel: 'user-login',
       event: 'User CLI login',
       icon: '✅',

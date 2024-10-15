@@ -1,22 +1,22 @@
-import { exit } from 'node:process'
-import { program } from 'commander'
-import { intro, log, outro } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type {
   OptionsBase,
 } from '../utils'
+import { exit } from 'node:process'
+import { intro, log, outro } from '@clack/prompts'
+import { program } from 'commander'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
-  OrganizationPerm,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
   getConfig,
   getOrganizationId,
+  OrganizationPerm,
   readPackageJson,
+  sendEvent,
   updateOrCreateChannel,
-  useLogSnag,
   verifyUser,
 } from '../utils'
 
@@ -41,7 +41,6 @@ export async function setChannel(channel: string, appId: string, options: Option
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
-  const snag = useLogSnag()
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')
@@ -159,7 +158,7 @@ export async function setChannel(channel: string, appId: string, options: Option
       log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
       program.error('')
     }
-    await snag.track({
+    await sendEvent(options.apikey, {
       channel: 'channel',
       event: 'Set channel',
       icon: '✅',

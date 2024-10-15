@@ -1,14 +1,21 @@
-import { exit } from 'node:process'
-import { program } from 'commander'
-import semver from 'semver/preload'
+import type { SemVer } from '@std/semver'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils'
-import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
+import { exit } from 'node:process'
+import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
+import {
+  format,
+  greaterThan,
+  increment,
+  lessThan,
+  parse,
+} from '@std/semver'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
+import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
+import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   version: string
@@ -25,11 +32,12 @@ async function removeVersions(toRemove: Database['public']['Tables']['app_versio
   }
 }
 
-function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['app_versions']['Row'][], bundle: string, nextMajor: string) {
+function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['app_versions']['Row'][], bundleVersion: SemVer, nextMajorVersion: SemVer) {
   const toRemove: Database['public']['Tables']['app_versions']['Row'][] = []
 
   data?.forEach((row) => {
-    if (semver.gte(row.name, bundle) && semver.lt(row.name, `${nextMajor}`))
+    const rowVersion = parse(row.name)
+    if (greaterThan(rowVersion, bundleVersion) && lessThan(rowVersion, nextMajorVersion))
       toRemove.push(row)
   })
   return toRemove
@@ -71,13 +79,14 @@ export async function cleanupBundle(appId: string, options: Options) {
     return
   }
   if (bundle) {
-    const nextMajor = `${semver.inc(bundle, 'major')}`
-    log.info(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`)
+    const bundleVersion = parse(bundle)
+    const nextMajorVersion = increment(bundleVersion, 'major')
+    log.info(`Querying available versions in Capgo between ${format(bundleVersion)} and ${format(nextMajorVersion)}`)
 
     // Get all app versions that are in the given range
-    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[]
+    allVersions = getRemovableVersionsInSemverRange(allVersions, bundleVersion, nextMajorVersion) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[]
 
-    log.info(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`)
+    log.info(`Active versions in Capgo between ${format(bundleVersion)} and ${format(nextMajorVersion)}: ${allVersions?.length}`)
   }
 
   // Slice to keep and remove

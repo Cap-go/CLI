@@ -1,9 +1,9 @@
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
-import { intro, log } from '@clack/prompts'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, checkCompatibility, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { intro, log } from '@clack/prompts'
+import { Table } from '@sauber/table'
+import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -47,24 +47,20 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
 
   const { finalCompatibility } = await checkCompatibility(supabase, appId, channel)
 
-  const t = new Table({
-    title: 'Compatibility',
-    charLength: { '❌': 2, '✅': 2 },
-  })
+  const t = new Table()
+  t.headers = ['Package', 'Local version', 'Remote version', 'Compatible']
+  t.theme = Table.roundTheme
+  t.rows = []
 
   const yesSymbol = options.text ? 'Yes' : '✅'
   const noSymbol = options.text ? 'No' : '❌'
 
   finalCompatibility.forEach((data) => {
     const { name, localVersion, remoteVersion } = data
-
-    t.addRow({
-      'Package': name,
-      'Local version': localVersion ?? 'None',
-      'Remote version': remoteVersion ?? 'None',
-      'Compatible': remoteVersion === localVersion ? yesSymbol : noSymbol,
-    })
+    const compatible = remoteVersion === localVersion ? yesSymbol : noSymbol
+    t.rows.push([name, localVersion, remoteVersion, compatible])
   })
 
-  log.success(t.render())
+  log.success('Compatibility')
+  log.success(t.toString())
 }

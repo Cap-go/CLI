@@ -1,22 +1,24 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import type { ExecSyncOptions } from 'node:child_process'
-import { execSync, spawnSync } from 'node:child_process'
-import { exit } from 'node:process'
-import { join } from 'node:path'
-import * as p from '@clack/prompts'
-import type LogSnag from 'logsnag'
-import semver from 'semver'
-import tmp from 'tmp'
-import { createKeyV2 } from './keyV2'
-import { markSnag, waitLog } from './app/debug'
-import { addChannel } from './channel/add'
-import { uploadBundle } from './bundle/upload'
-import { doLoginExists, login } from './login'
-import { addAppInternal } from './app/add'
-import { checkLatest } from './api/update'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, useLogSnag, verifyUser } from './utils'
+import { execSync, spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { join } from 'node:path'
+import { exit } from 'node:process'
+import * as p from '@clack/prompts'
+import {
+  lessThan,
+  parse,
+} from '@std/semver'
+import tmp from 'tmp'
+import { checkLatest } from './api/update'
+import { addAppInternal } from './app/add'
+import { markSnag, waitLog } from './app/debug'
+import { uploadBundle } from './bundle/upload'
+import { addChannel } from './channel/add'
+import { createKeyV2 } from './keyV2'
+import { doLoginExists, login } from './login'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -34,7 +36,8 @@ function readTmpObj() {
   if (!tmpObject) {
     tmpObject = readdirSync(tmp.tmpdir)
       .map((name) => { return { name, full: `${tmp.tmpdir}/${name}` } })
-      .find(obj => obj.name.startsWith('capgocli'))?.full
+      .find(obj => obj.name.startsWith('capgocli'))
+      ?.full
       ?? tmp.fileSync({ prefix: 'capgocli' }).name
   }
 }
@@ -50,7 +53,7 @@ function markStepDone(step: number) {
   }
 }
 
-async function readStepsDone(orgId: string, snag: LogSnag): Promise<number | undefined> {
+async function readStepsDone(orgId: string, apikey: string): Promise<number | undefined> {
   try {
     readTmpObj()
     const rawData = readFileSync(tmpObject!, 'utf-8')
@@ -60,7 +63,7 @@ async function readStepsDone(orgId: string, snag: LogSnag): Promise<number | und
     const { step_done } = JSON.parse(rawData)
     p.log.info(`You have already got to the step ${step_done}/10 in the previous session`)
     const skipSteps = await p.confirm({ message: 'Would you like to continue from where you left off?' })
-    await cancelCommand(skipSteps, orgId, snag)
+    await cancelCommand(skipSteps, orgId, apikey)
     if (skipSteps)
       return step_done
     return undefined
@@ -85,21 +88,21 @@ function cleanupStepsDone() {
   }
 }
 
-async function cancelCommand(command: boolean | symbol, orgId: string, snag: LogSnag) {
+async function cancelCommand(command: boolean | symbol, orgId: string, apikey: string) {
   if (p.isCancel(command)) {
-    await markSnag('onboarding-v2', orgId, snag, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
     exit()
   }
 }
 
-async function markStep(orgId: string, snag: LogSnag, step: number | string) {
-  return markSnag('onboarding-v2', orgId, snag, `onboarding-step-${step}`)
+async function markStep(orgId: string, apikey: string, step: number | string) {
+  return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`)
 }
 
-async function step2(organization: Organization, snag: LogSnag, appId: string, options: SuperOptions) {
+async function step2(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` })
-  await cancelCommand(doAdd, organization.gid, snag)
+  await cancelCommand(doAdd, organization.gid, apikey)
   if (doAdd) {
     const s = p.spinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${appId}`)
@@ -112,13 +115,13 @@ async function step2(organization: Organization, snag: LogSnag, appId: string, o
   else {
     p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
-  await markStep(organization.gid, snag, 2)
+  await markStep(organization.gid, apikey, 2)
 }
 
-async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step3(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doChannel = await p.confirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
-  await cancelCommand(doChannel, orgId, snag)
+  await cancelCommand(doChannel, orgId, apikey)
   if (doChannel) {
     const s = p.spinner()
     // create production channel public
@@ -135,35 +138,35 @@ async function step3(orgId: string, snag: LogSnag, apikey: string, appId: string
   else {
     p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
-  await markStep(orgId, snag, 3)
+  await markStep(orgId, apikey, 3)
 }
 
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
-async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step4(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
-  await cancelCommand(doInstall, orgId, snag)
+  await cancelCommand(doInstall, orgId, apikey)
   if (doInstall) {
     const s = p.spinner()
     s.start(`Checking if @capgo/capacitor-updater is installed`)
     let versionToInstall = 'latest'
     const pack = await readPackageJson()
     let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
-    coreVersion = semver.coerce(coreVersion?.replace('^', '').replace('~', ''), { includePrerelease: true })
+    coreVersion = parse(coreVersion?.replace('^', '').replace('~', ''))
     if (!coreVersion) {
       s.stop('Error')
       p.log.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
       p.outro(`Bye 👋`)
       exit()
     }
-    else if (semver.lt(coreVersion, '5.0.0')) {
+    else if (lessThan(coreVersion, parse('5.0.0'))) {
       s.stop('Error')
       p.log.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
       p.outro(`Bye 👋`)
       exit()
     }
-    else if (semver.lt(coreVersion, '6.0.0')) {
+    else if (lessThan(coreVersion, parse('6.0.0'))) {
       s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
       versionToInstall = '^5.0.0'
     }
@@ -189,12 +192,12 @@ async function step4(orgId: string, snag: LogSnag, apikey: string, appId: string
   else {
     p.log.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
-  await markStep(orgId, snag, 4)
+  await markStep(orgId, apikey, 4)
 }
 
-async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step5(orgId: string, apikey: string, appId: string) {
   const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
-  await cancelCommand(doAddCode, orgId, snag)
+  await cancelCommand(doAddCode, orgId, apikey)
 
   if (doAddCode) {
     const s = p.spinner()
@@ -288,17 +291,17 @@ async function step5(orgId: string, snag: LogSnag, apikey: string, appId: string
       }
     }
 
-    await markStep(orgId, snag, 5)
+    await markStep(orgId, apikey, 5)
   }
   else {
     p.log.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
   }
 }
 
-async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step6(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
-  await cancelCommand(doEncrypt, orgId, snag)
+  await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
     const s = p.spinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
@@ -312,15 +315,15 @@ async function step6(orgId: string, snag: LogSnag, apikey: string, appId: string
     else {
       s.stop(`key created 🔑`)
     }
-    markSnag('onboarding-v2', orgId, snag, 'Use encryption v2')
+    markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2')
   }
-  await markStep(orgId, snag, 6)
+  await markStep(orgId, apikey, 6)
 }
 
-async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step7(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doBuild = await p.confirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
-  await cancelCommand(doBuild, orgId, snag)
+  await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
     const s = p.spinner()
     const projectType = await findProjectType()
@@ -340,13 +343,13 @@ async function step7(orgId: string, snag: LogSnag, apikey: string, appId: string
   else {
     p.log.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
-  await markStep(orgId, snag, 7)
+  await markStep(orgId, apikey, 7)
 }
 
-async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step8(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
-  await cancelCommand(doBundle, orgId, snag)
+  await cancelCommand(doBundle, orgId, apikey)
   if (doBundle) {
     const s = p.spinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
@@ -367,13 +370,13 @@ async function step8(orgId: string, snag: LogSnag, apikey: string, appId: string
   else {
     p.log.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
   }
-  await markStep(orgId, snag, 8)
+  await markStep(orgId, apikey, 8)
 }
 
-async function step9(orgId: string, snag: LogSnag) {
+async function step9(orgId: string, apikey: string) {
   const pm = getPMAndCommand()
   const doRun = await p.confirm({ message: `Run in device now ?` })
-  await cancelCommand(doRun, orgId, snag)
+  await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
     const plaformType = await p.select({
       message: 'Pick a platform to run your app',
@@ -396,28 +399,27 @@ async function step9(orgId: string, snag: LogSnag) {
   else {
     p.log.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
-  await markStep(orgId, snag, 9)
+  await markStep(orgId, apikey, 9)
 }
 
-async function step10(orgId: string, snag: LogSnag, apikey: string, appId: string) {
+async function step10(orgId: string, apikey: string, appId: string) {
   const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
-  await cancelCommand(doRun, orgId, snag)
+  await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
     p.log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
-    await waitLog('onboarding-v2', apikey, appId, snag, orgId)
+    await waitLog('onboarding-v2', apikey, appId, apikey, orgId)
   }
   else {
     const appIdUrl = convertAppName(appId)
     p.log.info(`Check logs in https://web.capgo.app/app/p/${appIdUrl}/logs to see if update works.`)
   }
-  await markStep(orgId, snag, 10)
+  await markStep(orgId, apikey, 10)
 }
 
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   p.intro(`Capgo onboarding 🛫`)
   await checkLatest()
-  const snag = useLogSnag()
   const extConfig = await getConfig()
   appId = appId || extConfig?.config?.appId
   options.apikey = apikeyCommand || findSavedKey()
@@ -435,54 +437,54 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
 
-  const stepToSkip = await readStepsDone(orgId, snag) ?? 0
+  const stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
 
   try {
     if (stepToSkip < 1)
-      await markStep(orgId, snag, 1)
+      await markStep(orgId, options.apikey, 1)
 
     if (stepToSkip < 2) {
-      await step2(organization, snag, appId, options)
+      await step2(organization, options.apikey, appId, options)
       markStepDone(2)
     }
 
     if (stepToSkip < 3) {
-      await step3(orgId, snag, options.apikey, appId)
+      await step3(orgId, options.apikey, appId)
       markStepDone(3)
     }
 
     if (stepToSkip < 4) {
-      await step4(orgId, snag, options.apikey, appId)
+      await step4(orgId, options.apikey, appId)
       markStepDone(4)
     }
 
     if (stepToSkip < 5) {
-      await step5(orgId, snag, options.apikey, appId)
+      await step5(orgId, options.apikey, appId)
       markStepDone(5)
     }
 
     if (stepToSkip < 6) {
-      await step6(orgId, snag, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
+      await step6(orgId, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
-      await step7(orgId, snag, options.apikey, appId)
+      await step7(orgId, options.apikey, appId)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
-      await step8(orgId, snag, options.apikey, appId)
+      await step8(orgId, options.apikey, appId)
       markStepDone(8)
     }
 
     if (stepToSkip < 9) {
-      await step9(orgId, snag)
+      await step9(orgId, options.apikey)
       markStepDone(9)
     }
 
-    await step10(orgId, snag, options.apikey, appId)
-    await markStep(orgId, snag, 0)
+    await step10(orgId, options.apikey, appId)
+    await markStep(orgId, options.apikey, 0)
     cleanupStepsDone()
   }
   catch (e) {

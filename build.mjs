@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import * as esbuild from 'esbuild'
 
@@ -5,9 +6,10 @@ esbuild.build({
   entryPoints: ['src/index.ts'],
   bundle: true,
   platform: 'node',
-  target: 'node18',
+  target: 'node20',
   outfile: 'dist/index.js', // Change this to output a single file
   sourcemap: process.env.NODE_ENV === 'development',
+  metafile: true,
   minify: true, // Minify the output
   treeShaking: true, // Enable tree shaking to remove unused code
   banner: {
@@ -34,4 +36,6 @@ esbuild.build({
       },
     },
   ],
-}).catch(() => exit(1))
+}).catch(() => exit(1)).then((result) => {
+  writeFileSync('meta.json', JSON.stringify(result.metafile))
+})
