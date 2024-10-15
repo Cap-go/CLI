@@ -163,9 +163,8 @@ export async function getLocalConfig() {
     const capConfig: CapgoConfig = {
       host: (extConfig?.config?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
       hostWeb: (extConfig?.config?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
-      hostFilesApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localFilesHost || defaultFileHost) as string,
-      hostApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localApiHost || defaultApiHost) as string,
-
+      hostFilesApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localApiFiles || defaultFileHost) as string,
+      hostApi: (extConfig?.config?.plugins?.CapacitorUpdater?.localApi || defaultApiHost) as string,
     }
 
     if (extConfig?.config?.plugins?.CapacitorUpdater?.localSupa && extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon) {
