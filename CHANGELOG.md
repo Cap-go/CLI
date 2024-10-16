@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.21.15](https://github.com/Cap-go/CLI/compare/v4.21.14...v4.21.15) (2024-10-16)
+
+
+### Bug Fixes
+
+* add tsc for build ([0746f49](https://github.com/Cap-go/CLI/commit/0746f4989d73c6a0f20e524a3b7cb55918ba8571))
+
 ### [4.21.14](https://github.com/Cap-go/CLI/compare/v4.21.13...v4.21.14) (2024-10-16)
 
 
