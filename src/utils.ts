@@ -220,8 +220,7 @@ export async function getRemoteFileConfig() {
   return ky
     .get(`${localConfig.hostFilesApi}/files/config`)
     .then(res => res.json<CapgoFilesConfig>())
-    .catch((error) => {
-      log.info(`Files config error ${formatError(error)}`)
+    .catch(() => {
       return {
         partialUpload: false,
         TUSUpload: false,
