@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - renovate/**
+  pull_request:
 
 env:
   DENO_DIR: my_cache_directory
@@ -11,7 +12,7 @@ env:
 jobs:
   web:
     runs-on: ubuntu-latest
-    name: "Build code and test"
+    name: "Run tests"
     steps:
       - name: Check out
         uses: actions/checkout@v4
