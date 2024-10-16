@@ -612,7 +612,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
     }
     catch (err) {
-      log.error(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}`)
+      log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)
     }
 
     versionData.storage_provider = 'r2'

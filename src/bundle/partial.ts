@@ -51,7 +51,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
           Authorization: apikey,
         },
         onError(error) {
-          log.error(`Failed to upload ${file.file}: ${error}`)
+          log.info(`Failed to upload ${file.file}: ${error}`)
           reject(error)
         },
         onProgress() {
@@ -106,7 +106,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload Partial bundle ( after ${uploadTime} seconds)`)
-    log.error(`Error uploading partial update: ${error}`)
+    log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
     return null
   }
 }
