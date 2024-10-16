@@ -32,7 +32,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "node build.mjs",
+    "build": "tsc && node build.mjs",
     "dev": "NODE_ENV=development ncc build",
     "no-debug": "node dist/index.js",
     "test": "npx --yes ts-node -T src/index.ts",

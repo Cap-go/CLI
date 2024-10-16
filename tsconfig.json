@@ -1,9 +1,8 @@
 {
   "compilerOptions": {
-    "target": "es2015",
+    "target": "ES2022",
     "lib": [
-      "es2016",
-      "dom"
+      "ES2022"
     ],
     "baseUrl": "src",
     "module": "ESNext",
@@ -17,9 +16,7 @@
       ]
     },
     "resolveJsonModule": true,
-    "typeRoots": [
-      "src/types/*"
-    ],
+    "typeRoots": ["src/types/*", "node_modules/@types"],
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,

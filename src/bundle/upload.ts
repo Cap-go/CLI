@@ -516,7 +516,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   await checkVersionExists(supabase, appid, bundle)
 
   if (options.external && !options.external.startsWith('https://')) {
-    log.error(`External link should should start with "https://" current is "${external}"`)
+    log.error(`External link should should start with "https://" current is "${options.external}"`)
     program.error('')
   }
 
@@ -600,7 +600,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     })
     const fileName = `${appid}-${bundle}`
     const encodeFileName = encodeURIComponent(fileName)
-    await s3Client.putObject(fileName, zipped)
+    await s3Client.putObject(fileName, Uint8Array.from(zipped))
     versionData.external_url = `https://${s3Endpoint}/${encodeFileName}`
     versionData.storage_provider = 'external'
   }
