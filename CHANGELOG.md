@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.21.24](https://github.com/Cap-go/CLI/compare/v4.21.23...v4.21.24) (2024-10-17)
+
+
+### Bug Fixes
+
+* add better build script ([6ab90c6](https://github.com/Cap-go/CLI/commit/6ab90c6192633d1ab8cd953ba641360f81acfb2f))
+* test on windows admzip ([3f23c67](https://github.com/Cap-go/CLI/commit/3f23c678c6924e30c8426fe26adce9a4fa678d99))
+
 ### [4.21.23](https://github.com/Cap-go/CLI/compare/v4.21.22...v4.21.23) (2024-10-17)
 
 
