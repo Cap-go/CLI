@@ -1185,6 +1185,10 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.start(`Checking bundle checksum compatibility with channel ${channel}`)
   const remoteChecksum = await getRemoteChecksums(supabase, appId, channel)
 
+  if (!remoteChecksum) {
+    s.stop(`No checksum found for channel ${channel}, the bundle will be uploaded`)
+    return
+  }
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
     log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)

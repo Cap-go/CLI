@@ -3,10 +3,10 @@ name: Check POSIX Paths in Zip File
 on:
   push:
     branches:
-      - main
+      - renovate/**
+    tags:
+      - '*'
   pull_request:
-    branches:
-      - main
 
 jobs:
   create-valid-zip-linux:
