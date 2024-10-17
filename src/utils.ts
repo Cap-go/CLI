@@ -4,7 +4,7 @@ import type { Buffer } from 'node:buffer'
 import type { ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { homedir } from 'node:os'
+import { homedir, platform as osPlatform } from 'node:os'
 import { dirname, join, relative, resolve, sep } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
@@ -12,8 +12,8 @@ import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } 
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
+import AdmZip from 'adm-zip'
 import { program } from 'commander'
-import JSZip from 'jszip'
 import ky from 'ky'
 import prettyjson from 'prettyjson'
 import * as tus from 'tus-js-client'
@@ -695,11 +695,25 @@ export interface uploadUrlsType {
 }
 
 export async function zipFile(filePath: string): Promise<Buffer> {
-  log.info('Zipping file')
-  const zip = new JSZip()
+  if (osPlatform() === 'win32') {
+    return zipFileWindows(filePath)
+  }
+  else {
+    return zipFileUnix(filePath)
+  }
+}
 
-  // Helper function to recursively add files and folders to the ZIP archive
-  const addToZip = async (folderPath: string, zipPath: string) => {
+export function zipFileUnix(filePath: string) {
+  const zip = new AdmZip()
+  zip.addLocalFolder(filePath)
+  return zip.toBuffer()
+}
+
+export async function zipFileWindows(filePath: string): Promise<Buffer> {
+  log.info('Zipping file windows mode')
+  const zip = new AdmZip()
+
+  const addToZip = (folderPath: string, zipPath: string) => {
     const items = readdirSync(folderPath)
 
     for (const item of items) {
@@ -707,21 +721,18 @@ export async function zipFile(filePath: string): Promise<Buffer> {
       const stats = statSync(itemPath)
 
       if (stats.isFile()) {
-        const fileContent = await readFileSync(itemPath)
-        zip.file(join(zipPath, item).split(sep).join('/'), fileContent)
+        const fileContent = readFileSync(itemPath)
+        zip.addFile(join(zipPath, item).split(sep).join('/'), fileContent)
       }
       else if (stats.isDirectory()) {
-        await addToZip(itemPath, join(zipPath, item))
+        addToZip(itemPath, join(zipPath, item))
       }
     }
   }
 
-  // Start adding files and folders to the ZIP archive
-  await addToZip(filePath, '')
+  addToZip(filePath, '')
 
-  // Generate the ZIP file as a Buffer
-  const zipBuffer = await zip.generateAsync({ type: 'nodebuffer', platform: 'UNIX', compression: 'DEFLATE', compressionOptions: { level: 6 } })
-  return zipBuffer
+  return zip.toBuffer()
 }
 
 export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig): Promise<boolean> {
