@@ -157,7 +157,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     }
     else if (autoMinUpdateVersion) {
       try {
-        const { minUpdateVersion: lastMinUpdateVersion } = channelData.version as any
+        const { min_update_version: lastMinUpdateVersion } = channelData.version as any
         if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
           log.error('Invalid remote min update version, skipping auto setting compatibility')
           program.error('')
