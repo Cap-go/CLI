@@ -229,7 +229,7 @@ jobs:
   check-posix-paths-final:
     needs: [check-posix-paths-unix, check-posix-paths-macos]
     runs-on: ubuntu-latest
-    name: Check POSIX Paths
+    name: Check POSIX Paths in Zip File
     steps:
       - name: Final check
         run: echo "All POSIX path checks completed successfully"
