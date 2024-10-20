@@ -243,7 +243,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  if (keyV2 || existsSync(baseKeyV2)) {
+  if (keyV2 || existsSync(baseKeyV2) && key !== false) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
