@@ -243,7 +243,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  if (keyV2 || existsSync(baseKeyV2) && key !== false) {
+  if (keyV2 || options.keyDataV2 || existsSync(baseKeyV2) && key !== false) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
@@ -254,7 +254,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   if (key === false) {
     log.info(`Encryption ignored`)
   }
-  else if ((keyV2 || existsSync(baseKeyV2)) && !options.oldEncryption) {
+  else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
     const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
     // check if publicKey exist
@@ -289,7 +289,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     }
     zipped = res.encryptedData
   }
-  else if (key || existsSync(baseKeyPub)) {
+  else if (key || options.keyData || existsSync(baseKeyPub)) {
     const publicKey = typeof key === 'string' ? key : baseKeyPub
     let keyData = options.keyData || ''
     // check if publicKey exist

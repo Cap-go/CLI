@@ -134,7 +134,7 @@ bundle
   .option('--key <key>', 'custom path for public signing key')
   .option('--key-data <keyData>', 'public signing key')
   .option('--key-v2 <key>', 'custom path for private signing key')
-  .option('--key-data-v2  <keyData>', 'private signing key')
+  .option('--key-data-v2  <keyDataV2>', 'private signing key')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
