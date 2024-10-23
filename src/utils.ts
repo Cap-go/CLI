@@ -5,7 +5,7 @@ import type { ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import path, { dirname, join, relative, resolve, sep } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
@@ -113,8 +113,14 @@ function findRoot(dir: string) {
   return dir
 }
 
-export async function readPackageJson(f: string = findRoot(cwd())) {
-  const packageJson = readFileSync(join(f, PACKNAME))
+export async function readPackageJson(f: string = findRoot(cwd()), file: string | undefined = undefined) {
+  if (file) {
+    if (!existsSync(file)) {
+      log.error(`Package.json at ${file} does not exist`)
+      exit(1)
+    }
+  }
+  const packageJson = readFileSync(!file ? join(f, PACKNAME) : file)
   return JSON.parse(packageJson as any)
 }
 
@@ -1031,18 +1037,18 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies() {
-  const dir = findRoot(cwd())
-  const packageJsonPath = join(dir, PACKNAME)
+export async function getLocalDepenencies(packageJsonPath: string | undefined) {
+  // const dir = findRoot(cwd())
+  // const packageJsonPath = join(dir, PACKNAME)
 
-  if (!existsSync(packageJsonPath)) {
-    log.error('Missing package.json, you need to be in a capacitor project')
-    program.error('')
-  }
+  // if (!existsSync(packageJsonPath)) {
+  //   log.error('Missing package.json, you need to be in a capacitor project')
+  //   program.error('')
+  // }
 
   let packageJson
   try {
-    packageJson = await readPackageJson()
+    packageJson = await readPackageJson('', packageJsonPath)
   }
   catch (err) {
     log.error('Invalid package.json, JSON parsing failed')
@@ -1050,6 +1056,7 @@ export async function getLocalDepenencies() {
     program.error('')
   }
 
+  const dir = !packageJsonPath ? findRoot(cwd()) : path.resolve(packageJsonPath).replace('package.json', '')
   const { dependencies } = packageJson
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
@@ -1208,8 +1215,8 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string) {
-  const dependenciesObject = await getLocalDepenencies()
+export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined) {
+  const dependenciesObject = await getLocalDepenencies(packageJsonPath)
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
   const finalDepenencies:

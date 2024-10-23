@@ -45,6 +45,7 @@ program
 program
   .command('doctor')
   .description('Get info about your Capgo app install')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .action(getInfo)
 
 program
@@ -159,6 +160,7 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-c, --channel <channel>', 'channel to check the compatibility with')
   .option('--text', 'output text instead of emojis')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 bundle
   .command('delete [bundleId] [appId]')
@@ -232,6 +234,7 @@ bundle
   .option('-j, --json', 'output in JSON')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--key-v2', 'use encryption v2')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 const channel = program
   .command('channel')
@@ -291,6 +294,7 @@ channel
   .option('--no-dev', 'Disable sending update to development devices')
   .option('--emulator', 'Allow sending update to emulator devices')
   .option('--no-emulator', 'Disable sending update to emulator devices')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 const key = program
   .command('key_old')
@@ -353,6 +357,7 @@ program
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 const account = program
   .command('account')

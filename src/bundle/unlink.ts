@@ -23,6 +23,7 @@ import {
 
 interface Options extends OptionsBase {
   bundle?: string
+  packageJson?: string
 }
 
 export async function unlinkDevice(channel: string, appId: string, options: Options) {
@@ -32,7 +33,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   appId = appId || extConfig?.config?.appId
   let { bundle } = options
 
-  const pack = await readPackageJson()
+  const pack = await readPackageJson('', options.packageJson)
   bundle = bundle || pack?.version
 
   if (!options.apikey) {

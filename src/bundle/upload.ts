@@ -49,6 +49,7 @@ interface Options extends OptionsBase {
   partial?: boolean
   tus?: boolean
   encryptedChecksum?: string
+  packageJson?: string
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -56,7 +57,7 @@ type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
 
 async function getBundle(config: CapacitorConfig, options: Options) {
-  const pkg = await readPackageJson()
+  const pkg = await readPackageJson('', options.packageJson)
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const bundle = options.bundle
     || config?.plugins?.CapacitorUpdater?.version
@@ -141,7 +142,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     const {
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel,
-    } = await checkCompatibility(supabase, appid, channel)
+    } = await checkCompatibility(supabase, appid, channel, options.packageJson)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
@@ -177,7 +178,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
   else if (!ignoreMetadataCheck) {
     log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
-    localDependencies = await getLocalDepenencies()
+    localDependencies = await getLocalDepenencies(options.packageJson)
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
