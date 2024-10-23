@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.22.0](https://github.com/Cap-go/CLI/compare/v4.21.36...v4.22.0) (2024-10-23)
+
+
+### Features
+
+* allow the user to select package.json path ([fcb47d6](https://github.com/Cap-go/CLI/commit/fcb47d65a5926f68af0e1c40e9dca8ab81b430d9))
+
 ### [4.21.36](https://github.com/Cap-go/CLI/compare/v4.21.35...v4.21.36) (2024-10-22)
 
 
