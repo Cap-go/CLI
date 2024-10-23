@@ -27,6 +27,7 @@ interface Options extends OptionsBase {
   name?: string
   json?: boolean
   keyV2?: boolean
+  packageJson?: string
 }
 
 export async function zipBundle(appId: string, options: Options) {
@@ -40,7 +41,7 @@ export async function zipBundle(appId: string, options: Options) {
     appId = appId || extConfig?.config?.appId
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0]
-    const pack = await readPackageJson()
+    const pack = await readPackageJson('', options.packageJson)
     bundle = bundle || pack?.version || `0.0.1-beta.${uuid}`
     if (!json)
       intro(`Zipping ${appId}@${bundle}`)

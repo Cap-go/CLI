@@ -32,6 +32,7 @@ interface Options extends OptionsBase {
   disableAutoUpdate: string
   dev?: boolean
   emulator?: boolean
+  packageJson?: string
 }
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
@@ -89,7 +90,7 @@ export async function setChannel(channel: string, appId: string, options: Option
       owner_org: orgId,
       version: undefined as any,
     }
-    const pack = await readPackageJson()
+    const pack = await readPackageJson('', options.packageJson)
     const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || pack?.version) : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase

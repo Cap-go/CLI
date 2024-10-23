@@ -44,11 +44,11 @@ async function getInstalledDependencies() {
   return installedDependencies
 }
 
-export async function getInfo() {
+export async function getInfo(options: { packageJson?: string }) {
   log.warn(' 💊   Capgo Doctor  💊')
   // app name
   const extConfig = await getConfig()
-  const pkg = await readPackageJson()
+  const pkg = await readPackageJson('', options.packageJson)
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const appVersion = extConfig?.config?.plugins?.CapacitorUpdater?.version
     || pkg?.version
