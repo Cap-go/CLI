@@ -148,7 +148,7 @@ Options:
 * `--external <url>` Link to external URL instead of uploading to Capgo Cloud.
 * `--iv-session-key <key>` Set the IV and session key for bundle URL external.
 * `--s3-endpoint <s3Endpoint>` URL of S3 endpoint. Do not work with Partial upload, or external option.
-* `--s3-region <region>` Region for your S3 bucket. 
+* `--s3-region <region>` Region for your S3 bucket.
 * `--s3-apikey <apikey>` API key for your S3 endpoint.
 * `--s3-apisecret <apisecret>` API secret for your S3 endpoint.
 * `--s3-bucket-name <bucketName>` Name for your AWS S3 bucket.
@@ -172,6 +172,7 @@ Options:
 * `--tus` Upload the bundle using tus protocol.
 * `--multipart` Uses multipart protocol to upload data to S3, Deprecated, use TUS instead.
 * `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
+* `--package-json <packageJson>` A path to package.json. Usefull for monorepos.
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
 
