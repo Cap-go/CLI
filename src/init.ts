@@ -257,7 +257,7 @@ async function step5(orgId: string, apikey: string, appId: string) {
       if (!mainFilePath || !existsSync(mainFilePath)) {
         s.stop('Cannot find main file to install Updater plugin')
         const userProvidedPath = await p.text({
-          message: `Provide the correct relative path to your main file:`,
+          message: `Provide the correct relative path to your main file (JS or TS):`,
           validate: (value) => {
             if (!existsSync(value))
               return 'File does not exist. Please provide a valid path.'
