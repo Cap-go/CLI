@@ -358,6 +358,7 @@ program
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
+  // TODO: Remove this command, do not add new options here
 
 const account = program
   .command('account')
