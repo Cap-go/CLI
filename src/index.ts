@@ -153,6 +153,7 @@ bundle
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
   .option('--partial', 'Upload partial files to Capgo cloud')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 bundle
   .command('compatibility [appId]')
@@ -357,7 +358,6 @@ program
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
   )
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
 
 const account = program
   .command('account')
