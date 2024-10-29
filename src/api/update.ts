@@ -4,6 +4,7 @@ import pack from '../../package.json'
 
 export async function checkLatest() {
   const latest = await latestVersion('@capgo/cli')
+    .catch(() => '')
   const major = latest?.split('.')[0]
   if (latest !== pack.version) {
     log.warning(`🚨 You are using @capgo/cli@${pack.version} it's not the latest version.
