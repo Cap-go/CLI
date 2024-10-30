@@ -891,13 +891,13 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(apikey: string, payload: TrackOptions): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions): Promise<void> {
   try {
     const config = await getRemoteConfig()
     const response = await ky.post(`${config.host}/private/events`, {
       json: payload,
       headers: {
-        Authorization: `Bearer ${apikey}`,
+        capgkey,
       },
       timeout: 10000, // 10 seconds timeout
       retry: 3,
