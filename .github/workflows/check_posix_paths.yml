@@ -226,10 +226,10 @@ jobs:
     - name: Run the swift test
       run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-windows-2019.zip build-windows-2022.zip
 
-  check-posix-paths-final:
+  posix-paths-final:
     needs: [check-posix-paths-unix, check-posix-paths-macos]
     runs-on: ubuntu-latest
-    name: Check POSIX Paths in Zip File
+    name: POSIX Paths final
     steps:
       - name: Final check
         run: echo "All POSIX path checks completed successfully"

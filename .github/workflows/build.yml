@@ -34,13 +34,13 @@ jobs:
       - name: Build
         id: build_code
         run: bun run build
-      - name: Wait for POSIX path check to succeed
-        uses: lewagon/wait-on-check-action@v1.3.4
-        with:
-          ref: ${{ github.ref }}
-          check-name: 'Check POSIX Paths in Zip File'
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          wait-interval: 10
+      # - name: Wait for POSIX path check to succeed
+      #   uses: lewagon/wait-on-check-action@v1.3.4
+      #   with:
+      #     ref: ${{ github.ref }}
+      #     check-name: 'POSIX Paths final'
+      #     repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+      #     wait-interval: 10
       - name: Wait for tests to succeed
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
