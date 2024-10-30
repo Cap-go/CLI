@@ -5,7 +5,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { exit } from 'node:process'
-import * as p from '@clack/prompts'
+import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import {
   lessThan,
   parse,
@@ -48,8 +48,8 @@ function markStepDone(step: number) {
     writeFileSync(tmpObject!, JSON.stringify({ step_done: step }))
   }
   catch (err) {
-    p.log.error(`Cannot mark step as done in the CLI, error:\n${err}`)
-    p.log.warn('Onboarding will continue but please report it to the capgo team!')
+    pLog.error(`Cannot mark step as done in the CLI, error:\n${err}`)
+    pLog.warn('Onboarding will continue but please report it to the capgo team!')
   }
 }
 
@@ -61,16 +61,16 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
       return undefined
 
     const { step_done } = JSON.parse(rawData)
-    p.log.info(`You have already got to the step ${step_done}/10 in the previous session`)
-    const skipSteps = await p.confirm({ message: 'Would you like to continue from where you left off?' })
+    pLog.info(`You have already got to the step ${step_done}/10 in the previous session`)
+    const skipSteps = await pConfirm({ message: 'Would you like to continue from where you left off?' })
     await cancelCommand(skipSteps, orgId, apikey)
     if (skipSteps)
       return step_done
     return undefined
   }
   catch (err) {
-    p.log.error(`Cannot read which steps have been compleated, error:\n${err}`)
-    p.log.warn('Onboarding will continue but please report it to the capgo team!')
+    pLog.error(`Cannot read which steps have been compleated, error:\n${err}`)
+    pLog.warn('Onboarding will continue but please report it to the capgo team!')
     return undefined
   }
 }
@@ -84,12 +84,12 @@ function cleanupStepsDone() {
     rmSync(tmpObject)
   }
   catch (err) {
-    p.log.error(`Cannot delete the tmp steps file.\nError: ${err}`)
+    pLog.error(`Cannot delete the tmp steps file.\nError: ${err}`)
   }
 }
 
 async function cancelCommand(command: boolean | symbol, orgId: string, apikey: string) {
-  if (p.isCancel(command)) {
+  if (pIsCancel(command)) {
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
     exit()
   }
@@ -101,10 +101,10 @@ async function markStep(orgId: string, apikey: string, step: number | string) {
 
 async function step2(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
-  const doAdd = await p.confirm({ message: `Add ${appId} in Capgo?` })
+  const doAdd = await pConfirm({ message: `Add ${appId} in Capgo?` })
   await cancelCommand(doAdd, organization.gid, apikey)
   if (doAdd) {
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${appId}`)
     const addRes = await addAppInternal(appId, options, organization, false)
     if (!addRes)
@@ -113,17 +113,17 @@ async function step2(organization: Organization, apikey: string, appId: string, 
       s.stop(`App add Done ✅`)
   }
   else {
-    p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
+    pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
   await markStep(organization.gid, apikey, 2)
 }
 
 async function step3(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doChannel = await p.confirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
+  const doChannel = await pConfirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
   await cancelCommand(doChannel, orgId, apikey)
   if (doChannel) {
-    const s = p.spinner()
+    const s = pSpinner()
     // create production channel public
     s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
     const addChannelRes = await addChannel(defaultChannel, appId, {
@@ -136,7 +136,7 @@ async function step3(orgId: string, apikey: string, appId: string) {
       s.stop(`Channel add Done ✅`)
   }
   else {
-    p.log.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
+    pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
   await markStep(orgId, apikey, 3)
 }
@@ -145,10 +145,10 @@ const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 async function step4(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doInstall = await p.confirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
+  const doInstall = await pConfirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
   await cancelCommand(doInstall, orgId, apikey)
   if (doInstall) {
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Checking if @capgo/capacitor-updater is installed`)
     let versionToInstall = 'latest'
     const pack = await readPackageJson()
@@ -156,14 +156,14 @@ async function step4(orgId: string, apikey: string, appId: string) {
     coreVersion = parse(coreVersion?.replace('^', '').replace('~', ''))
     if (!coreVersion) {
       s.stop('Error')
-      p.log.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
+      pOutro(`Bye 👋`)
       exit()
     }
     else if (lessThan(coreVersion, parse('5.0.0'))) {
       s.stop('Error')
-      p.log.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
+      pOutro(`Bye 👋`)
       exit()
     }
     else if (lessThan(coreVersion, parse('6.0.0'))) {
@@ -172,8 +172,8 @@ async function step4(orgId: string, apikey: string, appId: string) {
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
-      p.log.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
+      pOutro(`Bye 👋`)
       exit()
     }
     // // use pm to install capgo
@@ -190,17 +190,17 @@ async function step4(orgId: string, apikey: string, appId: string) {
     }
   }
   else {
-    p.log.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
+    pLog.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
   await markStep(orgId, apikey, 4)
 }
 
 async function step5(orgId: string, apikey: string, appId: string) {
-  const doAddCode = await p.confirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
+  const doAddCode = await pConfirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
   await cancelCommand(doAddCode, orgId, apikey)
 
   if (doAddCode) {
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Adding @capacitor-updater to your main file`)
 
     const projectType = await findProjectType()
@@ -228,18 +228,18 @@ async function step5(orgId: string, apikey: string, appId: string) {
         const currentContent = readFileSync(nuxtFilePath, 'utf8')
         if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
           s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          p.log.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
+          pLog.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
         }
         else {
           writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
           s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          p.log.info('Updated capacitorUpdater.client.ts file with required code')
+          pLog.info('Updated capacitorUpdater.client.ts file with required code')
         }
       }
       else {
         writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
         s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-        p.log.info('Created plugins directory and capacitorUpdater.client.ts file')
+        pLog.info('Created plugins directory and capacitorUpdater.client.ts file')
       }
     }
     else {
@@ -256,15 +256,15 @@ async function step5(orgId: string, apikey: string, appId: string) {
       // Open main file and inject codeInject
       if (!mainFilePath || !existsSync(mainFilePath)) {
         s.stop('Cannot find main file to install Updater plugin')
-        const userProvidedPath = await p.text({
+        const userProvidedPath = await pText({
           message: `Provide the correct relative path to your main file (JS or TS):`,
           validate: (value) => {
             if (!existsSync(value))
               return 'File does not exist. Please provide a valid path.'
           },
         })
-        if (p.isCancel(userProvidedPath)) {
-          p.cancel('Operation cancelled.')
+        if (pIsCancel(userProvidedPath)) {
+          pCancel('Operation cancelled.')
           exit(1)
         }
         mainFilePath = userProvidedPath
@@ -276,8 +276,8 @@ async function step5(orgId: string, apikey: string, appId: string) {
 
       if (!last) {
         s.stop('Error')
-        p.log.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
-        p.outro(`Bye 👋`)
+        pLog.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
+        pOutro(`Bye 👋`)
         exit()
       }
 
@@ -294,22 +294,22 @@ async function step5(orgId: string, apikey: string, appId: string) {
     await markStep(orgId, apikey, 5)
   }
   else {
-    p.log.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
+    pLog.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
   }
 }
 
 async function step6(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doEncrypt = await p.confirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
+  const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
     const keyRes = await createKeyV2({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
-      p.log.warn(`Cannot create key ❌`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`Cannot create key ❌`)
+      pOutro(`Bye 👋`)
       exit(1)
     }
     else {
@@ -322,10 +322,10 @@ async function step6(orgId: string, apikey: string, appId: string) {
 
 async function step7(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doBuild = await p.confirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
+  const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
-    const s = p.spinner()
+    const s = pSpinner()
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
     s.start(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
@@ -333,25 +333,25 @@ async function step7(orgId: string, apikey: string, appId: string) {
     // check in script build exist
     if (!pack.scripts[buildCommand]) {
       s.stop('Error')
-      p.log.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
+      pOutro(`Bye 👋`)
       exit()
     }
     execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
     s.stop(`Build & Sync Done ✅`)
   }
   else {
-    p.log.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
+    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
   await markStep(orgId, apikey, 7)
 }
 
 async function step8(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doBundle = await p.confirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
+  const doBundle = await pConfirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
   await cancelCommand(doBundle, orgId, apikey)
   if (doBundle) {
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
     const uploadRes = await uploadBundle(appId, {
       channel: defaultChannel,
@@ -359,8 +359,8 @@ async function step8(orgId: string, apikey: string, appId: string) {
     }, false)
     if (!uploadRes) {
       s.stop('Error')
-      p.log.warn(`Upload failed ❌`)
-      p.outro(`Bye 👋`)
+      pLog.warn(`Upload failed ❌`)
+      pOutro(`Bye 👋`)
       exit()
     }
     else {
@@ -368,64 +368,64 @@ async function step8(orgId: string, apikey: string, appId: string) {
     }
   }
   else {
-    p.log.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
+    pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
   }
   await markStep(orgId, apikey, 8)
 }
 
 async function step9(orgId: string, apikey: string) {
   const pm = getPMAndCommand()
-  const doRun = await p.confirm({ message: `Run in device now ?` })
+  const doRun = await pConfirm({ message: `Run in device now ?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    const plaformType = await p.select({
+    const plaformType = await pSelect({
       message: 'Pick a platform to run your app',
       options: [
         { value: 'ios', label: 'IOS' },
         { value: 'android', label: 'Android' },
       ],
     })
-    if (p.isCancel(plaformType)) {
-      p.outro(`Bye 👋`)
+    if (pIsCancel(plaformType)) {
+      pOutro(`Bye 👋`)
       exit()
     }
 
     const platform = plaformType as 'ios' | 'android'
-    const s = p.spinner()
+    const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
     await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
     s.stop(`Started Done ✅`)
   }
   else {
-    p.log.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
+    pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
   await markStep(orgId, apikey, 9)
 }
 
 async function step10(orgId: string, apikey: string, appId: string, hostWeb: string) {
-  const doRun = await p.confirm({ message: `Automatic check if update working in device ?` })
+  const doRun = await pConfirm({ message: `Automatic check if update working in device ?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    p.log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
+    pLog.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
     await waitLog('onboarding-v2', apikey, appId, apikey, orgId)
   }
   else {
     const appIdUrl = convertAppName(appId)
-    p.log.info(`Check logs in ${hostWeb}/app/p/${appIdUrl}/logs to see if update works.`)
+    pLog.info(`Check logs in ${hostWeb}/app/p/${appIdUrl}/logs to see if update works.`)
   }
   await markStep(orgId, apikey, 10)
 }
 
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
-  p.intro(`Capgo onboarding 🛫`)
+  pIntro(`Capgo onboarding 🛫`)
   await checkLatest()
   const extConfig = await getConfig()
   const localConfig = await getLocalConfig()
   appId = appId || extConfig?.config?.appId
   options.apikey = apikeyCommand || findSavedKey()
 
-  const log = p.spinner()
+  const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
     await login(options.apikey, options, false)
@@ -490,14 +490,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   }
   catch (e) {
     console.error(e)
-    p.log.error(`Error during onboarding, please try again later`)
+    pLog.error(`Error during onboarding, please try again later`)
     exit(1)
   }
 
-  p.log.info(`Welcome onboard ✈️!`)
-  p.log.info(`Your Capgo update system is setup`)
-  p.log.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
-  p.log.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
-  p.outro(`Bye 👋`)
+  pLog.info(`Welcome onboard ✈️!`)
+  pLog.info(`Your Capgo update system is setup`)
+  pLog.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
+  pLog.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
+  pOutro(`Bye 👋`)
   exit()
 }

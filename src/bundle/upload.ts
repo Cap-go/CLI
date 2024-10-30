@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { checkLatest } from '../api/update'
-import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -42,6 +42,7 @@ interface Options extends OptionsBase {
   oldEncryption?: boolean
   minUpdateVersion?: string
   autoMinUpdateVersion?: boolean
+  autoSetBundle?: boolean
   ignoreMetadataCheck?: boolean
   ignoreChecksumCheck?: boolean
   timeout?: number
@@ -498,6 +499,10 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   const fileConfig = await getRemoteFileConfig()
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
   const bundle = await getBundle(extConfig.config, options)
+
+  if (options.autoSetBundle) {
+    await updateConfig({ version: bundle })
+  }
 
   checkNotifyAppReady(options, path)
 

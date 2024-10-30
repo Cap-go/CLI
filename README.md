@@ -173,6 +173,7 @@ Options:
 * `--multipart` Uses multipart protocol to upload data to S3, Deprecated, use TUS instead.
 * `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
 * `--package-json <packageJson>` A path to package.json. Usefull for monorepos.
+* `--auto-set-bundle` Set the bundle in capacitor.config.json.
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
 

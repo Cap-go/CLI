@@ -1,6 +1,5 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { intro, log, outro } from '@clack/prompts'
-import * as p from '@clack/prompts'
+import { intro, log, outro, confirm as pConfirm, spinner as pSpinner } from '@clack/prompts'
 import { program } from 'commander'
 import { createRSA } from './api/crypto'
 import { checkLatest } from './api/update'
@@ -68,7 +67,7 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
       log.info('Old private key deleted from config file')
-      const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with the new channel in order to support old apps and facilitate the migration?` })
+      const doSetupChannel = await pConfirm({ message: `Do you want to setup encryption with the new channel in order to support old apps and facilitate the migration?` })
       if (doSetupChannel) {
         extConfig.config.plugins.CapacitorUpdater.defaultChannel = 'encryption_v2'
       }
@@ -190,7 +189,7 @@ export async function createKeyV2(options: Options, logg = true) {
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
       log.info('Old private key deleted from config file')
-      const doSetupChannel = await p.confirm({ message: `Do you want to setup encryption with the new channel in order to support old apps and facilitate the migration?` })
+      const doSetupChannel = await pConfirm({ message: `Do you want to setup encryption with the new channel in order to support old apps and facilitate the migration?` })
       if (doSetupChannel) {
         extConfig.config.plugins.CapacitorUpdater.defaultChannel = 'encryption_v2'
       }
