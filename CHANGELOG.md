@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.22.9](https://github.com/Cap-go/CLI/compare/v4.22.8...v4.22.9) (2024-10-30)
+
+
+### Bug Fixes
+
+* add auto cancel ([dfe0ec6](https://github.com/Cap-go/CLI/commit/dfe0ec6dc5f2bc3f059ffe8bbb59dce4f84335d1))
+* try mac xlarge ([d3f9164](https://github.com/Cap-go/CLI/commit/d3f91641c6a537ad5755ee784754e98fad16eac3))
+
 ### [4.22.8](https://github.com/Cap-go/CLI/compare/v4.22.7...v4.22.8) (2024-10-30)
 
 ### [4.22.7](https://github.com/Cap-go/CLI/compare/v4.22.6...v4.22.7) (2024-10-30)
