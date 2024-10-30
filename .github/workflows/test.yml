@@ -53,15 +53,9 @@ jobs:
       - name: Run Supabase Start
         working-directory: capgo
         run: supabase start -x imgproxy,studio,realtime,studio,logflare,vector,inbucket
-      - uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
-      - name: "Start minio"
-        working-directory: capgo
-        run: bun run minio:start && bun run minio:seed
       - name: Install Capgo dependencies
         working-directory: capgo
         run: bun install  
       - name: Run CLI tests
         working-directory: capgo
-        run: LOCAL_CLI_PATH="../../dist/index.js" bun run test:cli
+        run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli
