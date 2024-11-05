@@ -155,6 +155,7 @@ bundle
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
   .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
+  .option('--dry-run', 'Dry run the upload process')
 
 bundle
   .command('compatibility [appId]')

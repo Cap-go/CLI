@@ -51,6 +51,7 @@ interface Options extends OptionsBase {
   tus?: boolean
   encryptedChecksum?: string
   packageJson?: string
+  dryRun?: boolean
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -349,6 +350,10 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
   let isTus = false
+  if (options.dryRun) {
+    spinner.stop(`Dry run, bundle not uploaded\nBundle uploaded 💪 in 0 seconds`)
+    return
+  }
   try {
     const localConfig = await getLocalConfig()
     if (options.tus !== undefined && options.tus) {
@@ -615,6 +620,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
+      if (options.dryRun) {
+        options.partial = false
+      }
       finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
     }
     catch (err) {
