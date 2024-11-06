@@ -571,13 +571,13 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
 
   // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
-  if (!fileConfig.TUSUpload) {
+  if (!fileConfig.TUSUpload || options.external) {
     options.tus = false
   }
   else {
     options.tus = options.tus || fileConfig.TUSUploadForced
   }
-  if (!fileConfig.partialUpload) {
+  if (!fileConfig.partialUpload || options.external) {
     options.partial = false
   }
   else {
@@ -665,8 +665,71 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   return true
 }
 
+function checkValidOptions(options: Options) {
+  if (options.ivSessionKey && !options.external) {
+    log.error('You need to provide an external url if you want to use the --iv-session-key option')
+    program.error('')
+  }
+  if (options.encryptedChecksum && !options.external) {
+    log.error('You need to provide an external url if you want to use the --encrypted-checksum option')
+    program.error('')
+  }
+  if (options.partial && options.external) {
+    log.error('You cannot use the --partial option with an external url')
+    program.error('')
+  }
+  if (options.tus && options.external) {
+    log.error('You cannot use the --tus option with an external url')
+    program.error('')
+  }
+  if (options.dryRun && options.external) {
+    log.error('You cannot use the --dry-run option with an external url')
+    program.error('')
+  }
+  if (options.multipart && options.external) {
+    log.error('You cannot use the --multipart option with an external url')
+    program.error('')
+  }
+  // cannot set key if external
+  if (options.external && (options.key || options.keyData || options.keyV2 || options.keyDataV2)) {
+    log.error('You cannot set a key if you are uploading to an external url')
+    program.error('')
+  }
+  // cannot set key and key-v2
+  if ((options.key || options.keyData) && (options.keyV2 || options.keyDataV2)) {
+    log.error('You cannot set both key and key-v2')
+    program.error('')
+  }
+  // cannot set key and key-data
+  if (options.key && options.keyData) {
+    log.error('You cannot set both key and key-data')
+    program.error('')
+  }
+  // cannot set key-v2 and key-data-v2
+  if (options.keyV2 && options.keyDataV2) {
+    log.error('You cannot set both key-v2 and key-data-v2')
+    program.error('')
+  }
+  // cannot set s3 and external
+  if (options.external && (options.s3Region || options.s3Apikey || options.s3Apisecret || options.s3Endpoint || options.s3BucketName || options.s3Port || options.s3SSL)) {
+    log.error('You cannot set S3 options if you are uploading to an external url, it\'s automatically handled')
+    program.error('')
+  }
+  // cannot set --encrypted-checksum if not external
+  if (options.encryptedChecksum && !options.external) {
+    log.error('You cannot set the --encrypted-checksum option if you are not uploading to an external url')
+    program.error('')
+  }
+  // cannot set min-update-version and auto-min-update-version
+  if (options.minUpdateVersion && options.autoMinUpdateVersion) {
+    log.error('You cannot set both min-update-version and auto-min-update-version, use only one of them')
+    program.error('')
+  }
+}
+
 export async function uploadCommand(appid: string, options: Options) {
   try {
+    checkValidOptions(options)
     await uploadBundle(appid, options, true)
   }
   catch (error) {
@@ -679,6 +742,7 @@ export async function uploadDeprecatedCommand(appid: string, options: Options) {
   const pm = getPMAndCommand()
   log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
+    checkValidOptions(options)
     await uploadBundle(appid, options, true)
   }
   catch (error) {
