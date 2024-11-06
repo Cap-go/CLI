@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.24.0](https://github.com/Cap-go/CLI/compare/v4.23.2...v4.24.0) (2024-11-06)
+
+
+### Features
+
+* add checkValidOptions to add message for user when then combine wrong options ([caecf99](https://github.com/Cap-go/CLI/commit/caecf9984adde7cb336ee953be6b95871838eb2f))
+
 ### [4.23.2](https://github.com/Cap-go/CLI/compare/v4.23.1...v4.23.2) (2024-11-05)
 
 
