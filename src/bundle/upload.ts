@@ -88,8 +88,12 @@ function getAppIdAndPath(appId: string | undefined, options: Options, config: Ca
   const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId
   const path = options.path || config?.webDir
 
-  if (!finalAppId || !path) {
-    log.error('Missing argument, you need to provide a appid and a path (--path), or be in a capacitor project')
+  if (!finalAppId) {
+    log.error('Missing argument, you need to provide a appid or be in a capacitor project')
+    program.error('')
+  }
+  if (!path) {
+    log.error('Missing argument, you need to provide a path (--path), or be in a capacitor project')
     program.error('')
   }
 
