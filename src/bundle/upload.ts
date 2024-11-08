@@ -360,23 +360,13 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   }
   try {
     const localConfig = await getLocalConfig()
-    if (options.tus !== undefined && options.tus) {
-      log.info(`Uploading bundle with TUS protocol`)
-      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig)
-      isTus = true
-      const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
-      const { error: changeError } = await supabase
-        .from('app_versions')
-        .update({ r2_path: filePath })
-        .eq('name', bundle)
-        .eq('app_id', appid)
-      if (changeError) {
-        log.error(`Cannot finish TUS upload ${formatError(changeError)}`)
-        Promise.reject(new Error('Cannot finish TUS upload'))
+    if ((options.multipart !== undefined && options.multipart) || (options.tus !== undefined && options.tus)) {
+      if (options.multipart) {
+        log.info(`Uploading bundle with multipart protocol, multipart is deprecated`)
       }
-    }
-    if (options.multipart !== undefined && options.multipart) {
-      log.info(`Uploading bundle with TUS protocol, multipart is deprecated`)
+      else {
+        log.info(`Uploading bundle with TUS protocol`)
+      }
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig)
       isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`

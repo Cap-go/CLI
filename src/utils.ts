@@ -1215,24 +1215,17 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
+interface Compatibility {
+  name: string
+  localVersion: string | undefined
+  remoteVersion: string | undefined
+}
+
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined) {
   const dependenciesObject = await getLocalDepenencies(packageJsonPath)
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
-  const finalDepenencies:
-  ({
-    name: string
-    localVersion: string
-    remoteVersion: string
-  } | {
-    name: string
-    localVersion: string
-    remoteVersion: undefined
-  } | {
-    name: string
-    localVersion: undefined
-    remoteVersion: string
-  })[] = dependenciesObject
+  const finalDepenencies: Compatibility[] = dependenciesObject
     .filter(a => !!a.native)
     .map((local) => {
       const remotePackage = mappedRemoteNativePackages.get(local.name)
