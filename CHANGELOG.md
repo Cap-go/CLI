@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.24.2](https://github.com/Cap-go/CLI/compare/v4.24.1...v4.24.2) (2024-11-08)
+
+
+### Bug Fixes
+
+* double upload issue ([95835bf](https://github.com/Cap-go/CLI/commit/95835bf697cbca5735868993fef3d11616bbdd20))
+
 ### [4.24.1](https://github.com/Cap-go/CLI/compare/v4.24.0...v4.24.1) (2024-11-07)
 
 
