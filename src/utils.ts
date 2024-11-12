@@ -1037,7 +1037,7 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies(packageJsonPath: string | undefined) {
+export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModules: string | undefined) {
   // const dir = findRoot(cwd())
   // const packageJsonPath = join(dir, PACKNAME)
 
@@ -1070,11 +1070,11 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined) {
     }
   }
 
-  const nodeModulesPath = join(cwd(), 'node_modules')
+  const nodeModulesPath = !nodeModules ? join(cwd(), 'node_modules') : nodeModules
   if (!existsSync(nodeModulesPath)) {
     const pm = findPackageManagerType(dir, 'npm')
     const installCmd = findInstallCommand(pm)
-    log.error(`Missing node_modules folder, please run ${pm} ${installCmd}`)
+    log.error(`Missing node_modules folder at ${nodeModulesPath}, please run ${pm} ${installCmd}`)
     program.error('')
   }
 
@@ -1221,8 +1221,8 @@ interface Compatibility {
   remoteVersion: string | undefined
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined) {
-  const dependenciesObject = await getLocalDepenencies(packageJsonPath)
+export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
+  const dependenciesObject = await getLocalDepenencies(packageJsonPath, nodeModules)
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
 
   const finalDepenencies: Compatibility[] = dependenciesObject
