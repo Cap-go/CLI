@@ -52,6 +52,7 @@ interface Options extends OptionsBase {
   encryptedChecksum?: string
   packageJson?: string
   dryRun?: boolean
+  nodeModules?: string
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -148,7 +149,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     const {
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel,
-    } = await checkCompatibility(supabase, appid, channel, options.packageJson)
+    } = await checkCompatibility(supabase, appid, channel, options.packageJson, options.nodeModules)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
@@ -184,7 +185,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
   else if (!ignoreMetadataCheck) {
     log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
-    localDependencies = await getLocalDepenencies(options.packageJson)
+    localDependencies = await getLocalDepenencies(options.packageJson, options.nodeModules)
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
