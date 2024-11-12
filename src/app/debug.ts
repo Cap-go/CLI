@@ -217,7 +217,7 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   await checkLatest()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
   const deviceId = options.device
   if (!options.apikey) {
     log.error(`Missing API key, you need to provide an API key to delete your app`)

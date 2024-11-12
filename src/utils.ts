@@ -1,7 +1,7 @@
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
-import type { ExtConfigPairs } from './config'
+import type { CapacitorConfig, ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
@@ -1219,6 +1219,11 @@ interface Compatibility {
   name: string
   localVersion: string | undefined
   remoteVersion: string | undefined
+}
+
+export function getAppId(appId: string | undefined, config: CapacitorConfig) {
+  const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId
+  return finalAppId
 }
 
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {

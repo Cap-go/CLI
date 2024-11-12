@@ -18,7 +18,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -422,7 +422,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   await checkLatest()
   const extConfig = await getConfig()
   const localConfig = await getLocalConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
   options.apikey = apikeyCommand || findSavedKey()
 
   if (appId === undefined) {

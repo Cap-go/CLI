@@ -3,7 +3,7 @@ import { exit, version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
 import latestVersion from 'latest-version'
 import pack from '../../package.json'
-import { getConfig, readPackageJson } from '../utils'
+import { getAppId, getConfig, readPackageJson } from '../utils'
 
 async function getLatestDependencies(installedDependencies: { [key: string]: string }) {
   const latestDependencies: { [key: string]: string } = {}
@@ -55,7 +55,7 @@ export async function getInfo(options: { packageJson?: string }) {
   const appName = extConfig?.config?.appName || ''
   log.info(` App Name: ${appName}`)
   // app id
-  const appId = extConfig?.config?.appId || ''
+  const appId = getAppId('', extConfig?.config)
   log.info(` App ID: ${appId}`)
   // app version
   log.info(` App Version: ${appVersion}`)

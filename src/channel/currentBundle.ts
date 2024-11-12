@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { intro, log } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -24,7 +24,7 @@ export async function currentBundle(channel: string, appId: string, options: Opt
 
   options.apikey = options.apikey || findSavedKey(quiet)
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')

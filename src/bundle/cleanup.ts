@@ -15,7 +15,7 @@ import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
-import { createSupabaseClient, findSavedKey, getConfig, getHumanDate, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, getHumanDate, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   version: string
@@ -51,7 +51,7 @@ export async function cleanupBundle(appId: string, options: Options) {
   const force = options.force || false
 
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
   if (!options.apikey) {
     log.error('Missing API key, you need to provide an API key to delete your app')
     program.error('')
