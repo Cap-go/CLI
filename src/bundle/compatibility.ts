@@ -9,6 +9,7 @@ interface Options extends OptionsBase {
   channel?: string
   text?: boolean
   packageJson?: string
+  nodeModules?: string
 }
 
 export async function checkCompatibilityCommand(appId: string, options: Options) {
@@ -46,7 +47,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
   // const nativePackages = Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version }))
   // await supabase.from('app_versions').update({ native_packages: nativePackages }).eq('id', '9654')
 
-  const { finalCompatibility } = await checkCompatibility(supabase, appId, channel, options.packageJson)
+  const { finalCompatibility } = await checkCompatibility(supabase, appId, channel, options.packageJson, options.nodeModules)
 
   const t = new Table()
   t.headers = ['Package', 'Local version', 'Remote version', 'Compatible']

@@ -156,6 +156,7 @@ bundle
   .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-run', 'Dry run the upload process')
+  .option('--node-modules <nodeModules>', 'A path to node_modules. Usefull for monorepos')
 
 bundle
   .command('compatibility [appId]')
@@ -164,6 +165,7 @@ bundle
   .option('-c, --channel <channel>', 'channel to check the compatibility with')
   .option('--text', 'output text instead of emojis')
   .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--node-modules <nodeModules>', 'A path to node_modules. Usefull for monorepos')
 
 bundle
   .command('delete [bundleId] [appId]')
