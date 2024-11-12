@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { checkLatest } from '../api/update'
-import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -86,7 +86,7 @@ function getApikey(options: Options) {
 }
 
 function getAppIdAndPath(appId: string | undefined, options: Options, config: CapacitorConfig) {
-  const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId
+  const finalAppId = getAppId(appId, config)
   const path = options.path || config?.webDir
 
   if (!finalAppId) {

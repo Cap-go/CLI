@@ -5,14 +5,14 @@ import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkLatest } from '../api/update'
 import { displayBundles, getActiveAppVersions } from '../api/versions'
-import { createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 export async function listBundle(appId: string, options: OptionsBase) {
   intro(`List bundles`)
   await checkLatest()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')
     program.error('')

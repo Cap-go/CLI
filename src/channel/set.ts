@@ -11,6 +11,7 @@ import {
   createSupabaseClient,
   findSavedKey,
   formatError,
+  getAppId,
   getConfig,
   getOrganizationId,
   OrganizationPerm,
@@ -41,7 +42,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   intro(`Set channel`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')

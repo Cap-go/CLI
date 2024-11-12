@@ -4,7 +4,7 @@ import { Table } from '@sauber/table'
 import { program } from 'commander'
 import { subset } from 'semver'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { checkCompatibility, createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -17,7 +17,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
   intro(`Check compatibility`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   const { channel } = options
 

@@ -13,6 +13,7 @@ import {
   createSupabaseClient,
   findSavedKey,
   formatError,
+  getAppId,
   getConfig,
   getOrganizationId,
   OrganizationPerm,
@@ -30,7 +31,7 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   intro(`Unlink bundle ${options.apikey}`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
   let { bundle } = options
 
   const pack = await readPackageJson('', options.packageJson)

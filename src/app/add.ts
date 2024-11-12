@@ -14,6 +14,7 @@ import {
   createSupabaseClient,
   findSavedKey,
   formatError,
+  getAppId,
   getConfig,
   getContentType,
   getOrganization,
@@ -31,7 +32,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
   await checkLatest()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error(`Missing API key, you need to provide a API key to upload your bundle`)

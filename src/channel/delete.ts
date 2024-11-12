@@ -4,13 +4,13 @@ import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel } from '../api/channels'
-import { createSupabaseClient, findSavedKey, formatError, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
   intro(`Delete channel`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')

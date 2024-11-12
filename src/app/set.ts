@@ -5,13 +5,13 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
-import { createSupabaseClient, findSavedKey, formatError, getConfig, getContentType, getOrganization, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getContentType, getOrganization, OrganizationPerm, verifyUser } from '../utils'
 
 export async function setApp(appId: string, options: Options) {
   intro(`Set app`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = appId || extConfig?.config?.appId
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error(`Missing API key, you need to provide a API key to upload your bundle`)

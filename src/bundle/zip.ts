@@ -11,6 +11,7 @@ import { checkLatest } from '../api/update'
 import {
   baseKeyV2,
   formatError,
+  getAppId,
   getConfig,
   readPackageJson,
   regexSemver,
@@ -38,7 +39,7 @@ export async function zipBundle(appId: string, options: Options) {
       await checkLatest()
 
     const extConfig = await getConfig()
-    appId = appId || extConfig?.config?.appId
+    appId = getAppId(appId, extConfig?.config)
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0]
     const pack = await readPackageJson('', options.packageJson)
