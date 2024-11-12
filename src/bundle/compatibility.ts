@@ -2,6 +2,7 @@ import type { OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { program } from 'commander'
+import { subset } from 'semver'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkCompatibility, createSupabaseClient, findSavedKey, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
@@ -59,7 +60,14 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
 
   finalCompatibility.forEach((data) => {
     const { name, localVersion, remoteVersion } = data
-    const compatible = remoteVersion === localVersion ? yesSymbol : noSymbol
+    // remoteVersion === localVersion
+    let compatible = noSymbol
+    try {
+      compatible = subset(localVersion ?? '', remoteVersion ?? '') ? yesSymbol : noSymbol
+    }
+    catch (e) {
+      log.error(`Fail when compare. Error: ${e}`)
+    }
     t.rows.push([name, localVersion, remoteVersion, compatible])
   })
 

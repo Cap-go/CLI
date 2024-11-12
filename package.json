@@ -51,6 +51,7 @@
     "@clack/prompts": "^0.7.0",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
+    "@types/semver": "7.5.8",
     "@supabase/supabase-js": "^2.46.0",
     "@tomasklaen/checksum": "^1.1.0",
     "@types/adm-zip": "^0.5.6",
@@ -79,5 +80,8 @@
     "tsconfig-paths": "4.2.0",
     "tus-js-client": "^4.2.3",
     "typescript": "5.6.3"
+  },
+  "dependencies": {
+    "semver": "^7.6.3"
   }
 }
