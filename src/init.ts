@@ -425,6 +425,17 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   appId = appId || extConfig?.config?.appId
   options.apikey = apikeyCommand || findSavedKey()
 
+  if (appId === undefined) {
+    // ask for the appId
+    appId = await pText({
+      message: 'Enter your appId:',
+    }) as string
+    if (pIsCancel(appId)) {
+      pCancel('Operation cancelled.')
+      exit(1)
+    }
+  }
+
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
