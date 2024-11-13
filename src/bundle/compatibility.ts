@@ -2,7 +2,7 @@ import type { OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { program } from 'commander'
-import { subset } from 'semver'
+import subset from 'semver/ranges/subset'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkCompatibility, createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 

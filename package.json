@@ -51,12 +51,12 @@
     "@clack/prompts": "^0.7.0",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
-    "@types/semver": "7.5.8",
     "@supabase/supabase-js": "^2.46.0",
     "@tomasklaen/checksum": "^1.1.0",
     "@types/adm-zip": "^0.5.6",
     "@types/node": "^22.8.4",
     "@types/prettyjson": "^0.0.33",
+    "@types/semver": "7.5.8",
     "@types/tmp": "^0.2.6",
     "@typescript-eslint/eslint-plugin": "^8.12.2",
     "@typescript-eslint/parser": "^8.12.2",
@@ -74,14 +74,12 @@
     "open": "^10.1.0",
     "pkg": "5.8.1",
     "prettyjson": "^1.2.5",
+    "semver": "^7.6.3",
     "tmp": "^0.2.3",
     "ts-loader": "^9.5.1",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
     "tus-js-client": "^4.2.3",
     "typescript": "5.6.3"
-  },
-  "dependencies": {
-    "semver": "^7.6.3"
   }
 }
