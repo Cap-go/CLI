@@ -154,10 +154,10 @@ Options:
 * `--s3-bucket-name <bucketName>` Name for your AWS S3 bucket.
 * `--s3-port <port>` Port for your S3 endpoint.
 * `--no-s3-ssl` Disable SSL for S3 upload.
-* `--key <key>` Custom path for public signing key.
-* `--key-data <keyData>` Public signing key.
-* `--key-v2 <key>` Custom path for private signing key.
-* `--key-data-v2 <keyData>` Private signing key.
+* `--key <key>` Custom path for public signing key (v1 system).
+* `--key-data <keyData>` Public signing key (v1 system).
+* `--key-v2 <key>` Custom path for private signing key (v2 system).
+* `--key-data-v2 <keyData>` Private signing key (v2 system).
 * `--bundle-url` Prints bundle URL into stdout.
 * `--no-key` Ignore signing key and send clear update.
 * `--no-code-check` Ignore checking if notifyAppReady() is called in source code and index present in root folder.
