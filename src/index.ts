@@ -33,7 +33,7 @@ import { checkCompatibilityCommand } from './bundle/compatibility'
 program
   .name(pack.name)
   .description('Manage packages and bundle versions in Capgo Cloud')
-  .version(pack.version)
+  .version(pack.version, '-v, --version', 'output the current version')
 
 program
   .command('login [apikey]')
