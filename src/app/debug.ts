@@ -4,7 +4,7 @@ import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clac
 import { program } from 'commander'
 import ky from 'ky'
 import { checkLatest } from '../api/update'
-import { convertAppName, createSupabaseClient, findSavedKey, formatError, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
+import { convertAppName, createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
