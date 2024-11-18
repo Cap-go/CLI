@@ -174,6 +174,7 @@ Options:
 * `--encrypted-checksum <encryptedChecksum>` An encrypted checksum (signature). Used only when uploading an external bundle.
 * `--package-json <packageJson>` A path to package.json. Usefull for monorepos.
 * `--auto-set-bundle` Set the bundle in capacitor.config.json.
+* `--node-modules <nodeModules>` A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules).
 
 > ⭐️ External option helps to unlock 2 cases: corporate with privacy concern, don't send the code to a third part and app bigger than 200 MB. With this setting, Capgo store only the link to the zip and sends the link to all apps.
 
@@ -313,6 +314,9 @@ Optionally, you can give:
 
 * `--apikey [key]` API key to link to your account.
 * `--text` use text instead of emojis in the table
+* `--channel [channel]` the channel to check the compatibility with.
+* `--package-json <packageJson>` A path to package.json. Usefull for monorepos
+* `--node-modules <nodeModules>` A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)
 
 ## Channel
 
