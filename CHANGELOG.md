@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.25.6](https://github.com/Cap-go/CLI/compare/v4.25.5...v4.25.6) (2024-11-18)
+
+
+### Bug Fixes
+
+* allow list of folders ([d36d468](https://github.com/Cap-go/CLI/commit/d36d468ba2da878052f391824b6c51a8a0724e06))
+
 ### [4.25.5](https://github.com/Cap-go/CLI/compare/v4.25.4...v4.25.5) (2024-11-18)
 
 ### [4.25.4](https://github.com/Cap-go/CLI/compare/v4.25.3...v4.25.4) (2024-11-15)
