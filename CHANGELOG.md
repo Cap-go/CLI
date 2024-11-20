@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.26.2](https://github.com/Cap-go/CLI/compare/v4.26.1...v4.26.2) (2024-11-20)
+
+
+### Bug Fixes
+
+* compatibility table with semver ([805044e](https://github.com/Cap-go/CLI/commit/805044ef041d68135953095b34e3d2cf64ed8b03))
+
 ### [4.26.1](https://github.com/Cap-go/CLI/compare/v4.26.0...v4.26.1) (2024-11-20)
 
 
