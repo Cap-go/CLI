@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.26.0](https://github.com/Cap-go/CLI/compare/v4.25.6...v4.26.0) (2024-11-20)
+
+
+### Features
+
+* setup supabase in the config on init ([05ff1c5](https://github.com/Cap-go/CLI/commit/05ff1c526999479b6a26b27c8f84aa4322bdf624))
+
 ### [4.25.6](https://github.com/Cap-go/CLI/compare/v4.25.5...v4.25.6) (2024-11-18)
 
 
