@@ -579,7 +579,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = options.partial || fileConfig.partialUploadForced
   }
 
-  // TODO: re enable this when we have the partial upload working better
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
