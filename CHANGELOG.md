@@ -2,6 +2,37 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.26.0](https://github.com/Cap-go/CLI/compare/v4.25.6...v4.26.0) (2024-11-20)
+
+
+### Features
+
+* setup supabase in the config on init ([05ff1c5](https://github.com/Cap-go/CLI/commit/05ff1c526999479b6a26b27c8f84aa4322bdf624))
+
+### [4.25.6](https://github.com/Cap-go/CLI/compare/v4.25.5...v4.25.6) (2024-11-18)
+
+
+### Bug Fixes
+
+* allow list of folders ([d36d468](https://github.com/Cap-go/CLI/commit/d36d468ba2da878052f391824b6c51a8a0724e06))
+
+### [4.25.5](https://github.com/Cap-go/CLI/compare/v4.25.4...v4.25.5) (2024-11-18)
+
+### [4.25.4](https://github.com/Cap-go/CLI/compare/v4.25.3...v4.25.4) (2024-11-15)
+
+
+### Bug Fixes
+
+* build issue ([9f1943b](https://github.com/Cap-go/CLI/commit/9f1943bd47012c4e94a4d1b0bbe5719226e3270f))
+
+### [4.25.3](https://github.com/Cap-go/CLI/compare/v4.25.2...v4.25.3) (2024-11-14)
+
+
+### Bug Fixes
+
+* doc for keys ([7ee84d2](https://github.com/Cap-go/CLI/commit/7ee84d21b45d8a783faefeb45ad83fa56453bb76))
+* issue with -v ([3d2ce3c](https://github.com/Cap-go/CLI/commit/3d2ce3c230a142f4fcdff79e1ba5262cd8df5b15))
+
 ### [4.25.2](https://github.com/Cap-go/CLI/compare/v4.25.1...v4.25.2) (2024-11-12)
 
 

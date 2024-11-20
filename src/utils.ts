@@ -1037,15 +1037,8 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModules: string | undefined) {
-  // const dir = findRoot(cwd())
-  // const packageJsonPath = join(dir, PACKNAME)
-
-  // if (!existsSync(packageJsonPath)) {
-  //   log.error('Missing package.json, you need to be in a capacitor project')
-  //   program.error('')
-  // }
-
+export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
+  const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
   let packageJson
   try {
     packageJson = await readPackageJson('', packageJsonPath)
@@ -1070,11 +1063,15 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
     }
   }
 
-  const nodeModulesPath = !nodeModules ? join(cwd(), 'node_modules') : nodeModules
-  if (!existsSync(nodeModulesPath)) {
+  const nodeModulesPaths = nodeModules.length === 0
+    ? [join(cwd(), 'node_modules')]
+    : nodeModules
+
+  const anyValidPath = nodeModulesPaths.some(path => existsSync(path))
+  if (!anyValidPath) {
     const pm = findPackageManagerType(dir, 'npm')
     const installCmd = findInstallCommand(pm)
-    log.error(`Missing node_modules folder at ${nodeModulesPath}, please run ${pm} ${installCmd}`)
+    log.error(`Missing node_modules folder at ${nodeModulesPaths.join(', ')}, please run ${pm} ${installCmd}`)
     program.error('')
   }
 
@@ -1082,26 +1079,34 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
 
   const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
     .map(async ([key, value]) => {
-      const dependencyFolderPath = join(nodeModulesPath, key)
-      const dependencyFolderExists = existsSync(dependencyFolderPath)
+      let dependencyFound = false
+      let hasNativeFiles = false
 
-      if (!dependencyFolderExists) {
+      for (const modulePath of nodeModulesPaths) {
+        const dependencyFolderPath = join(modulePath, key)
+        if (existsSync(dependencyFolderPath)) {
+          dependencyFound = true
+          try {
+            const files = readDirRecursively(dependencyFolderPath)
+            if (files.some(fileName => nativeFileRegex.test(fileName))) {
+              hasNativeFiles = true
+              break
+            }
+          }
+          catch (error) {
+            log.error(`Error reading node_modules files for ${key} package in ${modulePath}`)
+            console.error(error)
+            program.error('')
+          }
+        }
+      }
+
+      if (!dependencyFound) {
         anyInvalid = true
         const pm = findPackageManagerType(dir, 'npm')
         const installCmd = findInstallCommand(pm)
         log.error(`Missing dependency ${key}, please run ${pm} ${installCmd}`)
         return { name: key, version: value }
-      }
-
-      let hasNativeFiles = false
-      try {
-        const files = readDirRecursively(dependencyFolderPath)
-        hasNativeFiles = files.some(fileName => nativeFileRegex.test(fileName))
-      }
-      catch (error) {
-        log.error(`Error reading node_modules files for ${key} package`)
-        console.error(error)
-        program.error('')
       }
 
       return {

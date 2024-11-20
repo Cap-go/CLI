@@ -33,7 +33,7 @@ import { checkCompatibilityCommand } from './bundle/compatibility'
 program
   .name(pack.name)
   .description('Manage packages and bundle versions in Capgo Cloud')
-  .version(pack.version)
+  .version(pack.version, '-v, --version', 'output the current version')
 
 program
   .command('login [apikey]')
@@ -54,6 +54,8 @@ program
   .action(initApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
+  .option('--supa-host <supaHost>', 'Supabase host URL')
+  .option('--supa-anon <supaAnon>', 'Supabase anon token')
 
 const app = program
   .command('app')
@@ -132,10 +134,10 @@ bundle
   .option('--s3-bucket-name <bucketName>', 'Name for your AWS S3 bucket')
   .option('--s3-port <port>', 'Port for your S3 endpoint')
   .option('--no-s3-ssl', 'Disable SSL for S3 upload')
-  .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'public signing key')
-  .option('--key-v2 <key>', 'custom path for private signing key')
-  .option('--key-data-v2  <keyDataV2>', 'private signing key')
+  .option('--key <key>', 'custom path for public signing key (v1 system)')
+  .option('--key-data <keyData>', 'public signing key  (v1 system)')
+  .option('--key-v2 <key>', 'custom path for private signing key (v2 system)')
+  .option('--key-data-v2  <keyDataV2>', 'private signing key (v2 system)')
   .option('--bundle-url', 'prints bundle url into stdout')
   .option('--no-key', 'ignore signing key and send clear update')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
@@ -156,7 +158,7 @@ bundle
   .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-run', 'Dry run the upload process')
-  .option('--node-modules <nodeModules>', 'A path to node_modules. Usefull for monorepos')
+  .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
   .command('compatibility [appId]')
@@ -165,7 +167,7 @@ bundle
   .option('-c, --channel <channel>', 'channel to check the compatibility with')
   .option('--text', 'output text instead of emojis')
   .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
-  .option('--node-modules <nodeModules>', 'A path to node_modules. Usefull for monorepos')
+  .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
   .command('delete [bundleId] [appId]')
