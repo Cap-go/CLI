@@ -54,6 +54,8 @@ program
   .action(initApp)
   .option('-n, --name <name>', 'app name')
   .option('-i, --icon <icon>', 'app icon path')
+  .option('--supa-host <supaHost>', 'Supabase host URL')
+  .option('--supa-anon <supaAnon>', 'Supabase anon token')
 
 const app = program
   .command('app')
