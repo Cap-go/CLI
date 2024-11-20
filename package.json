@@ -48,7 +48,7 @@
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capacitor/cli": "^6.1.2",
     "@capgo/find-package-manager": "^0.0.17",
-    "@clack/prompts": "^0.7.0",
+    "@clack/prompts": "^0.8.0",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
     "@supabase/supabase-js": "^2.46.0",
