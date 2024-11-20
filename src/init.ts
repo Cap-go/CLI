@@ -22,6 +22,8 @@ import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, f
 
 interface SuperOptions extends Options {
   local: boolean
+  supaHost?: string
+  supaAnon?: string
 }
 const importInject = 'import { CapacitorUpdater } from \'@capgo/capacitor-updater\''
 const codeInject = 'CapacitorUpdater.notifyAppReady()'
@@ -420,7 +422,18 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
   await checkLatest()
-  const extConfig = await getConfig()
+
+  const extConfig = (!options.supaAnon || !options.supaHost)
+    ? await getConfig()
+    : await updateConfig({
+      statsUrl: `${options.supaHost}/functions/v1/stats`,
+      channelUrl: `${options.supaHost}/functions/v1/channel_self`,
+      updateUrl: `${options.supaHost}/functions/v1/updates`,
+      localApiFiles: `${options.supaHost}/functions/v1`,
+      localS3: true,
+      localSupa: options.supaHost,
+      localSupaAnon: options.supaAnon,
+    })
   const localConfig = await getLocalConfig()
   appId = getAppId(appId, extConfig?.config)
   options.apikey = apikeyCommand || findSavedKey()
