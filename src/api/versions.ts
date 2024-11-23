@@ -62,6 +62,7 @@ export async function getActiveAppVersions(supabase: SupabaseClient<Database>, a
     .select()
     .eq('app_id', appid)
     .eq('deleted', false)
+    .neq('storage_provider', 'revert_to_builtin')
     .order('created_at', { ascending: false })
 
   if (vError) {

@@ -101,6 +101,7 @@ export async function setChannel(channel: string, appId: string, options: Option
         .eq('name', bundleVersion)
         .eq('user_id', userId)
         .eq('deleted', false)
+        .neq('storage_provider', 'revert_to_builtin')
         .single()
       if (vError || !data) {
         log.error(`Cannot find version ${bundleVersion}`)
