@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.26.6](https://github.com/Cap-go/CLI/compare/v4.26.5...v4.26.6) (2024-12-04)
+
+
+### Bug Fixes
+
+* disable partial for windows for now ([f3ac79e](https://github.com/Cap-go/CLI/commit/f3ac79ea42cf18f8f120a3d41c3761bf24f20a12))
+
 ### [4.26.5](https://github.com/Cap-go/CLI/compare/v4.26.4...v4.26.5) (2024-12-02)
 
 ### [4.26.4](https://github.com/Cap-go/CLI/compare/v4.26.3...v4.26.4) (2024-11-25)
