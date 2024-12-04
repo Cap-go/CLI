@@ -1,6 +1,7 @@
 import type { manifestType } from '../utils'
 import { createReadStream } from 'node:fs'
-import { join } from 'node:path'
+import { platform as osPlatform } from 'node:os'
+import { join, posix, win32 } from 'node:path'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
@@ -27,6 +28,17 @@ export async function prepareBundlePartialFiles(path: string, apikey: string, or
   return manifest
 }
 
+function convertToUnixPath(windowsPath: string): string {
+  if (osPlatform() !== 'win32') {
+    return windowsPath
+  }
+  // First, normalize the Windows path
+  const normalizedPath = win32.normalize(windowsPath)
+
+  // Convert Windows separators to POSIX separators
+  return normalizedPath.split(win32.sep).join(posix.sep)
+}
+
 export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
@@ -38,6 +50,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
   const uploadFiles = manifest.map(async (file) => {
     const finalFilePath = join(path, file.file)
+    const filePathUnix = convertToUnixPath(finalFilePath)
     const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
@@ -45,13 +58,13 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
       const upload = new tus.Upload(fileBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
         metadata: {
-          filename: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
+          filename: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
         },
         headers: {
           Authorization: apikey,
         },
         onError(error) {
-          log.info(`Failed to upload ${file.file}: ${error}`)
+          log.info(`Failed to upload ${filePathUnix}: ${error}`)
           reject(error)
         },
         onProgress() {
@@ -62,8 +75,8 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
         onSuccess() {
           uploadedFiles++
           resolve({
-            file_name: file.file,
-            s3_path: `orgs/${orgId}/apps/${appId}/${name}/${file.file}`,
+            file_name: filePathUnix,
+            s3_path: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
             file_hash: file.hash,
           })
         },

@@ -52,7 +52,7 @@ interface Options extends OptionsBase {
   tus?: boolean
   encryptedChecksum?: string
   packageJson?: string
-  dryRun?: boolean
+  dryUpload?: boolean
   nodeModules?: string
 }
 
@@ -356,7 +356,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
   let isTus = false
-  if (options.dryRun) {
+  if (options.dryUpload) {
     spinner.stop(`Dry run, bundle not uploaded\nBundle uploaded 💪 in 0 seconds`)
     return
   }
@@ -574,7 +574,8 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.tus = options.tus || fileConfig.TUSUploadForced
   }
   // Temporary disable partial upload on windows TODO: fix this
-  if (!fileConfig.partialUpload || options.external || osPlatform() === 'win32') {
+  // if (!fileConfig.partialUpload || options.external || osPlatform() === 'win32') {
+  if (!fileConfig.partialUpload || options.external) {
     options.partial = false
   }
   else {
@@ -616,7 +617,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
-      if (options.dryRun) {
+      if (options.dryUpload) {
         options.partial = false
       }
       finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
@@ -678,8 +679,8 @@ function checkValidOptions(options: Options) {
     log.error('You cannot use the --tus option with an external url')
     program.error('')
   }
-  if (options.dryRun && options.external) {
-    log.error('You cannot use the --dry-run option with an external url')
+  if (options.dryUpload && options.external) {
+    log.error('You cannot use the --dry-upload option with an external url')
     program.error('')
   }
   if (options.multipart && options.external) {
