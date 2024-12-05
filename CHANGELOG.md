@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.26.9](https://github.com/Cap-go/CLI/compare/v4.26.8...v4.26.9) (2024-12-05)
+
+
+### Bug Fixes
+
+* add alert message to switch to v2 encrypt ([cef28ff](https://github.com/Cap-go/CLI/commit/cef28ff3619b019803083db3ee47ebb8e6ab7168))
+
 ### [4.26.8](https://github.com/Cap-go/CLI/compare/v4.26.7...v4.26.8) (2024-12-04)
 
 ### [4.26.7](https://github.com/Cap-go/CLI/compare/v4.26.6...v4.26.7) (2024-12-04)
