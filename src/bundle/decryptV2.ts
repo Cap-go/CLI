@@ -4,7 +4,7 @@ import { intro, log, outro } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
 import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { baseKeyPubV2, getConfig } from '../utils'
 
 interface Options {
@@ -15,7 +15,7 @@ interface Options {
 
 export async function decryptZipV2(zipPath: string, ivsessionKey: string, options: Options) {
   intro(`Decrypt zip file`)
-  await checkLatest()
+  await checkAlerts()
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {

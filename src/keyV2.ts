@@ -2,7 +2,7 @@ import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
 import { program } from 'commander'
 import { createRSA } from './api/crypto'
-import { checkLatest } from './api/update'
+import { checkAlerts } from './api/update'
 import { writeConfig } from './config'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 
@@ -138,7 +138,7 @@ export async function deleteOldPrivateKey(options: Options, logg = true): Promis
 
 export async function saveKeyCommandV2(options: saveOptions) {
   intro(`Save keys 🔑`)
-  await checkLatest()
+  await checkAlerts()
   await saveKeyV2(options)
 }
 
@@ -216,11 +216,11 @@ export async function createKeyV2(options: Options, logg = true) {
 }
 
 export async function createKeyCommandV2(options: Options) {
-  await checkLatest()
+  await checkAlerts()
   await createKeyV2(options)
 }
 
 export async function deleteOldKeyCommandV2(options: Options) {
-  await checkLatest()
+  await checkAlerts()
   await deleteOldPrivateKey(options)
 }

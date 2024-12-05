@@ -11,7 +11,7 @@ import {
   parse,
 } from '@std/semver'
 import tmp from 'tmp'
-import { checkLatest } from './api/update'
+import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
 import { uploadBundle } from './bundle/upload'
@@ -421,7 +421,7 @@ async function step10(orgId: string, apikey: string, appId: string, hostWeb: str
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
-  await checkLatest()
+  await checkAlerts()
 
   const extConfig = (!options.supaAnon || !options.supaHost)
     ? await getConfig()

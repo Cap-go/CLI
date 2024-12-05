@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { decryptSource } from '../api/crypto'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { baseKey, getConfig } from '../utils'
 
 interface Options {
@@ -13,7 +13,7 @@ interface Options {
 
 export async function decryptZip(zipPath: string, ivsessionKey: string, options: Options) {
   intro(`Decrypt zip file`)
-  await checkLatest()
+  await checkAlerts()
   // write in file .capgo the apikey in home directory
 
   if (!existsSync(zipPath)) {

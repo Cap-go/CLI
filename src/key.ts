@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { createRSA } from './api/crypto'
-import { checkLatest } from './api/update'
+import { checkAlerts } from './api/update'
 import { writeConfig } from './config'
 import { baseKey, baseKeyPub, getConfig, updateConfig } from './utils'
 
@@ -62,7 +62,7 @@ export async function saveKey(options: saveOptions, logg = true) {
 }
 export async function saveKeyCommand(options: saveOptions) {
   intro(`Save keys 🔑`)
-  await checkLatest()
+  await checkAlerts()
   await saveKey(options)
 }
 
@@ -113,6 +113,6 @@ export async function createKey(options: Options, logg = true) {
 }
 
 export async function createKeyCommand(options: Options) {
-  await checkLatest()
+  await checkAlerts()
   await createKey(options)
 }

@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { encryptSource } from '../api/crypto'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { baseKeyPub } from '../utils'
 
 interface Options {
@@ -14,7 +14,7 @@ interface Options {
 export async function encryptZip(zipPath: string, options: Options) {
   intro(`Encryption`)
 
-  await checkLatest()
+  await checkAlerts()
 
   // write in file .capgo the apikey in home directory
 

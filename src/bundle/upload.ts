@@ -14,7 +14,7 @@ import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
@@ -298,6 +298,7 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     zipped = res.encryptedData
   }
   else if (key || options.keyData || existsSync(baseKeyPub)) {
+    log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2, here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/`)
     const publicKey = typeof key === 'string' ? key : baseKeyPub
     let keyData = options.keyData || ''
     // check if publicKey exist
@@ -490,7 +491,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading with CLI version ${pack.version}`)
   const pm = getPMAndCommand()
-  await checkLatest()
+  await checkAlerts()
 
   const { s3Region, s3Apikey, s3Apisecret, s3BucketName, s3Endpoint, s3Port, s3SSL } = options
 

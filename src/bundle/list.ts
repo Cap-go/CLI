@@ -3,13 +3,13 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { displayBundles, getActiveAppVersions } from '../api/versions'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 export async function listBundle(appId: string, options: OptionsBase) {
   intro(`List bundles`)
-  await checkLatest()
+  await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = getAppId(appId, extConfig?.config)

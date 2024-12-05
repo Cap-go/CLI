@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import { program } from 'commander'
 import ky from 'ky'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { convertAppName, createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
 function wait(ms: number) {
@@ -214,7 +214,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
 export async function debugApp(appId: string, options: OptionsBaseDebug) {
   intro(`Debug Live update in Capgo`)
 
-  await checkLatest()
+  await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = getAppId(appId, extConfig?.config)

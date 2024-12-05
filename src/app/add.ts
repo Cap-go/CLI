@@ -8,7 +8,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExists, newIconPath } from '../api/app'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import {
   checkPlanValid,
   createSupabaseClient,
@@ -29,7 +29,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
   if (throwErr)
     intro(`Adding`)
 
-  await checkLatest()
+  await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = getAppId(appId, extConfig?.config)

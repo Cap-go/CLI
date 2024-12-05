@@ -7,7 +7,7 @@ import { exit } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import {
   baseKeyV2,
   formatError,
@@ -36,7 +36,7 @@ export async function zipBundle(appId: string, options: Options) {
     let { bundle, path } = options
     const { json } = options
     if (!json)
-      await checkLatest()
+      await checkAlerts()
 
     const extConfig = await getConfig()
     appId = getAppId(appId, extConfig?.config)

@@ -3,7 +3,7 @@ import { homedir } from 'node:os'
 import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
-import { checkLatest } from './api/update'
+import { checkAlerts } from './api/update'
 import { createSupabaseClient, sendEvent, verifyUser } from './utils'
 
 interface Options {
@@ -25,7 +25,7 @@ export async function login(apikey: string, options: Options, shouldExit = true)
     }
     return false
   }
-  await checkLatest()
+  await checkAlerts()
   // write in file .capgo the apikey in home directory
   try {
     const { local } = options

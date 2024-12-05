@@ -5,7 +5,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { program } from 'commander'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
 
 function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
@@ -43,7 +43,7 @@ export async function getActiveApps(supabase: SupabaseClient<Database>) {
 export async function listApp(options: OptionsBase) {
   intro(`List apps in Capgo`)
 
-  await checkLatest()
+  await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
 
   const supabase = await createSupabaseClient(options.apikey)

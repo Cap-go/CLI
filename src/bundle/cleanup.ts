@@ -13,7 +13,7 @@ import {
 } from '@std/semver'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, getHumanDate, OrganizationPerm, verifyUser } from '../utils'
 
@@ -45,7 +45,7 @@ function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['a
 
 export async function cleanupBundle(appId: string, options: Options) {
   intro(`Cleanup versions in Capgo`)
-  await checkLatest()
+  await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options
   const force = options.force || false

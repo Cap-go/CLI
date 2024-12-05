@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
 import { baseKeyV2, formatError, getConfig } from '../utils'
 
 interface Options {
@@ -17,7 +17,7 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
 
   if (!json) {
     intro(`Encryption`)
-    await checkLatest()
+    await checkAlerts()
   }
 
   const extConfig = await getConfig()
