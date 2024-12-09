@@ -55,7 +55,13 @@ export async function addAppInternal(appId: string, options: Options, organizati
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
   if (appExist) {
-    log.error(`App ${appId} already exist`)
+    if (appId === 'io.ionic.starter') {
+      // Prevent users from using the default appId
+      log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
+    }
+    else {
+      log.error(`App ${appId} already exist`)
+    }
     program.error('')
   }
 
