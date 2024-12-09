@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.26.10](https://github.com/Cap-go/CLI/compare/v4.26.9...v4.26.10) (2024-12-09)
+
+
+### Bug Fixes
+
+* add i alias ([fc3e6cb](https://github.com/Cap-go/CLI/commit/fc3e6cbd10462f104fd4253254146ac958286c27))
+
 ### [4.26.9](https://github.com/Cap-go/CLI/compare/v4.26.8...v4.26.9) (2024-12-05)
 
 
