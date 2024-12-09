@@ -12,5 +12,4 @@ Please use @capgo/cli@${latest}" or @capgo/cli@${major} to keep up to date with 
     )
   }
   // check if the app use old encryption key and if so alert the user it not secure enouth and it should migrate on v2
-  
 }
