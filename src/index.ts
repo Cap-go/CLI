@@ -50,6 +50,7 @@ program
 
 program
   .command('init [apikey] [appId]')
+  .alias('i')
   .description('Init a new app')
   .action(initApp)
   .option('-n, --name <name>', 'app name')
