@@ -50,7 +50,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
 
   const uploadFiles = manifest.map(async (file) => {
     const finalFilePath = join(path, file.file)
-    const filePathUnix = convertToUnixPath(finalFilePath)
+    const filePathUnix = convertToUnixPath(file.file)
     const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
