@@ -77,7 +77,7 @@ export async function zipBundle(appId: string, options: Options) {
       const foundIndex = checkIndexPosition(path)
       if (!foundIndex) {
         if (!json)
-          log.error(`index.html is missing in the root folder or in the only folder in the root folder`)
+          log.error(`index.html is missing in the root folder of ${path}`)
         else
           console.error(formatError({ error: 'index_html_not_found' }))
         program.error('')

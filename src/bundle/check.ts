@@ -26,14 +26,7 @@ export function searchInDirectory(dirPath: string, searchString: string) {
 }
 
 export function checkIndexPosition(dirPath: string): boolean {
-  // look for index.html in the root folder or if there only one folder in the root folder look for index.html in this folder
   const files = readdirSync(dirPath)
-  if (files.length === 1) {
-    const filePath = join(dirPath, files[0])
-    const stats = statSync(filePath)
-    if (stats.isDirectory())
-      return checkIndexPosition(filePath)
-  }
   const index = files.indexOf('index.html')
   if (index > -1)
     return true

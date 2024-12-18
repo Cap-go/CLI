@@ -117,7 +117,7 @@ function checkNotifyAppReady(options: Options, path: string) {
     }
     const foundIndex = checkIndexPosition(path)
     if (!foundIndex) {
-      log.error(`index.html is missing in the root folder or in the only folder in the root folder`)
+      log.error(`index.html is missing in the root folder of ${path}`)
       program.error('')
     }
   }
