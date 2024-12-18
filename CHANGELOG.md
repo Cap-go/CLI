@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.26.13](https://github.com/Cap-go/CLI/compare/v4.26.12...v4.26.13) (2024-12-18)
+
+
+### Bug Fixes
+
+* stop users to have wrong dist folders format ([c9cd264](https://github.com/Cap-go/CLI/commit/c9cd264ac65fdda225d4dd55a66fe304f4bd3201))
+
 ### [4.26.12](https://github.com/Cap-go/CLI/compare/v4.26.11...v4.26.12) (2024-12-18)
 
 
