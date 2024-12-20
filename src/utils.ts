@@ -857,23 +857,6 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 
   if (data && !error) {
-    if (data.enable_progressive_deploy) {
-      log.info('Progressive deploy is enabled')
-
-      if (data.secondary_version_percentage !== 1)
-        log.warn('Latest progressive deploy has not finished')
-
-      update.second_version = update.version
-      if (!data.second_version) {
-        log.error('missing secondVersion')
-        return Promise.reject(new Error('missing secondVersion'))
-      }
-      update.version = data.second_version
-      update.secondary_version_percentage = 0.1
-      log.info('Started new progressive upload!')
-
-      // update.version = undefined
-    }
     return supabase
       .from('channels')
       .update(update)

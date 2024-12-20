@@ -13,7 +13,7 @@ import ky, { HTTPError } from 'ky'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
-import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -265,7 +265,6 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
     const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
-    // check if publicKey exist
     if (!keyDataV2 && !existsSync(privateKey)) {
       log.error(`Cannot find private key ${privateKey}`)
       program.error('')
@@ -280,22 +279,20 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       },
       notify: false,
     })
-    // open with fs publicKey path
     if (!keyDataV2) {
       const keyFile = readFileSync(privateKey)
       keyDataV2 = keyFile.toString()
     }
-    // encrypt
     log.info(`Encrypting your bundle with V2`)
-    const res = encryptSourceV2(zipped, keyDataV2)
+    const { sessionKey, ivSessionKey } = generateSessionKey(keyDataV2)
+    const encryptedData = encryptSourceV2(zipped, sessionKey, ivSessionKey)
     checksum = encryptChecksumV2(checksum, keyDataV2)
-    sessionKey = res.ivSessionKey
     if (options.displayIvSession) {
       log.info(`Your Iv Session key is ${sessionKey},
     keep it safe, you will need it to decrypt your bundle.
     It will be also visible in your dashboard\n`)
     }
-    zipped = res.encryptedData
+    zipped = encryptedData
   }
   else if (key || options.keyData || existsSync(baseKeyPub)) {
     log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2, here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/`)
