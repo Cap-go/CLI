@@ -528,7 +528,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
 
   const versionData = {
-    // bucket_id: external ? undefined : fileName,
     name: bundle,
     app_id: appid,
     session_key: undefined as undefined | string,
