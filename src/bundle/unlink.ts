@@ -6,7 +6,6 @@ import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkVersionNotUsedInChannel } from '../api/channels'
-import { checkVersionNotUsedInDeviceOverride } from '../api/devices_override'
 import { getVersionData } from '../api/versions'
 import {
   checkPlanValid,
@@ -68,7 +67,6 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
 
     const versionData = await getVersionData(supabase, appId, bundle)
     await checkVersionNotUsedInChannel(supabase, appId, versionData)
-    await checkVersionNotUsedInDeviceOverride(supabase, appId, versionData)
     await sendEvent(options.apikey, {
       channel: 'bundle',
       event: 'Unlink bundle',

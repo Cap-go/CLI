@@ -8,7 +8,6 @@ import { program } from 'commander'
 // import { definitions } from '../types/types_supabase';
 import { getHumanDate } from '../utils'
 import { checkVersionNotUsedInChannel } from './channels'
-import { checkVersionNotUsedInDeviceOverride } from './devices_override'
 
 export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid: string, bundle: string) {
   const { error: delAppSpecVersionError } = await supabase
@@ -28,7 +27,6 @@ export async function deleteAppVersion(supabase: SupabaseClient<Database>, appid
 export async function deleteSpecificVersion(supabase: SupabaseClient<Database>, appid: string, bundle: string) {
   const versionData = await getVersionData(supabase, appid, bundle)
   await checkVersionNotUsedInChannel(supabase, appid, versionData)
-  await checkVersionNotUsedInDeviceOverride(supabase, appid, versionData)
   // Delete only a specific version in storage
   await deleteAppVersion(supabase, appid, bundle)
 }
