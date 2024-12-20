@@ -90,10 +90,6 @@ interface Channel {
   disable_auto_update: string
   disable_auto_update_under_native: boolean
   allow_device_self_set: boolean
-  enable_progressive_deploy: boolean
-  secondary_version_percentage: number
-  second_version?: version
-  enable_ab_testing: boolean
   allow_emulator: boolean
   allow_dev: boolean
   version?: version
@@ -118,12 +114,6 @@ export function displayChannels(data: Channel[]) {
       row.disable_auto_update,
       row.disable_auto_update_under_native ? '❌' : '✅',
       row.allow_device_self_set ? '✅' : '❌',
-      row.enable_progressive_deploy ? '✅' : '❌',
-      row.enable_progressive_deploy && row.second_version ? row.second_version.name : undefined,
-      row.enable_progressive_deploy && row.second_version ? row.secondary_version_percentage : undefined,
-      row.enable_ab_testing ? '✅' : '❌',
-      row.enable_ab_testing && row.second_version ? row.second_version.name : undefined,
-      row.enable_ab_testing && row.second_version ? `${(1 - row.secondary_version_percentage) * 100}% / ${row.secondary_version_percentage * 100}%` : undefined,
       row.allow_emulator ? '✅' : '❌',
       row.allow_dev ? '✅' : '❌',
     ])
@@ -146,10 +136,6 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
       allow_device_self_set,
       disable_auto_update_under_native,
       disable_auto_update,
-      enable_progressive_deploy,
-      enable_ab_testing,
-      secondary_version_percentage,
-      second_version (id, name),
       created_at,
       created_by,
       app_id,

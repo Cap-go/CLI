@@ -848,24 +848,6 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     log.error('missing app_id, name, or created_by')
     return Promise.reject(new Error('missing app_id, name, or created_by'))
   }
-  const { data, error } = await supabase
-    .from('channels')
-    .select('enable_progressive_deploy, secondary_version_percentage, second_version')
-    .eq('app_id', update.app_id)
-    .eq('name', update.name)
-    // .eq('created_by', update.created_by)
-    .single()
-
-  if (data && !error) {
-    return supabase
-      .from('channels')
-      .update(update)
-      .eq('app_id', update.app_id)
-      .eq('name', update.name)
-      // .eq('created_by', update.created_by)
-      .select()
-      .single()
-  }
 
   return supabase
     .from('channels')
