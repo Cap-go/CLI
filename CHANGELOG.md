@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.27.5](https://github.com/Cap-go/CLI/compare/v4.27.4...v4.27.5) (2024-12-20)
+
+
+### Bug Fixes
+
+* uload issue ([53863a2](https://github.com/Cap-go/CLI/commit/53863a236ffd437e913fa898e6c777f2068911c9))
+
 ### [4.27.4](https://github.com/Cap-go/CLI/compare/v4.27.3...v4.27.4) (2024-12-20)
 
 
