@@ -53,6 +53,7 @@ interface Options extends OptionsBase {
   packageJson?: string
   dryUpload?: boolean
   nodeModules?: string
+  encryptPartial?: boolean
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -242,6 +243,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
 }
 
 async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, apikey: string, orgId: string, appid: string) {
+  let ivSessionKey
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
@@ -284,11 +286,13 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       keyDataV2 = keyFile.toString()
     }
     log.info(`Encrypting your bundle with V2`)
-    const { sessionKey, ivSessionKey } = generateSessionKey(keyDataV2)
-    const encryptedData = encryptSourceV2(zipped, sessionKey, ivSessionKey)
+    const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
+    const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
     checksum = encryptChecksumV2(checksum, keyDataV2)
+    ivSessionKey = ivKey
+    sessionKey = sKey
     if (options.displayIvSession) {
-      log.info(`Your Iv Session key is ${sessionKey},
+      log.info(`Your Iv Session key is ${ivSessionKey},
     keep it safe, you will need it to decrypt your bundle.
     It will be also visible in your dashboard\n`)
     }
@@ -321,9 +325,9 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     // encrypt
     log.info(`Encrypting your bundle`)
     const res = encryptSource(zipped, keyData)
-    sessionKey = res.ivSessionKey
+    ivSessionKey = res.ivSessionKey
     if (options.displayIvSession) {
-      log.info(`Your Iv Session key is ${sessionKey},
+      log.info(`Your Iv Session key is ${ivSessionKey},
 keep it safe, you will need it to decrypt your bundle.
 It will be also visible in your dashboard\n`)
     }
@@ -345,7 +349,7 @@ It will be also visible in your dashboard\n`)
     })
   }
 
-  return { zipped, sessionKey, checksum }
+  return { zipped, ivSessionKey, sessionKey, checksum }
 }
 
 async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
@@ -487,6 +491,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
 
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading with CLI version ${pack.version}`)
+  let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
   await checkAlerts()
 
@@ -539,9 +544,10 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   let zipped: Buffer | null = null
   if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
-    versionData.session_key = sessionKey
+    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
+    versionData.session_key = ivSessionKey
     versionData.checksum = checksum
+    sessionKey = sk
     zipped = _zipped
     if (!options.ignoreChecksumCheck) {
       await checkChecksum(supabase, appid, channel, checksum)
@@ -616,7 +622,24 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       if (options.dryUpload) {
         options.partial = false
       }
-      finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
+      const encryptionData = versionData.session_key && options.encryptPartial && sessionKey
+        ? {
+            sessionKey,
+            ivSessionKey: versionData.session_key,
+          }
+        : undefined
+
+      finalManifest = options.partial
+        ? await uploadPartial(
+          apikey,
+          manifest,
+          path,
+          appid,
+          bundle,
+          orgId,
+          encryptionData,
+        )
+        : null
     }
     catch (err) {
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)

@@ -1,3 +1,4 @@
+import type { Buffer } from 'node:buffer'
 import type { manifestType } from '../utils'
 import { createReadStream } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
@@ -6,6 +7,7 @@ import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
+import { encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, sendEvent } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
@@ -39,7 +41,20 @@ function convertToUnixPath(windowsPath: string): string {
   return normalizedPath.split(win32.sep).join(posix.sep)
 }
 
-export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string): Promise<any[] | null> {
+interface PartialEncryptionOptions {
+  sessionKey: Buffer
+  ivSessionKey: string
+}
+
+export async function uploadPartial(
+  apikey: string,
+  manifest: manifestType,
+  path: string,
+  appId: string,
+  name: string,
+  orgId: string,
+  encryptionOptions?: PartialEncryptionOptions,
+): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
@@ -54,8 +69,13 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
+    let finalBuffer = fileBuffer
+    if (encryptionOptions) {
+      finalBuffer = encryptSourceV2(fileBuffer as Buffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
+    }
+
     return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(fileBuffer as any, {
+      const upload = new tus.Upload(finalBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
         metadata: {
           filename: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
@@ -68,7 +88,6 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
           reject(error)
         },
         onProgress() {
-          // Update progress based on number of files
           const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
           spinner.message(`Uploading partial update: ${percentage}%`)
         },
