@@ -404,7 +404,12 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       log.error(`Response Error: ${body.error || body.status || body.message}`)
     }
     else {
-      log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
+      if (!options.tus) {
+        log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
+      }
+      else {
+        log.error(`Cannot upload bundle please contact support if the issue persists ${formatError(errorUpload)}`)
+      }
     }
     // call delete version on path /delete_failed_version to delete the version
     await deletedFailedVersion(supabase, appid, bundle)
