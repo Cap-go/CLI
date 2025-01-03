@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.28.1](https://github.com/Cap-go/CLI/compare/v4.28.0...v4.28.1) (2025-01-03)
+
+
+### Bug Fixes
+
+* dependency allow multi package json as well ([d81c8b5](https://github.com/Cap-go/CLI/commit/d81c8b5e3295276c44cc4a1d917561c469f82f95))
+* error display ([bfc7279](https://github.com/Cap-go/CLI/commit/bfc72797c854a8aedeb06085ed81f44d92d31968))
+* the dir for multi packages ([fbfee5b](https://github.com/Cap-go/CLI/commit/fbfee5b9a7dca1e7f9a30f36a17868e1f43771fb))
+
 ## [4.28.0](https://github.com/Cap-go/CLI/compare/v4.27.9...v4.28.0) (2025-01-03)
 
 
