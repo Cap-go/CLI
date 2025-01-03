@@ -236,7 +236,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     .single()
 
   if (appVersion || appVersionError) {
-    log.error(`Version already exists ${formatError(appVersionError)}`)
+    log.error(`Version ${bundle} already exists ${formatError(appVersionError)}`)
     program.error('')
   }
 }
@@ -364,7 +364,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     const localConfig = await getLocalConfig()
     if ((options.multipart !== undefined && options.multipart) || (options.tus !== undefined && options.tus)) {
       if (options.multipart) {
-        log.info(`Uploading bundle with multipart protocol, multipart is deprecated`)
+        log.info(`Uploading bundle with multipart is deprecated, we upload with TUS instead`)
       }
       else {
         log.info(`Uploading bundle with TUS protocol`)

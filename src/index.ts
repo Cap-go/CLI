@@ -156,9 +156,9 @@ bundle
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
   .option('--partial', 'Upload partial files to Capgo cloud')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (useful for testing)')
+  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
