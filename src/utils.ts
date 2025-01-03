@@ -1056,8 +1056,8 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
     console.error('json parse error: ', err)
     program.error('')
   }
-
-  const dir = !packageJsonPath ? findRoot(cwd()) : path.resolve(packageJsonPath).replace('package.json', '')
+  const firstPackageJson = packageJsonPath?.split(',')[0]
+  const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace('package.json', '')
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
     program.error('')
