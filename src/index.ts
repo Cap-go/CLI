@@ -45,7 +45,7 @@ program
 program
   .command('doctor')
   .description('Get info about your Capgo app install')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .action(getInfo)
 
 program
@@ -158,7 +158,7 @@ bundle
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (useful for testing)')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
@@ -167,7 +167,7 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-c, --channel <channel>', 'channel to check the compatibility with')
   .option('--text', 'output text instead of emojis')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
@@ -242,7 +242,7 @@ bundle
   .option('-j, --json', 'output in JSON')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--key-v2', 'use encryption v2')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
 
 const channel = program
   .command('channel')
@@ -302,7 +302,7 @@ channel
   .option('--no-dev', 'Disable sending update to development devices')
   .option('--emulator', 'Allow sending update to emulator devices')
   .option('--no-emulator', 'Disable sending update to emulator devices')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
 
 const key = program
   .command('key_old')

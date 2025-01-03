@@ -122,6 +122,34 @@ export async function readPackageJson(f: string = findRoot(cwd()), file: string 
   return JSON.parse(packageJson as any)
 }
 
+export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
+  // if file contain , split by comma and return the array
+  let files = file?.split(',')
+  if (!files) {
+    files = [join(f, PACKNAME)]
+  }
+  if (files) {
+    for (const file of files) {
+      if (!existsSync(file)) {
+        log.error(`Package.json at ${file} does not exist`)
+        exit(1)
+      }
+    }
+  }
+  const dependencies = new Map<string, string>()
+  for (const file of files) {
+    const packageJson = readFileSync(file)
+    const pkg = JSON.parse(packageJson as any)
+    for (const dependency in pkg.dependencies) {
+      dependencies.set(dependency, pkg.dependencies[dependency])
+    }
+    for (const dependency in pkg.devDependencies) {
+      dependencies.set(dependency, pkg.devDependencies[dependency])
+    }
+  }
+  return dependencies
+}
+
 export async function getConfig() {
   try {
     const extConfig = await loadConfig()
@@ -531,13 +559,13 @@ export async function findProjectType() {
     }
     if (f.includes('package.json')) {
       const folder = dirname(f)
-      const packageJson = await readPackageJson(folder)
-      if (packageJson.dependencies) {
-        if (packageJson.dependencies.react) {
+      const dependencies = await getAllPackagesDependencies(folder)
+      if (dependencies) {
+        if (dependencies.get('react')) {
           log.info('Found react project test')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
-        if (packageJson.dependencies.vue) {
+        if (dependencies.get('vue')) {
           log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
@@ -772,6 +800,7 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
       },
       // Callback for errors which cannot be fixed using retries
       onError(error) {
+        log.error(`Error uploading bundle: ${error.message}`)
         if (error instanceof tus.DetailedError) {
           const body = error.originalResponse?.getBody()
           const jsonBody = JSON.parse(body || '{"error": "unknown error"}')
@@ -1018,9 +1047,9 @@ function readDirRecursively(dir: string): string[] {
 
 export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
-  let packageJson
+  let dependencies
   try {
-    packageJson = await readPackageJson('', packageJsonPath)
+    dependencies = await getAllPackagesDependencies('', packageJsonPath)
   }
   catch (err) {
     log.error('Invalid package.json, JSON parsing failed')
@@ -1029,7 +1058,6 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
   }
 
   const dir = !packageJsonPath ? findRoot(cwd()) : path.resolve(packageJsonPath).replace('package.json', '')
-  const { dependencies } = packageJson
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
     program.error('')
@@ -1055,8 +1083,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
   }
 
   let anyInvalid = false
-
-  const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
+  const dependenciesObject = await Promise.all(Array.from(dependencies.entries())
     .map(async ([key, value]) => {
       let dependencyFound = false
       let hasNativeFiles = false

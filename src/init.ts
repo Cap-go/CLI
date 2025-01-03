@@ -18,7 +18,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -153,9 +153,8 @@ async function step4(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     s.start(`Checking if @capgo/capacitor-updater is installed`)
     let versionToInstall = 'latest'
-    const pack = await readPackageJson()
-    let coreVersion = pack.dependencies['@capacitor/core'] || pack.devDependencies['@capacitor/core']
-    coreVersion = parse(coreVersion?.replace('^', '').replace('~', ''))
+    const dependencies = await getAllPackagesDependencies()
+    const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
     if (!coreVersion) {
       s.stop('Error')
       pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
@@ -181,7 +180,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
     //  check if capgo is already installed in package.json
-    if (pack.dependencies['@capgo/capacitor-updater']) {
+    if (dependencies.get('@capgo/capacitor-updater')) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
