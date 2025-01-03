@@ -53,6 +53,7 @@ interface Options extends OptionsBase {
   packageJson?: string
   dryUpload?: boolean
   nodeModules?: string
+  tusChunkSize?: number
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -369,7 +370,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       else {
         log.info(`Uploading bundle with TUS protocol`)
       }
-      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig)
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig, options.tusChunkSize)
       isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
