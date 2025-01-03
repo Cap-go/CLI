@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.28.0](https://github.com/Cap-go/CLI/compare/v4.27.9...v4.28.0) (2025-01-03)
+
+
+### Features
+
+* --tus-chunk-size ([c2cd3c1](https://github.com/Cap-go/CLI/commit/c2cd3c1789b27fb44bb736dc0151766df9944d68))
+
 ### [4.27.9](https://github.com/Cap-go/CLI/compare/v4.27.8...v4.27.9) (2025-01-02)
 
 
