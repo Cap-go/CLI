@@ -154,6 +154,7 @@ bundle
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
   .option('--multipart', 'Uses multipart protocol to upload data to S3, Deprecated, use tus instead')
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
+  .option('--tus-chunk-size <tusChunkSize>', 'Chunk size for the TUS upload')
   .option('--partial', 'Upload partial files to Capgo cloud')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')

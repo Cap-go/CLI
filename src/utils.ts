@@ -767,7 +767,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   return zip.toBuffer()
 }
 
-export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig): Promise<boolean> {
+export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig, chunkSize?: number): Promise<boolean> {
   return new Promise((resolve, reject) => {
     sendEvent(apikey, {
       channel: 'app',
@@ -787,6 +787,7 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
     const upload = new tus.Upload(data as any, {
       endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
       // parallelUploads: multipart,
+      chunkSize: chunkSize || Number.POSITIVE_INFINITY,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/gzip',
