@@ -29,6 +29,8 @@ export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
 export const ALERT_MB = 20
 export const UPLOAD_TIMEOUT = 120000
+export const MAX_CHUNK_SIZE = 1024 * 1024 * 99 // 99MB
+
 const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]> =
@@ -787,7 +789,7 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
     const upload = new tus.Upload(data as any, {
       endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
       // parallelUploads: multipart,
-      chunkSize: chunkSize || Number.POSITIVE_INFINITY,
+      chunkSize: chunkSize || MAX_CHUNK_SIZE,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/gzip',

@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, MAX_CHUNK_SIZE, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -48,6 +48,7 @@ interface Options extends OptionsBase {
   timeout?: number
   multipart?: boolean
   partial?: boolean
+  partialOnly?: boolean
   tus?: boolean
   encryptedChecksum?: string
   packageJson?: string
@@ -584,7 +585,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = false
   }
   else {
-    options.partial = options.partial || fileConfig.partialUploadForced
+    options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
   }
 
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
@@ -593,6 +594,10 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   if (dbError) {
     log.error(`Cannot add bundle ${formatError(dbError)}`)
     program.error('')
+  }
+  if (options.tusChunkSize && options.tusChunkSize > MAX_CHUNK_SIZE) {
+    log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${MAX_CHUNK_SIZE}, using the maximum chunk size`)
+    options.tusChunkSize = MAX_CHUNK_SIZE
   }
 
   if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
@@ -618,14 +623,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+    if (!options.partialOnly) {
+      await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+    }
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
       if (options.dryUpload) {
         options.partial = false
       }
-      finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId) : null
+      finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId, options.tusChunkSize) : null
     }
     catch (err) {
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)

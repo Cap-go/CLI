@@ -156,6 +156,7 @@ bundle
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
   .option('--tus-chunk-size <tusChunkSize>', 'Chunk size for the TUS upload')
   .option('--partial', 'Upload partial files to Capgo cloud')
+  .option('--partial-only', 'Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (useful for testing)')
