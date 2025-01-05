@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.29.0](https://github.com/Cap-go/CLI/compare/v4.28.2...v4.29.0) (2025-01-05)
+
+
+### Features
+
+* remove legacy upload command ([57c8402](https://github.com/Cap-go/CLI/commit/57c8402ef94a530a52b8f0df326b659df54c3bbf))
+
 ### [4.28.2](https://github.com/Cap-go/CLI/compare/v4.28.1...v4.28.2) (2025-01-04)
 
 ### [4.28.1](https://github.com/Cap-go/CLI/compare/v4.28.0...v4.28.1) (2025-01-03)
