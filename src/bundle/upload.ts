@@ -746,16 +746,3 @@ export async function uploadCommand(appid: string, options: Options) {
     program.error('')
   }
 }
-
-export async function uploadDeprecatedCommand(appid: string, options: Options) {
-  const pm = getPMAndCommand()
-  log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
-  try {
-    checkValidOptions(options)
-    await uploadBundle(appid, options, true)
-  }
-  catch (error) {
-    log.error(formatError(error))
-    program.error('')
-  }
-}

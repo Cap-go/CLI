@@ -13,7 +13,7 @@ import { deleteBundle } from './bundle/delete'
 import { encryptZip } from './bundle/encrypt'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { listBundle } from './bundle/list'
-import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload'
+import { uploadCommand } from './bundle/upload'
 import { zipBundle } from './bundle/zip'
 import { addChannelCommand } from './channel/add'
 import { currentBundle } from './channel/currentBundle'
@@ -346,28 +346,6 @@ keyV2
   .command('delete_old')
   .description('Delete the old encryption key')
   .action(deleteOldKeyCommandV2)
-
-program
-  .command('upload [appId]')
-  .alias('u')
-  .description('(Deprecated) Upload a new bundle to Capgo Cloud')
-  .action(uploadDeprecatedCommand)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-p, --path <path>', 'path of the folder to upload')
-  .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
-  .option('--old-encryption', 'use old encryption')
-  .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'public signing key')
-  .option('--bundle-url', 'prints bundle url into stdout')
-  .option('--no-key', 'ignore signing key and send clear update')
-  .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload')
-  .option(
-    '--min-update-version <minUpdateVersion>',
-    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
-  )
-  // TODO: Remove this command, do not add new options here
 
 const account = program
   .command('account')
