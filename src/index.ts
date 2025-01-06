@@ -162,6 +162,7 @@ bundle
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (useful for testing)')
   .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
+  .option('--encrypt-partial', 'Encrypt the partial update files')
 
 bundle
   .command('compatibility [appId]')
