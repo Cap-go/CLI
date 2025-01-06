@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.29.1](https://github.com/Cap-go/CLI/compare/v4.29.0...v4.29.1) (2025-01-06)
+
+
+### Bug Fixes
+
+* get_orgs_v5 -> get_orgs_v6 ([1975532](https://github.com/Cap-go/CLI/commit/1975532999fa788cf2e4e374b74f8de5cf7125a6))
+
 ## [4.29.0](https://github.com/Cap-go/CLI/compare/v4.28.2...v4.29.0) (2025-01-05)
 
 
