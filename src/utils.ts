@@ -924,7 +924,7 @@ export async function sendEvent(capgkey: string, payload: TrackOptions): Promise
 
 export async function getOrganization(supabase: SupabaseClient<Database>, roles: string[]): Promise<Organization> {
   const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v5')
+    .rpc('get_orgs_v6')
 
   if (orgError) {
     log.error('Cannot get the list of organizations - exiting')
