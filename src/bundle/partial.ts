@@ -7,13 +7,20 @@ import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
-import { encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, MAX_CHUNK_SIZE, sendEvent } from '../utils'
 
-export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
+export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string, encryptionMethod: 'none' | 'v2' | 'v1', finalKeyData: string) {
   const spinner = spinnerC()
-  spinner.start('Generating the update manifest')
+  spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : 'Generating the update manifest with v2 encryption')
   const manifest = await generateManifest(path)
+
+  if (encryptionMethod === 'v2') {
+    manifest.forEach((file) => {
+      file.hash = encryptChecksumV2(file.hash, finalKeyData)
+    })
+  }
+
   spinner.stop('Manifest generated successfully')
 
   await sendEvent(apikey, {

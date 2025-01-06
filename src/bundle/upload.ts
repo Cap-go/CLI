@@ -249,6 +249,8 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
+  let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
+  let finalKeyData = ''
   const key = options.key
   const keyV2 = options.keyV2
 
@@ -293,6 +295,8 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
     checksum = encryptChecksumV2(checksum, keyDataV2)
     ivSessionKey = ivKey
     sessionKey = sKey
+    encryptionMethod = 'v2'
+    finalKeyData = keyDataV2
     if (options.displayIvSession) {
       log.info(`Your Iv Session key is ${ivSessionKey},
     keep it safe, you will need it to decrypt your bundle.
@@ -325,6 +329,8 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       keyData = keyFile.toString()
     }
     // encrypt
+    encryptionMethod = 'v1'
+    finalKeyData = keyData
     log.info(`Encrypting your bundle`)
     const res = encryptSource(zipped, keyData)
     ivSessionKey = res.ivSessionKey
@@ -351,7 +357,7 @@ It will be also visible in your dashboard\n`)
     })
   }
 
-  return { zipped, ivSessionKey, sessionKey, checksum }
+  return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData }
 }
 
 async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
@@ -550,12 +556,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null
+  let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
+  let finalKeyData = ''
   if (!options.external) {
-    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
+    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
     versionData.session_key = ivSessionKey
     versionData.checksum = checksum
     sessionKey = sk
     zipped = _zipped
+    encryptionMethod = em
+    finalKeyData = fkd
     if (!options.ignoreChecksumCheck) {
       await checkChecksum(supabase, appid, channel, checksum)
     }
@@ -591,7 +601,12 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
   }
 
-  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
+  if (versionData.session_key && options.encryptPartial && sessionKey && encryptionMethod === 'v1') {
+    log.error('You cannot encrypt the partial update if you are not using the v2 encryption method')
+    program.error('')
+  }
+
+  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
