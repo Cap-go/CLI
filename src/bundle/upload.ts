@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, MAX_CHUNK_SIZE, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -48,12 +48,14 @@ interface Options extends OptionsBase {
   timeout?: number
   multipart?: boolean
   partial?: boolean
+  partialOnly?: boolean
   tus?: boolean
   encryptedChecksum?: string
   packageJson?: string
   dryUpload?: boolean
   nodeModules?: string
   encryptPartial?: boolean
+  tusChunkSize?: number
 }
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
@@ -237,7 +239,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     .single()
 
   if (appVersion || appVersionError) {
-    log.error(`Version already exists ${formatError(appVersionError)}`)
+    log.error(`Version ${bundle} already exists ${formatError(appVersionError)}`)
     program.error('')
   }
 }
@@ -365,12 +367,12 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     const localConfig = await getLocalConfig()
     if ((options.multipart !== undefined && options.multipart) || (options.tus !== undefined && options.tus)) {
       if (options.multipart) {
-        log.info(`Uploading bundle with multipart protocol, multipart is deprecated`)
+        log.info(`Uploading bundle with multipart is deprecated, we upload with TUS instead`)
       }
       else {
         log.info(`Uploading bundle with TUS protocol`)
       }
-      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig)
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig, options.tusChunkSize)
       isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
@@ -405,7 +407,12 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       log.error(`Response Error: ${body.error || body.status || body.message}`)
     }
     else {
-      log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
+      if (!options.tus) {
+        log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
+      }
+      else {
+        log.error(`Cannot upload bundle please contact support if the issue persists ${formatError(errorUpload)}`)
+      }
     }
     // call delete version on path /delete_failed_version to delete the version
     await deletedFailedVersion(supabase, appid, bundle)
@@ -581,7 +588,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = false
   }
   else {
-    options.partial = options.partial || fileConfig.partialUploadForced
+    options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
   }
 
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
@@ -590,6 +597,10 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   if (dbError) {
     log.error(`Cannot add bundle ${formatError(dbError)}`)
     program.error('')
+  }
+  if (options.tusChunkSize && options.tusChunkSize > MAX_CHUNK_SIZE) {
+    log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${MAX_CHUNK_SIZE}, using the maximum chunk size`)
+    options.tusChunkSize = MAX_CHUNK_SIZE
   }
 
   if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
@@ -615,7 +626,9 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+    if (!options.partialOnly) {
+      await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+    }
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
@@ -638,6 +651,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
           bundle,
           orgId,
           encryptionData,
+          options.tusChunkSize,
         )
         : null
     }
@@ -744,19 +758,6 @@ function checkValidOptions(options: Options) {
 }
 
 export async function uploadCommand(appid: string, options: Options) {
-  try {
-    checkValidOptions(options)
-    await uploadBundle(appid, options, true)
-  }
-  catch (error) {
-    log.error(formatError(error))
-    program.error('')
-  }
-}
-
-export async function uploadDeprecatedCommand(appid: string, options: Options) {
-  const pm = getPMAndCommand()
-  log.warn(`⚠️  This command is deprecated, use "${pm.runner} @capgo/cli bundle upload" instead ⚠️`)
   try {
     checkValidOptions(options)
     await uploadBundle(appid, options, true)

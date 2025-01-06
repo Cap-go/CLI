@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "4.27.2",
+  "version": "4.29.0",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -48,7 +48,7 @@
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capacitor/cli": "^6.2.0",
     "@capgo/find-package-manager": "^0.0.17",
-    "@clack/prompts": "^0.8.1",
+    "@clack/prompts": "^0.9.0",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
     "@supabase/supabase-js": "^2.46.0",

@@ -13,7 +13,7 @@ import { deleteBundle } from './bundle/delete'
 import { encryptZip } from './bundle/encrypt'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { listBundle } from './bundle/list'
-import { uploadCommand, uploadDeprecatedCommand } from './bundle/upload'
+import { uploadCommand } from './bundle/upload'
 import { zipBundle } from './bundle/zip'
 import { addChannelCommand } from './channel/add'
 import { currentBundle } from './channel/currentBundle'
@@ -45,7 +45,7 @@ program
 program
   .command('doctor')
   .description('Get info about your Capgo app install')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .action(getInfo)
 
 program
@@ -154,11 +154,13 @@ bundle
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
   .option('--multipart', 'Uses multipart protocol to upload data to S3, Deprecated, use tus instead')
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
+  .option('--tus-chunk-size <tusChunkSize>', 'Chunk size for the TUS upload')
   .option('--partial', 'Upload partial files to Capgo cloud')
+  .option('--partial-only', 'Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle')
   .option('--encrypted-checksum <encryptedChecksum>', 'An encrypted checksum (signature). Used only when uploading an external bundle.')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
   .option('--auto-set-bundle', 'Set the bundle in capacitor.config.json')
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (useful for testing)')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
@@ -167,7 +169,7 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-c, --channel <channel>', 'channel to check the compatibility with')
   .option('--text', 'output text instead of emojis')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
 
 bundle
@@ -242,7 +244,7 @@ bundle
   .option('-j, --json', 'output in JSON')
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--key-v2', 'use encryption v2')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
 
 const channel = program
   .command('channel')
@@ -302,7 +304,7 @@ channel
   .option('--no-dev', 'Disable sending update to development devices')
   .option('--emulator', 'Allow sending update to emulator devices')
   .option('--no-emulator', 'Disable sending update to emulator devices')
-  .option('--package-json <packageJson>', 'A path to package.json. Usefull for monorepos')
+  .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
 
 const key = program
   .command('key_old')
@@ -344,28 +346,6 @@ keyV2
   .command('delete_old')
   .description('Delete the old encryption key')
   .action(deleteOldKeyCommandV2)
-
-program
-  .command('upload [appId]')
-  .alias('u')
-  .description('(Deprecated) Upload a new bundle to Capgo Cloud')
-  .action(uploadDeprecatedCommand)
-  .option('-a, --apikey <apikey>', 'apikey to link to your account')
-  .option('-p, --path <path>', 'path of the folder to upload')
-  .option('-c, --channel <channel>', 'channel to link to')
-  .option('-e, --external <url>', 'link to external url intead of upload to Capgo Cloud')
-  .option('--old-encryption', 'use old encryption')
-  .option('--key <key>', 'custom path for public signing key')
-  .option('--key-data <keyData>', 'public signing key')
-  .option('--bundle-url', 'prints bundle url into stdout')
-  .option('--no-key', 'ignore signing key and send clear update')
-  .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
-  .option('-b, --bundle <bundle>', 'bundle version number of the file to upload')
-  .option(
-    '--min-update-version <minUpdateVersion>',
-    'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
-  )
-  // TODO: Remove this command, do not add new options here
 
 const account = program
   .command('account')

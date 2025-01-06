@@ -8,7 +8,7 @@ import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
 import { encryptSourceV2 } from '../api/cryptoV2'
-import { generateManifest, getLocalConfig, sendEvent } from '../utils'
+import { generateManifest, getLocalConfig, MAX_CHUNK_SIZE, sendEvent } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -54,6 +54,7 @@ export async function uploadPartial(
   name: string,
   orgId: string,
   encryptionOptions?: PartialEncryptionOptions,
+  chunkSize?: number,
 ): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
@@ -77,6 +78,7 @@ export async function uploadPartial(
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(finalBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
+        chunkSize: chunkSize || MAX_CHUNK_SIZE,
         metadata: {
           filename: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
         },

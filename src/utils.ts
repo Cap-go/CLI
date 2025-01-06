@@ -23,14 +23,14 @@ export const baseKey = '.capgo_key'
 export const baseKeyV2 = '.capgo_key_v2'
 export const baseKeyPub = `${baseKey}.pub`
 export const baseKeyPubV2 = `${baseKeyV2}.pub`
-export const baseSignKey = '.capgo_sign_key.priv'
-export const baseSignKeyPub = `.capgo_sign_key.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultFileHost = 'https://files.capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
 export const ALERT_MB = 20
 export const UPLOAD_TIMEOUT = 120000
+export const MAX_CHUNK_SIZE = 1024 * 1024 * 99 // 99MB
+
 const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]> =
@@ -122,6 +122,34 @@ export async function readPackageJson(f: string = findRoot(cwd()), file: string 
   }
   const packageJson = readFileSync(!file ? join(f, PACKNAME) : file)
   return JSON.parse(packageJson as any)
+}
+
+export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
+  // if file contain , split by comma and return the array
+  let files = file?.split(',')
+  if (!files) {
+    files = [join(f, PACKNAME)]
+  }
+  if (files) {
+    for (const file of files) {
+      if (!existsSync(file)) {
+        log.error(`Package.json at ${file} does not exist`)
+        exit(1)
+      }
+    }
+  }
+  const dependencies = new Map<string, string>()
+  for (const file of files) {
+    const packageJson = readFileSync(file)
+    const pkg = JSON.parse(packageJson as any)
+    for (const dependency in pkg.dependencies) {
+      dependencies.set(dependency, pkg.dependencies[dependency])
+    }
+    for (const dependency in pkg.devDependencies) {
+      dependencies.set(dependency, pkg.devDependencies[dependency])
+    }
+  }
+  return dependencies
 }
 
 export async function getConfig() {
@@ -533,13 +561,13 @@ export async function findProjectType() {
     }
     if (f.includes('package.json')) {
       const folder = dirname(f)
-      const packageJson = await readPackageJson(folder)
-      if (packageJson.dependencies) {
-        if (packageJson.dependencies.react) {
+      const dependencies = await getAllPackagesDependencies(folder)
+      if (dependencies) {
+        if (dependencies.get('react')) {
           log.info('Found react project test')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
-        if (packageJson.dependencies.vue) {
+        if (dependencies.get('vue')) {
           log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
@@ -741,7 +769,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   return zip.toBuffer()
 }
 
-export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig): Promise<boolean> {
+export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig, chunkSize?: number): Promise<boolean> {
   return new Promise((resolve, reject) => {
     sendEvent(apikey, {
       channel: 'app',
@@ -761,6 +789,7 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
     const upload = new tus.Upload(data as any, {
       endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
       // parallelUploads: multipart,
+      chunkSize: chunkSize || MAX_CHUNK_SIZE,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/gzip',
@@ -774,6 +803,7 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
       },
       // Callback for errors which cannot be fixed using retries
       onError(error) {
+        log.error(`Error uploading bundle: ${error.message}`)
         if (error instanceof tus.DetailedError) {
           const body = error.originalResponse?.getBody()
           const jsonBody = JSON.parse(body || '{"error": "unknown error"}')
@@ -848,21 +878,19 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     log.error('missing app_id, name, or created_by')
     return Promise.reject(new Error('missing app_id, name, or created_by'))
   }
+
   const { data, error } = await supabase
     .from('channels')
-    .select('enable_progressive_deploy, secondary_version_percentage, second_version')
+    .select()
     .eq('app_id', update.app_id)
     .eq('name', update.name)
-    // .eq('created_by', update.created_by)
     .single()
-
   if (data && !error) {
     return supabase
       .from('channels')
       .update(update)
       .eq('app_id', update.app_id)
       .eq('name', update.name)
-      // .eq('created_by', update.created_by)
       .select()
       .single()
   }
@@ -1022,18 +1050,17 @@ function readDirRecursively(dir: string): string[] {
 
 export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
-  let packageJson
+  let dependencies
   try {
-    packageJson = await readPackageJson('', packageJsonPath)
+    dependencies = await getAllPackagesDependencies('', packageJsonPath)
   }
   catch (err) {
     log.error('Invalid package.json, JSON parsing failed')
     console.error('json parse error: ', err)
     program.error('')
   }
-
-  const dir = !packageJsonPath ? findRoot(cwd()) : path.resolve(packageJsonPath).replace('package.json', '')
-  const { dependencies } = packageJson
+  const firstPackageJson = packageJsonPath?.split(',')[0]
+  const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace('package.json', '')
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
     program.error('')
@@ -1059,8 +1086,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
   }
 
   let anyInvalid = false
-
-  const dependenciesObject = await Promise.all(Object.entries(dependencies as Record<string, string>)
+  const dependenciesObject = await Promise.all(Array.from(dependencies.entries())
     .map(async ([key, value]) => {
       let dependencyFound = false
       let hasNativeFiles = false
