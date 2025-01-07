@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
-import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { baseKeyV2, formatError, getConfig } from '../utils'
 
@@ -80,7 +80,8 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
   }
 
   const zipFile = readFileSync(zipPath)
-  const encodedZip = encryptSourceV2(zipFile, privateKey)
+  const { sessionKey, ivSessionKey } = generateSessionKey(privateKey)
+  const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
   const encodedChecksum = encryptChecksumV2(checksum, privateKey)
 
   const filename_encrypted = `${zipPath}_encrypted.zip`
@@ -90,16 +91,16 @@ export async function encryptZipV2(zipPath: string, checksum: string, options: O
     console.log(JSON.stringify({
       checksum: encodedChecksum,
       filename: filename_encrypted,
-      ivSessionKey: encodedZip.ivSessionKey,
+      ivSessionKey,
     }, null, 2))
   }
   else {
     log.success(`Encoded Checksum: ${encodedChecksum}`)
-    log.success(`ivSessionKey: ${encodedZip.ivSessionKey}`)
+    log.success(`ivSessionKey: ${ivSessionKey}`)
   }
 
   // write decodedZip in a file
-  writeFileSync(filename_encrypted, encodedZip.encryptedData)
+  writeFileSync(filename_encrypted, encryptedData)
   if (!json) {
     log.success(`Encrypted zip saved at ${filename_encrypted}`)
     outro(`Done ✅`)
