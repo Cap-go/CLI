@@ -13,7 +13,7 @@ import ky, { HTTPError } from 'ky'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
-import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, MAX_CHUNK_SIZE, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -54,6 +54,7 @@ interface Options extends OptionsBase {
   packageJson?: string
   dryUpload?: boolean
   nodeModules?: string
+  encryptPartial?: boolean
   tusChunkSize?: number
 }
 
@@ -244,9 +245,12 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
 }
 
 async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, apikey: string, orgId: string, appid: string) {
+  let ivSessionKey
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
+  let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
+  let finalKeyData = ''
   const key = options.key
   const keyV2 = options.keyV2
 
@@ -267,7 +271,6 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
     const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
-    // check if publicKey exist
     if (!keyDataV2 && !existsSync(privateKey)) {
       log.error(`Cannot find private key ${privateKey}`)
       program.error('')
@@ -282,22 +285,24 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       },
       notify: false,
     })
-    // open with fs publicKey path
     if (!keyDataV2) {
       const keyFile = readFileSync(privateKey)
       keyDataV2 = keyFile.toString()
     }
-    // encrypt
     log.info(`Encrypting your bundle with V2`)
-    const res = encryptSourceV2(zipped, keyDataV2)
+    const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
+    const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
     checksum = encryptChecksumV2(checksum, keyDataV2)
-    sessionKey = res.ivSessionKey
+    ivSessionKey = ivKey
+    sessionKey = sKey
+    encryptionMethod = 'v2'
+    finalKeyData = keyDataV2
     if (options.displayIvSession) {
-      log.info(`Your Iv Session key is ${sessionKey},
+      log.info(`Your Iv Session key is ${ivSessionKey},
     keep it safe, you will need it to decrypt your bundle.
     It will be also visible in your dashboard\n`)
     }
-    zipped = res.encryptedData
+    zipped = encryptedData
   }
   else if (key || options.keyData || existsSync(baseKeyPub)) {
     log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2, here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/`)
@@ -324,11 +329,13 @@ async function prepareBundleFile(path: string, options: Options, localConfig: lo
       keyData = keyFile.toString()
     }
     // encrypt
+    encryptionMethod = 'v1'
+    finalKeyData = keyData
     log.info(`Encrypting your bundle`)
     const res = encryptSource(zipped, keyData)
-    sessionKey = res.ivSessionKey
+    ivSessionKey = res.ivSessionKey
     if (options.displayIvSession) {
-      log.info(`Your Iv Session key is ${sessionKey},
+      log.info(`Your Iv Session key is ${ivSessionKey},
 keep it safe, you will need it to decrypt your bundle.
 It will be also visible in your dashboard\n`)
     }
@@ -350,7 +357,7 @@ It will be also visible in your dashboard\n`)
     })
   }
 
-  return { zipped, sessionKey, checksum }
+  return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData }
 }
 
 async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
@@ -497,6 +504,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
 
 export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
   intro(`Uploading with CLI version ${pack.version}`)
+  let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
   await checkAlerts()
 
@@ -548,11 +556,16 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null
+  let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
+  let finalKeyData = ''
   if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
-    versionData.session_key = sessionKey
+    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
+    versionData.session_key = ivSessionKey
     versionData.checksum = checksum
+    sessionKey = sk
     zipped = _zipped
+    encryptionMethod = em
+    finalKeyData = fkd
     if (!options.ignoreChecksumCheck) {
       await checkChecksum(supabase, appid, channel, checksum)
     }
@@ -588,7 +601,12 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
   }
 
-  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid) : []
+  if (options.encryptPartial && encryptionMethod === 'v1') {
+    log.error('You cannot encrypt the partial update if you are not using the v2 encryption method')
+    program.error('')
+  }
+
+  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -632,7 +650,25 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
       if (options.dryUpload) {
         options.partial = false
       }
-      finalManifest = options.partial ? await uploadPartial(apikey, manifest, path, appid, bundle, orgId, options.tusChunkSize) : null
+      const encryptionData = versionData.session_key && options.encryptPartial && sessionKey
+        ? {
+            sessionKey,
+            ivSessionKey: versionData.session_key,
+          }
+        : undefined
+
+      finalManifest = options.partial
+        ? await uploadPartial(
+          apikey,
+          manifest,
+          path,
+          appid,
+          bundle,
+          orgId,
+          encryptionData,
+          options.tusChunkSize,
+        )
+        : null
     }
     catch (err) {
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)

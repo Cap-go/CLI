@@ -1,3 +1,4 @@
+import type { Buffer } from 'node:buffer'
 import type { manifestType } from '../utils'
 import { createReadStream } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
@@ -6,12 +7,20 @@ import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
+import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, MAX_CHUNK_SIZE, sendEvent } from '../utils'
 
-export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
+export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string, encryptionMethod: 'none' | 'v2' | 'v1', finalKeyData: string) {
   const spinner = spinnerC()
-  spinner.start('Generating the update manifest')
+  spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : 'Generating the update manifest with v2 encryption')
   const manifest = await generateManifest(path)
+
+  if (encryptionMethod === 'v2') {
+    manifest.forEach((file) => {
+      file.hash = encryptChecksumV2(file.hash, finalKeyData)
+    })
+  }
+
   spinner.stop('Manifest generated successfully')
 
   await sendEvent(apikey, {
@@ -39,7 +48,21 @@ function convertToUnixPath(windowsPath: string): string {
   return normalizedPath.split(win32.sep).join(posix.sep)
 }
 
-export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string, chunkSize?: number): Promise<any[] | null> {
+interface PartialEncryptionOptions {
+  sessionKey: Buffer
+  ivSessionKey: string
+}
+
+export async function uploadPartial(
+  apikey: string,
+  manifest: manifestType,
+  path: string,
+  appId: string,
+  name: string,
+  orgId: string,
+  encryptionOptions?: PartialEncryptionOptions,
+  chunkSize?: number,
+): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
@@ -54,8 +77,13 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
+    let finalBuffer = fileBuffer
+    if (encryptionOptions) {
+      finalBuffer = encryptSourceV2(fileBuffer as Buffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
+    }
+
     return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(fileBuffer as any, {
+      const upload = new tus.Upload(finalBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
         chunkSize: chunkSize || MAX_CHUNK_SIZE,
         metadata: {
@@ -69,7 +97,6 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
           reject(error)
         },
         onProgress() {
-          // Update progress based on number of files
           const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
           spinner.message(`Uploading partial update: ${percentage}%`)
         },

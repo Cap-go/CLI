@@ -13,6 +13,33 @@ const algorithm = 'aes-128-cbc'
 const formatB64 = 'base64'
 const padding = constants.RSA_PKCS1_PADDING
 
+export function generateSessionKey(key: string): { sessionKey: Buffer, ivSessionKey: string } {
+  const initVector = randomBytes(16)
+  const sessionKey = randomBytes(16)
+  const ivB64 = initVector.toString(formatB64)
+  const sessionb64Encrypted = privateEncrypt(
+    {
+      key,
+      padding,
+    },
+    sessionKey,
+  ).toString(formatB64)
+
+  return {
+    sessionKey,
+    ivSessionKey: `${ivB64}:${sessionb64Encrypted}`,
+  }
+}
+
+export function encryptSourceV2(source: Buffer, sessionKey: Buffer, ivSessionKey: string): Buffer {
+  const [ivB64] = ivSessionKey.split(':')
+  const initVector = Buffer.from(ivB64, formatB64)
+  const cipher = createCipheriv(algorithm, sessionKey, initVector)
+  cipher.setAutoPadding(true)
+  const encryptedData = Buffer.concat([cipher.update(source), cipher.final()])
+  return encryptedData
+}
+
 export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: string): Buffer {
   // console.log('decryptKeyType - ', decryptKeyType);
   // console.log(key);
@@ -37,10 +64,6 @@ export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: strin
   const decryptedData = Buffer.concat([decipher.update(source), decipher.final()])
 
   return decryptedData
-}
-export interface Encoded {
-  ivSessionKey: string
-  encryptedData: Buffer
 }
 
 export function encryptChecksumV2(checksum: string, key: string): string {
@@ -67,28 +90,6 @@ export function decryptChecksumV2(checksum: string, key: string): string {
   return checksumDecrypted
 }
 
-export function encryptSourceV2(source: Buffer, key: string): Encoded {
-  const initVector = randomBytes(16)
-  const sessionKey = randomBytes(16)
-  const cipher = createCipheriv(algorithm, sessionKey, initVector)
-  cipher.setAutoPadding(true)
-  const ivB64 = initVector.toString(formatB64)
-  const sessionb64Encrypted = privateEncrypt(
-    {
-      key,
-      padding,
-    },
-    sessionKey,
-  ).toString(formatB64)
-
-  const ivSessionKey = `${ivB64}:${sessionb64Encrypted}`
-  const encryptedData = Buffer.concat([cipher.update(source), cipher.final()])
-
-  return {
-    encryptedData,
-    ivSessionKey,
-  }
-}
 export interface RSAKeys {
   publicKey: string
   privateKey: string
