@@ -6,3 +6,4 @@ output/
 .history
 *.map
 .DS_Store
+meta.json
