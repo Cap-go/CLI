@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.30.0](https://github.com/Cap-go/CLI/compare/v4.29.1...v4.30.0) (2025-01-07)
+
+
+### Features
+
+* encrypt checksum ([a29cdbd](https://github.com/Cap-go/CLI/commit/a29cdbd8f272f72fa30a0f238492604dfe1d9007))
+
+
+### Bug Fixes
+
+* allow partial encryption ([4c8e8b2](https://github.com/Cap-go/CLI/commit/4c8e8b2ca558416c9802e4f4e71dd51bc07e9117))
+* small bug ([07f7cc7](https://github.com/Cap-go/CLI/commit/07f7cc75b171143a46236452aaaa6c80d37a73f5))
+* split create sessionKey and encrypt ([b9f10a9](https://github.com/Cap-go/CLI/commit/b9f10a9c84e8bd5eed9a9a87a11fd347bc67a1bb))
+
 ### [4.29.1](https://github.com/Cap-go/CLI/compare/v4.29.0...v4.29.1) (2025-01-06)
 
 
