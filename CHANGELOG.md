@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.30.2](https://github.com/Cap-go/CLI/compare/v4.30.1...v4.30.2) (2025-01-07)
+
+
+### Bug Fixes
+
+* add message to unlock mono repo users ([ff2cef1](https://github.com/Cap-go/CLI/commit/ff2cef1024cd1aa2322192e171dfc6d7c3091ae1))
+
 ### [4.30.1](https://github.com/Cap-go/CLI/compare/v4.30.0...v4.30.1) (2025-01-07)
 
 
