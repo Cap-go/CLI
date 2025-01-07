@@ -601,7 +601,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
   }
 
-  if (versionData.session_key && options.encryptPartial && sessionKey && encryptionMethod === 'v1') {
+  if (options.encryptPartial && encryptionMethod === 'v1') {
     log.error('You cannot encrypt the partial update if you are not using the v2 encryption method')
     program.error('')
   }
