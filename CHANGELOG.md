@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.30.1](https://github.com/Cap-go/CLI/compare/v4.30.0...v4.30.1) (2025-01-07)
+
+
+### Bug Fixes
+
+* get max value from back ([a7adaa3](https://github.com/Cap-go/CLI/commit/a7adaa33350fdf175141574fafaed7360a11b269))
+* ignore meta.json ([6bee28d](https://github.com/Cap-go/CLI/commit/6bee28d8a9b591173a84df8028f30c0c5ebbe43a))
+
 ## [4.30.0](https://github.com/Cap-go/CLI/compare/v4.29.1...v4.30.0) (2025-01-07)
 
 
