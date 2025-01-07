@@ -6,7 +6,7 @@ import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
-import { generateManifest, getLocalConfig, MAX_CHUNK_SIZE, sendEvent } from '../utils'
+import { generateManifest, getLocalConfig, sendEvent } from '../utils'
 
 export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string) {
   const spinner = spinnerC()
@@ -39,7 +39,7 @@ function convertToUnixPath(windowsPath: string): string {
   return normalizedPath.split(win32.sep).join(posix.sep)
 }
 
-export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string, chunkSize?: number): Promise<any[] | null> {
+export async function uploadPartial(apikey: string, manifest: manifestType, path: string, appId: string, name: string, orgId: string, chunkSize: number): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
@@ -57,7 +57,7 @@ export async function uploadPartial(apikey: string, manifest: manifestType, path
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(fileBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
-        chunkSize: chunkSize || MAX_CHUNK_SIZE,
+        chunkSize,
         metadata: {
           filename: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
         },

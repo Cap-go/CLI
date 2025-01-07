@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { ALERT_MB, baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, MAX_CHUNK_SIZE, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -243,7 +243,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   }
 }
 
-async function prepareBundleFile(path: string, options: Options, localConfig: localConfigType, apikey: string, orgId: string, appid: string) {
+async function prepareBundleFile(path: string, options: Options, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number) {
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
@@ -335,8 +335,13 @@ It will be also visible in your dashboard\n`)
     zipped = res.encryptedData
   }
   const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
-  if (mbSize > ALERT_MB) {
-    log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
+  const mbSizeMax = Math.floor(maxUploadLength / 1024 / 1024)
+  if (zipped?.byteLength > maxUploadLength) {
+    log.error(`The bundle size is ${mbSize} Mb, this is greater than the maximum upload length ${mbSizeMax} Mb, please reduce the size of your bundle`)
+    program.error('')
+  }
+  else if (zipped?.byteLength > alertUploadSize) {
+    log.warn(`WARNING !!\nThe bundle size is ${mbSize} Mb, this may take a while to download for users\n`)
     log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
     await sendEvent(apikey, {
       channel: 'app-error',
@@ -353,7 +358,7 @@ It will be also visible in your dashboard\n`)
   return { zipped, sessionKey, checksum }
 }
 
-async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options) {
+async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options, tusChunkSize: number) {
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
@@ -371,7 +376,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       else {
         log.info(`Uploading bundle with TUS protocol`)
       }
-      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig, options.tusChunkSize)
+      await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig, tusChunkSize)
       isTus = true
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
@@ -549,7 +554,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   let zipped: Buffer | null = null
   if (!options.external) {
-    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, localConfig, apikey, orgId, appid)
+    const { zipped: _zipped, sessionKey, checksum } = await prepareBundleFile(path, options, apikey, orgId, appid, fileConfig.maxUploadLength, fileConfig.alertUploadSize)
     versionData.session_key = sessionKey
     versionData.checksum = checksum
     zipped = _zipped
@@ -579,8 +584,6 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   else {
     options.tus = options.tus || fileConfig.TUSUploadForced
   }
-  // Temporary disable partial upload on windows TODO: fix this
-  // if (!fileConfig.partialUpload || options.external || osPlatform() === 'win32') {
   if (!fileConfig.partialUpload || options.external) {
     options.partial = false
   }
@@ -595,9 +598,12 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     log.error(`Cannot add bundle ${formatError(dbError)}`)
     program.error('')
   }
-  if (options.tusChunkSize && options.tusChunkSize > MAX_CHUNK_SIZE) {
-    log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${MAX_CHUNK_SIZE}, using the maximum chunk size`)
-    options.tusChunkSize = MAX_CHUNK_SIZE
+  if (options.tusChunkSize && options.tusChunkSize > fileConfig.maxChunkSize) {
+    log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${fileConfig.maxChunkSize}, using the maximum chunk size`)
+    options.tusChunkSize = fileConfig.maxChunkSize
+  }
+  else if (!options.tusChunkSize) {
+    options.tusChunkSize = fileConfig.maxChunkSize
   }
 
   if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
@@ -624,7 +630,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   }
   else if (zipped) {
     if (!options.partialOnly) {
-      await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options)
+      await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options, options.tusChunkSize)
     }
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null

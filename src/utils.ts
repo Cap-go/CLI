@@ -27,9 +27,10 @@ export const defaultHost = 'https://capgo.app'
 export const defaultFileHost = 'https://files.capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
 export const defaultHostWeb = 'https://web.capgo.app'
-export const ALERT_MB = 20
 export const UPLOAD_TIMEOUT = 120000
-export const MAX_CHUNK_SIZE = 1024 * 1024 * 99 // 99MB
+export const ALERT_UPLOAD_SIZE_BYTES = 1024 * 1024 * 20 // 20MB
+export const MAX_UPLOAD_LENGTH_BYTES = 1024 * 1024 * 1024 // 1GB
+export const MAX_CHUNK_SIZE_BYTES = 1024 * 1024 * 99 // 99MB
 
 const PACKNAME = 'package.json'
 
@@ -246,6 +247,9 @@ interface CapgoFilesConfig {
   partialUploadForced: boolean
   TUSUpload: boolean
   TUSUploadForced: boolean
+  maxUploadLength: number
+  maxChunkSize: number
+  alertUploadSize: number
 }
 
 export async function getRemoteFileConfig() {
@@ -260,6 +264,9 @@ export async function getRemoteFileConfig() {
         TUSUpload: false,
         partialUploadForced: false,
         TUSUploadForced: false,
+        maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
+        maxChunkSize: MAX_CHUNK_SIZE_BYTES,
+        alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
       }
     })
 }
@@ -769,7 +776,7 @@ export async function zipFileWindows(filePath: string): Promise<Buffer> {
   return zip.toBuffer()
 }
 
-export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig, chunkSize?: number): Promise<boolean> {
+export async function uploadTUS(apikey: string, data: Buffer, orgId: string, appId: string, name: string, spinner: ReturnType<typeof spinnerC>, localConfig: CapgoConfig, chunkSize: number): Promise<boolean> {
   return new Promise((resolve, reject) => {
     sendEvent(apikey, {
       channel: 'app',
@@ -781,15 +788,10 @@ export async function uploadTUS(apikey: string, data: Buffer, orgId: string, app
       },
       notify: false,
     })
-    // TODO: debug multipart TUS upload
-    // const fileSize = data.length
-    // const maxFileSize = 2 * 1024 * 1024
-    // const multipart = fileSize > maxFileSize ? Math.ceil(fileSize / maxFileSize) : 1
-
     const upload = new tus.Upload(data as any, {
       endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
       // parallelUploads: multipart,
-      chunkSize: chunkSize || MAX_CHUNK_SIZE,
+      chunkSize,
       metadataForPartialUploads: {
         filename: `orgs/${orgId}/apps/${appId}/${name}.zip`,
         filetype: 'application/gzip',

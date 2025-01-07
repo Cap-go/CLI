@@ -101,7 +101,7 @@ export async function zipBundle(appId: string, options: Options) {
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024)
     // We do not issue this warning for json
     if (mbSize > alertMb && !json) {
-      log.warn(`WARNING !!\nThe app size is ${mbSize} Mb, this may take a while to download for users\n`)
+      log.warn(`WARNING !!\nThe bundle size is ${mbSize} Mb, this may take a while to download for users\n`)
       log.warn(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
     }
     const s2 = spinner()
