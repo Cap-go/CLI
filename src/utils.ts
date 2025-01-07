@@ -1127,8 +1127,11 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
       }
     })).catch(() => [])
 
-  if (anyInvalid || dependenciesObject.find(a => a.native === undefined))
+  if (anyInvalid || dependenciesObject.find(a => a.native === undefined)) {
+    log.error('Missing dependencies or invalid dependencies')
+    log.error('If you use monorepo, workspace or any special package manager you can use the --package-json [path,] and --node-modules [path,] options to make the command work properly')
     program.error('')
+  }
 
   return dependenciesObject as { name: string, version: string, native: boolean }[]
 }
