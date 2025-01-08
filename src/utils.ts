@@ -122,7 +122,7 @@ export async function readPackageJson(f: string = findRoot(cwd()), file: string 
       exit(1)
     }
   }
-  const packageJson = readFileSync(!file ? join(f, PACKNAME) : file)
+  const packageJson = readFileSync(!fileSplit ? join(f, PACKNAME) : fileSplit)
   return JSON.parse(packageJson as any)
 }
 
