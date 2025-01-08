@@ -115,9 +115,10 @@ function findRoot(dir: string) {
 }
 
 export async function readPackageJson(f: string = findRoot(cwd()), file: string | undefined = undefined) {
-  if (file) {
-    if (!existsSync(file)) {
-      log.error(`Package.json at ${file} does not exist`)
+  const fileSplit = file?.split(',')[0]
+  if (fileSplit) {
+    if (!existsSync(fileSplit)) {
+      log.error(`Package.json at ${fileSplit} does not exist`)
       exit(1)
     }
   }
