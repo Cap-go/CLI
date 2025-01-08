@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.30.3](https://github.com/Cap-go/CLI/compare/v4.30.2...v4.30.3) (2025-01-08)
+
+
+### Bug Fixes
+
+* issue with readPackageJson ([c572881](https://github.com/Cap-go/CLI/commit/c57288198a744cb133224e851743ece3f977bab5))
+
 ### [4.30.2](https://github.com/Cap-go/CLI/compare/v4.30.1...v4.30.2) (2025-01-07)
 
 
