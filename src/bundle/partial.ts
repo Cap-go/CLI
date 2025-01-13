@@ -1,14 +1,38 @@
-import type { Buffer } from 'node:buffer'
+import type { TransformCallback } from 'node:stream'
 import type { manifestType } from '../utils'
+import { Buffer } from 'node:buffer'
 import { createReadStream } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
 import { join, posix, win32 } from 'node:path'
+import { Transform } from 'node:stream'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
+
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, sendEvent } from '../utils'
+
+// Custom transform stream for small files
+class SmallFileTransform extends Transform {
+  private isFirstChunk = true
+
+  _transform(chunk: Buffer, encoding: string, callback: TransformCallback) {
+    if (this.isFirstChunk) {
+      // Add Brotli header for small files
+      this.push(Buffer.from([0x8B, 0x00, 0x80])) // Standard Brotli header
+      this.isFirstChunk = false
+    }
+    this.push(chunk)
+    callback()
+  }
+
+  _flush(callback: TransformCallback) {
+    // Add Brotli footer
+    this.push(Buffer.from([0x03]))
+    callback()
+  }
+}
 
 export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string, encryptionMethod: 'none' | 'v2' | 'v1', finalKeyData: string) {
   const spinner = spinnerC()
@@ -74,7 +98,12 @@ export async function uploadPartial(
   const uploadFiles = manifest.map(async (file) => {
     const finalFilePath = join(path, file.file)
     const filePathUnix = convertToUnixPath(file.file)
-    const fileStream = createReadStream(finalFilePath).pipe(createBrotliCompress())
+
+    // Read file size first
+    const fileStats = await readBuffer(createReadStream(finalFilePath))
+    const fileStream = fileStats.length < 16
+      ? createReadStream(finalFilePath).pipe(new SmallFileTransform())
+      : createReadStream(finalFilePath).pipe(createBrotliCompress())
     const fileBuffer = await readBuffer(fileStream)
 
     let finalBuffer = fileBuffer
