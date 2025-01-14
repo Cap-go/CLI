@@ -1,12 +1,15 @@
 import { program } from 'commander'
 import pack from '../package.json'
 import { addCommand } from './app/add'
+// import { watchApp } from './app/watch';
+import { debugApp } from './app/debug'
 import { deleteApp } from './app/delete'
 import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
 import { cleanupBundle } from './bundle/cleanup'
+import { checkCompatibilityCommand } from './bundle/compatibility'
 import { decryptZip } from './bundle/decrypt'
 import { decryptZipV2 } from './bundle/decryptV2'
 import { deleteBundle } from './bundle/delete'
@@ -23,12 +26,9 @@ import { setChannel } from './channel/set'
 import { initApp } from './init'
 import { createKeyCommand, saveKeyCommand } from './key'
 import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './keyV2'
+
 import { loginCommand } from './login'
 import { getUserId } from './user/account'
-
-// import { watchApp } from './app/watch';
-import { debugApp } from './app/debug'
-import { checkCompatibilityCommand } from './bundle/compatibility'
 
 program
   .name(pack.name)
