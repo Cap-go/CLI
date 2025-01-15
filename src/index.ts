@@ -163,6 +163,7 @@ bundle
   .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
   .option('--encrypt-partial', 'Encrypt the partial update files')
+  .option('--delete-linked-bundle-on-upload', 'Locates the currently linked bundle in the channel you are trying to upload to, and deletes it')
 
 bundle
   .command('compatibility [appId]')

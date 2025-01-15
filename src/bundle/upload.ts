@@ -55,6 +55,7 @@ interface Options extends OptionsBase {
   dryUpload?: boolean
   nodeModules?: string
   encryptPartial?: boolean
+  deleteLinkedBundleOnUpload?: boolean
   tusChunkSize?: number
 }
 
@@ -446,6 +447,43 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   })
 }
 
+// It is really important that his function never terminates the program, it should always return, even if it fails
+async function deleteLinkedBundleOnUpload(supabase: SupabaseType, appid: string, channel: string) {
+  const { data, error } = await supabase
+    .from('channels')
+    .select('version ( id, name, deleted )')
+    .eq('app_id', appid)
+    .eq('name', channel)
+
+  if (error) {
+    log.error(`Cannot delete linked bundle on upload ${formatError(error)}`)
+    return
+  }
+
+  if (data.length === 0) {
+    log.warn('No linked bundle found in the channel you are trying to upload to')
+    return
+  }
+
+  const version = data[0].version
+  if (version.deleted) {
+    log.warn('The linked bundle is already deleted')
+    return
+  }
+
+  const { error: deleteError } = await supabase
+    .from('app_versions')
+    .update({ deleted: true })
+    .eq('id', version.id)
+
+  if (deleteError) {
+    log.error(`Cannot delete linked bundle on upload ${formatError(deleteError)}`)
+    return
+  }
+
+  log.info('Linked bundle deleted')
+}
+
 async function setVersionInChannel(
   supabase: SupabaseType,
   apikey: string,
@@ -545,6 +583,11 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   if (options.external && !options.external.startsWith('https://')) {
     log.error(`External link should should start with "https://" current is "${options.external}"`)
     program.error('')
+  }
+
+  if (options.deleteLinkedBundleOnUpload) {
+    log.warn('Deleting linked bundle on upload is destructive, it will delete the currently linked bundle in the channel you are trying to upload to.')
+    log.warn('Please make sure you want to do this, if you are not sure, please do not use this option.')
   }
 
   const versionData = {
@@ -691,6 +734,13 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   // Check we have app access to this appId
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
+
+  if (options.deleteLinkedBundleOnUpload && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+    await deleteLinkedBundleOnUpload(supabase, appid, channel)
+  }
+  else if (options.deleteLinkedBundleOnUpload) {
+    log.warn('Cannot delete linked bundle on upload as a upload organization member')
+  }
 
   if (hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig)

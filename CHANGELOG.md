@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.31.0](https://github.com/Cap-go/CLI/compare/v4.30.10...v4.31.0) (2025-01-15)
+
+
+### Features
+
+* delete-linked-bundle-on-upload ([18cc22e](https://github.com/Cap-go/CLI/commit/18cc22e8bf9b4e4cd5cd5edc51527ec448d24ae7))
+
 ### [4.30.10](https://github.com/Cap-go/CLI/compare/v4.30.9...v4.30.10) (2025-01-15)
 
 
