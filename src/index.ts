@@ -265,6 +265,7 @@ channel
   .description('Delete channel')
   .action(deleteChannel)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
+  .option('--delete-bundle', 'delete the bundle associated with the channel')
 
 channel
   .command('list [appId]')

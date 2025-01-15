@@ -77,10 +77,28 @@ export function delChannel(supabase: SupabaseClient<Database>, name: string, app
     .eq('app_id', appId)
     .single()
 }
+
+export function findBundleIdByChannelName(supabase: SupabaseClient<Database>, appId: string, name: string) {
+  return supabase
+    .from('channels')
+    .select(`
+      id,
+      version (id, name)
+    `)
+    .eq('app_id', appId)
+    .eq('name', name)
+    .single()
+    .throwOnError()
+    .then(({ data }) => {
+      return data?.version
+    })
+}
+
 interface version {
   id: string
   name: string
 }
+
 interface Channel {
   id: number
   name: string

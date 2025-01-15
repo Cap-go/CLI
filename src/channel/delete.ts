@@ -3,10 +3,15 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { delChannel } from '../api/channels'
+import { delChannel, findBundleIdByChannelName } from '../api/channels'
+import { deleteAppVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
-export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
+interface DeleteChannelOptions extends OptionsBase {
+  deleteBundle: boolean
+}
+
+export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
   intro(`Delete channel`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
@@ -26,6 +31,15 @@ export async function deleteChannel(channelId: string, appId: string, options: O
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
+  if (options.deleteBundle) {
+    log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)
+    // first get the bundle id
+    const bundle = await findBundleIdByChannelName(supabase, appId, channelId)
+    if (bundle && bundle.name) {
+      log.info(`Deleting bundle ${bundle.name} from Capgo`)
+      await deleteAppVersion(supabase, appId, bundle.name)
+    }
+  }
   log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
   try {
     const deleteStatus = await delChannel(supabase, channelId, appId, userId)
