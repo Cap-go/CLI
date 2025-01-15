@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.32.0](https://github.com/Cap-go/CLI/compare/v4.31.0...v4.32.0) (2025-01-15)
+
+
+### Features
+
+* allow auto delete bundle with channel ([80d4417](https://github.com/Cap-go/CLI/commit/80d4417c00466658ddd2ae5267d0ad299806e88a))
+
 ## [4.31.0](https://github.com/Cap-go/CLI/compare/v4.30.10...v4.31.0) (2025-01-15)
 
 
