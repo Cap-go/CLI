@@ -503,30 +503,40 @@ async function setVersionInChannel(
     log.warn('Cannot get version id, cannot set channel')
     program.error('')
   }
-  const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
-    name: channel,
-    app_id: appid,
-    created_by: userId,
-    version: versionId,
-    owner_org: orgId,
-  })
-  if (dbError3) {
-    log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
-    program.error('')
-  }
-  const appidWeb = convertAppName(appid)
-  const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
-  if (data?.public)
-    log.info('Your update is now available in your public channel 🎉')
-  else if (data?.id)
-    log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-  if (displayBundleUrl) {
-    log.info(`Bundle url: ${bundleUrl}`)
+  const { data: apiAccess } = await supabase
+    .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
+    .single()
+
+  if (apiAccess) {
+    const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
+      name: channel,
+      app_id: appid,
+      created_by: userId,
+      version: versionId,
+      owner_org: orgId,
+    })
+    if (dbError3) {
+      log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
+      program.error('')
+    }
+    const appidWeb = convertAppName(appid)
+    const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
+    if (data?.public)
+      log.info('Your update is now available in your public channel 🎉')
+    else if (data?.id)
+      log.info(`Link device to this bundle to try it: ${bundleUrl}`)
+
+    if (displayBundleUrl) {
+      log.info(`Bundle url: ${bundleUrl}`)
+    }
+    else if (!versionId) {
+      log.warn('Cannot set bundle with upload key, use key with more rights for that')
+      program.error('')
+    }
   }
-  else if (!versionId) {
-    log.warn('Cannot set bundle with upload key, use key with more rights for that')
-    program.error('')
+  else {
+    log.warn('The upload key is not allowed to set the version in the channel')
   }
 }
 
