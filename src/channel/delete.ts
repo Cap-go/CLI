@@ -27,7 +27,7 @@ export async function deleteChannel(channelId: string, appId: string, options: D
   }
   const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const userId = await verifyUser(supabase, options.apikey, ['all'])
   // Check we have app access to this appId
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
 
