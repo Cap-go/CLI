@@ -306,7 +306,8 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
     zipped = encryptedData
   }
   else if (key || options.keyData || existsSync(baseKeyPub)) {
-    log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2, here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/`)
+    log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2.`)
+    log.warn('Here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/')
     const publicKey = typeof key === 'string' ? key : baseKeyPub
     let keyData = options.keyData || ''
     // check if publicKey exist
