@@ -1,7 +1,6 @@
 import { program } from 'commander'
 import pack from '../package.json'
 import { addCommand } from './app/add'
-// import { watchApp } from './app/watch';
 import { debugApp } from './app/debug'
 import { deleteApp } from './app/delete'
 import { getInfo } from './app/info'
