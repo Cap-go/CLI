@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.33.0](https://github.com/Cap-go/CLI/compare/v4.32.4...v4.33.0) (2025-01-25)
+
+
+### Features
+
+* do not encrypt bundle when using Capacitor V5 ([02a52e3](https://github.com/Cap-go/CLI/commit/02a52e3016e45ea2fae174e379b82b0a51469a3e))
+
 ### [4.32.4](https://github.com/Cap-go/CLI/compare/v4.32.3...v4.32.4) (2025-01-21)
 
 
