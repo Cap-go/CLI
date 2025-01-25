@@ -116,7 +116,7 @@ function checkNotifyAppReady(options: Options, path: string) {
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
     const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
     if (!isPluginConfigured) {
-      log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`)
+      log.error(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready`)
       program.error('')
     }
     const foundIndex = checkIndexPosition(path)

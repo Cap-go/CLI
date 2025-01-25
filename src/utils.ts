@@ -104,7 +104,7 @@ export function wait(ms: number) {
   })
 }
 
-function findRoot(dir: string) {
+export function findRoot(dir: string) {
   if (isMonorepo(dir)) {
     return findMonorepoRoot(dir)
   }
