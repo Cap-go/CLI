@@ -18,7 +18,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, projectIsMonorepo, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -439,7 +439,8 @@ async function step8(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     let nodeModulesPath: string | undefined
     s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
-    if (globalPathToPackageJson) {
+    const isMonorepo = projectIsMonorepo(cwd())
+    if (globalPathToPackageJson && isMonorepo) {
       pLog.warn(`You are most likely using a monorepo, please provide the path to your package.json file AND node_modules path folder when uploading your bundle`)
       pLog.warn(`Example: ${pm.runner} @capgo/cli@latest bundle upload --package-json ./packages/my-app/package.json --node-modules ./packages/my-app/node_modules`)
       nodeModulesPath = join(findRoot(cwd()), 'node_modules')
@@ -453,8 +454,8 @@ async function step8(orgId: string, apikey: string, appId: string) {
     const uploadRes = await uploadBundle(appId, {
       channel: defaultChannel,
       apikey,
-      packageJson: globalPathToPackageJson,
-      nodeModules: nodeModulesPath,
+      packageJson: isMonorepo ? globalPathToPackageJson : undefined,
+      nodeModules: isMonorepo ? nodeModulesPath : undefined,
     }, false)
     if (!uploadRes) {
       s.stop('Error')
