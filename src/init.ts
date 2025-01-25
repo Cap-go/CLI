@@ -300,10 +300,21 @@ async function step5(orgId: string, apikey: string, appId: string) {
 }
 
 async function step6(orgId: string, apikey: string, appId: string) {
+  const dependencies = await getAllPackagesDependencies()
+  const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
+  if (!coreVersion) {
+    pLog.warn(`Cannot find @capacitor/core in package.json. It is likely that you are using a monorepo. Please NOTE that encryption is not supported in Capacitor V5.`)
+  }
+
   const pm = getPMAndCommand()
   const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
+    if (coreVersion && lessThan(coreVersion, parse('6.0.0'))) {
+      pLog.warn(`Encryption is not supported in Capacitor V5.`)
+      return
+    }
+
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
     const keyRes = await createKeyV2({ force: true }, false)
