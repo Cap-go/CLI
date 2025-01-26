@@ -470,6 +470,29 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: 
     log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
 }
 
+export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, orgId: string, apikey: string, appId?: string, warning = true) {
+  const config = await getRemoteConfig()
+
+  // isAllowedActionAppIdApiKey was updated in the orgs_v3 migration to work with the new system
+  const validPlan = await supabase.rpc('is_allowed_action_org_action', { orgid: orgId, actions: ['storage'] })
+  if (!validPlan) {
+    log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
+    wait(100)
+    import('open')
+      .then((module) => {
+        module.default(`${config.hostWeb}/dashboard/settings/plans`)
+      })
+    wait(500)
+    program.error('')
+  }
+  const [trialDays, ispaying] = await Promise.all([
+    isTrialOrg(supabase, orgId),
+    isPayingOrg(supabase, orgId),
+  ])
+  if (trialDays > 0 && warning && !ispaying)
+    log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
+}
+
 export function findSavedKey(quiet = false) {
   // search for key in home dir
   const userHomeDir = homedir()
