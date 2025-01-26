@@ -447,6 +447,37 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   }
 }
 
+export async function checkRemoteCliMessages(supabase: SupabaseClient<Database>, orgId: string, cliVersion: string) {
+  const { data: messages, error } = await supabase.rpc('get_organization_cli_warnings', { orgid: orgId, cli_version: cliVersion })
+  if (error) {
+    log.error(`Cannot get cli warnings: ${formatError(error)}`)
+    return
+  }
+  if (messages.length > 0) {
+    log.warn(`Found ${messages.length} cli warnings for your organization.`)
+    let exitAfter = false
+    for (const message of messages) {
+      if (typeof message !== 'object' || typeof (message as any).message !== 'string' || typeof (message as any).fatal !== 'boolean') {
+        log.error(`Invalid cli warning: ${message}`)
+        continue
+      }
+      const msg = (message as any) as { message: string, fatal: boolean }
+      if (msg.fatal) {
+        exitAfter = true
+        log.error(`${msg.message.replaceAll('\\n', '\n')}`)
+      }
+      else {
+        log.warn(`${msg.message.replaceAll('\\n', '\n')}`)
+      }
+    }
+    if (exitAfter) {
+      log.error('Please fix the warnings and try again.')
+      program.error('')
+    }
+    log.info('End of cli warnings.')
+  }
+}
+
 export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: string, apikey: string, appId?: string, warning = true) {
   const config = await getRemoteConfig()
 
@@ -474,7 +505,7 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
   const config = await getRemoteConfig()
 
   // isAllowedActionAppIdApiKey was updated in the orgs_v3 migration to work with the new system
-  const validPlan = await supabase.rpc('is_allowed_action_org_action', { orgid: orgId, actions: ['storage'] })
+  const { data: validPlan } = await supabase.rpc('is_allowed_action_org_action', { orgid: orgId, actions: ['storage'] })
   if (!validPlan) {
     log.error(`You need to upgrade your plan to continue to use capgo.\n Upgrade here: ${config.hostWeb}/dashboard/settings/plans\n`)
     wait(100)
