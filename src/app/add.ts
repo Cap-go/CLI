@@ -1,4 +1,4 @@
-import type Buffer from 'node:buffer'
+import type { Buffer } from 'node:buffer'
 import type { Options } from '../api/app'
 import type {
   Organization,
