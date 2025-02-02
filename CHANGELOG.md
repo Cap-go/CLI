@@ -2,6 +2,27 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [4.34.0](https://github.com/Cap-go/CLI/compare/v4.33.0...v4.34.0) (2025-01-25)
+
+
+### Features
+
+* add a monorepo check on upload ([41a0087](https://github.com/Cap-go/CLI/commit/41a00870d9083bae43adc4ee7c3cf7747e25b546))
+* improve init for monorepos ([6edb337](https://github.com/Cap-go/CLI/commit/6edb337eea13a6fc0b2419c74c98ffe3fab462da))
+
+
+### Bug Fixes
+
+* better msg for upload apikey ([fb41e66](https://github.com/Cap-go/CLI/commit/fb41e66bed611f4d007a95808fbf57a8689ffe96))
+* key perms for channel delete ([7a69ed5](https://github.com/Cap-go/CLI/commit/7a69ed5f59ea26d74e845f5e4edd9e45ea8413a1))
+
+## [4.33.0](https://github.com/Cap-go/CLI/compare/v4.32.4...v4.33.0) (2025-01-25)
+
+
+### Features
+
+* do not encrypt bundle when using Capacitor V5 ([02a52e3](https://github.com/Cap-go/CLI/commit/02a52e3016e45ea2fae174e379b82b0a51469a3e))
+
 ### [4.32.4](https://github.com/Cap-go/CLI/compare/v4.32.3...v4.32.4) (2025-01-21)
 
 

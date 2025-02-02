@@ -2,9 +2,9 @@ import type { ExecSyncOptions } from 'node:child_process'
 import type { Options } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { exit } from 'node:process'
+import { cwd, exit } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import {
   lessThan,
@@ -18,7 +18,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, projectIsMonorepo, readPackageJson, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -33,6 +33,7 @@ const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
 
 let tmpObject: tmp.FileResult['name'] | undefined
+let globalPathToPackageJson: string | undefined
 
 function readTmpObj() {
   if (!tmpObject) {
@@ -44,10 +45,13 @@ function readTmpObj() {
   }
 }
 
-function markStepDone(step: number) {
+function markStepDone(step: number, pathToPackageJson?: string) {
   try {
     readTmpObj()
-    writeFileSync(tmpObject!, JSON.stringify({ step_done: step }))
+    writeFileSync(tmpObject!, JSON.stringify(pathToPackageJson ? { step_done: step, pathToPackageJson } : { step_done: step, pathToPackageJson: globalPathToPackageJson }))
+    if (pathToPackageJson) {
+      globalPathToPackageJson = pathToPackageJson
+    }
   }
   catch (err) {
     pLog.error(`Cannot mark step as done in the CLI, error:\n${err}`)
@@ -62,12 +66,17 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done } = JSON.parse(rawData)
+    const { step_done, pathToPackageJson } = JSON.parse(rawData)
     pLog.info(`You have already got to the step ${step_done}/10 in the previous session`)
     const skipSteps = await pConfirm({ message: 'Would you like to continue from where you left off?' })
     await cancelCommand(skipSteps, orgId, apikey)
-    if (skipSteps)
+    if (skipSteps) {
+      if (pathToPackageJson) {
+        globalPathToPackageJson = pathToPackageJson
+      }
       return step_done
+    }
+
     return undefined
   }
   catch (err) {
@@ -143,6 +152,73 @@ async function step3(orgId: string, apikey: string, appId: string) {
   await markStep(orgId, apikey, 3)
 }
 
+async function getAssistedDependencies(stepsDone: number) {
+  // here we will assume that getAlllPackagesDependencies uses 'findRoot(cwd())' for the first argument
+  const root = join(findRoot(cwd()), 'package.json')
+  const dependencies = !globalPathToPackageJson ? await getAllPackagesDependencies(undefined, root) : await getAllPackagesDependencies(undefined, globalPathToPackageJson)
+  if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
+    pLog.warn('No adequate dependencies found')
+    const doSelect = await pConfirm({ message: 'Would you like to select the package.json file manually?' })
+    if (pIsCancel(doSelect)) {
+      pCancel('Operation cancelled.')
+      exit(1)
+    }
+    if (doSelect) {
+      const useTreeSelect = await pConfirm({ message: 'Would you like to use a tree selector to choose the package.json file?' })
+      if (pIsCancel(useTreeSelect)) {
+        pCancel('Operation cancelled.')
+        exit(1)
+      }
+
+      if (useTreeSelect) {
+        let path = cwd()
+        let selectedPath = 'package.json' as string | symbol
+        while (true) {
+          const options = readdirSync(path)
+            .map(dir => ({ value: dir, label: dir }))
+          options.push({ value: '..', label: '..' })
+          selectedPath = await pSelect({
+            message: 'Select package.json file:',
+            options,
+          })
+          if (pIsCancel(selectedPath)) {
+            pCancel('Operation cancelled.')
+            exit(1)
+          }
+          if (!statSync(join(path, selectedPath)).isDirectory() && selectedPath !== 'package.json') {
+            pLog.error(`Selected a file that is not a package.json file`)
+            continue
+          }
+          path = join(path, selectedPath)
+          if (selectedPath === 'package.json') {
+            break
+          }
+        }
+        // write the path of package.json in tmp file
+        await markStepDone(stepsDone, path)
+        return { dependencies: await getAllPackagesDependencies(undefined, path), path }
+      }
+      const path = await pText({
+        message: 'Enter path to node_modules folder:',
+      }) as string
+      if (pIsCancel(path)) {
+        pCancel('Operation cancelled.')
+        exit(1)
+      }
+      if (!existsSync(path)) {
+        pLog.error(`Path ${path} does not exist`)
+        exit(1)
+      }
+      return { dependencies: await getAllPackagesDependencies(undefined, path), path }
+    }
+  }
+
+  // even in the default case, let's mark the path to package.json
+  // this will help with bundle upload
+  await markStepDone(stepsDone, root)
+  return { dependencies: await getAllPackagesDependencies(undefined, root), path: root }
+}
+
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 async function step4(orgId: string, apikey: string, appId: string) {
@@ -151,9 +227,17 @@ async function step4(orgId: string, apikey: string, appId: string) {
   await cancelCommand(doInstall, orgId, apikey)
   if (doInstall) {
     const s = pSpinner()
-    s.start(`Checking if @capgo/capacitor-updater is installed`)
     let versionToInstall = 'latest'
-    const dependencies = await getAllPackagesDependencies()
+    // 3 because this is the 4th step, ergo 3 steps have already been done
+    const { dependencies, path } = await getAssistedDependencies(3)
+    s.start(`Checking if @capgo/capacitor-updater is installed`)
+    if (!dependencies.has('@capacitor/core')) {
+      s.stop('Error')
+      pLog.warn(`Cannot find @capacitor/core in package.json`)
+      pOutro(`Bye 👋`)
+      exit()
+    }
+
     const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
     if (!coreVersion) {
       s.stop('Error')
@@ -184,8 +268,8 @@ async function step4(orgId: string, apikey: string, appId: string) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
-      await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, execOption as ExecSyncOptions)
-      const pkg = await readPackageJson()
+      await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
+      const pkg = await readPackageJson(undefined, path)
       await updateConfig({ version: pkg?.version || '1.0.0', appId, autoUpdate: true })
       s.stop(`Install Done ✅`)
     }
@@ -300,10 +384,21 @@ async function step5(orgId: string, apikey: string, appId: string) {
 }
 
 async function step6(orgId: string, apikey: string, appId: string) {
+  const dependencies = await getAllPackagesDependencies()
+  const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
+  if (!coreVersion) {
+    pLog.warn(`Cannot find @capacitor/core in package.json. It is likely that you are using a monorepo. Please NOTE that encryption is not supported in Capacitor V5.`)
+  }
+
   const pm = getPMAndCommand()
   const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
+    if (coreVersion && lessThan(coreVersion, parse('6.0.0'))) {
+      pLog.warn(`Encryption is not supported in Capacitor V5.`)
+      return
+    }
+
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
     const keyRes = await createKeyV2({ force: true }, false)
@@ -353,10 +448,25 @@ async function step8(orgId: string, apikey: string, appId: string) {
   await cancelCommand(doBundle, orgId, apikey)
   if (doBundle) {
     const s = pSpinner()
+    let nodeModulesPath: string | undefined
     s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
+    const isMonorepo = projectIsMonorepo(cwd())
+    if (globalPathToPackageJson && isMonorepo) {
+      pLog.warn(`You are most likely using a monorepo, please provide the path to your package.json file AND node_modules path folder when uploading your bundle`)
+      pLog.warn(`Example: ${pm.runner} @capgo/cli@latest bundle upload --package-json ./packages/my-app/package.json --node-modules ./packages/my-app/node_modules`)
+      nodeModulesPath = join(findRoot(cwd()), 'node_modules')
+      pLog.warn(`Guessed node modules path at: ${nodeModulesPath}`)
+      if (!existsSync(nodeModulesPath)) {
+        pLog.error(`Node modules path does not exist, upload skipped`)
+        pOutro(`Bye 👋`)
+        exit(1)
+      }
+    }
     const uploadRes = await uploadBundle(appId, {
       channel: defaultChannel,
       apikey,
+      packageJson: isMonorepo ? globalPathToPackageJson : undefined,
+      nodeModules: isMonorepo ? nodeModulesPath : undefined,
     }, false)
     if (!uploadRes) {
       s.stop('Error')

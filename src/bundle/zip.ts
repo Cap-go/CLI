@@ -69,7 +69,7 @@ export async function zipBundle(appId: string, options: Options) {
       const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
       if (!isPluginConfigured) {
         if (!json)
-          log.error(`notifyAppReady() is missing in the source code. see: https://capgo.app/docs/plugin/api/#notifyappready`)
+          log.error(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready`)
         else
           console.error(formatError({ error: 'notifyAppReady_not_in_source_code' }))
         program.error('')
