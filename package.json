@@ -44,22 +44,22 @@
     "check-posix-paths": "node test/check-posix-paths.js"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^3.14.0",
+    "@antfu/eslint-config": "^4.1.1",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
-    "@capacitor/cli": "^6.2.0",
+    "@capacitor/cli": "^7.0.1",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.9.1",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver",
-    "@supabase/supabase-js": "^2.47.12",
+    "@supabase/supabase-js": "^2.48.1",
     "@tomasklaen/checksum": "^1.1.0",
     "@types/adm-zip": "^0.5.7",
-    "@types/node": "^22.10.6",
+    "@types/node": "^22.13.0",
     "@types/prettyjson": "^0.0.33",
     "@types/semver": "7.5.8",
     "@types/tmp": "^0.2.6",
-    "@typescript-eslint/eslint-plugin": "^8.20.0",
-    "@typescript-eslint/parser": "^8.20.0",
+    "@typescript-eslint/eslint-plugin": "^8.22.0",
+    "@typescript-eslint/parser": "^8.22.0",
     "@vercel/ncc": "^0.38.3",
     "adm-zip": "^0.5.16",
     "ci-info": "^4.1.0",
@@ -79,7 +79,7 @@
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
-    "tus-js-client": "^4.2.3",
+    "tus-js-client": "^4.3.1",
     "typescript": "5.7.3"
   }
 }
