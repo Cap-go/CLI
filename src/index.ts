@@ -354,7 +354,7 @@ const account = program
   .description('Manage account')
 
 account.command('id')
-  .description('Get your account ID')
+  .description('Get your account ID, it\'s safe to share it in discord or other places')
   .action(getUserId)
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
 
