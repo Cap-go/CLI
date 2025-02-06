@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [4.34.5](https://github.com/Cap-go/CLI/compare/v4.34.4...v4.34.5) (2025-02-06)
+
+
+### Bug Fixes
+
+* remove lint for now ([55bd71c](https://github.com/Cap-go/CLI/commit/55bd71c0fbb9953c9cbfdda2202c2b470c8be769))
+* use new lockfile ([e64267c](https://github.com/Cap-go/CLI/commit/e64267cbf4cba4284c6f36e5134cf193da02161e))
+
 ### [4.34.4](https://github.com/Cap-go/CLI/compare/v4.34.3...v4.34.4) (2025-02-06)
 
 
