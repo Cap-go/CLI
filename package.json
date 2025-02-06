@@ -58,8 +58,6 @@
     "@types/prettyjson": "^0.0.33",
     "@types/semver": "7.5.8",
     "@types/tmp": "^0.2.6",
-    "@typescript-eslint/eslint-plugin": "^8.22.0",
-    "@typescript-eslint/parser": "^8.22.0",
     "@vercel/ncc": "^0.38.3",
     "adm-zip": "^0.5.16",
     "ci-info": "^4.1.0",
