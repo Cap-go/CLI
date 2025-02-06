@@ -395,14 +395,14 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
         .eq('app_id', appid)
       if (changeError) {
         log.error(`Cannot finish TUS upload ${formatError(changeError)}`)
-        Promise.reject(new Error('Cannot finish TUS upload'))
+        return Promise.reject(new Error('Cannot finish TUS upload'))
       }
     }
     else {
       const url = await uploadUrl(supabase, appid, bundle)
       if (!url) {
         log.error(`Cannot get upload url`)
-        Promise.reject(new Error('Cannot get upload url'))
+        return Promise.reject(new Error('Cannot get upload url'))
       }
       await ky.put(url, {
         timeout: options.timeout || UPLOAD_TIMEOUT,
