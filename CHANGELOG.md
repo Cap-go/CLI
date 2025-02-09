@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.1.0](https://github.com/Cap-go/CLI/compare/v5.0.0...v5.1.0) (2025-02-09)
+
+
+### Features
+
+* warnings and better plan ([08c25db](https://github.com/Cap-go/CLI/commit/08c25db671e07ec0058d5b106e2196408aeb255f))
+* warnings and better plan ([1a9750e](https://github.com/Cap-go/CLI/commit/1a9750e84a79c970765b2111ce59bc078672a415))
+
 ## [5.0.0](https://github.com/Cap-go/CLI/compare/v4.34.6...v5.0.0) (2025-02-09)
 
 
