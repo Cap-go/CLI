@@ -9,10 +9,8 @@ import { setApp } from './app/set'
 import { setSetting } from './app/setting'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibilityCommand } from './bundle/compatibility'
-import { decryptZip } from './bundle/decrypt'
 import { decryptZipV2 } from './bundle/decryptV2'
 import { deleteBundle } from './bundle/delete'
-import { encryptZip } from './bundle/encrypt'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { listBundle } from './bundle/list'
 import { uploadCommand } from './bundle/upload'
@@ -23,7 +21,6 @@ import { deleteChannel } from './channel/delete'
 import { listChannels } from './channel/list'
 import { setChannel } from './channel/set'
 import { initApp } from './init'
-import { createKeyCommand, saveKeyCommand } from './key'
 import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './keyV2'
 
 import { loginCommand } from './login'
@@ -206,21 +203,7 @@ bundle
   .option('-f, --force', 'force removal')
 
 bundle
-  .command('decrypt [zipPath] [sessionKey]')
-  .description('Decrypt a signed zip bundle')
-  .action(decryptZip)
-  .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'private signing key')
-
-bundle
   .command('encrypt [zipPath]')
-  .description('Encrypt a zip bundle')
-  .action(encryptZip)
-  .option('--key <key>', 'custom path for private signing key')
-  .option('--key-data <keyData>', 'private signing key')
-
-bundle
-  .command('encryptV2 [zipPath] [checksum]')
   .description('Encrypt a zip bundle using the new encryption method')
   .action(encryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
@@ -228,7 +211,7 @@ bundle
   .option('-j, --json', 'output in JSON')
 
 bundle
-  .command('decryptV2 [zipPath] [checksum]')
+  .command('decrypt [zipPath] [checksum]')
   .description('Decrypt a zip bundle using the new encryption method')
   .action(decryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
@@ -307,24 +290,6 @@ channel
   .option('--emulator', 'Allow sending update to emulator devices')
   .option('--no-emulator', 'Disable sending update to emulator devices')
   .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
-
-const key = program
-  .command('key_old')
-  .description('Manage old encryption key')
-
-key
-  .command('save')
-  .description('Save base64 encryption key in capacitor config, usefull for CI')
-  .action(saveKeyCommand)
-  .option('-f, --force', 'force generate a new one')
-  .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config')
-
-key
-  .command('create')
-  .description('Create a new encryption key')
-  .action(createKeyCommand)
-  .option('-f, --force', 'force generate a new one')
 
 const keyV2 = program
   .command('key')

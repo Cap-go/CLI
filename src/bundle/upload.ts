@@ -12,10 +12,9 @@ import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { encryptSource } from '../api/crypto'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyPub, baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -25,9 +24,7 @@ interface Options extends OptionsBase {
   channel?: string
   displayIvSession?: boolean
   external?: string
-  key?: boolean | string
   keyV2?: boolean | string
-  keyData?: string
   keyDataV2?: string
   ivSessionKey?: string
   s3Region?: string
@@ -252,13 +249,12 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   let zipped: Buffer | null = null
   let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
   let finalKeyData = ''
-  const key = options.key
   const keyV2 = options.keyV2
 
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  if ((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && key !== false) {
+  if ((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && keyV2 !== false) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
@@ -266,7 +262,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   }
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
-  if (key === false) {
+  if (keyV2 === false) {
     log.info(`Encryption ignored`)
   }
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
@@ -304,44 +300,6 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
     It will be also visible in your dashboard\n`)
     }
     zipped = encryptedData
-  }
-  else if (key || options.keyData || existsSync(baseKeyPub)) {
-    log.warn(`WARNING !!\nYou are using old encryption key, it's not secure enouth and it should be migrate on v2.`)
-    log.warn('Here is the migration guide: https://capgo.app/docs/cli/migrations/encryption/')
-    const publicKey = typeof key === 'string' ? key : baseKeyPub
-    let keyData = options.keyData || ''
-    // check if publicKey exist
-    if (!keyData && !existsSync(publicKey)) {
-      log.error(`Cannot find public key ${publicKey}`)
-      program.error('')
-    }
-    await sendEvent(apikey, {
-      channel: 'app',
-      event: 'App encryption',
-      icon: '🔑',
-      user_id: orgId,
-      tags: {
-        'app-id': appid,
-      },
-      notify: false,
-    })
-    // open with fs publicKey path
-    if (!keyData) {
-      const keyFile = readFileSync(publicKey)
-      keyData = keyFile.toString()
-    }
-    // encrypt
-    encryptionMethod = 'v1'
-    finalKeyData = keyData
-    log.info(`Encrypting your bundle`)
-    const res = encryptSource(zipped, keyData)
-    ivSessionKey = res.ivSessionKey
-    if (options.displayIvSession) {
-      log.info(`Your Iv Session key is ${ivSessionKey},
-keep it safe, you will need it to decrypt your bundle.
-It will be also visible in your dashboard\n`)
-    }
-    zipped = res.encryptedData
   }
   const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
   const mbSizeMax = Math.floor(maxUploadLength / 1024 / 1024)
@@ -803,18 +761,8 @@ function checkValidOptions(options: Options) {
     program.error('')
   }
   // cannot set key if external
-  if (options.external && (options.key || options.keyData || options.keyV2 || options.keyDataV2)) {
+  if (options.external && (options.keyV2 || options.keyDataV2)) {
     log.error('You cannot set a key if you are uploading to an external url')
-    program.error('')
-  }
-  // cannot set key and key-v2
-  if ((options.key || options.keyData) && (options.keyV2 || options.keyDataV2)) {
-    log.error('You cannot set both key and key-v2')
-    program.error('')
-  }
-  // cannot set key and key-data
-  if (options.key && options.keyData) {
-    log.error('You cannot set both key and key-data')
     program.error('')
   }
   // cannot set key-v2 and key-data-v2
