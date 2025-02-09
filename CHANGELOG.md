@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0](https://github.com/Cap-go/CLI/compare/v4.34.6...v5.0.0) (2025-02-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove old key encryption
+
+### Features
+
+* remove old key encryption ([4757ef9](https://github.com/Cap-go/CLI/commit/4757ef9988b6b68ccb25c5005c539928f48b52d4))
+
 ### [4.34.6](https://github.com/Cap-go/CLI/compare/v4.34.5...v4.34.6) (2025-02-06)
 
 
