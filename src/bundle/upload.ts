@@ -543,7 +543,8 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
-  await checkPlanValid(supabase, orgId, apikey, appid, true)
+  await checkRemoteCliMessages(supabase, orgId, pack.version)
+  await checkPlanValidUpload(supabase, orgId, apikey, appid, true)
   await checkTrial(supabase, orgId, localConfig)
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
