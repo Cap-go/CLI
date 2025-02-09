@@ -4,9 +4,11 @@ import type { Database } from '../types/supabase.types'
 import type { manifestType, OptionsBase } from '../utils'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { exit } from 'node:process'
+import { join } from 'node:path/posix'
+import { cwd, exit } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import { greaterOrEqual, parse } from '@std/semver'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
@@ -14,7 +16,7 @@ import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -139,8 +141,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
-  // eslint-disable-next-line no-undef-init
-  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined = undefined
+  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
 
   // We only check compatibility IF the channel exists
@@ -254,7 +255,19 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  if ((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && keyV2 !== false) {
+  const root = join(findRoot(cwd()), 'package.json')
+  const dependencies = await getAllPackagesDependencies(undefined, root)
+  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  let isv7 = false
+  if (!updaterVersion) {
+    // TODO: remove this once we have a proper way to check the version
+    log.warn('Cannot find @capgo/capacitor-updater in your package.json, assuming it is v7')
+    isv7 = true
+  }
+  else {
+    isv7 = greaterOrEqual(parse(updaterVersion), parse('7.0.0'))
+  }
+  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && keyV2 !== false) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
