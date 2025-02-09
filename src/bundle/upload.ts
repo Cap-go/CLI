@@ -14,7 +14,7 @@ import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValid, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, convertAppName, createSupabaseClient, deletedFailedVersion, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
