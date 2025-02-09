@@ -2,6 +2,61 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [5.0.0](https://github.com/Cap-go/CLI/compare/v4.34.6...v5.0.0) (2025-02-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* remove old key encryption
+
+### Features
+
+* remove old key encryption ([4757ef9](https://github.com/Cap-go/CLI/commit/4757ef9988b6b68ccb25c5005c539928f48b52d4))
+
+### [4.34.6](https://github.com/Cap-go/CLI/compare/v4.34.5...v4.34.6) (2025-02-06)
+
+
+### Bug Fixes
+
+* lint ([6bc48ae](https://github.com/Cap-go/CLI/commit/6bc48aee266952d544b04733862e3bd0dc1d5912))
+
+### [4.34.5](https://github.com/Cap-go/CLI/compare/v4.34.4...v4.34.5) (2025-02-06)
+
+
+### Bug Fixes
+
+* remove lint for now ([55bd71c](https://github.com/Cap-go/CLI/commit/55bd71c0fbb9953c9cbfdda2202c2b470c8be769))
+* use new lockfile ([e64267c](https://github.com/Cap-go/CLI/commit/e64267cbf4cba4284c6f36e5134cf193da02161e))
+
+### [4.34.4](https://github.com/Cap-go/CLI/compare/v4.34.3...v4.34.4) (2025-02-06)
+
+
+### Bug Fixes
+
+* lint issue ([8b7bc6d](https://github.com/Cap-go/CLI/commit/8b7bc6db8cc1f643cc0c4b4b1e971d512d0471f3))
+
+### [4.34.3](https://github.com/Cap-go/CLI/compare/v4.34.2...v4.34.3) (2025-02-06)
+
+
+### Bug Fixes
+
+* reject properly ([5b2eba5](https://github.com/Cap-go/CLI/commit/5b2eba547b22d445558c4e9b52a08fa96b54e763))
+
+### [4.34.2](https://github.com/Cap-go/CLI/compare/v4.34.1...v4.34.2) (2025-02-05)
+
+
+### Bug Fixes
+
+* desc for id command ([0e3caee](https://github.com/Cap-go/CLI/commit/0e3caeeac6072d55544df2f4649aab37724a1ab4))
+
+### [4.34.1](https://github.com/Cap-go/CLI/compare/v4.34.0...v4.34.1) (2025-02-02)
+
+
+### Bug Fixes
+
+* declaration ([8c95b1b](https://github.com/Cap-go/CLI/commit/8c95b1bf28a48fb3aaf3411f2324bba9e1cbb0e7))
+* use latest versions ([9287cbf](https://github.com/Cap-go/CLI/commit/9287cbf336a928b531f5a41050724f35e362e8f5))
+
 ## [4.34.0](https://github.com/Cap-go/CLI/compare/v4.33.0...v4.34.0) (2025-01-25)
 
 

@@ -77,6 +77,38 @@ export function encryptChecksumV2(checksum: string, key: string): string {
 
   return checksumEncrypted
 }
+export function createRSA(format: 'pem' | 'der/pem' = 'pem', keySize = 2048): RSAKeys {
+  const { publicKey, privateKey } = generateKeyPairSync('rsa', {
+    // The standard secure default length for RSA keys is 2048 bits
+    modulusLength: keySize,
+  })
+
+  // Generate RSA key pair
+  if (format === 'pem') {
+    return {
+      publicKey: publicKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }) as string,
+    }
+  }
+  else {
+    return {
+      publicKey: publicKey.export({
+        type: 'spki',
+        format: 'der',
+      }).toString('base64'),
+      privateKey: privateKey.export({
+        type: 'pkcs1',
+        format: 'pem',
+      }).toString('base64'),
+    }
+  }
+}
 
 export function decryptChecksumV2(checksum: string, key: string): string {
   const checksumDecrypted = publicDecrypt(
@@ -111,21 +143,3 @@ export function createRSAV2(): RSAKeys {
     }) as string,
   }
 }
-//  test AES
-
-// const source = 'Hello world'
-// console.log('\nsource', source)
-// const { publicKey, privateKey } = createRSA()
-
-// console.log('\nencryptSource ================================================================')
-// //  convert source to base64
-// const sourceBuff = Buffer.from(source)
-// const res = encryptSource(sourceBuff, publicKey)
-// console.log('\nencryptedData', res.encryptedData.toString('base64'))
-// // console.log('\nres', res)
-// console.log('\ndecryptSource ================================================================')
-// const decodedSource = decryptSource(res.encryptedData, res.ivSessionKey, privateKey)
-// // convert decodedSource from base64 to utf-8
-// const decodedSourceString = decodedSource.toString('utf-8')
-// console.log('\ndecodedSourceString', decodedSourceString)
-// console.log('\n Is match', decodedSourceString === source)

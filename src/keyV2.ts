@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
 import { program } from 'commander'
-import { createRSA } from './api/crypto'
+import { createRSA } from './api/cryptoV2'
 import { checkAlerts } from './api/update'
 import { writeConfig } from './config'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
