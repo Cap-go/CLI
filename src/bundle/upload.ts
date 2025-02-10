@@ -257,7 +257,9 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   s.start(`Calculating checksum`)
   const root = join(findRoot(cwd()), 'package.json')
   const dependencies = await getAllPackagesDependencies(undefined, root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  let updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  // clean the version
+  updaterVersion = updaterVersion?.replace('^', '').replace('~', '')
   let isv7 = false
   if (!updaterVersion) {
     // TODO: remove this once we have a proper way to check the version
