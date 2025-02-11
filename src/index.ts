@@ -203,7 +203,7 @@ bundle
   .option('-f, --force', 'force removal')
 
 bundle
-  .command('encrypt [zipPath]')
+  .command('encrypt [zipPath] [checksum]')
   .description('Encrypt a zip bundle using the new encryption method')
   .action(encryptZipV2)
   .option('--key <key>', 'custom path for private signing key')
