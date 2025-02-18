@@ -26,7 +26,8 @@ interface Options extends OptionsBase {
   channel?: string
   displayIvSession?: boolean
   external?: string
-  keyV2?: boolean | string
+  key?: boolean
+  keyV2?: string
   keyDataV2?: string
   ivSessionKey?: string
   s3Region?: string
@@ -251,6 +252,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
   let finalKeyData = ''
   const keyV2 = options.keyV2
+  const noKey = options.key === false
 
   zipped = await zipFile(path)
   const s = spinnerC()
@@ -277,7 +279,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   }
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
-  if (keyV2 === false) {
+  if (noKey === false) {
     log.info(`Encryption ignored`)
   }
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
