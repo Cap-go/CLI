@@ -301,7 +301,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
       const keyFile = readFileSync(privateKey)
       keyDataV2 = keyFile.toString()
     }
-    log.info(`Encrypting your bundle with V2`)
+    log.info('Encrypting your bundle with V2')
     const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
     const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
     checksum = encryptChecksumV2(checksum, keyDataV2)
