@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.15](https://github.com/Cap-go/CLI/compare/v7.0.14...v7.0.15) (2025-02-19)
+
+
+### Bug Fixes
+
+* issue save key ([a459428](https://github.com/Cap-go/CLI/commit/a459428d21c123a158bc94c6d960aa0eb9b2a4c8))
+
 ### [7.0.14](https://github.com/Cap-go/CLI/compare/v7.0.13...v7.0.14) (2025-02-19)
 
 
