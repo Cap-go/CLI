@@ -292,8 +292,8 @@ keyV2
   .description('Save base64 encryption key in capacitor config, usefull for CI')
   .action(saveKeyCommandV2)
   .option('-f, --force', 'force generate a new one')
-  .option('--key', 'key path to save in capacitor config')
-  .option('--key-data', 'key data to save in capacitor config')
+  .option('--key <key>', 'key path to save in capacitor config')
+  .option('--key-data <keyData>', 'key data to save in capacitor config')
 
 keyV2
   .command('create')
