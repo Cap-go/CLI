@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.13](https://github.com/Cap-go/CLI/compare/v7.0.12...v7.0.13) (2025-02-19)
+
+
+### Bug Fixes
+
+* add missing `checksum` parameter for encrypt command ([84d0e1d](https://github.com/Cap-go/CLI/commit/84d0e1d55b85330308d90bcc8bb6c3f5230b48ae))
+
 ### [7.0.12](https://github.com/Cap-go/CLI/compare/v7.0.11...v7.0.12) (2025-02-19)
 
 
