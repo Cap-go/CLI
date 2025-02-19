@@ -258,7 +258,8 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   const s = spinnerC()
   s.start(`Calculating checksum`)
   const root = join(findRoot(cwd()), 'package.json')
-  const dependencies = await getAllPackagesDependencies(undefined, root)
+  // options.packageJson
+  const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
   let updaterVersion = dependencies.get('@capgo/capacitor-updater')
   // clean the version
   updaterVersion = updaterVersion?.replace('^', '').replace('~', '')
