@@ -43,7 +43,7 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js"
   },
-  "devDependencies": {
+  "dependencies": {
     "@antfu/eslint-config": "^4.1.1",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capacitor/cli": "^7.0.1",
@@ -56,6 +56,7 @@
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^22.13.1",
     "@types/prettyjson": "^0.0.33",
+    "@types/semver": "^7.5.8",
     "@types/tmp": "^0.2.6",
     "@vercel/ncc": "^0.38.3",
     "adm-zip": "^0.5.16",
@@ -71,15 +72,12 @@
     "open": "^10.1.0",
     "pkg": "5.8.1",
     "prettyjson": "^1.2.5",
+    "semver": "^7.7.1",
     "tmp": "^0.2.3",
     "ts-loader": "^9.5.2",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
     "tus-js-client": "^4.3.1",
     "typescript": "5.7.3"
-  },
-  "dependencies": {
-    "@types/semver": "^7.5.8",
-    "semver": "^7.7.1"
   }
 }
