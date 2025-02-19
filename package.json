@@ -43,7 +43,7 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js"
   },
-  "dependencies": {
+  "devDependencies": {
     "@antfu/eslint-config": "^4.1.1",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client",
     "@capacitor/cli": "^7.0.1",

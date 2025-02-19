@@ -94,12 +94,6 @@ app
   .option('--string <string>', 'A value for the setting to modify as a string')
   .action(setSetting)
 
-// app
-//   .command('watch [port]')
-//   .alias('w')
-//   .description('watch for changes in your app and allow capgo app or your app to see changes in live')
-//   .action(watchApp);
-
 app
   .command('set [appId]')
   .alias('s')
