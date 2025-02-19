@@ -14,12 +14,12 @@ import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, sendEvent } from '../utils'
 
 // Threshold for small files where Node.js might skip compression (in bytes)
-const SMALL_FILE_THRESHOLD = 100
+const SMALL_FILE_THRESHOLD = 4096
 
-// Precomputed minimal Brotli stream for an empty file
-const EMPTY_BROTLI_STREAM = Buffer.from([0x06]) // Final empty block, decompresses to empty buffer
+// Precomputed minimal Brotli stream for an empty file, compatible with iOS and Android
+const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
 
-// Compress file, handling all cases without failing
+// Compress file, ensuring compatibility and no failures
 async function compressFile(filePath: string, options: BrotliOptions = {}): Promise<Buffer> {
   const stats = statSync(filePath)
   const fileSize = stats.size
@@ -31,7 +31,7 @@ async function compressFile(filePath: string, options: BrotliOptions = {}): Prom
   const originalBuffer = await readBuffer(createReadStream(filePath))
   const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress(options)))
 
-  // For small files or if compression was ineffective, try brotli library
+  // For small files or ineffective compression, use brotli library
   if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
     const uncompressedBrotli = brotli.compress(originalBuffer, {
       mode: 0, // Generic mode
@@ -40,9 +40,13 @@ async function compressFile(filePath: string, options: BrotliOptions = {}): Prom
     if (uncompressedBrotli) {
       return Buffer.from(uncompressedBrotli)
     }
-    // Fallback if brotli.compress fails: log warning and return zlib output or original wrapped minimally
-    log.warn(`Brotli library failed for ${filePath}, falling back to minimal stream or zlib output`)
-    return compressedBuffer.length > 0 ? compressedBuffer : Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
+    // Fallback if brotli.compress fails
+    log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 7.0.21 or higher to work on IOS`)
+    if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
+      return compressedBuffer // Use zlib if it produced something reasonable
+    }
+    // Last resort: minimal manual stream (shouldn’t reach here often)
+    return Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
   }
 
   return compressedBuffer
