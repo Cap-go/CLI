@@ -1,40 +1,61 @@
-import type { TransformCallback } from 'node:stream'
+import type { BrotliOptions } from 'node:zlib'
 import type { manifestType } from '../utils'
 import { Buffer } from 'node:buffer'
-import { createReadStream } from 'node:fs'
+import { createReadStream, statSync } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
 import { join, posix, win32 } from 'node:path'
-import { Transform } from 'node:stream'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
-
 import { log, spinner as spinnerC } from '@clack/prompts'
+
+import * as brotli from 'brotli'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { generateManifest, getLocalConfig, sendEvent } from '../utils'
 
-// Custom transform stream for small files
-class SmallFileTransform extends Transform {
-  private isFirstChunk = true
+// Threshold for small files where Node.js might skip compression (in bytes)
+const SMALL_FILE_THRESHOLD = 100
 
-  _transform(chunk: Buffer, encoding: string, callback: TransformCallback) {
-    if (this.isFirstChunk) {
-      // Add Brotli header for small files
-      this.push(Buffer.from([0x8B, 0x00, 0x80])) // Standard Brotli header
-      this.isFirstChunk = false
+// Precomputed minimal Brotli stream for an empty file
+const EMPTY_BROTLI_STREAM = Buffer.from([0x06]) // Final empty block, decompresses to empty buffer
+
+// Compress file, handling all cases without failing
+async function compressFile(filePath: string, options: BrotliOptions = {}): Promise<Buffer> {
+  const stats = statSync(filePath)
+  const fileSize = stats.size
+
+  if (fileSize === 0) {
+    return EMPTY_BROTLI_STREAM
+  }
+
+  const originalBuffer = await readBuffer(createReadStream(filePath))
+  const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress(options)))
+
+  // For small files or if compression was ineffective, try brotli library
+  if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
+    const uncompressedBrotli = brotli.compress(originalBuffer, {
+      mode: 0, // Generic mode
+      quality: 0, // No compression, just wrap
+    })
+    if (uncompressedBrotli) {
+      return Buffer.from(uncompressedBrotli)
     }
-    this.push(chunk)
-    callback()
+    // Fallback if brotli.compress fails: log warning and return zlib output or original wrapped minimally
+    log.warn(`Brotli library failed for ${filePath}, falling back to minimal stream or zlib output`)
+    return compressedBuffer.length > 0 ? compressedBuffer : Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
   }
 
-  _flush(callback: TransformCallback) {
-    // Add Brotli footer
-    this.push(Buffer.from([0x03]))
-    callback()
-  }
+  return compressedBuffer
 }
 
-export async function prepareBundlePartialFiles(path: string, apikey: string, orgId: string, appid: string, encryptionMethod: 'none' | 'v2' | 'v1', finalKeyData: string) {
+export async function prepareBundlePartialFiles(
+  path: string,
+  apikey: string,
+  orgId: string,
+  appid: string,
+  encryptionMethod: 'none' | 'v2' | 'v1',
+  finalKeyData: string,
+) {
   const spinner = spinnerC()
   spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : 'Generating the update manifest with v2 encryption')
   const manifest = await generateManifest(path)
@@ -65,10 +86,7 @@ function convertToUnixPath(windowsPath: string): string {
   if (osPlatform() !== 'win32') {
     return windowsPath
   }
-  // First, normalize the Windows path
   const normalizedPath = win32.normalize(windowsPath)
-
-  // Convert Windows separators to POSIX separators
   return normalizedPath.split(win32.sep).join(posix.sep)
 }
 
@@ -99,16 +117,10 @@ export async function uploadPartial(
     const finalFilePath = join(path, file.file)
     const filePathUnix = convertToUnixPath(file.file)
 
-    // Read file size first
-    const fileStats = await readBuffer(createReadStream(finalFilePath))
-    const fileStream = fileStats.length < 16
-      ? createReadStream(finalFilePath).pipe(new SmallFileTransform())
-      : createReadStream(finalFilePath).pipe(createBrotliCompress())
-    const fileBuffer = await readBuffer(fileStream)
-
+    const fileBuffer: Buffer = await compressFile(finalFilePath)
     let finalBuffer = fileBuffer
     if (encryptionOptions) {
-      finalBuffer = encryptSourceV2(fileBuffer as Buffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
+      finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
     }
 
     return new Promise((resolve, reject) => {
@@ -175,7 +187,7 @@ export async function uploadPartial(
   catch (error) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload Partial bundle ( after ${uploadTime} seconds)`)
+    spinner.stop(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
     log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
     return null
   }
