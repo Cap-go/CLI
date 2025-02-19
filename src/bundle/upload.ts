@@ -280,7 +280,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   }
   s.stop(`Checksum: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
-  if (noKey === false) {
+  if (noKey) {
     log.info(`Encryption ignored`)
   }
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
