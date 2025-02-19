@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.0.17](https://github.com/Cap-go/CLI/compare/v7.0.16...v7.0.17) (2025-02-19)
+
+
+### Bug Fixes
+
+* android brotli ([75752fe](https://github.com/Cap-go/CLI/commit/75752fe79579d08817fef5e4a7232e4334ed172d))
+* partial for empty files ([87281c6](https://github.com/Cap-go/CLI/commit/87281c6f488675ba56a100161dd418a4940a1422))
+
 ### [7.0.16](https://github.com/Cap-go/CLI/compare/v7.0.15...v7.0.16) (2025-02-19)
 
 
