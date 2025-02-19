@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.1.0](https://github.com/Cap-go/CLI/compare/v7.0.17...v7.1.0) (2025-02-19)
+
+
+### Features
+
+* fix partial for empty files ([1ea127b](https://github.com/Cap-go/CLI/commit/1ea127b250db849dc95bcbb851dab61a9d49beb4))
+
 ### [7.0.17](https://github.com/Cap-go/CLI/compare/v7.0.16...v7.0.17) (2025-02-19)
 
 
