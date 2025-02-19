@@ -263,6 +263,18 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   let updaterVersion = dependencies.get('@capgo/capacitor-updater')
   // clean the version
   updaterVersion = updaterVersion?.replace('^', '').replace('~', '')
+  // make sure the version is vemvers and not fucking npm loose version with missing "."
+  if (updaterVersion) {
+    const versionParts = updaterVersion.split('.')
+    if (versionParts.length === 2) {
+      log.warn(`Your @capgo/capacitor-updater is ${updaterVersion}, please update to a full version like x.x.x`)
+      updaterVersion = `${updaterVersion}.0`
+    }
+    else if (versionParts.length === 1) {
+      log.warn(`Your @capgo/capacitor-updater is ${updaterVersion}, please update to a full version like x.x.x`)
+      updaterVersion = `${updaterVersion}.0.0`
+    }
+  }
   let isv7 = false
   if (!updaterVersion) {
     // TODO: remove this once we have a proper way to check the version
