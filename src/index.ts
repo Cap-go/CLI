@@ -131,8 +131,6 @@ bundle
   .option('--s3-bucket-name <bucketName>', 'Name for your AWS S3 bucket')
   .option('--s3-port <port>', 'Port for your S3 endpoint')
   .option('--no-s3-ssl', 'Disable SSL for S3 upload')
-  .option('--key <key>', 'custom path for public signing key (v1 system)')
-  .option('--key-data <keyData>', 'public signing key  (v1 system)')
   .option('--key-v2 <key>', 'custom path for private signing key (v2 system)')
   .option('--key-data-v2  <keyDataV2>', 'private signing key (v2 system)')
   .option('--bundle-url', 'prints bundle url into stdout')
