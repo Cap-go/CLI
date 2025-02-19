@@ -271,7 +271,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   else {
     isv7 = greaterOrEqual(parse(updaterVersion), parse('7.0.0'))
   }
-  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && keyV2 !== false) || isv7) {
+  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
