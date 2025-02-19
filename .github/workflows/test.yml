@@ -1,5 +1,9 @@
 name: Run tests
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -14,7 +18,7 @@ env:
 jobs:
   web:
     runs-on: ubuntu-latest
-    name: "Run tests"
+    name: Run tests
     steps:
       - name: Check out
         uses: actions/checkout@v4
@@ -34,18 +38,18 @@ jobs:
       - name: Run
         id: run_cli
         run: node dist/index.js --help
-      
+
       # New steps for Capgo backend setup
-      - name: Cache Deno dependencies 
+      - name: Cache Deno dependencies
         uses: actions/cache@v4
         with:
           path: ${{ env.DENO_DIR }}
           key: my_cache_key
-      - name: "Checkout capgo"
+      - name: Checkout capgo
         uses: actions/checkout@v4
         with:
-          repository: 'Cap-go/capgo'
-          path: 'capgo'
+          repository: Cap-go/capgo
+          path: capgo
       - name: Install Supabase CLI
         uses: supabase/setup-cli@v1
         with:
@@ -55,7 +59,7 @@ jobs:
         run: supabase start -x imgproxy,studio,realtime,studio,logflare,vector,inbucket
       - name: Install Capgo dependencies
         working-directory: capgo
-        run: bun install  
+        run: bun install
       - name: Run CLI tests
         working-directory: capgo
         run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli

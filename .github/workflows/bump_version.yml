@@ -1,5 +1,9 @@
 name: Bump version
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches:
@@ -10,13 +14,13 @@ jobs:
   bump-version:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
-    name: "Bump version and create changelog with standard version"
+    name: Bump version and create changelog with standard version
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+          token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -43,7 +47,7 @@ jobs:
   create-cache:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
-    name: "Create global cache on main branch"
+    name: Create global cache on main branch
     steps:
       - name: Checkout
         uses: actions/checkout@v4
