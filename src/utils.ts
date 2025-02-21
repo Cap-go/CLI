@@ -773,9 +773,19 @@ async function* walkDirectory(dir: string): AsyncGenerator<string> {
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
   const allFiles: { file: string, hash: string }[] = []
+  const ignoredFiles = ['.DS_Store', '.git', '.gitignore', 'node_modules', 'package-lock.json', 'package.json', 'tsconfig.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json']
 
   for await (const file of walkDirectory(path)) {
+    if (ignoredFiles.some(ignoredFile => file.includes(ignoredFile))) {
+      log.info(`Ignoring file ${file}, please ensure you have only required files in your dist folder`)
+      continue
+    }
     const buffer = readFileSync(file)
+    // ignore files with size 0
+    if (buffer.length === 0) {
+      log.info(`Ignoring empty file ${file}, please ensure you have only required files in your dist folder`)
+      continue
+    }
     const hash = await getChecksum(buffer, 'sha256')
     let filePath = relative(path, file)
     if (filePath.startsWith('/'))
