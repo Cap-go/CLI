@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.2](https://github.com/Cap-go/CLI/compare/v7.1.1...v7.1.2) (2025-02-21)
+
+
+### Bug Fixes
+
+* add ignore list for manifest to reduce bundle size ([077e323](https://github.com/Cap-go/CLI/commit/077e323e80473ac5ea3ed4b1245a624a27d40ca9))
+
 ### [7.1.1](https://github.com/Cap-go/CLI/compare/v7.1.0...v7.1.1) (2025-02-19)
 
 
