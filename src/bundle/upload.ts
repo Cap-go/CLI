@@ -278,8 +278,9 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   let isv7 = false
   if (!updaterVersion) {
     // TODO: remove this once we have a proper way to check the version
-    log.warn('Cannot find @capgo/capacitor-updater in your package.json, assuming it is v7')
-    isv7 = true
+    log.warn('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
+    program.error('')
+    return
   }
   else {
     isv7 = greaterOrEqual(parse(updaterVersion), parse('7.0.0'))
