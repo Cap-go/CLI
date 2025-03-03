@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.7](https://github.com/Cap-go/CLI/compare/v7.1.6...v7.1.7) (2025-03-03)
+
+
+### Bug Fixes
+
+* issue with semver ([e8d18b3](https://github.com/Cap-go/CLI/commit/e8d18b3fb82d1fffea5d165014abed0a87e5c1f2))
+
 ### [7.1.6](https://github.com/Cap-go/CLI/compare/v7.1.5...v7.1.6) (2025-03-03)
 
 
