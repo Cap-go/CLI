@@ -38,9 +38,10 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.ref }}
-          check-name: POSIX Paths final
+          check-regexp: .*POSIX Paths.*
           repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
           wait-interval: 10
+          verbose: true
       - name: Wait for tests to succeed
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
