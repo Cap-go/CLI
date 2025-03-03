@@ -13,7 +13,7 @@ import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
-import semverGt from 'semver/functions/gt'
+import semverGte from 'semver/functions/gte'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
@@ -232,7 +232,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     return undefined as any
   }
   else {
-    isv7 = semverGt(updaterVersion, '7.0.0')
+    isv7 = semverGte(updaterVersion, '7.0.0')
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')

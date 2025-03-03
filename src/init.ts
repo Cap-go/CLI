@@ -218,7 +218,7 @@ async function getAssistedDependencies(stepsDone: number) {
 }
 
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
-const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
+const urlMigrateV7 = 'https://capacitorjs.com/docs/updating/7-0'
 async function step4(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doInstall = await pConfirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
@@ -243,15 +243,16 @@ async function step4(orgId: string, apikey: string, appId: string) {
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '5.0.0')) {
+
+    if (semverLt(coreVersion, '6.0.0')) {
       s.stop('Error')
-      pLog.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
+      pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only support 2 last Capacitor versions, please update to Capacitor v6 minimum: ${urlMigrateV6}`)
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '6.0.0')) {
-      s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
-      versionToInstall = '^5.0.0'
+    else if (semverLt(coreVersion, '7.0.0')) {
+      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to get the best features of Capgo`)
+      versionToInstall = '^7.0.0'
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
