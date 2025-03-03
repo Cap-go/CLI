@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.11](https://github.com/Cap-go/CLI/compare/v7.1.10...v7.1.11) (2025-03-03)
+
+
+### Bug Fixes
+
+* better error when s3 issue ([a47f087](https://github.com/Cap-go/CLI/commit/a47f08710002d169f394694b0dd44e16c007dfc8))
+* rject partial with incorrect updater version ([e02bee0](https://github.com/Cap-go/CLI/commit/e02bee0f9a4ead2667ced1b63a9499361b7c5718))
+
 ### [7.1.10](https://github.com/Cap-go/CLI/compare/v7.1.9...v7.1.10) (2025-03-03)
 
 
