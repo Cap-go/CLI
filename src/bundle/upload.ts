@@ -346,6 +346,9 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
         timeout: options.timeout || UPLOAD_TIMEOUT,
         retry: 5,
         body: zipped,
+        headers: {
+          'Content-Type': 'application/zip',
+        },
       })
     }
   }
@@ -354,8 +357,22 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
     if (errorUpload instanceof HTTPError) {
-      const body = await errorUpload.response.json<{ error?: string, status?: string, message?: string }>()
-      log.error(`Response Error: ${body.error || body.status || body.message}`)
+      try {
+        const text = await errorUpload.response.text()
+        if (text.startsWith('<?xml')) {
+          // Parse XML error message
+          const matches = text.match(/<Message>(.*?)<\/Message>/s)
+          const message = matches ? matches[1] : 'Unknown S3 error'
+          log.error(`S3 Upload Error: ${message}`)
+        }
+        else {
+          const body = JSON.parse(text)
+          log.error(`Response Error: ${body.error || body.status || body.message}`)
+        }
+      }
+      catch {
+        log.error(`Upload failed with status ${errorUpload.response.status}: ${errorUpload.message}`)
+      }
     }
     else {
       if (!options.tus) {
