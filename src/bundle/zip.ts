@@ -12,8 +12,8 @@ import {
   baseKeyV2,
   formatError,
   getAppId,
+  getBundleVersion,
   getConfig,
-  readPackageJson,
   regexSemver,
   zipFile,
 } from '../utils'
@@ -42,8 +42,8 @@ export async function zipBundle(appId: string, options: Options) {
     appId = getAppId(appId, extConfig?.config)
     // create bundle name format : 1.0.0-beta.x where x is a uuid
     const uuid = randomUUID().split('-')[0]
-    const pack = await readPackageJson('', options.packageJson)
-    bundle = bundle || pack?.version || `0.0.1-beta.${uuid}`
+    const packVersion = getBundleVersion('', options.packageJson)
+    bundle = bundle || packVersion || `0.0.1-beta.${uuid}`
     if (!json)
       intro(`Zipping ${appId}@${bundle}`)
     // check if bundle is valid

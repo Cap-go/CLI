@@ -2,6 +2,7 @@ import type { OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { program } from 'commander'
+// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import subset from 'semver/ranges/subset'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkCompatibility, createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'

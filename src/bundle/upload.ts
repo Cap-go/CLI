@@ -1,74 +1,37 @@
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig } from '../config'
 import type { Database } from '../types/supabase.types'
-import type { manifestType, OptionsBase } from '../utils'
+import type { manifestType } from '../utils'
+import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path/posix'
 import { cwd, exit } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
-import { greaterOrEqual, parse } from '@std/semver'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
+// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
+import semverGt from 'semver/functions/gt'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, readPackageJson, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
-
-interface Options extends OptionsBase {
-  bundle?: string
-  path?: string
-  channel?: string
-  displayIvSession?: boolean
-  external?: string
-  key?: boolean
-  keyV2?: string
-  keyDataV2?: string
-  ivSessionKey?: string
-  s3Region?: string
-  s3Apikey?: string
-  s3Apisecret?: string
-  s3BucketName?: string
-  s3Port?: number
-  s3SSL?: boolean
-  s3Endpoint?: string
-  bundleUrl?: boolean
-  codeCheck?: boolean
-  oldEncryption?: boolean
-  minUpdateVersion?: string
-  autoMinUpdateVersion?: boolean
-  autoSetBundle?: boolean
-  ignoreMetadataCheck?: boolean
-  ignoreChecksumCheck?: boolean
-  timeout?: number
-  multipart?: boolean
-  partial?: boolean
-  partialOnly?: boolean
-  tus?: boolean
-  encryptedChecksum?: string
-  packageJson?: string
-  dryUpload?: boolean
-  nodeModules?: string
-  encryptPartial?: boolean
-  deleteLinkedBundleOnUpload?: boolean
-  tusChunkSize?: number
-}
 
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
 
-async function getBundle(config: CapacitorConfig, options: Options) {
-  const pkg = await readPackageJson('', options.packageJson)
+async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
+  const pkgVersion = getBundleVersion('', options.packageJson)
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const bundle = options.bundle
     || config?.plugins?.CapacitorUpdater?.version
-    || pkg?.version
+    || pkgVersion
     || `0.0.1-beta.${randomUUID().split('-')[0]}`
 
   if (!regexSemver.test(bundle)) {
@@ -79,7 +42,7 @@ async function getBundle(config: CapacitorConfig, options: Options) {
   return bundle
 }
 
-function getApikey(options: Options) {
+function getApikey(options: OptionsUpload) {
   const apikey = options.apikey || findSavedKey()
   if (!apikey) {
     log.error(`Missing API key, you need to provide a API key to upload your bundle`)
@@ -89,7 +52,7 @@ function getApikey(options: Options) {
   return apikey
 }
 
-function getAppIdAndPath(appId: string | undefined, options: Options, config: CapacitorConfig) {
+function getAppIdAndPath(appId: string | undefined, options: OptionsUpload, config: CapacitorConfig) {
   const finalAppId = getAppId(appId, config)
   const path = options.path || config?.webDir
 
@@ -110,7 +73,7 @@ function getAppIdAndPath(appId: string | undefined, options: Options, config: Ca
   return { appid: finalAppId, path }
 }
 
-function checkNotifyAppReady(options: Options, path: string) {
+function checkNotifyAppReady(options: OptionsUpload, path: string) {
   const checkNotifyAppReady = options.codeCheck
 
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
@@ -127,7 +90,7 @@ function checkNotifyAppReady(options: Options, path: string) {
   }
 }
 
-async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: Options, channel: string, appid: string, bundle: string) {
+async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: OptionsUpload, channel: string, appid: string, bundle: string) {
   // Check compatibility here
   const ignoreMetadataCheck = options.ignoreMetadataCheck
   const autoMinUpdateVersion = options.autoMinUpdateVersion
@@ -244,7 +207,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   }
 }
 
-async function prepareBundleFile(path: string, options: Options, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number) {
+async function prepareBundleFile(path: string, options: OptionsUpload, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number) {
   let ivSessionKey
   let sessionKey
   let checksum = ''
@@ -257,33 +220,19 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  const root = join(findRoot(cwd()), 'package.json')
+  const root = join(findRoot(cwd()), PACKNAME)
   // options.packageJson
   const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-  let updaterVersion = dependencies.get('@capgo/capacitor-updater')
-  // clean the version
-  updaterVersion = updaterVersion?.replace('^', '').replace('~', '')
-  // make sure the version is vemvers and not fucking npm loose version with missing "."
-  if (updaterVersion) {
-    const versionParts = updaterVersion.split('.')
-    if (versionParts.length === 2) {
-      log.warn(`Your @capgo/capacitor-updater is ${updaterVersion}, please update to a full version like x.x.x`)
-      updaterVersion = `${updaterVersion}.0`
-    }
-    else if (versionParts.length === 1) {
-      log.warn(`Your @capgo/capacitor-updater is ${updaterVersion}, please update to a full version like x.x.x`)
-      updaterVersion = `${updaterVersion}.0.0`
-    }
-  }
+  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
   let isv7 = false
   if (!updaterVersion) {
     // TODO: remove this once we have a proper way to check the version
     log.warn('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
     program.error('')
-    return
+    return undefined as any
   }
   else {
-    isv7 = greaterOrEqual(parse(updaterVersion), parse('7.0.0'))
+    isv7 = semverGt(updaterVersion, '7.0.0')
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
@@ -356,7 +305,7 @@ async function prepareBundleFile(path: string, options: Options, apikey: string,
   return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData }
 }
 
-async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: Options, tusChunkSize: number) {
+async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: OptionsUpload, tusChunkSize: number) {
   const spinner = spinnerC()
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
@@ -545,7 +494,7 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
   return data.default_upload_channel
 }
 
-export async function uploadBundle(preAppid: string, options: Options, shouldExit = true) {
+export async function uploadBundle(preAppid: string, options: OptionsUpload, shouldExit = true) {
   intro(`Uploading with CLI version ${pack.version}`)
   let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
@@ -675,11 +624,12 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     }
 
     log.info('Uploading to S3')
+    const endPoint = s3SSL ? `https://${s3Endpoint}` : `http://${s3Endpoint}`
     const s3Client = new S3Client({
       endPoint: s3Endpoint,
       region: s3Region,
       port: s3Port,
-      useSSL: s3SSL,
+      pathStyle: true,
       bucket: s3BucketName,
       accessKey: s3Apikey,
       secretKey: s3Apisecret,
@@ -687,7 +637,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
     const fileName = `${appid}-${bundle}`
     const encodeFileName = encodeURIComponent(fileName)
     await s3Client.putObject(fileName, Uint8Array.from(zipped))
-    versionData.external_url = `https://${s3Endpoint}/${encodeFileName}`
+    versionData.external_url = `${endPoint}/${encodeFileName}`
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
@@ -716,7 +666,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
           bundle,
           orgId,
           encryptionData,
-          options.tusChunkSize,
+          options,
         )
         : null
     }
@@ -767,7 +717,7 @@ export async function uploadBundle(preAppid: string, options: Options, shouldExi
   return true
 }
 
-function checkValidOptions(options: Options) {
+function checkValidOptions(options: OptionsUpload) {
   if (options.ivSessionKey && !options.external) {
     log.error('You need to provide an external url if you want to use the --iv-session-key option')
     program.error('')
@@ -819,7 +769,7 @@ function checkValidOptions(options: Options) {
   }
 }
 
-export async function uploadCommand(appid: string, options: Options) {
+export async function uploadCommand(appid: string, options: OptionsUpload) {
   try {
     checkValidOptions(options)
     await uploadBundle(appid, options, true)

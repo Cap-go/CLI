@@ -13,10 +13,10 @@ import {
   findSavedKey,
   formatError,
   getAppId,
+  getBundleVersion,
   getConfig,
   getOrganizationId,
   OrganizationPerm,
-  readPackageJson,
   sendEvent,
   verifyUser,
 } from '../utils'
@@ -33,8 +33,8 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
   appId = getAppId(appId, extConfig?.config)
   let { bundle } = options
 
-  const pack = await readPackageJson('', options.packageJson)
-  bundle = bundle || pack?.version
+  const packVersion = getBundleVersion('', options.packageJson)
+  bundle = bundle || packVersion
 
   if (!options.apikey) {
     log.error('Missing API key, you need to provide a API key to upload your bundle')

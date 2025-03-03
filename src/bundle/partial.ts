@@ -1,17 +1,18 @@
-import type { BrotliOptions } from 'node:zlib'
 import type { manifestType } from '../utils'
+import type { OptionsUpload } from './upload_interface'
 import { Buffer } from 'node:buffer'
 import { createReadStream, statSync } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
 import { join, posix, win32 } from 'node:path'
+import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
-
 import * as brotli from 'brotli'
+import semverSatisfies from 'semver/functions/satisfies'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { generateManifest, getLocalConfig, sendEvent } from '../utils'
+import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
 
 // Threshold for small files where Node.js might skip compression (in bytes)
 const SMALL_FILE_THRESHOLD = 4096
@@ -20,7 +21,7 @@ const SMALL_FILE_THRESHOLD = 4096
 const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
 
 // Compress file, ensuring compatibility and no failures
-async function compressFile(filePath: string, options: BrotliOptions = {}): Promise<Buffer> {
+async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<Buffer> {
   const stats = statSync(filePath)
   const fileSize = stats.size
 
@@ -29,7 +30,7 @@ async function compressFile(filePath: string, options: BrotliOptions = {}): Prom
   }
 
   const originalBuffer = await readBuffer(createReadStream(filePath))
-  const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress(options)))
+  const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress({})))
 
   // For small files or ineffective compression, use brotli library
   if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
@@ -41,11 +42,23 @@ async function compressFile(filePath: string, options: BrotliOptions = {}): Prom
       return Buffer.from(uncompressedBrotli)
     }
     // Fallback if brotli.compress fails
-    log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 7.0.21 or higher to work on IOS`)
+    // will work only with > 6.14.12 or > 7.0.23
+    const root = join(findRoot(cwd()), PACKNAME)
+    const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
+    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    if (!updaterVersion) {
+      log.warn(`Cannot find @capgo/capacitor-updater in package.json, please provide the package.json path to the command with --package-json`)
+      throw new Error('Updater version not found')
+    }
+
+    if (!semverSatisfies(updaterVersion, '>=6.14.12 <7.0.0 || >=7.0.23')) {
+      log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
+    }
+
     if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
       return compressedBuffer // Use zlib if it produced something reasonable
     }
-    // Last resort: minimal manual stream (shouldn’t reach here often)
+    // Last resort: minimal manual stream (shouldn't reach here often)
     return Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
   }
 
@@ -94,6 +107,17 @@ function convertToUnixPath(windowsPath: string): string {
   return normalizedPath.split(win32.sep).join(posix.sep)
 }
 
+// Properly encode path segments while preserving slashes
+function encodePathSegments(path: string): string {
+  const result = path.split('/').map(segment => encodeURIComponent(segment)).join('/')
+  // if has space print it
+  if (path.includes(' ') || result.includes('PreviewFrame')) {
+    log.warn(`File "${path}" contains spaces in its name.`)
+    log.warn(`File "${result}" contains spaces in its name.`)
+  }
+  return result
+}
+
 interface PartialEncryptionOptions {
   sessionKey: Buffer
   ivSessionKey: string
@@ -107,12 +131,19 @@ export async function uploadPartial(
   name: string,
   orgId: string,
   encryptionOptions: PartialEncryptionOptions | undefined,
-  chunkSize: number,
+  options: OptionsUpload,
 ): Promise<any[] | null> {
   const spinner = spinnerC()
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
   const localConfig = await getLocalConfig()
+
+  // Check if any files have spaces in their names
+  const filesWithSpaces = manifest.filter(file => file.file.includes(' '))
+
+  if (filesWithSpaces.length > 0) {
+    throw new Error(`Files with spaces in their names (${filesWithSpaces.map(f => f.file).join(', ')}). Please rename the files.`)
+  }
 
   let uploadedFiles = 0
   const totalFiles = manifest.length
@@ -121,24 +152,26 @@ export async function uploadPartial(
     const finalFilePath = join(path, file.file)
     const filePathUnix = convertToUnixPath(file.file)
 
-    const fileBuffer: Buffer = await compressFile(finalFilePath)
+    const fileBuffer: Buffer = await compressFile(finalFilePath, options)
     let finalBuffer = fileBuffer
     if (encryptionOptions) {
       finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
     }
+    const filePathUnixSafe = encodePathSegments(filePathUnix)
+    const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
 
     return new Promise((resolve, reject) => {
       const upload = new tus.Upload(finalBuffer as any, {
         endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
-        chunkSize,
+        chunkSize: options.tusChunkSize,
         metadata: {
-          filename: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
+          filename,
         },
         headers: {
           Authorization: apikey,
         },
         onError(error) {
-          log.info(`Failed to upload ${filePathUnix}: ${error}`)
+          log.info(`Failed to upload ${filePathUnixSafe}: ${error}`)
           reject(error)
         },
         onProgress() {
@@ -148,8 +181,8 @@ export async function uploadPartial(
         onSuccess() {
           uploadedFiles++
           resolve({
-            file_name: filePathUnix,
-            s3_path: `orgs/${orgId}/apps/${appId}/${name}/${filePathUnix}`,
+            file_name: filePathUnixSafe,
+            s3_path: filename,
             file_hash: file.hash,
           })
         },

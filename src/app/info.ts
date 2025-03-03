@@ -3,7 +3,7 @@ import { exit, version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
 import latestVersion from 'latest-version'
 import pack from '../../package.json'
-import { getAppId, getConfig, readPackageJson } from '../utils'
+import { getAllPackagesDependencies, getAppId, getBundleVersion, getConfig } from '../utils'
 
 async function getLatestDependencies(installedDependencies: { [key: string]: string }) {
   const latestDependencies: { [key: string]: string } = {}
@@ -27,20 +27,17 @@ async function getLatestDependencies(installedDependencies: { [key: string]: str
 }
 
 async function getInstalledDependencies() {
-  const { dependencies } = await readPackageJson()
+  const dependencies = await getAllPackagesDependencies()
   const installedDependencies: { [key: string]: string } = {
     '@capgo/cli': pack.version,
   }
-  for (const dependency in dependencies) {
-    if (Object.prototype.hasOwnProperty.call(dependencies, dependency)
-      && dependency.startsWith('@capgo/')
-      && dependency.startsWith('@capawesome/')
-      && dependency.startsWith('capacitor')) {
-      // remove ^ or ~ from version
-      const version = dependencies[dependency].replace('^', '').replace('~', '')
+  dependencies.forEach((version, dependency) => {
+    if (dependency.startsWith('@capgo/')
+      || dependency.startsWith('@capawesome/')
+      || dependency.startsWith('capacitor')) {
       installedDependencies[dependency] = version
     }
-  }
+  })
   return installedDependencies
 }
 
@@ -48,10 +45,10 @@ export async function getInfo(options: { packageJson?: string }) {
   log.warn(' 💊   Capgo Doctor  💊')
   // app name
   const extConfig = await getConfig()
-  const pkg = await readPackageJson('', options.packageJson)
+  const pkgVersion = getBundleVersion('', options.packageJson)
   // create bundle name format : 1.0.0-beta.x where x is a uuid
   const appVersion = extConfig?.config?.plugins?.CapacitorUpdater?.version
-    || pkg?.version
+    || pkgVersion
   const appName = extConfig?.config?.appName || ''
   log.info(` App Name: ${appName}`)
   // app id

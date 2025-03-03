@@ -4,6 +4,7 @@ import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
+// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import {
   format,
   greaterThan,

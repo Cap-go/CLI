@@ -6,10 +6,8 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
-import {
-  lessThan,
-  parse,
-} from '@std/semver'
+// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
+import semverLt from 'semver/functions/lt'
 import tmp from 'tmp'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
@@ -18,7 +16,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getConfig, getLocalConfig, getOrganization, getPMAndCommand, projectIsMonorepo, readPackageJson, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfig, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -154,7 +152,7 @@ async function step3(orgId: string, apikey: string, appId: string) {
 
 async function getAssistedDependencies(stepsDone: number) {
   // here we will assume that getAlllPackagesDependencies uses 'findRoot(cwd())' for the first argument
-  const root = join(findRoot(cwd()), 'package.json')
+  const root = join(findRoot(cwd()), PACKNAME)
   const dependencies = !globalPathToPackageJson ? await getAllPackagesDependencies(undefined, root) : await getAllPackagesDependencies(undefined, globalPathToPackageJson)
   if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
     pLog.warn('No adequate dependencies found')
@@ -172,7 +170,7 @@ async function getAssistedDependencies(stepsDone: number) {
 
       if (useTreeSelect) {
         let path = cwd()
-        let selectedPath = 'package.json' as string | symbol
+        let selectedPath = PACKNAME as string | symbol
         while (true) {
           const options = readdirSync(path)
             .map(dir => ({ value: dir, label: dir }))
@@ -185,12 +183,12 @@ async function getAssistedDependencies(stepsDone: number) {
             pCancel('Operation cancelled.')
             exit(1)
           }
-          if (!statSync(join(path, selectedPath)).isDirectory() && selectedPath !== 'package.json') {
+          if (!statSync(join(path, selectedPath)).isDirectory() && selectedPath !== PACKNAME) {
             pLog.error(`Selected a file that is not a package.json file`)
             continue
           }
           path = join(path, selectedPath)
-          if (selectedPath === 'package.json') {
+          if (selectedPath === PACKNAME) {
             break
           }
         }
@@ -238,20 +236,20 @@ async function step4(orgId: string, apikey: string, appId: string) {
       exit()
     }
 
-    const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
+    const coreVersion = dependencies.get('@capacitor/core')
     if (!coreVersion) {
       s.stop('Error')
       pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (lessThan(coreVersion, parse('5.0.0'))) {
+    else if (semverLt(coreVersion, '5.0.0')) {
       s.stop('Error')
       pLog.warn(`@capacitor/core version is ${coreVersion}, please update to Capacitor v5 first: ${urlMigrateV5}`)
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (lessThan(coreVersion, parse('6.0.0'))) {
+    else if (semverLt(coreVersion, '6.0.0')) {
       s.stop(`@capacitor/core version is ${coreVersion}, please update to Capacitor v6: ${urlMigrateV6} to access the best features of Capgo`)
       versionToInstall = '^5.0.0'
     }
@@ -269,8 +267,8 @@ async function step4(orgId: string, apikey: string, appId: string) {
     }
     else {
       await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
-      const pkg = await readPackageJson(undefined, path)
-      await updateConfig({ version: pkg?.version || '1.0.0', appId, autoUpdate: true })
+      const pkgVersion = await getBundleVersion(undefined, path)
+      await updateConfig({ version: pkgVersion || '1.0.0', appId, autoUpdate: true })
       s.stop(`Install Done ✅`)
     }
   }
@@ -385,7 +383,7 @@ async function step5(orgId: string, apikey: string, appId: string) {
 
 async function step6(orgId: string, apikey: string, appId: string) {
   const dependencies = await getAllPackagesDependencies()
-  const coreVersion = parse(dependencies.get('@capacitor/core')?.replace('^', '').replace('~', '') ?? '')
+  const coreVersion = dependencies.get('@capacitor/core')
   if (!coreVersion) {
     pLog.warn(`Cannot find @capacitor/core in package.json. It is likely that you are using a monorepo. Please NOTE that encryption is not supported in Capacitor V5.`)
   }
@@ -394,7 +392,7 @@ async function step6(orgId: string, apikey: string, appId: string) {
   const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
-    if (coreVersion && lessThan(coreVersion, parse('6.0.0'))) {
+    if (coreVersion && semverLt(coreVersion, '6.0.0')) {
       pLog.warn(`Encryption is not supported in Capacitor V5.`)
       return
     }
@@ -425,9 +423,9 @@ async function step7(orgId: string, apikey: string, appId: string) {
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
     s.start(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
-    const pack = await readPackageJson()
+    const packScripts = await getPackageScripts()
     // check in script build exist
-    if (!pack.scripts[buildCommand]) {
+    if (!packScripts[buildCommand]) {
       s.stop('Error')
       pLog.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
       pOutro(`Bye 👋`)

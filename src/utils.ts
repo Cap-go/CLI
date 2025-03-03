@@ -16,6 +16,8 @@ import AdmZip from 'adm-zip'
 import { program } from 'commander'
 import ky from 'ky'
 import prettyjson from 'prettyjson'
+import cleanVersion from 'semver/functions/clean'
+import coerceVersion from 'semver/functions/coerce'
 import * as tus from 'tus-js-client'
 import { loadConfig, writeConfig } from './config'
 
@@ -32,7 +34,7 @@ export const ALERT_UPLOAD_SIZE_BYTES = 1024 * 1024 * 20 // 20MB
 export const MAX_UPLOAD_LENGTH_BYTES = 1024 * 1024 * 1024 // 1GB
 export const MAX_CHUNK_SIZE_BYTES = 1024 * 1024 * 99 // 99MB
 
-const PACKNAME = 'package.json'
+export const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]> =
   ArrayType extends readonly (infer ElementType)[] ? ElementType : never
@@ -118,7 +120,8 @@ export function findRoot(dir: string) {
   return dir
 }
 
-export async function readPackageJson(f: string = findRoot(cwd()), file: string | undefined = undefined) {
+// do not expose this function this prevent missuses
+function readPackageJson(f: string = findRoot(cwd()), file: string | undefined = undefined) {
   const fileSplit = file?.split(',')[0]
   if (fileSplit) {
     if (!existsSync(fileSplit)) {
@@ -128,6 +131,15 @@ export async function readPackageJson(f: string = findRoot(cwd()), file: string 
   }
   const packageJson = readFileSync(!fileSplit ? join(f, PACKNAME) : fileSplit)
   return JSON.parse(packageJson as any)
+}
+
+export function getPackageScripts(f: string = findRoot(cwd()), file: string | undefined = undefined): Record<string, string> {
+  const packageJson = readPackageJson(f, file)
+  return packageJson.scripts
+}
+export function getBundleVersion(f: string = findRoot(cwd()), file: string | undefined = undefined): string {
+  const packageJson = readPackageJson(f, file)
+  return packageJson.version ?? ''
 }
 
 export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
@@ -149,10 +161,10 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
     const packageJson = readFileSync(file)
     const pkg = JSON.parse(packageJson as any)
     for (const dependency in pkg.dependencies) {
-      dependencies.set(dependency, pkg.dependencies[dependency])
+      dependencies.set(dependency, cleanVersion(coerceVersion(pkg.dependencies[dependency])?.version ?? '') ?? '')
     }
     for (const dependency in pkg.devDependencies) {
-      dependencies.set(dependency, pkg.devDependencies[dependency])
+      dependencies.set(dependency, cleanVersion(coerceVersion(pkg.devDependencies[dependency])?.version ?? '') ?? '')
     }
   }
   return dependencies
@@ -625,7 +637,7 @@ export async function findProjectType() {
       log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
-    if (f.includes('package.json')) {
+    if (f.includes(PACKNAME)) {
       const folder = dirname(f)
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
@@ -773,7 +785,7 @@ async function* walkDirectory(dir: string): AsyncGenerator<string> {
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {
   const allFiles: { file: string, hash: string }[] = []
-  const ignoredFiles = ['.DS_Store', '.git', '.gitignore', 'node_modules', 'package-lock.json', 'package.json', 'tsconfig.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json']
+  const ignoredFiles = ['.DS_Store', '.git', '.gitignore', 'node_modules', 'package-lock.json', 'tsconfig.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json', 'tsconfig.app.json', 'tsconfig.spec.json']
 
   for await (const file of walkDirectory(path)) {
     if (ignoredFiles.some(ignoredFile => file.includes(ignoredFile))) {
@@ -1131,7 +1143,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
     program.error('')
   }
   const firstPackageJson = packageJsonPath?.split(',')[0]
-  const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace('package.json', '')
+  const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace(PACKNAME, '')
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
     program.error('')

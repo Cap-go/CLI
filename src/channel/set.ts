@@ -12,10 +12,10 @@ import {
   findSavedKey,
   formatError,
   getAppId,
+  getBundleVersion,
   getConfig,
   getOrganizationId,
   OrganizationPerm,
-  readPackageJson,
   sendEvent,
   updateOrCreateChannel,
   verifyUser,
@@ -91,8 +91,7 @@ export async function setChannel(channel: string, appId: string, options: Option
       owner_org: orgId,
       version: undefined as any,
     }
-    const pack = await readPackageJson('', options.packageJson)
-    const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || pack?.version) : bundle
+    const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || getBundleVersion('', options.packageJson)) : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
         .from('app_versions')
