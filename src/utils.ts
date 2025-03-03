@@ -18,6 +18,7 @@ import ky from 'ky'
 import prettyjson from 'prettyjson'
 import cleanVersion from 'semver/functions/clean'
 import coerceVersion from 'semver/functions/coerce'
+import validVersion from 'semver/functions/valid'
 import * as tus from 'tus-js-client'
 import { loadConfig, writeConfig } from './config'
 
@@ -142,6 +143,16 @@ export function getBundleVersion(f: string = findRoot(cwd()), file: string | und
   return packageJson.version ?? ''
 }
 
+function returnVersion(version: string) {
+  if (validVersion(version)) {
+    const coerced = coerceVersion(version)
+    if (coerced) {
+      return cleanVersion(coerced.version) ?? version
+    }
+  }
+  return version
+}
+
 export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
   // if file contain , split by comma and return the array
   let files = file?.split(',')
@@ -161,10 +172,10 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
     const packageJson = readFileSync(file)
     const pkg = JSON.parse(packageJson as any)
     for (const dependency in pkg.dependencies) {
-      dependencies.set(dependency, cleanVersion(coerceVersion(pkg.dependencies[dependency])?.version ?? '') ?? '')
+      dependencies.set(dependency, returnVersion(pkg.dependencies[dependency]))
     }
     for (const dependency in pkg.devDependencies) {
-      dependencies.set(dependency, cleanVersion(coerceVersion(pkg.devDependencies[dependency])?.version ?? '') ?? '')
+      dependencies.set(dependency, returnVersion(pkg.devDependencies[dependency]))
     }
   }
   return dependencies
