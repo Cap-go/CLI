@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.5](https://github.com/Cap-go/CLI/compare/v7.1.4...v7.1.5) (2025-03-03)
+
+
+### Bug Fixes
+
+* semver issue + prevent partial name with space ([5799ed6](https://github.com/Cap-go/CLI/commit/5799ed68069f1b3326902d37425dcb862370b9de))
+
 ### [7.1.4](https://github.com/Cap-go/CLI/compare/v7.1.3...v7.1.4) (2025-02-25)
 
 
