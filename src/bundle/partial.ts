@@ -53,6 +53,7 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
 
     if (!semverSatisfies(updaterVersion, '>=6.14.12 <7.0.0 || >=7.0.23')) {
       log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
+      throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
     }
 
     if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
@@ -148,51 +149,51 @@ export async function uploadPartial(
   let uploadedFiles = 0
   const totalFiles = manifest.length
 
-  const uploadFiles = manifest.map(async (file) => {
-    const finalFilePath = join(path, file.file)
-    const filePathUnix = convertToUnixPath(file.file)
-
-    const fileBuffer: Buffer = await compressFile(finalFilePath, options)
-    let finalBuffer = fileBuffer
-    if (encryptionOptions) {
-      finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
-    }
-    const filePathUnixSafe = encodePathSegments(filePathUnix)
-    const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
-
-    return new Promise((resolve, reject) => {
-      const upload = new tus.Upload(finalBuffer as any, {
-        endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
-        chunkSize: options.tusChunkSize,
-        metadata: {
-          filename,
-        },
-        headers: {
-          Authorization: apikey,
-        },
-        onError(error) {
-          log.info(`Failed to upload ${filePathUnixSafe}: ${error}`)
-          reject(error)
-        },
-        onProgress() {
-          const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
-          spinner.message(`Uploading partial update: ${percentage}%`)
-        },
-        onSuccess() {
-          uploadedFiles++
-          resolve({
-            file_name: filePathUnixSafe,
-            s3_path: filename,
-            file_hash: file.hash,
-          })
-        },
-      })
-
-      upload.start()
-    })
-  })
-
   try {
+    const uploadFiles = manifest.map(async (file) => {
+      const finalFilePath = join(path, file.file)
+      const filePathUnix = convertToUnixPath(file.file)
+
+      const fileBuffer: Buffer = await compressFile(finalFilePath, options)
+      let finalBuffer = fileBuffer
+      if (encryptionOptions) {
+        finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
+      }
+      const filePathUnixSafe = encodePathSegments(filePathUnix)
+      const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
+
+      return new Promise((resolve, reject) => {
+        const upload = new tus.Upload(finalBuffer as any, {
+          endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
+          chunkSize: options.tusChunkSize,
+          metadata: {
+            filename,
+          },
+          headers: {
+            Authorization: apikey,
+          },
+          onError(error) {
+            log.info(`Failed to upload ${filePathUnixSafe}: ${error}`)
+            reject(error)
+          },
+          onProgress() {
+            const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
+            spinner.message(`Uploading partial update: ${percentage}%`)
+          },
+          onSuccess() {
+            uploadedFiles++
+            resolve({
+              file_name: filePathUnixSafe,
+              s3_path: filename,
+              file_hash: file.hash,
+            })
+          },
+        })
+
+        upload.start()
+      })
+    })
+
     const results = await Promise.all(uploadFiles)
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
