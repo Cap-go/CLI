@@ -169,11 +169,9 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
     const packageJson = readFileSync(file)
     const pkg = JSON.parse(packageJson as any)
     for (const dependency in pkg.dependencies) {
-      console.log('dependencies', dependency, returnVersion(pkg.dependencies[dependency]))
       dependencies.set(dependency, returnVersion(pkg.dependencies[dependency]))
     }
     for (const dependency in pkg.devDependencies) {
-      console.log('devDependencies', dependency, returnVersion(pkg.devDependencies[dependency]))
       dependencies.set(dependency, returnVersion(pkg.devDependencies[dependency]))
     }
   }
