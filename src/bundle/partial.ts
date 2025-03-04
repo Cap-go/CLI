@@ -9,6 +9,7 @@ import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import * as brotli from 'brotli'
+import coerceVersion from 'semver/functions/coerce'
 import semverSatisfies from 'semver/functions/satisfies'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
@@ -46,12 +47,13 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
     const root = join(findRoot(cwd()), PACKNAME)
     const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
     const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-    if (!updaterVersion) {
+    const coerced = coerceVersion(updaterVersion)
+    if (!updaterVersion || !coerced) {
       log.warn(`Cannot find @capgo/capacitor-updater in package.json, please provide the package.json path to the command with --package-json`)
       throw new Error('Updater version not found')
     }
 
-    if (!semverSatisfies(updaterVersion, '>=6.14.12 <7.0.0 || >=7.0.23')) {
+    if (!semverSatisfies(coerced, '>=6.14.12 <7.0.0 || >=7.0.23')) {
       log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
       throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
     }

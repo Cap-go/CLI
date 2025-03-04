@@ -12,6 +12,7 @@ import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
+import coerceVersion from 'semver/functions/coerce'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import semverGte from 'semver/functions/gte'
 import pack from '../../package.json'
@@ -225,14 +226,15 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
   const updaterVersion = dependencies.get('@capgo/capacitor-updater')
   let isv7 = false
+  const coerced = coerceVersion(updaterVersion)
   if (!updaterVersion) {
     // TODO: remove this once we have a proper way to check the version
     log.warn('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
     program.error('')
     return undefined as any
   }
-  else {
-    isv7 = semverGte(updaterVersion, '7.0.0')
+  else if (coerced) {
+    isv7 = semverGte(coerced.version, '7.0.0')
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
