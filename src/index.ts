@@ -141,6 +141,7 @@ bundle
   .option('--ignore-checksum-check', 'Ignores the checksum check when uploading')
   .option('--timeout <timeout>', 'Timeout for the upload process in seconds')
   .option('--multipart', 'Uses multipart protocol to upload data to S3, Deprecated, use tus instead')
+  .option('--zip', 'Upload the bundle using zip to Capgo cloud (legacy)')
   .option('--tus', 'Upload the bundle using TUS to Capgo cloud')
   .option('--tus-chunk-size <tusChunkSize>', 'Chunk size for the TUS upload')
   .option('--partial', 'Upload partial files to Capgo cloud')

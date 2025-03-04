@@ -602,8 +602,11 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     versionData.checksum = options.encryptedChecksum
   }
 
+  if (options.zip) {
+    options.tus = false
+  }
   // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
-  if (!fileConfig.TUSUpload || options.external) {
+  else if (!fileConfig.TUSUpload || options.external) {
     options.tus = false
   }
   else {

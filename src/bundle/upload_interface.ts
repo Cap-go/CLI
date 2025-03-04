@@ -37,4 +37,5 @@ export interface OptionsUpload extends OptionsBase {
   encryptPartial?: boolean
   deleteLinkedBundleOnUpload?: boolean
   tusChunkSize?: number
+  zip?: boolean
 }
