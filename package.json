@@ -4,7 +4,7 @@
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
-  "homepage": "https://github.com/Cap-go/CLIl#readme",
+  "homepage": "https://github.com/Cap-go/CLI#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Cap-go/CLI.git"
