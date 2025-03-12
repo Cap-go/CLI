@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.19](https://github.com/Cap-go/CLI/compare/v7.1.18...v7.1.19) (2025-03-11)
+
+
+### Bug Fixes
+
+* correct typo in package.json homepage URL ([b1f4816](https://github.com/Cap-go/CLI/commit/b1f4816664fe69fed04ff615c5230118b804f151)), closes [#390](https://github.com/Cap-go/CLI/issues/390)
+
+### [7.1.18](https://github.com/Cap-go/CLI/compare/v7.1.17...v7.1.18) (2025-03-11)
+
+
+### Bug Fixes
+
+* add devin ([974e7c5](https://github.com/Cap-go/CLI/commit/974e7c50aa928ec5331e1a22bfd29f72f69a18c5))
+
 ### [7.1.17](https://github.com/Cap-go/CLI/compare/v7.1.16...v7.1.17) (2025-03-10)
 
 ### [7.1.16](https://github.com/Cap-go/CLI/compare/v7.1.15...v7.1.16) (2025-03-04)
