@@ -34,6 +34,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
   try {
     const data = await findUnknownVersion(supabase, appId)
     const orgId = await getOrganizationId(supabase, appId)
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
     if (!data) {
       log.error(`Cannot find default version for channel creation, please contact Capgo support 🤨`)
       program.error('')
@@ -42,6 +43,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       name: channelId,
       app_id: appId,
       version: data.id,
+      created_by: userId,
       owner_org: orgId,
     })
 
