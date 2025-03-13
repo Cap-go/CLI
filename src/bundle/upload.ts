@@ -494,7 +494,7 @@ async function setVersionInChannel(
     }
   }
   else {
-    log.warn('The upload key is not allowed to set the version in the channel')
+    log.warn('Cannot set channel, the upload key is not allowed to do that, use the "all" for this.')
   }
 }
 
