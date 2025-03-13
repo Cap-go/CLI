@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.1.20](https://github.com/Cap-go/CLI/compare/v7.1.19...v7.1.20) (2025-03-12)
+
+
+### Bug Fixes
+
+* add missing created_by ([b739c6d](https://github.com/Cap-go/CLI/commit/b739c6d4ceca01d5f551b004383ce7f3119b8536))
+
 ### [7.1.19](https://github.com/Cap-go/CLI/compare/v7.1.18...v7.1.19) (2025-03-11)
 
 
