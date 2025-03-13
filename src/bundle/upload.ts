@@ -494,7 +494,7 @@ async function setVersionInChannel(
     }
   }
   else {
-    log.warn('Cannot set channel, the upload key is not allowed to do that, use the "all" for this.')
+    log.warn('The upload key is not allowed to set the version in the channel')
   }
 }
 
@@ -570,6 +570,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     owner_org: orgId,
     user_id: userId,
     checksum: undefined as undefined | string,
+    link: options.link || null,
+    comment: options.comment || null,
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null

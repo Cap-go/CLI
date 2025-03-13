@@ -38,4 +38,6 @@ export interface OptionsUpload extends OptionsBase {
   deleteLinkedBundleOnUpload?: boolean
   tusChunkSize?: number
   zip?: boolean
+  link?: string
+  comment?: string
 }

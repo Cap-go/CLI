@@ -132,6 +132,8 @@ bundle
   .option('--no-code-check', 'Ignore checking if notifyAppReady() is called in soure code and index present in root folder')
   .option('--display-iv-session', 'Show in the console the iv and session key used to encrypt the update')
   .option('-b, --bundle <bundle>', 'bundle version number of the bundle to upload')
+  .option('--link <link>', 'Link to external resource (e.g. GitHub release)')
+  .option('--comment <comment>', 'Comment about this version, could be a release note, a commit hash, a commit message, etc.')
   .option(
     '--min-update-version <minUpdateVersion>',
     'Minimal version required to update to this version. Used only if the disable auto update is set to metadata in channel',
