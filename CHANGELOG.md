@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.2.1](https://github.com/Cap-go/CLI/compare/v7.2.0...v7.2.1) (2025-03-17)
+
+
+### Bug Fixes
+
+* issue with sendEvent ([c3a32b1](https://github.com/Cap-go/CLI/commit/c3a32b19b810665afa8feac6d06fa123d7c88e3c))
+
 ## [7.2.0](https://github.com/Cap-go/CLI/compare/v7.1.21...v7.2.0) (2025-03-13)
 
 
