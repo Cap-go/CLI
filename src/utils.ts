@@ -995,7 +995,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
 export async function sendEvent(capgkey: string, payload: TrackOptions): Promise<void> {
   try {
     const config = await getRemoteConfig()
-    const response = await ky.post(`${config.host}/private/events`, {
+    const response = await ky.post(`${config.hostApi}/private/events`, {
       json: payload,
       headers: {
         capgkey,
