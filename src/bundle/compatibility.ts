@@ -5,7 +5,7 @@ import { program } from 'commander'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import subset from 'semver/ranges/subset'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkCompatibility, createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { checkCompatibility, createSupabaseClient, findSavedKey, getAppId, getConfig, isCompatible, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -61,14 +61,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
 
   finalCompatibility.forEach((data) => {
     const { name, localVersion, remoteVersion } = data
-    // remoteVersion === localVersion
-    let compatible = noSymbol
-    try {
-      compatible = subset(localVersion ?? '', remoteVersion ?? '') ? yesSymbol : noSymbol
-    }
-    catch (e) {
-      log.error(`Fail when compare. Error: ${e}`)
-    }
+    const compatible = isCompatible(data) ? yesSymbol : noSymbol
     t.rows.push([name, localVersion, remoteVersion, compatible])
   })
 

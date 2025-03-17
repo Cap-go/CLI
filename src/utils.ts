@@ -18,6 +18,7 @@ import ky from 'ky'
 import prettyjson from 'prettyjson'
 import cleanVersion from 'semver/functions/clean'
 import validVersion from 'semver/functions/valid'
+import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
 import { loadConfig, writeConfig } from './config'
 
@@ -1276,7 +1277,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
   }
 
   if (!castedRemoteNativePackages) {
-    log.error(`Error parsing native packages, perhaps the metadata does not exist?`)
+    log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
     program.error('')
   }
 
@@ -1333,6 +1334,21 @@ export function getAppId(appId: string | undefined, config: CapacitorConfig) {
   return finalAppId
 }
 
+export function isCompatible(pkg: Compatibility): boolean {
+  // Only check compatibility if there's a local version
+  // If there's a local version but no remote version, or versions don't match, it's incompatible
+  if (!pkg.localVersion)
+    return true // If no local version, it's compatible (remote-only package)
+  if (!pkg.remoteVersion)
+    return false // If local version but no remote version, it's incompatible
+  try {
+    return subset(pkg.localVersion, pkg.remoteVersion)
+  }
+  catch {
+    return false // If version comparison fails, consider it incompatible
+  }
+}
+
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
   const dependenciesObject = await getLocalDepenencies(packageJsonPath, nodeModules)
   const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
@@ -1356,6 +1372,8 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
       }
     })
 
+  // Only include remote packages that are not in local for informational purposes
+  // These won't affect compatibility
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))

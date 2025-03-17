@@ -19,7 +19,7 @@ import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -121,7 +121,8 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
 
-    if (finalCompatibility.find(x => x.localVersion !== x.remoteVersion)) {
+    // Check if any package is incompatible
+    if (finalCompatibility.find(x => !isCompatible(x))) {
       spinner.stop(`Bundle NOT compatible with ${channel} channel`)
       log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
