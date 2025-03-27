@@ -8,7 +8,6 @@ import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
-import * as brotli from 'brotli'
 import coerceVersion from 'semver/functions/coerce'
 import semverSatisfies from 'semver/functions/satisfies'
 import * as tus from 'tus-js-client'
@@ -33,20 +32,20 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
     }
 
     const originalBuffer = await readBuffer(createReadStream(filePath))
-    
+
     const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress({})))
 
     if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
       log.info(`File ${filePath} is small or doesn't compress well, skipping Brotli compression`)
       return { buffer: originalBuffer, compressed: false }
     }
-    
+
     log.info(`File ${filePath} compressed from ${fileSize} to ${compressedBuffer.length} bytes`)
     return { buffer: compressedBuffer, compressed: true }
   }
   catch (e) {
     log.error(`Error compressing file ${filePath}: ${e}`)
-    
+
     try {
       // will work only with > 6.14.12 or > 7.0.23
       const root = join(findRoot(cwd()), PACKNAME)
@@ -62,7 +61,7 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
         log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
         throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
       }
-      
+
       const originalBuffer = await readBuffer(createReadStream(filePath))
       return { buffer: originalBuffer, compressed: false }
     }
@@ -167,11 +166,11 @@ export async function uploadPartial(
       if (encryptionOptions) {
         finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
       }
-      
-      const filePathUnixSafe = compressed ? 
-        encodePathSegments(filePathUnix) + '.br' : 
-        encodePathSegments(filePathUnix)
-        
+
+      const filePathUnixSafe = compressed
+        ? `${encodePathSegments(filePathUnix)}.br`
+        : encodePathSegments(filePathUnix)
+
       const compressionStatus = compressed ? 'compressed' : 'uncompressed'
       log.info(`Processing ${compressionStatus} file ${file.file} to ${filePathUnixSafe}`)
       const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
