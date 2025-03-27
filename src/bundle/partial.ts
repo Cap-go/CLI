@@ -22,50 +22,56 @@ const SMALL_FILE_THRESHOLD = 4096
 const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
 
 // Compress file, ensuring compatibility and no failures
-async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<Buffer> {
-  const stats = statSync(filePath)
-  const fileSize = stats.size
+async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<{ buffer: Buffer, compressed: boolean }> {
+  try {
+    const stats = statSync(filePath)
+    const fileSize = stats.size
+    log.info(`Compressing file ${filePath} size: ${fileSize}`)
 
-  if (fileSize === 0) {
-    return EMPTY_BROTLI_STREAM
+    if (fileSize === 0) {
+      return { buffer: EMPTY_BROTLI_STREAM, compressed: false }
+    }
+
+    const originalBuffer = await readBuffer(createReadStream(filePath))
+    
+    const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress({})))
+
+    if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
+      log.info(`File ${filePath} is small or doesn't compress well, skipping Brotli compression`)
+      return { buffer: originalBuffer, compressed: false }
+    }
+    
+    log.info(`File ${filePath} compressed from ${fileSize} to ${compressedBuffer.length} bytes`)
+    return { buffer: compressedBuffer, compressed: true }
   }
+  catch (e) {
+    log.error(`Error compressing file ${filePath}: ${e}`)
+    
+    try {
+      // will work only with > 6.14.12 or > 7.0.23
+      const root = join(findRoot(cwd()), PACKNAME)
+      const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
+      const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+      const coerced = coerceVersion(updaterVersion)
+      if (!updaterVersion || !coerced) {
+        log.warn(`Cannot find @capgo/capacitor-updater in package.json, please provide the package.json path to the command with --package-json`)
+        throw new Error('Updater version not found')
+      }
 
-  const originalBuffer = await readBuffer(createReadStream(filePath))
-  const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress({})))
-
-  // For small files or ineffective compression, use brotli library
-  if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
-    const uncompressedBrotli = brotli.compress(originalBuffer, {
-      mode: 0, // Generic mode
-      quality: 0, // No compression, just wrap
-    })
-    if (uncompressedBrotli) {
-      return Buffer.from(uncompressedBrotli)
+      if (!semverSatisfies(coerced, '>=6.14.12 <7.0.0 || >=7.0.23')) {
+        log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
+        throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
+      }
+      
+      const originalBuffer = await readBuffer(createReadStream(filePath))
+      return { buffer: originalBuffer, compressed: false }
     }
-    // Fallback if brotli.compress fails
-    // will work only with > 6.14.12 or > 7.0.23
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-    const coerced = coerceVersion(updaterVersion)
-    if (!updaterVersion || !coerced) {
-      log.warn(`Cannot find @capgo/capacitor-updater in package.json, please provide the package.json path to the command with --package-json`)
-      throw new Error('Updater version not found')
+    catch (innerError) {
+      log.error(`Error in fallback handling for ${filePath}: ${innerError}`)
+      const originalBuffer = await readBuffer(createReadStream(filePath))
+      return { buffer: originalBuffer, compressed: false }
     }
-
-    if (!semverSatisfies(coerced, '>=6.14.12 <7.0.0 || >=7.0.23')) {
-      log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
-      throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
-    }
-
-    if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
-      return compressedBuffer // Use zlib if it produced something reasonable
-    }
-    // Last resort: minimal manual stream (shouldn't reach here often)
-    return Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
   }
-
-  return compressedBuffer
 }
 
 export async function prepareBundlePartialFiles(
@@ -156,12 +162,18 @@ export async function uploadPartial(
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
 
-      const fileBuffer: Buffer = await compressFile(finalFilePath, options)
+      const { buffer: fileBuffer, compressed } = await compressFile(finalFilePath, options)
       let finalBuffer = fileBuffer
       if (encryptionOptions) {
         finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
       }
-      const filePathUnixSafe = encodePathSegments(filePathUnix)
+      
+      const filePathUnixSafe = compressed ? 
+        encodePathSegments(filePathUnix) + '.br' : 
+        encodePathSegments(filePathUnix)
+        
+      const compressionStatus = compressed ? 'compressed' : 'uncompressed'
+      log.info(`Processing ${compressionStatus} file ${file.file} to ${filePathUnixSafe}`)
       const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
 
       return new Promise((resolve, reject) => {
