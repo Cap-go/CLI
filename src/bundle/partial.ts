@@ -22,14 +22,14 @@ const SMALL_FILE_THRESHOLD = 4096
 const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
 
 // Compress file, ensuring compatibility and no failures
-async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<{buffer: Buffer, isCompressed: boolean}> {
+async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<{ buffer: Buffer, isCompressed: boolean }> {
   const stats = statSync(filePath)
   const fileSize = stats.size
 
   if (fileSize === 0) {
     return {
       buffer: EMPTY_BROTLI_STREAM,
-      isCompressed: false
+      isCompressed: false,
     }
   }
 
@@ -44,7 +44,7 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
     if (uncompressedBrotli) {
       return {
         buffer: Buffer.from(uncompressedBrotli),
-        isCompressed: false
+        isCompressed: false,
       }
     }
     // Fallback if brotli.compress fails
@@ -66,19 +66,19 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
     if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
       return {
         buffer: compressedBuffer, // Use zlib if it produced something reasonable
-        isCompressed: false
+        isCompressed: false,
       }
     }
     // Last resort: minimal manual stream (shouldn't reach here often)
     return {
       buffer: Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03]),
-      isCompressed: false
+      isCompressed: false,
     }
   }
 
   return {
     buffer: compressedBuffer,
-    isCompressed: true
+    isCompressed: true,
   }
 }
 
