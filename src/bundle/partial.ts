@@ -22,12 +22,12 @@ const SMALL_FILE_THRESHOLD = 4096
 const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
 
 // Compress file, ensuring compatibility and no failures
-async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<Buffer> {
+async function compressFile(filePath: string, uploadOptions: OptionsUpload): Promise<{ buffer: Buffer, compressed: boolean }> {
   const stats = statSync(filePath)
   const fileSize = stats.size
 
   if (fileSize === 0) {
-    return EMPTY_BROTLI_STREAM
+    return { buffer: EMPTY_BROTLI_STREAM, compressed: false }
   }
 
   const originalBuffer = await readBuffer(createReadStream(filePath))
@@ -40,7 +40,7 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
       quality: 0, // No compression, just wrap
     })
     if (uncompressedBrotli) {
-      return Buffer.from(uncompressedBrotli)
+      return { buffer: Buffer.from(uncompressedBrotli), compressed: false }
     }
     // Fallback if brotli.compress fails
     // will work only with > 6.14.12 or > 7.0.23
@@ -59,13 +59,13 @@ async function compressFile(filePath: string, uploadOptions: OptionsUpload): Pro
     }
 
     if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
-      return compressedBuffer // Use zlib if it produced something reasonable
+      return { buffer: compressedBuffer, compressed: false } // Use zlib if it produced something reasonable
     }
     // Last resort: minimal manual stream (shouldn't reach here often)
-    return Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
+    return { buffer: Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03]), compressed: false }
   }
 
-  return compressedBuffer
+  return { buffer: compressedBuffer, compressed: true }
 }
 
 export async function prepareBundlePartialFiles(
@@ -156,13 +156,14 @@ export async function uploadPartial(
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
 
-      const fileBuffer: Buffer = await compressFile(finalFilePath, options)
+      const { buffer: fileBuffer, compressed } = await compressFile(finalFilePath, options)
       let finalBuffer = fileBuffer
       if (encryptionOptions) {
         finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
       }
       const filePathUnixSafe = encodePathSegments(filePathUnix)
-      const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
+      const filePathWithExtension = compressed ? `${filePathUnixSafe}.br` : filePathUnixSafe
+      const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathWithExtension}`
 
       return new Promise((resolve, reject) => {
         const upload = new tus.Upload(finalBuffer as any, {
@@ -185,7 +186,7 @@ export async function uploadPartial(
           onSuccess() {
             uploadedFiles++
             resolve({
-              file_name: filePathUnixSafe,
+              file_name: compressed ? `${filePathUnixSafe}.br` : filePathUnixSafe,
               s3_path: filename,
               file_hash: file.hash,
             })
