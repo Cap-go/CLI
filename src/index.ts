@@ -153,7 +153,7 @@ bundle
   .option('--dry-upload', 'Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing)')
   .option('--package-json <packageJson>', 'A list of path to package.json. Usefull for monorepos (comma separated ex: ../../package.json,./package.json)')
   .option('--node-modules <nodeModules>', 'A list of path to node_modules. Usefull for monorepos (comma separated ex: ../../node_modules,./node_modules)')
-  .option('--encrypt-partial', 'Encrypt the partial update files')
+  .option('--encrypt-partial', 'Encrypt the partial update files (automatically applied for updater > 6.14.4)')
   .option('--delete-linked-bundle-on-upload', 'Locates the currently linked bundle in the channel you are trying to upload to, and deletes it')
   .option('--no-brotli-patterns <patterns>', 'Glob patterns for files to exclude from brotli compression (comma-separated)')
   .option('--disable-brotli', 'Completely disable brotli compression even if updater version supports it')

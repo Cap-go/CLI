@@ -627,6 +627,20 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     program.error('')
   }
 
+  // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
+  if (options.partial && encryptionMethod === 'v2' && !options.encryptPartial) {
+    // Check updater version
+    const root = join(findRoot(cwd()), PACKNAME)
+    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
+    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    const coerced = coerceVersion(updaterVersion)
+
+    if (updaterVersion && coerced && semverGte(coerced.version, '6.14.4')) {
+      log.info(`Auto-enabling partial update encryption for updater version ${coerced.version} (> 6.14.4)`)
+      options.encryptPartial = true
+    }
+  }
+
   const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
