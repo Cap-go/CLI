@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.2.5](https://github.com/Cap-go/CLI/compare/v7.2.4...v7.2.5) (2025-03-29)
+
+
+### Bug Fixes
+
+* brotli issue allow ignore for certain files ([d367491](https://github.com/Cap-go/CLI/commit/d367491fe98ba8692dcbfed22db4f648ab6aac60))
+
 ### [7.2.4](https://github.com/Cap-go/CLI/compare/v7.2.3...v7.2.4) (2025-03-24)
 
 ### [7.2.3](https://github.com/Cap-go/CLI/compare/v7.2.2...v7.2.3) (2025-03-21)
