@@ -40,4 +40,6 @@ export interface OptionsUpload extends OptionsBase {
   zip?: boolean
   link?: string
   comment?: string
+  noBrotliPatterns?: string
+  disableBrotli?: boolean
 }
