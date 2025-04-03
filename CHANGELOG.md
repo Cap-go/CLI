@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.2.7](https://github.com/Cap-go/CLI/compare/v7.2.6...v7.2.7) (2025-04-03)
+
+
+### Bug Fixes
+
+* add userID in addAppInternal ([5bb199f](https://github.com/Cap-go/CLI/commit/5bb199f0a92edb0b9659a5c61d988aa4db034aeb))
+
 ### [7.2.6](https://github.com/Cap-go/CLI/compare/v7.2.5...v7.2.6) (2025-03-29)
 
 
