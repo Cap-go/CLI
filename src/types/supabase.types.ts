@@ -7,6 +7,31 @@ export type Json =
   | Json[]
 
 export interface Database {
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          operationName?: string
+          query?: string
+          variables?: Json
+          extensions?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       apikeys: {
@@ -205,6 +230,9 @@ export interface Database {
         Row: {
           app_id: string
           created_at: string | null
+          default_channel_android: number | null
+          default_channel_ios: number | null
+          default_channel_sync: boolean
           default_upload_channel: string
           icon_url: string
           id: string | null
@@ -219,6 +247,9 @@ export interface Database {
         Insert: {
           app_id: string
           created_at?: string | null
+          default_channel_android?: number | null
+          default_channel_ios?: number | null
+          default_channel_sync?: boolean
           default_upload_channel?: string
           icon_url: string
           id?: string | null
@@ -233,6 +264,9 @@ export interface Database {
         Update: {
           app_id?: string
           created_at?: string | null
+          default_channel_android?: number | null
+          default_channel_ios?: number | null
+          default_channel_sync?: boolean
           default_upload_channel?: string
           icon_url?: string
           id?: string | null
@@ -245,6 +279,20 @@ export interface Database {
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: 'apps_default_channel_android_fkey'
+            columns: ['default_channel_android']
+            isOneToOne: false
+            referencedRelation: 'channels'
+            referencedColumns: ['id']
+          },
+          {
+            foreignKeyName: 'apps_default_channel_ios_fkey'
+            columns: ['default_channel_ios']
+            isOneToOne: false
+            referencedRelation: 'channels'
+            referencedColumns: ['id']
+          },
           {
             foreignKeyName: 'apps_user_id_fkey'
             columns: ['user_id']
@@ -517,13 +565,37 @@ export interface Database {
         }
         Insert: {
           created_at?: string | null
-          email?: string
+          email: string
           id?: string
         }
         Update: {
           created_at?: string | null
           email?: string
           id?: string
+        }
+        Relationships: []
+      }
+      deleted_apps: {
+        Row: {
+          app_id: string
+          created_at: string | null
+          deleted_at: string | null
+          id: number
+          owner_org: string
+        }
+        Insert: {
+          app_id: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: number
+          owner_org: string
+        }
+        Update: {
+          app_id?: string
+          created_at?: string | null
+          deleted_at?: string | null
+          id?: number
+          owner_org?: string
         }
         Relationships: []
       }
@@ -885,6 +957,7 @@ export interface Database {
           storage_unit: number | null
           stripe_id: string
           updated_at: string
+          version: number
         }
         Insert: {
           bandwidth: number
@@ -907,6 +980,7 @@ export interface Database {
           storage_unit?: number | null
           stripe_id?: string
           updated_at?: string
+          version?: number
         }
         Update: {
           bandwidth?: number
@@ -929,6 +1003,7 @@ export interface Database {
           storage_unit?: number | null
           stripe_id?: string
           updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -1163,10 +1238,6 @@ export interface Database {
         }
         Returns: string
       }
-      calculate_daily_app_usage: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       check_min_rights:
         | {
           Args: {
@@ -1239,10 +1310,6 @@ export interface Database {
         Returns: number
       }
       count_all_onboarded: {
-        Args: Record<PropertyKey, never>
-        Returns: number
-      }
-      count_all_paying: {
         Args: Record<PropertyKey, never>
         Returns: number
       }
@@ -1328,6 +1395,19 @@ export interface Database {
             uninstall: number
           }[]
         }
+        | {
+          Args: {
+            p_org_id: string
+            p_start_date: string
+            p_end_date: string
+          }
+          Returns: {
+            mau: number
+            bandwidth: number
+            storage: number
+            deleted_apps: number
+          }[]
+        }
       get_app_versions: {
         Args: {
           appid: string
@@ -1375,19 +1455,6 @@ export interface Database {
         Returns: {
           subscription_anchor_start: string
           subscription_anchor_end: string
-        }[]
-      }
-      get_daily_version: {
-        Args: {
-          app_id_param: string
-          start_date_param?: string
-          end_date_param?: string
-        }
-        Returns: {
-          date: string
-          app_id: string
-          version_id: number
-          percent: number
         }[]
       }
       get_db_url: {
@@ -1465,18 +1532,6 @@ export interface Database {
           app_id: string
         }
         Returns: string
-      }
-      get_infos: {
-        Args: {
-          appid: string
-          deviceid: string
-          versionname: string
-        }
-        Returns: {
-          current_version_id: number
-          versiondata: Json
-          channel: Json
-        }[]
       }
       get_metered_usage:
         | {
@@ -1705,20 +1760,6 @@ export interface Database {
             uninstall: number
           }[]
         }
-      get_total_storage_size:
-        | {
-          Args: {
-            appid: string
-          }
-          Returns: number
-        }
-        | {
-          Args: {
-            userid: string
-            appid: string
-          }
-          Returns: number
-        }
       get_total_storage_size_org: {
         Args: {
           org_id: string
@@ -1822,14 +1863,6 @@ export interface Database {
         Returns: boolean
       }
       http_post_helper: {
-        Args: {
-          function_name: string
-          function_type: string
-          body: Json
-        }
-        Returns: number
-      }
-      http_post_helper_preprod: {
         Args: {
           function_name: string
           function_type: string
@@ -2112,32 +2145,27 @@ export interface Database {
           uninstall: number
         }[]
       }
-      reset_and_seed_app_data:
-        | {
-          Args: {
-            p_app_id: string
-          }
-          Returns: undefined
+      replicate_to_d1: {
+        Args: {
+          record: Json
+          old_record: Json
+          operation: string
+          table_name: string
         }
-        | {
-          Args: {
-            p_app_id: string
-          }
-          Returns: undefined
+        Returns: undefined
+      }
+      reset_and_seed_app_data: {
+        Args: {
+          p_app_id: string
         }
-      reset_and_seed_app_stats_data:
-        | {
-          Args: {
-            p_app_id: string
-          }
-          Returns: undefined
+        Returns: undefined
+      }
+      reset_and_seed_app_stats_data: {
+        Args: {
+          p_app_id: string
         }
-        | {
-          Args: {
-            p_app_id: string
-          }
-          Returns: undefined
-        }
+        Returns: undefined
+      }
       reset_and_seed_data: {
         Args: Record<PropertyKey, never>
         Returns: undefined
@@ -2186,33 +2214,6 @@ export interface Database {
         }
         Returns: undefined
       }
-      update_app_usage:
-        | {
-          Args: Record<PropertyKey, never>
-          Returns: undefined
-        }
-        | {
-          Args: {
-            minutes_interval: number
-          }
-          Returns: undefined
-        }
-      update_notification: {
-        Args: {
-          p_event: string
-          p_uniq_id: string
-          p_owner_org: string
-        }
-        Returns: undefined
-      }
-      upsert_notification: {
-        Args: {
-          p_event: string
-          p_uniq_id: string
-          p_owner_org: string
-        }
-        Returns: undefined
-      }
       verify_mfa: {
         Args: Record<PropertyKey, never>
         Returns: boolean
@@ -2220,10 +2221,8 @@ export interface Database {
     }
     Enums: {
       action_type: 'mau' | 'storage' | 'bandwidth'
-      app_mode: 'prod' | 'dev' | 'livereload'
       disable_update: 'major' | 'minor' | 'patch' | 'version_number' | 'none'
       key_mode: 'read' | 'write' | 'all' | 'upload'
-      pay_as_you_go_type: 'base' | 'units'
       platform_os: 'ios' | 'android'
       stats_action:
         | 'delete'
@@ -2279,7 +2278,7 @@ export interface Database {
         | 'failed'
         | 'deleted'
         | 'canceled'
-      usage_mode: '5min' | 'day' | 'month' | 'cycle' | 'last_saved'
+      usage_mode: 'last_saved' | '5min' | 'day' | 'cycle'
       user_min_right:
         | 'invite_read'
         | 'invite_upload'
@@ -2299,9 +2298,6 @@ export interface Database {
         file_name: string | null
         s3_path: string | null
         file_hash: string | null
-      }
-      match_plan: {
-        name: string | null
       }
       orgs_table: {
         id: string | null

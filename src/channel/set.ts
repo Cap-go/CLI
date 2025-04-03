@@ -3,7 +3,7 @@ import type {
   OptionsBase,
 } from '../utils'
 import { exit } from 'node:process'
-import { intro, log, outro } from '@clack/prompts'
+import { intro, isCancel, log, outro, select } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
@@ -108,12 +108,13 @@ export async function setChannel(channel: string, appId: string, options: Option
       log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
       channelPayload.version = data.id
     }
+    let publicChannel = null as boolean | null
     if (state != null) {
       if (state === 'public' || state === 'private')
         log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`)
 
       log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
-      channelPayload.public = state === 'public' || state === 'default'
+      publicChannel = state === 'public' || state === 'default'
     }
     if (downgrade != null) {
       log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
@@ -149,10 +150,105 @@ export async function setChannel(channel: string, appId: string, options: Option
       log.info(`Set ${appId} channel: ${channel} to ${finalDisableAutoUpdate} disable update strategy to this channel`)
     }
     try {
-      const { error: dbError } = await updateOrCreateChannel(supabase, channelPayload)
+      const { error: dbError, data: channelData } = await updateOrCreateChannel(supabase, channelPayload)
       if (dbError) {
         log.error(`Cannot set channel the upload key is not allowed to do that, use the "all" for this.`)
         program.error('')
+      }
+      if (publicChannel != null) {
+        const { data: appData, error: appError } = await supabase
+          .from('apps')
+          .select('default_channel_android, default_channel_ios')
+          .eq('app_id', appId)
+          .single()
+        if (appError) {
+          log.error(`Cannot get app ${appId}`)
+          program.error('')
+        }
+        if (!publicChannel) {
+          if (appData?.default_channel_android !== channelData.id && appData?.default_channel_ios !== channelData.id) {
+            log.info(`Channel ${channel} is not public for both iOS and Android.`)
+          }
+          else {
+            if (appData?.default_channel_android === channelData.id) {
+              const { error: androidError } = await supabase
+                .from('apps')
+                .update({ default_channel_android: null })
+                .eq('app_id', appId)
+              if (androidError) {
+                log.error(`Cannot set default channel android to null`)
+                program.error('')
+              }
+            }
+            if (appData?.default_channel_ios === channelData.id) {
+              const { error: iosError } = await supabase
+                .from('apps')
+                .update({ default_channel_ios: null })
+                .eq('app_id', appId)
+              if (iosError) {
+                log.error(`Cannot set default channel ios to null`)
+                program.error('')
+              }
+            }
+            if ((appData?.default_channel_ios === null && appData?.default_channel_android === channelData.id) || (appData?.default_channel_ios === channelData.id && appData?.default_channel_android === null)) {
+              const { error: bothError } = await supabase
+                .from('apps')
+                .update({ default_channel_sync: true })
+                .eq('app_id', appId)
+              if (bothError) {
+                log.error(`Cannot set default channel sync to true`)
+                program.error('')
+              }
+            }
+          }
+        }
+        else if (appData?.default_channel_ios === channelData.id && appData?.default_channel_android === channelData.id) {
+          // check if pehaps the channel is already public
+          log.info(`Channel ${channel} is already public for both iOS and Android.`)
+        }
+        else {
+          // here we need to ask the user if he wants the channel to become public for iOS android or Both
+          const platformType = await select({
+            message: 'Do you want the channel to become public for iOS android or Both?',
+            options: [
+              { value: 'iOS', label: 'iOS' },
+              { value: 'Android', label: 'Android' },
+              { value: 'Both', label: 'Both' },
+            ],
+          })
+          if (isCancel(platformType)) {
+            outro(`Bye 👋`)
+            exit()
+          }
+
+          const platform = platformType as 'iOS' | 'Android' | 'Both'
+          if (platform === 'iOS' || platform === 'Android') {
+            const opositePlatform = platform === 'iOS' ? 'android' : 'ios'
+            const { error: singlePlatformError } = await supabase
+              .from('apps')
+              .update({ [`default_channel_${platform.toLowerCase()}`]: channelData.id, default_channel_sync: appData?.[`default_channel_${opositePlatform}`] === channelData.id })
+              .eq('app_id', appId)
+            if (singlePlatformError) {
+              log.error(`Failed to set default channel ${platform} to ${channel}.`)
+              log.error(`This may be due to insufficient permissions or a database error.${formatError(singlePlatformError)}`)
+              program.error('')
+            }
+          }
+          else {
+            const { error: bothPlatformError } = await supabase
+              .from('apps')
+              .update({ default_channel_sync: true, default_channel_ios: channelData.id, default_channel_android: channelData.id })
+              .eq('app_id', appId)
+            if (bothPlatformError) {
+              log.error(`Failed to synchronize default channel settings across both platforms.`)
+              log.error(`Unable to set channel '${channel}' as default for both iOS and Android.${formatError(bothPlatformError)}`)
+              program.error('')
+            }
+          }
+        }
+        if (publicChannel && (appData?.default_channel_ios !== channelData.id || appData?.default_channel_android !== channelData.id)) {
+          log.info(`Set ${appId} channel: ${channel} to ${publicChannel ? 'public' : 'private'}`)
+        }
       }
     }
     catch {
@@ -171,7 +267,8 @@ export async function setChannel(channel: string, appId: string, options: Option
     }).catch()
   }
   catch (err) {
-    log.error(`Unknow error ${formatError(err)}`)
+    log.error(`An unexpected error occurred while setting channel '${channel}' for app '${appId}'.`)
+    log.error(`Please verify your inputs and try again.${formatError(err)}`)
     program.error('')
   }
   outro(`Done ✅`)
