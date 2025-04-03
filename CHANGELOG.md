@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.2.6](https://github.com/Cap-go/CLI/compare/v7.2.5...v7.2.6) (2025-03-29)
+
+
+### Bug Fixes
+
+* auto enable encrypt-partial for updater > 6.14.4 ([c2e4e1d](https://github.com/Cap-go/CLI/commit/c2e4e1d4b4eeb0b547f40d4e38bcb6640e32a2cc))
+
 ### [7.2.5](https://github.com/Cap-go/CLI/compare/v7.2.4...v7.2.5) (2025-03-29)
 
 
