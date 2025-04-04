@@ -237,6 +237,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   else if (coerced) {
     isv7 = semverGte(coerced.version, '7.0.0')
   }
+  else if (updaterVersion === 'link:@capgo/capacitor-updater') {
+    log.warn('Using local @capgo/capacitor-updater. Assuming v7')
+    isv7 = true
+  }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
   }
