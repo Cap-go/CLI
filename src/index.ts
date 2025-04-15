@@ -89,9 +89,9 @@ app
 
 app
   .command('setting [path]')
-  .description('Modifies capacitor config programmatically')
-  .option('--bool <bool>', 'A value for the setting to modify as a boolean')
-  .option('--string <string>', 'A value for the setting to modify as a string')
+  .description('Modifies capacitor config programmatically, path is the path to the setting to modify, ex: plugins.CapacitorUpdater.defaultChannel')
+  .option('--bool <bool>', 'A value for the setting to modify as a boolean, ex: --bool true')
+  .option('--string <string>', 'A value for the setting to modify as a string, ex: --string "Production"')
   .action(setSetting)
 
 app
