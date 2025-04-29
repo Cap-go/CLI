@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.3.0](https://github.com/Cap-go/CLI/compare/v7.2.11...v7.3.0) (2025-04-29)
+
+
+### Features
+
+* add in CLI to cleanup the ignore channel option ([bddd773](https://github.com/Cap-go/CLI/commit/bddd773744d0f5bae6358cdf05588f435ce7a9ff))
+
 ### [7.2.11](https://github.com/Cap-go/CLI/compare/v7.2.10...v7.2.11) (2025-04-29)
 
 
