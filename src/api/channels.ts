@@ -141,12 +141,12 @@ export function displayChannels(data: Channel[]) {
 }
 
 export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {
-  const { data, error: vError } = await supabase
-    .from('channels')
-    .select(`
+  const [{ data, error: vError }, { data: appData, error: appError }] = await Promise.all([
+    supabase
+      .from('channels')
+      .select(`
       id,
       name,
-      public,
       allow_emulator,
       allow_dev,
       ios,
@@ -159,13 +159,24 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
       app_id,
       version (id, name)
     `)
-    .eq('app_id', appid)
-    // .eq('created_by', userId)
-    .order('created_at', { ascending: false })
+      .eq('app_id', appid)
+      .order('created_at', { ascending: false }),
 
-  if (vError) {
+    supabase.from('apps')
+      .select('default_channel_ios, default_channel_android')
+      .eq('app_id', appid)
+      .single(),
+  ])
+
+  if (vError || appError) {
     log.error(`App ${appid} not found in database`)
+    console.log(vError, appError)
     program.error('')
   }
-  return data as any as Channel[]
+  return data.map((channel) => {
+    return {
+      ...channel,
+      public: appData?.default_channel_ios === channel.id || appData?.default_channel_android === channel.id,
+    }
+  }) as any as Channel[]
 }

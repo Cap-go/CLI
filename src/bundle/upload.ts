@@ -467,6 +467,17 @@ async function setVersionInChannel(
     .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
     .single()
 
+  const { data: appData, error: appError } = await supabase
+    .from('apps')
+    .select('default_channel_ios, default_channel_android')
+    .eq('app_id', appid)
+    .single()
+
+  if (appError) {
+    log.error(`Cannot get app data ${formatError(appError)}`)
+    program.error('')
+  }
+
   if (apiAccess) {
     const { error: dbError3, data } = await updateOrCreateChannel(supabase, {
       name: channel,
@@ -481,7 +492,7 @@ async function setVersionInChannel(
     }
     const appidWeb = convertAppName(appid)
     const bundleUrl = `${localConfig.hostWeb}/app/p/${appidWeb}/channel/${data.id}`
-    if (data?.public)
+    if (appData?.default_channel_ios === data.id || appData?.default_channel_android === data.id)
       log.info('Your update is now available in your public channel 🎉')
     else if (data?.id)
       log.info(`Link device to this bundle to try it: ${bundleUrl}`)
