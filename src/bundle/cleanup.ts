@@ -23,6 +23,7 @@ interface Options extends OptionsBase {
   bundle: string
   keep: number
   force: boolean
+  ignoreChannel: boolean
 }
 
 async function removeVersions(toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient<Database>, appid: string) {
@@ -50,6 +51,7 @@ export async function cleanupBundle(appId: string, options: Options) {
   options.apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options
   const force = options.force || false
+  const ignoreChannel = options.ignoreChannel || false
 
   const extConfig = await getConfig()
   appId = getAppId(appId, extConfig?.config)
@@ -91,18 +93,16 @@ export async function cleanupBundle(appId: string, options: Options) {
   }
 
   // Slice to keep and remove
-
   const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
   // Slice to keep and remove
   let kept = 0
   allVersions.forEach((v) => {
     const isInUse = versionInUse.find(vi => vi === v.id)
-    if (kept < keep || isInUse) {
+    if (kept < keep || (isInUse && !ignoreChannel)) {
       if (isInUse)
         v.keep = '✅ (Linked to channel)'
       else
         v.keep = '✅'
-
       kept += 1
     }
     else {

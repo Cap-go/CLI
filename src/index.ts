@@ -200,6 +200,7 @@ bundle
   .option('-a, --apikey <apikey>', 'apikey to link to your account')
   .option('-k, --keep <keep>', 'number of version to keep')
   .option('-f, --force', 'force removal')
+  .option('--ignore-channel', 'delete all versions even if linked to a channel, this will delete channel as well')
 
 bundle
   .command('encrypt [zipPath] [checksum]')
