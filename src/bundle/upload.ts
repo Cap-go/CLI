@@ -537,6 +537,11 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
 
   const localConfig = await getLocalConfig()
+  if (options.supaHost && options.supaAnon) {
+    log.info('Using custom supabase instance from provided options')
+    localConfig.supaHost = options.supaHost
+    localConfig.supaKey = options.supaAnon
+  }
   const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
   const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
