@@ -206,7 +206,7 @@ Optionally, you can give:
 
 ### **Delete**
 
-`npx @capgo/cli bundle delete [appId]`
+`npx @capgo/cli bundle delete [bundleId] [appId]`
 
 `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
