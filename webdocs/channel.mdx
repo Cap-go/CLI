@@ -1,25 +1,28 @@
 ---
-title: channel
+title: 📢 channel
 sidebar_label: channel
 sidebar:
   order: 6
 ---
 
-# Channel
-
 📢 Manage distribution channels for app updates in Capgo Cloud, controlling how updates are delivered to devices.
 
-### <a id="channel"></a> 📢 **Channel**
+## Table of Contents
+
+- [Add](#add)
+- [Delete](#delete)
+- [List](#list)
+- [CurrentBundle](#currentBundle)
+- [Set](#set)
 
 ```bash
 npx @capgo/cli@latest channel
 ```
 
-📢 Manage distribution channels for app updates in Capgo Cloud, controlling how updates are delivered to devices.
 
 ## CHANNEL Subcommands
 
-#### <a id="channel-add"></a> ➕ **Add**
+### <a id="channel-add"></a> ➕ **Add**
 
 **Alias:** `a`
 
@@ -28,7 +31,6 @@ npx @capgo/cli@latest channel add
 ```
 
 ➕ Create a new channel for app distribution in Capgo Cloud to manage update delivery.
-
 
 **Example:**
 
@@ -43,7 +45,7 @@ npx @capgo/cli@latest channel add production com.example.app --default
 | **-d,** | <code>string</code> | Set the channel as default |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="channel-delete"></a> 🗑️ **Delete**
+### <a id="channel-delete"></a> 🗑️ **Delete**
 
 **Alias:** `d`
 
@@ -52,7 +54,6 @@ npx @capgo/cli@latest channel delete
 ```
 
 🗑️ Delete a channel from Capgo Cloud, optionally removing associated bundles to free up resources.
-
 
 **Example:**
 
@@ -67,7 +68,7 @@ npx @capgo/cli@latest channel delete production com.example.app
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--delete-bundle** | <code>boolean</code> | Delete the bundle associated with the channel |
 
-#### <a id="channel-list"></a> 📋 **List**
+### <a id="channel-list"></a> 📋 **List**
 
 **Alias:** `l`
 
@@ -76,7 +77,6 @@ npx @capgo/cli@latest channel list
 ```
 
 📋 List all channels configured for an app in Capgo Cloud to review distribution settings.
-
 
 **Example:**
 
@@ -90,14 +90,13 @@ npx @capgo/cli@latest channel list com.example.app
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="channel-currentBundle"></a> 📦 **CurrentBundle**
+### <a id="channel-currentBundle"></a> 📦 **CurrentBundle**
 
 ```bash
 npx @capgo/cli@latest channel currentBundle
 ```
 
 📦 Get the current bundle linked to a specific channel in Capgo Cloud for update tracking.
-
 
 **Example:**
 
@@ -113,7 +112,7 @@ npx @capgo/cli@latest channel currentBundle production com.example.app
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--quiet** | <code>boolean</code> | Only print the bundle version |
 
-#### <a id="channel-set"></a> ⚙️ **Set**
+### <a id="channel-set"></a> ⚙️ **Set**
 
 **Alias:** `s`
 
@@ -122,9 +121,7 @@ npx @capgo/cli@latest channel set
 ```
 
 ⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, emulator).
-
 One channel must be default.
-
 
 **Example:**
 

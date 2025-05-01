@@ -1,25 +1,31 @@
 ---
-title: bundle
+title: 📦 bundle
 sidebar_label: bundle
 sidebar:
   order: 4
 ---
 
-# Bundle
-
 📦 Manage app bundles for deployment in Capgo Cloud, including upload, compatibility checks, and encryption.
 
-### <a id="bundle"></a> 📦 **Bundle**
+## Table of Contents
+
+- [Upload](#upload)
+- [Compatibility](#compatibility)
+- [Delete](#delete)
+- [List](#list)
+- [Cleanup](#cleanup)
+- [Encrypt](#encrypt)
+- [Decrypt](#decrypt)
+- [Zip](#zip)
 
 ```bash
 npx @capgo/cli@latest bundle
 ```
 
-📦 Manage app bundles for deployment in Capgo Cloud, including upload, compatibility checks, and encryption.
 
 ## BUNDLE Subcommands
 
-#### <a id="bundle-upload"></a> ⬆️ **Upload**
+### <a id="bundle-upload"></a> ⬆️ **Upload**
 
 **Alias:** `u`
 
@@ -28,24 +34,16 @@ npx @capgo/cli@latest bundle upload
 ```
 
 ⬆️ Upload a new app bundle to Capgo Cloud for distribution, optionally linking to a channel or external URL.
-
 External option supports privacy concerns or large apps (>200MB) by storing only the link.
-
 Capgo never inspects external content. Encryption adds a trustless security layer.
-
 Version must be > 0.0.0 and unique.
-
 > ℹ️ External option helps with corporate privacy concerns and apps larger than 200MB by storing only the link.
-
 
 > ℹ️ Capgo Cloud never looks at the content in the link for external options or in the code when stored.
 
-
 > ℹ️ You can add a second layer of security with encryption, making Capgo trustless.
 
-
 > ℹ️ Version should be greater than "0.0.0" and cannot be overridden or reused after deletion for security reasons.
-
 
 
 **Example:**
@@ -102,14 +100,13 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
 | **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
-#### <a id="bundle-compatibility"></a> 🧪 **Compatibility**
+### <a id="bundle-compatibility"></a> 🧪 **Compatibility**
 
 ```bash
 npx @capgo/cli@latest bundle compatibility
 ```
 
 🧪 Check compatibility of a bundle with a specific channel in Capgo Cloud to ensure updates are safe.
-
 
 **Example:**
 
@@ -127,7 +124,7 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
 
-#### <a id="bundle-delete"></a> 🗑️ **Delete**
+### <a id="bundle-delete"></a> 🗑️ **Delete**
 
 **Alias:** `d`
 
@@ -136,7 +133,6 @@ npx @capgo/cli@latest bundle delete
 ```
 
 🗑️ Delete a specific bundle from Capgo Cloud, optionally targeting a single version.
-
 
 **Example:**
 
@@ -150,7 +146,7 @@ npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="bundle-list"></a> 📋 **List**
+### <a id="bundle-list"></a> 📋 **List**
 
 **Alias:** `l`
 
@@ -159,7 +155,6 @@ npx @capgo/cli@latest bundle list
 ```
 
 📋 List all bundles uploaded for an app in Capgo Cloud.
-
 
 **Example:**
 
@@ -173,7 +168,7 @@ npx @capgo/cli@latest bundle list com.example.app
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
+### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
 
 **Alias:** `c`
 
@@ -182,9 +177,7 @@ npx @capgo/cli@latest bundle cleanup
 ```
 
 🧹 Cleanup old bundles in Capgo Cloud, keeping a specified number of recent versions or those linked to channels.
-
 Ignores bundles in use.
-
 
 **Example:**
 
@@ -202,16 +195,14 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 | **-f,** | <code>string</code> | Force removal |
 | **--ignore-channel** | <code>boolean</code> | Delete all versions even if linked to a channel, this will delete channel as well |
 
-#### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
+### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
 
 ```bash
 npx @capgo/cli@latest bundle encrypt
 ```
 
 🔒 Encrypt a zip bundle using the new encryption method for secure external storage or testing.
-
 Used with external sources or for testing, prints ivSessionKey for upload or decryption.
-
 
 **Example:**
 
@@ -227,16 +218,14 @@ npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM
 | **--key-data** | <code>string</code> | Private signing key |
 | **-j,** | <code>string</code> | Output in JSON |
 
-#### <a id="bundle-decrypt"></a> 🔓 **Decrypt**
+### <a id="bundle-decrypt"></a> 🔓 **Decrypt**
 
 ```bash
 npx @capgo/cli@latest bundle decrypt
 ```
 
 🔓 Decrypt a zip bundle using the new encryption method, mainly for testing purposes.
-
 Prints the base64 decrypted session key for verification.
-
 
 **Example:**
 
@@ -252,16 +241,14 @@ npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM
 | **--key-data** | <code>string</code> | Private signing key |
 | **--checksum** | <code>string</code> | Checksum of the bundle, to verify the integrity of the bundle |
 
-#### <a id="bundle-zip"></a> 🔹 **Zip**
+### <a id="bundle-zip"></a> 🔹 **Zip**
 
 ```bash
 npx @capgo/cli@latest bundle zip
 ```
 
 🗜️ Create a zip file of your app bundle for upload or local storage.
-
 Useful for preparing bundles before encryption or upload.
-
 
 **Example:**
 

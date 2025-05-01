@@ -1,25 +1,29 @@
 ---
-title: app
+title: 📱 app
 sidebar_label: app
 sidebar:
   order: 5
 ---
 
-# App
-
 📱 Manage your Capgo app settings and configurations in Capgo Cloud.
 
-### <a id="app"></a> 📱 **App**
+## Table of Contents
+
+- [Add](#add)
+- [Delete](#delete)
+- [List](#list)
+- [Debug](#debug)
+- [Setting](#setting)
+- [Set](#set)
 
 ```bash
 npx @capgo/cli@latest app
 ```
 
-📱 Manage your Capgo app settings and configurations in Capgo Cloud.
 
 ## APP Subcommands
 
-#### <a id="app-add"></a> ➕ **Add**
+### <a id="app-add"></a> ➕ **Add**
 
 **Alias:** `a`
 
@@ -28,9 +32,7 @@ npx @capgo/cli@latest app add
 ```
 
 ➕ Add a new app to Capgo Cloud with a unique app ID in the format com.test.app.
-
 All options can be guessed from config if not provided.
-
 
 **Example:**
 
@@ -46,14 +48,13 @@ npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./icon.png
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="app-delete"></a> 🗑️ **Delete**
+### <a id="app-delete"></a> 🗑️ **Delete**
 
 ```bash
 npx @capgo/cli@latest app delete
 ```
 
 🗑️ Delete an app from Capgo Cloud, optionally specifying a version to delete only that bundle.
-
 
 **Example:**
 
@@ -67,7 +68,7 @@ npx @capgo/cli@latest app delete com.example.app
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="app-list"></a> 📋 **List**
+### <a id="app-list"></a> 📋 **List**
 
 **Alias:** `l`
 
@@ -76,7 +77,6 @@ npx @capgo/cli@latest app list
 ```
 
 📋 List all apps registered under your account in Capgo Cloud.
-
 
 **Example:**
 
@@ -90,16 +90,14 @@ npx @capgo/cli@latest app list
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 
-#### <a id="app-debug"></a> 🐞 **Debug**
+### <a id="app-debug"></a> 🐞 **Debug**
 
 ```bash
 npx @capgo/cli@latest app debug
 ```
 
 🐞 Listen for live update events in Capgo Cloud to debug your app.
-
 Optionally target a specific device for detailed diagnostics.
-
 
 **Example:**
 
@@ -114,16 +112,14 @@ npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-d,** | <code>string</code> | The specific device ID to debug |
 
-#### <a id="app-setting"></a> ⚙️ **Setting**
+### <a id="app-setting"></a> ⚙️ **Setting**
 
 ```bash
 npx @capgo/cli@latest app setting
 ```
 
 ⚙️ Modify Capacitor configuration programmatically by specifying the path to the setting.
-
 (e.g., plugins.CapacitorUpdater.defaultChannel). You MUST provide either --string or --bool.
-
 
 **Example:**
 
@@ -138,7 +134,7 @@ npx @capgo/cli@latest app setting plugins.CapacitorUpdater.defaultChannel --stri
 | **--bool** | <code>string</code> | A value for the setting to modify as a boolean, ex: --bool true |
 | **--string** | <code>string</code> | A value for the setting to modify as a string, ex: --string "Production" |
 
-#### <a id="app-set"></a> ⚙️ **Set**
+### <a id="app-set"></a> ⚙️ **Set**
 
 **Alias:** `s`
 
@@ -147,9 +143,7 @@ npx @capgo/cli@latest app set
 ```
 
 ⚙️ Update settings for an existing app in Capgo Cloud, such as name, icon, or retention period for bundles.
-
 Retention of 0 means infinite storage.
-
 
 **Example:**
 

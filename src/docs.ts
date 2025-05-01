@@ -25,13 +25,22 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
   }))
 
   // Function to format command documentation
-  const formatCommand = (cmd: any, isSubcommand = false, parentCmd?: string) => {
+  const formatCommand = (cmd: any, isSubcommand = false, parentCmd?: string, skipMainHeading = false) => {
     const cmdName = cmd.name
     const cmdNameCapitalized = cmdName.charAt(0).toUpperCase() + cmdName.slice(1)
 
-    // Create anchor for TOC linking
-    const anchor = isSubcommand ? `${parentCmd}-${cmdName}` : cmdName
-    const heading = isSubcommand ? `####` : `###`
+    // Create anchor for TOC linking - use different IDs for README vs individual files
+    let anchor
+    if (isSubcommand) {
+      // For subcommands, in README we use parent-child format, in individual files just child
+      anchor = parentCmd ? `${parentCmd}-${cmdName}` : cmdName
+    }
+    else {
+      // For main commands, in README we use command name, in individual files we use 'options'
+      anchor = skipMainHeading ? 'options' : cmdName
+    }
+
+    const heading = isSubcommand ? `###` : `##`
 
     let section = ''
 
@@ -80,7 +89,10 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     else if (cmdName === 'account')
       emoji = '👤'
 
-    section += `${heading} <a id="${anchor}"></a> ${emoji} **${cmdNameCapitalized}**\n\n`
+    // Add the heading unless we're skipping the main heading
+    if (!(skipMainHeading && !isSubcommand)) {
+      section += `${heading} <a id="${anchor}"></a> ${emoji} **${cmdNameCapitalized}**\n\n`
+    }
 
     if (cmd.alias) {
       section += `**Alias:** \`${cmd.alias}\`\n\n`
@@ -97,7 +109,11 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
 
     // Description - split by line breaks and handle topics
     const descLines = cmd.description.split('\n')
-    descLines.forEach((line: string) => {
+    // Skip the first line for the main command since we already included it
+    const startIndex = (!isSubcommand && skipMainHeading) ? 1 : 0
+
+    for (let i = startIndex; i < descLines.length; i++) {
+      const line = descLines[i]
       if (line.trim().startsWith('Note:')) {
         // Format notes with emoji
         section += `> ℹ️ ${line.trim().substring(5).trim()}\n\n`
@@ -105,10 +121,10 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       else if (line.includes('Example:')) {
         // Skip example lines, they'll be handled separately
       }
-      else {
+      else if (line.trim()) { // Only add non-empty lines
         section += `${line}\n`
       }
-    })
+    }
     section += '\n'
 
     // Handle example separately
@@ -122,7 +138,13 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
 
     // Options table
     if (cmd.options.length > 0) {
-      section += `**Options:**\n\n`
+      if (!isSubcommand) {
+        // Only add the Options title for the main command
+        section += `## <a id="options"></a> Options\n\n`
+      }
+      else {
+        section += `**Options:**\n\n`
+      }
       section += `| Param          | Type          | Description          |\n`
       section += `| -------------- | ------------- | -------------------- |\n`
       cmd.options.forEach((opt: any) => {
@@ -148,22 +170,83 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       if (cmd.name === 'generate-docs')
         return // Skip documenting this command
 
+      // Determine emoji for this command
+      let emoji = '🔹'
+      if (cmd.name.includes('upload'))
+        emoji = '⬆️'
+      else if (cmd.name.includes('delete'))
+        emoji = '🗑️'
+      else if (cmd.name.includes('list'))
+        emoji = '📋'
+      else if (cmd.name.includes('add'))
+        emoji = '➕'
+      else if (cmd.name.includes('set'))
+        emoji = '⚙️'
+      else if (cmd.name.includes('create'))
+        emoji = '🔨'
+      else if (cmd.name.includes('encrypt'))
+        emoji = '🔒'
+      else if (cmd.name.includes('decrypt'))
+        emoji = '🔓'
+      else if (cmd.name.includes('debug'))
+        emoji = '🐞'
+      else if (cmd.name.includes('doctor'))
+        emoji = '👨‍⚕️'
+      else if (cmd.name.includes('login'))
+        emoji = '🔑'
+      else if (cmd.name.includes('init'))
+        emoji = '🚀'
+      else if (cmd.name.includes('compatibility'))
+        emoji = '🧪'
+      else if (cmd.name.includes('cleanup'))
+        emoji = '🧹'
+      else if (cmd.name.includes('currentBundle'))
+        emoji = '📦'
+      else if (cmd.name.includes('setting'))
+        emoji = '⚙️'
+      else if (cmd.name === 'app')
+        emoji = '📱'
+      else if (cmd.name === 'bundle')
+        emoji = '📦'
+      else if (cmd.name === 'channel')
+        emoji = '📢'
+      else if (cmd.name === 'key')
+        emoji = '🔐'
+      else if (cmd.name === 'account')
+        emoji = '👤'
+
       // Generate frontmatter and content for the command
       let cmdFile = `---
-title: ${cmd.name}
+title: ${emoji} ${cmd.name}
 sidebar_label: ${cmd.name}
 sidebar:
   order: ${commands.indexOf(cmd) + 1}
 ---
 
 `
-      // Add command description with emoji preserved
+      // Add command description with emoji preserved, but skip the redundant title
       const description = cmd.description.split('\n')[0]
-      cmdFile += `# ${cmd.name.charAt(0).toUpperCase() + cmd.name.slice(1)}\n\n`
       cmdFile += `${description}\n\n`
 
+      // Generate Table of Contents for this command
+      if (cmd.subcommands.length > 0) {
+        cmdFile += `## Table of Contents\n\n`
+
+        // Add link to options if present
+        if (cmd.options.length > 0) {
+          cmdFile += `- [Options](#options)\n`
+        }
+
+        // Add links to all subcommands
+        cmd.subcommands.forEach((subCmd: any) => {
+          const subCmdNameCapitalized = subCmd.name.charAt(0).toUpperCase() + subCmd.name.slice(1)
+          cmdFile += `- [${subCmdNameCapitalized}](#${subCmd.name})\n`
+        })
+        cmdFile += `\n`
+      }
+
       // Add command documentation
-      let cmdMarkdown = formatCommand(cmd)
+      let cmdMarkdown = formatCommand(cmd, false, cmd.name, true) // Last param to skip the main heading
 
       if (cmd.subcommands.length > 0) {
         cmdMarkdown += `## ${cmd.name.toUpperCase()} Subcommands\n\n`
