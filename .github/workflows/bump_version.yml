@@ -2,7 +2,7 @@ name: Bump version
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 on:
   push:
@@ -38,10 +38,11 @@ jobs:
       - name: Update README.md
         run: bun run generate-docs
       - name: Update Doc
-        run: bun run generate-docs --folder reference
+        run: bun run generate-docs --folder webdocs
       - name: Add doc to github
         run: |
           git add README.md
+          git add webdocs/*
           git commit --m "docs: update README.md" || true
       - name: Create bump and changelog main
         if: github.ref == 'refs/heads/main'
@@ -60,7 +61,7 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          source-files: reference
+          source-files: webdocs
           destination-username: Cap-go
           destination-repository: website
           destination-directory: src/content/docs/docs/cli/reference
