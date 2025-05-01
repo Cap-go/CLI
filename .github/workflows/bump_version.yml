@@ -38,7 +38,7 @@ jobs:
       - name: Update README.md
         run: bun run generate-docs
       - name: Update Doc
-        run: bun run generate-docs --folder webdocs
+        run: bun run generate-docs --folder reference
       - name: Add doc to github
         run: |
           git add README.md
@@ -54,7 +54,7 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          source-files: webdocs
+          source-files: reference
           destination-username: Cap-go
           destination-repository: website
           destination-directory: src/content/docs/docs/cli/reference
