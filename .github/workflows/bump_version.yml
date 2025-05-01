@@ -1,7 +1,7 @@
 name: Bump version
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
+  group: ${{ github.workflow }}-${{ github.ref }}-bump-version
   cancel-in-progress: false
 
 on:
