@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.4.0](https://github.com/Cap-go/CLI/compare/v7.3.3...v7.4.0) (2025-05-01)
+
+
+### Features
+
+* redo CLI docs ([2ca87b8](https://github.com/Cap-go/CLI/commit/2ca87b8bba2e4354cd10f13a9e84e173adbe1c1e))
+
+
+### Bug Fixes
+
+* assume Capacitor V7 for linked versions of the updater ([4d67285](https://github.com/Cap-go/CLI/commit/4d672855beb070459af11cf9b6c5cb7bc89fdfc1))
+* build before genrerate docs ([9e1dc89](https://github.com/Cap-go/CLI/commit/9e1dc894c040715cd330be0d28a65fbb0e5e36d4))
+
 ### [7.3.3](https://github.com/Cap-go/CLI/compare/v7.3.2...v7.3.3) (2025-05-01)
 
 ### [7.3.2](https://github.com/Cap-go/CLI/compare/v7.3.1...v7.3.2) (2025-05-01)
