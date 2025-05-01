@@ -130,13 +130,7 @@ npx @capgo/cli@latest login YOUR_API_KEY
 
 ## <a id="bundle"></a> 📦 **Bundle**
 
-```bash
-npx @capgo/cli@latest bundle
-```
-
 📦 Manage app bundles for deployment in Capgo Cloud, including upload, compatibility checks, and encryption.
-
-#### BUNDLE Subcommands:
 
 ### <a id="bundle-upload"></a> ⬆️ **Upload**
 
@@ -384,13 +378,7 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 
 ## <a id="app"></a> 📱 **App**
 
-```bash
-npx @capgo/cli@latest app
-```
-
 📱 Manage your Capgo app settings and configurations in Capgo Cloud.
-
-#### APP Subcommands:
 
 ### <a id="app-add"></a> ➕ **Add**
 
@@ -532,13 +520,7 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 
 ## <a id="channel"></a> 📢 **Channel**
 
-```bash
-npx @capgo/cli@latest channel
-```
-
 📢 Manage distribution channels for app updates in Capgo Cloud, controlling how updates are delivered to devices.
-
-#### CHANNEL Subcommands:
 
 ### <a id="channel-add"></a> ➕ **Add**
 
@@ -675,13 +657,7 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 
 ## <a id="key"></a> 🔐 **Key**
 
-```bash
-npx @capgo/cli@latest key
-```
-
 🔐 Manage encryption keys for secure bundle distribution in Capgo Cloud, supporting end-to-end encryption with RSA and AES combination.
-
-#### KEY Subcommands:
 
 ### <a id="key-save"></a> 🔹 **Save**
 
@@ -744,13 +720,7 @@ npx @capgo/cli@latest key delete_old
 
 ## <a id="account"></a> 👤 **Account**
 
-```bash
-npx @capgo/cli@latest account
-```
-
 👤 Manage your Capgo account details and retrieve information for support or collaboration.
-
-#### ACCOUNT Subcommands:
 
 ### <a id="account-id"></a> 🔹 **Id**
 

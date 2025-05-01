@@ -1,31 +1,73 @@
+import type { Command, Option } from 'commander'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { log } from '@clack/prompts'
 import { program } from 'commander'
 
+// Define proper types for mapped commands
+interface CommandOption {
+  flags: string
+  description: string
+}
+
+// Extend Command type to include internal properties
+interface CommandWithInternals extends Command {
+  _actionHandler: ((...args: any[]) => void) | null
+}
+
+interface MappedCommand {
+  name: string
+  alias: string
+  description: string
+  options: CommandOption[]
+  subcommands: MappedCommand[]
+  hasAction: boolean // Property to track if command has an action handler
+  isCommandGroup: boolean // Property to identify command groups
+}
+
 export function generateDocs(filePath: string = './README.md', folderPath?: string) {
-  const commands = program.commands.map((cmd: any) => ({
-    name: cmd.name(),
-    alias: cmd.alias() || '',
-    description: cmd.description(),
-    options: cmd.options.map((opt: any) => ({
-      flags: opt.flags,
-      description: opt.description,
-    })),
-    subcommands: cmd.commands
-      ? cmd.commands.map((subCmd: any) => ({
-          name: subCmd.name(),
-          alias: subCmd.alias() || '',
-          description: subCmd.description(),
-          options: subCmd.options.map((opt: any) => ({
-            flags: opt.flags,
-            description: opt.description,
-          })),
-        }))
-      : [],
-  }))
+  const commands = program.commands.map((cmd: Command): MappedCommand => {
+    // Cast to access internal properties
+    const cmdWithInternals = cmd as CommandWithInternals
+    // Check if command has an action handler
+    const hasAction = cmdWithInternals._actionHandler !== null && cmdWithInternals._actionHandler !== undefined
+    // Check if it has subcommands
+    const hasSubcommands = cmd.commands && cmd.commands.length > 0
+    // A command group has subcommands but no action handler
+    const isCommandGroup = hasSubcommands && !hasAction
+
+    return {
+      name: cmd.name(),
+      alias: cmd.alias() || '',
+      description: cmd.description(),
+      options: cmd.options.map((opt: Option): CommandOption => ({
+        flags: opt.flags,
+        description: opt.description || '',
+      })),
+      subcommands: cmd.commands
+        ? cmd.commands.map((subCmd: Command): MappedCommand => {
+            const subCmdWithInternals = subCmd as CommandWithInternals
+            const subCmdHasAction = subCmdWithInternals._actionHandler !== null && subCmdWithInternals._actionHandler !== undefined
+            return {
+              name: subCmd.name(),
+              alias: subCmd.alias() || '',
+              description: subCmd.description(),
+              options: subCmd.options.map((opt: Option): CommandOption => ({
+                flags: opt.flags,
+                description: opt.description || '',
+              })),
+              subcommands: [], // Subcommands don't have their own subcommands in this implementation
+              hasAction: subCmdHasAction,
+              isCommandGroup: false, // Subcommands are never command groups
+            }
+          })
+        : [],
+      hasAction,
+      isCommandGroup,
+    }
+  })
 
   // Function to format command documentation
-  const formatCommand = (cmd: any, isSubcommand = false, parentCmd?: string, skipMainHeading = false) => {
+  const formatCommand = (cmd: MappedCommand, isSubcommand = false, parentCmd?: string, skipMainHeading = false) => {
     const cmdName = cmd.name
     const cmdNameCapitalized = cmdName.charAt(0).toUpperCase() + cmdName.slice(1)
 
@@ -89,7 +131,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     else if (cmdName === 'account')
       emoji = '👤'
 
-    // Add the heading unless we're skipping the main heading
+    // For all commands, add the heading and description
     if (!(skipMainHeading && !isSubcommand)) {
       section += `${heading} <a id="${anchor}"></a> ${emoji} **${cmdNameCapitalized}**\n\n`
     }
@@ -98,14 +140,17 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       section += `**Alias:** \`${cmd.alias}\`\n\n`
     }
 
-    section += `\`\`\`bash\n`
-    if (isSubcommand) {
-      section += `npx @capgo/cli@latest ${parentCmd} ${cmdName}\n`
+    // For regular commands, show usage example
+    if (!cmd.isCommandGroup) {
+      section += `\`\`\`bash\n`
+      if (isSubcommand) {
+        section += `npx @capgo/cli@latest ${parentCmd} ${cmdName}\n`
+      }
+      else {
+        section += `npx @capgo/cli@latest ${cmdName}\n`
+      }
+      section += `\`\`\`\n\n`
     }
-    else {
-      section += `npx @capgo/cli@latest ${cmdName}\n`
-    }
-    section += `\`\`\`\n\n`
 
     // Description - split by line breaks and handle topics
     const descLines = cmd.description.split('\n')
@@ -127,16 +172,16 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     }
     section += '\n'
 
-    // Handle example separately
+    // Handle example separately - only for regular commands, not for command groups
     const exampleLine = cmd.description.split('\n').find((line: string) => line.includes('Example:'))
-    if (exampleLine) {
+    if (exampleLine && !cmd.isCommandGroup) {
       section += `**Example:**\n\n`
       section += `\`\`\`bash\n`
       section += `${exampleLine.replace('Example: ', '')}\n`
       section += `\`\`\`\n\n`
     }
 
-    // Options table
+    // Options table - for all commands (even command groups may have global options)
     if (cmd.options.length > 0) {
       if (!isSubcommand) {
         // Only add the Options title for the main command
@@ -147,7 +192,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       }
       section += `| Param          | Type          | Description          |\n`
       section += `| -------------- | ------------- | -------------------- |\n`
-      cmd.options.forEach((opt: any) => {
+      cmd.options.forEach((opt) => {
         const param = opt.flags.split(' ')[0]
         const type = opt.flags.split(' ').length > 1 ? 'string' : 'boolean'
         section += `| **${param}** | <code>${type}</code> | ${opt.description} |\n`
@@ -245,11 +290,12 @@ sidebar:
         cmdFile += `\n`
       }
 
-      // Add command documentation
-      let cmdMarkdown = formatCommand(cmd, false, cmd.name, true) // Last param to skip the main heading
-
-      if (cmd.subcommands.length > 0) {
-        cmdMarkdown += `## ${cmd.name.toUpperCase()} Subcommands\n\n`
+      let cmdMarkdown = ''
+      if (cmd.subcommands.length === 0) {
+        // Add command documentation
+        cmdMarkdown = formatCommand(cmd, false, cmd.name, true) // Last param to skip the main heading
+      }
+      else {
         cmd.subcommands.forEach((subCmd: any) => {
           cmdMarkdown += formatCommand(subCmd, true, cmd.name)
         })
@@ -293,14 +339,20 @@ sidebar:
       if (cmd.name === 'generate-docs')
         return // Skip documenting this command
 
-      markdown += formatCommand(cmd)
+      // Use the formatCommand function with the flag set to skip usage for command groups
+      markdown += formatCommand(cmd, false, undefined, false)
 
       if (cmd.subcommands.length > 0) {
-        markdown += `#### ${cmd.name.toUpperCase()} Subcommands:\n\n`
-        cmd.subcommands.forEach((subCmd: any) => {
+        // For command groups, don't add a subcommands heading since that's implied
+        if (!cmd.isCommandGroup) {
+          markdown += `#### ${cmd.name.toUpperCase()} Subcommands:\n\n`
+        }
+
+        cmd.subcommands.forEach((subCmd) => {
           markdown += formatCommand(subCmd, true, cmd.name)
         })
       }
+
       markdown += '\n'
     })
 
