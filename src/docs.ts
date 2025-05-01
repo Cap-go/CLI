@@ -24,6 +24,54 @@ interface MappedCommand {
   isCommandGroup: boolean // Property to identify command groups
 }
 
+// Helper function to get an emoji for a command
+function getCommandEmoji(cmdName: string): string {
+  let emoji = '🔹'
+  if (cmdName.includes('upload'))
+    emoji = '⬆️'
+  else if (cmdName.includes('delete'))
+    emoji = '🗑️'
+  else if (cmdName.includes('list'))
+    emoji = '📋'
+  else if (cmdName.includes('add'))
+    emoji = '➕'
+  else if (cmdName.includes('set'))
+    emoji = '⚙️'
+  else if (cmdName.includes('create'))
+    emoji = '🔨'
+  else if (cmdName.includes('encrypt'))
+    emoji = '🔒'
+  else if (cmdName.includes('decrypt'))
+    emoji = '🔓'
+  else if (cmdName.includes('debug'))
+    emoji = '🐞'
+  else if (cmdName.includes('doctor'))
+    emoji = '👨‍⚕️'
+  else if (cmdName.includes('login'))
+    emoji = '🔑'
+  else if (cmdName.includes('init'))
+    emoji = '🚀'
+  else if (cmdName.includes('compatibility'))
+    emoji = '🧪'
+  else if (cmdName.includes('cleanup'))
+    emoji = '🧹'
+  else if (cmdName.includes('currentBundle'))
+    emoji = '📦'
+  else if (cmdName.includes('setting'))
+    emoji = '⚙️'
+  else if (cmdName === 'app')
+    emoji = '📱'
+  else if (cmdName === 'bundle')
+    emoji = '📦'
+  else if (cmdName === 'channel')
+    emoji = '📢'
+  else if (cmdName === 'key')
+    emoji = '🔐'
+  else if (cmdName === 'account')
+    emoji = '👤'
+  return emoji
+}
+
 export function generateDocs(filePath: string = './README.md', folderPath?: string) {
   const commands = program.commands.map((cmd: Command): MappedCommand => {
     // Cast to access internal properties
@@ -87,49 +135,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     let section = ''
 
     // Command heading with emoji based on command type
-    let emoji = '🔹'
-    if (cmdName.includes('upload'))
-      emoji = '⬆️'
-    else if (cmdName.includes('delete'))
-      emoji = '🗑️'
-    else if (cmdName.includes('list'))
-      emoji = '📋'
-    else if (cmdName.includes('add'))
-      emoji = '➕'
-    else if (cmdName.includes('set'))
-      emoji = '⚙️'
-    else if (cmdName.includes('create'))
-      emoji = '🔨'
-    else if (cmdName.includes('encrypt'))
-      emoji = '🔒'
-    else if (cmdName.includes('decrypt'))
-      emoji = '🔓'
-    else if (cmdName.includes('debug'))
-      emoji = '🐞'
-    else if (cmdName.includes('doctor'))
-      emoji = '👨‍⚕️'
-    else if (cmdName.includes('login'))
-      emoji = '🔑'
-    else if (cmdName.includes('init'))
-      emoji = '🚀'
-    else if (cmdName.includes('compatibility'))
-      emoji = '🧪'
-    else if (cmdName.includes('cleanup'))
-      emoji = '🧹'
-    else if (cmdName.includes('currentBundle'))
-      emoji = '📦'
-    else if (cmdName.includes('setting'))
-      emoji = '⚙️'
-    else if (cmdName === 'app')
-      emoji = '📱'
-    else if (cmdName === 'bundle')
-      emoji = '📦'
-    else if (cmdName === 'channel')
-      emoji = '📢'
-    else if (cmdName === 'key')
-      emoji = '🔐'
-    else if (cmdName === 'account')
-      emoji = '👤'
+    const emoji = getCommandEmoji(cmdName)
 
     // For all commands, add the heading and description
     if (!(skipMainHeading && !isSubcommand)) {
@@ -216,49 +222,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
         return // Skip documenting this command
 
       // Determine emoji for this command
-      let emoji = '🔹'
-      if (cmd.name.includes('upload'))
-        emoji = '⬆️'
-      else if (cmd.name.includes('delete'))
-        emoji = '🗑️'
-      else if (cmd.name.includes('list'))
-        emoji = '📋'
-      else if (cmd.name.includes('add'))
-        emoji = '➕'
-      else if (cmd.name.includes('set'))
-        emoji = '⚙️'
-      else if (cmd.name.includes('create'))
-        emoji = '🔨'
-      else if (cmd.name.includes('encrypt'))
-        emoji = '🔒'
-      else if (cmd.name.includes('decrypt'))
-        emoji = '🔓'
-      else if (cmd.name.includes('debug'))
-        emoji = '🐞'
-      else if (cmd.name.includes('doctor'))
-        emoji = '👨‍⚕️'
-      else if (cmd.name.includes('login'))
-        emoji = '🔑'
-      else if (cmd.name.includes('init'))
-        emoji = '🚀'
-      else if (cmd.name.includes('compatibility'))
-        emoji = '🧪'
-      else if (cmd.name.includes('cleanup'))
-        emoji = '🧹'
-      else if (cmd.name.includes('currentBundle'))
-        emoji = '📦'
-      else if (cmd.name.includes('setting'))
-        emoji = '⚙️'
-      else if (cmd.name === 'app')
-        emoji = '📱'
-      else if (cmd.name === 'bundle')
-        emoji = '📦'
-      else if (cmd.name === 'channel')
-        emoji = '📢'
-      else if (cmd.name === 'key')
-        emoji = '🔐'
-      else if (cmd.name === 'account')
-        emoji = '👤'
+      const emoji = getCommandEmoji(cmd.name)
 
       // Generate frontmatter and content for the command
       let cmdFile = `---
@@ -272,23 +236,6 @@ sidebar:
       // Add command description with emoji preserved, but skip the redundant title
       const description = cmd.description.split('\n')[0]
       cmdFile += `${description}\n\n`
-
-      // Generate Table of Contents for this command
-      if (cmd.subcommands.length > 0) {
-        cmdFile += `## Table of Contents\n\n`
-
-        // Add link to options if present
-        if (cmd.options.length > 0) {
-          cmdFile += `- [Options](#options)\n`
-        }
-
-        // Add links to all subcommands
-        cmd.subcommands.forEach((subCmd: any) => {
-          const subCmdNameCapitalized = subCmd.name.charAt(0).toUpperCase() + subCmd.name.slice(1)
-          cmdFile += `- [${subCmdNameCapitalized}](#${subCmd.name})\n`
-        })
-        cmdFile += `\n`
-      }
 
       let cmdMarkdown = ''
       if (cmd.subcommands.length === 0) {
@@ -324,7 +271,9 @@ sidebar:
       if (cmd.name === 'generate-docs')
         return // Skip documenting this command
 
-      markdown += `- [${cmd.name.charAt(0).toUpperCase() + cmd.name.slice(1)}](#${cmd.name})\n`
+      // Get emoji for this command
+      const emoji = getCommandEmoji(cmd.name)
+      markdown += `- ${emoji} [${cmd.name.charAt(0).toUpperCase() + cmd.name.slice(1)}](#${cmd.name})\n`
 
       if (cmd.subcommands.length > 0) {
         cmd.subcommands.forEach((subCmd: any) => {
