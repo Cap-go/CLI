@@ -61,7 +61,7 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          source-files: webdocs
+          source-files: webdocs/*
           destination-username: Cap-go
           destination-repository: website
           destination-directory: src/content/docs/docs/cli/reference

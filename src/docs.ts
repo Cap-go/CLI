@@ -176,8 +176,8 @@ sidebar:
 
       // Write the file
       try {
-        writeFileSync(`${folderPath}/${cmd.name}.md`, cmdFile, 'utf8')
-        log.success(`Generated documentation file for ${cmd.name} command in ${folderPath}/${cmd.name}.md`)
+        writeFileSync(`${folderPath}/${cmd.name}.mdx`, cmdFile, 'utf8')
+        log.success(`Generated documentation file for ${cmd.name} command in ${folderPath}/${cmd.name}.mdx`)
       }
       catch (error) {
         console.error(`Error generating file for ${cmd.name}:`, error)
