@@ -26,7 +26,6 @@ interface Options extends OptionsBase {
   state?: string
   downgrade?: boolean
   latest?: boolean
-  upgrade?: boolean
   ios?: boolean
   android?: boolean
   selfAssign?: boolean
@@ -59,7 +58,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
   const orgId = await getOrganizationId(supabase, appId)
 
-  const { bundle, state, downgrade, latest, upgrade, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
+  const { bundle, state, downgrade, latest, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
   if (!channel) {
     log.error('Missing argument, you need to provide a channel')
     program.error('')
@@ -72,7 +71,6 @@ export async function setChannel(channel: string, appId: string, options: Option
     && state == null
     && latest == null
     && downgrade == null
-    && upgrade == null
     && ios == null
     && android == null
     && selfAssign == null

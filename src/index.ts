@@ -351,8 +351,6 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--latest', `Get the latest version key in the package.json to set it to the channel`)
   .option('--downgrade', `Allow to downgrade to version under native one`)
   .option('--no-downgrade', `Disable downgrade to version under native one`)
-  .option('--upgrade', `Allow to upgrade to version above native one`)
-  .option('--no-upgrade', `Disable upgrade to version above native one`)
   .option('--ios', `Allow sending update to iOS devices`)
   .option('--no-ios', `Disable sending update to iOS devices`)
   .option('--android', `Allow sending update to Android devices`)
