@@ -332,6 +332,10 @@ Optionally, you can give:
 
 `[channelId]` the name of your channel you want to delete. `[appId]` your app ID the format `com.test.app` is explained [here](https://capacitorjs.com/docs/cli/commands/init/).
 
+Optionally, you can give:
+
+* `--delete-bundle` Deletes the bundle associated with the channel.
+
 ### **List**
 
 `npx @capgo/cli channel list [appId]`
