@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.9](https://github.com/Cap-go/CLI/compare/v7.4.8...v7.4.9) (2025-05-01)
+
+
+### Bug Fixes
+
+* perfect remove toc on website as it's already on the side ([4057444](https://github.com/Cap-go/CLI/commit/40574441e348d2bfcccb5c6830c004b9a7a4841e))
+
 ### [7.4.8](https://github.com/Cap-go/CLI/compare/v7.4.7...v7.4.8) (2025-05-01)
 
 
