@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.6](https://github.com/Cap-go/CLI/compare/v7.4.5...v7.4.6) (2025-05-01)
+
+
+### Bug Fixes
+
+* delete old md files ([38d9e2b](https://github.com/Cap-go/CLI/commit/38d9e2bc23b02a0a7d0feb989aaa935fff8e1d66))
+
 ### [7.4.5](https://github.com/Cap-go/CLI/compare/v7.4.4...v7.4.5) (2025-05-01)
 
 
