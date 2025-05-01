@@ -67,6 +67,7 @@ npx @capgo/cli@latest init
 
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
 
+
 **Example:**
 
 ```bash
@@ -82,6 +83,7 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
 | **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
+
 ### <a id="doctor"></a> 👨‍⚕️ **Doctor**
 
 ```bash
@@ -91,6 +93,7 @@ npx @capgo/cli@latest doctor
 👨‍⚕️ Check if your Capgo app installation is up-to-date and gather information useful for bug reports.
 
 This command helps diagnose issues with your setup.
+
 
 **Example:**
 
@@ -104,6 +107,7 @@ npx @capgo/cli@latest doctor
 | -------------- | ------------- | -------------------- |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 
+
 ### <a id="login"></a> 🔑 **Login**
 
 **Alias:** `l`
@@ -116,6 +120,7 @@ npx @capgo/cli@latest login
 
 Use --apikey=******** in any command to override it.
 
+
 **Example:**
 
 ```bash
@@ -127,6 +132,7 @@ npx @capgo/cli@latest login YOUR_API_KEY
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **--local** | <code>boolean</code> | Only save in local folder, git ignored for security. |
+
 
 ### <a id="bundle"></a> 📦 **Bundle**
 
@@ -156,11 +162,16 @@ Version must be > 0.0.0 and unique.
 
 > ℹ️ External option helps with corporate privacy concerns and apps larger than 200MB by storing only the link.
 
+
 > ℹ️ Capgo Cloud never looks at the content in the link for external options or in the code when stored.
+
 
 > ℹ️ You can add a second layer of security with encryption, making Capgo trustless.
 
+
 > ℹ️ Version should be greater than "0.0.0" and cannot be overridden or reused after deletion for security reasons.
+
+
 
 **Example:**
 
@@ -224,6 +235,7 @@ npx @capgo/cli@latest bundle compatibility
 
 🧪 Check compatibility of a bundle with a specific channel in Capgo Cloud to ensure updates are safe.
 
+
 **Example:**
 
 ```bash
@@ -250,6 +262,7 @@ npx @capgo/cli@latest bundle delete
 
 🗑️ Delete a specific bundle from Capgo Cloud, optionally targeting a single version.
 
+
 **Example:**
 
 ```bash
@@ -271,6 +284,7 @@ npx @capgo/cli@latest bundle list
 ```
 
 📋 List all bundles uploaded for an app in Capgo Cloud.
+
 
 **Example:**
 
@@ -295,6 +309,7 @@ npx @capgo/cli@latest bundle cleanup
 🧹 Cleanup old bundles in Capgo Cloud, keeping a specified number of recent versions or those linked to channels.
 
 Ignores bundles in use.
+
 
 **Example:**
 
@@ -322,6 +337,7 @@ npx @capgo/cli@latest bundle encrypt
 
 Used with external sources or for testing, prints ivSessionKey for upload or decryption.
 
+
 **Example:**
 
 ```bash
@@ -345,6 +361,7 @@ npx @capgo/cli@latest bundle decrypt
 🔓 Decrypt a zip bundle using the new encryption method, mainly for testing purposes.
 
 Prints the base64 decrypted session key for verification.
+
 
 **Example:**
 
@@ -370,6 +387,7 @@ npx @capgo/cli@latest bundle zip
 
 Useful for preparing bundles before encryption or upload.
 
+
 **Example:**
 
 ```bash
@@ -387,6 +405,7 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **--no-code-check** | <code>boolean</code> | Ignore checking if notifyAppReady() is called in source code and index present in root folder |
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
+
 
 ### <a id="app"></a> 📱 **App**
 
@@ -410,6 +429,7 @@ npx @capgo/cli@latest app add
 
 All options can be guessed from config if not provided.
 
+
 **Example:**
 
 ```bash
@@ -431,6 +451,7 @@ npx @capgo/cli@latest app delete
 ```
 
 🗑️ Delete an app from Capgo Cloud, optionally specifying a version to delete only that bundle.
+
 
 **Example:**
 
@@ -454,6 +475,7 @@ npx @capgo/cli@latest app list
 
 📋 List all apps registered under your account in Capgo Cloud.
 
+
 **Example:**
 
 ```bash
@@ -475,6 +497,7 @@ npx @capgo/cli@latest app debug
 🐞 Listen for live update events in Capgo Cloud to debug your app.
 
 Optionally target a specific device for detailed diagnostics.
+
 
 **Example:**
 
@@ -498,6 +521,7 @@ npx @capgo/cli@latest app setting
 ⚙️ Modify Capacitor configuration programmatically by specifying the path to the setting.
 
 (e.g., plugins.CapacitorUpdater.defaultChannel). You MUST provide either --string or --bool.
+
 
 **Example:**
 
@@ -524,6 +548,7 @@ npx @capgo/cli@latest app set
 
 Retention of 0 means infinite storage.
 
+
 **Example:**
 
 ```bash
@@ -538,6 +563,7 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-r,** | <code>string</code> | Retention period of app bundle in days, 0 by default = infinite |
+
 
 ### <a id="channel"></a> 📢 **Channel**
 
@@ -558,6 +584,7 @@ npx @capgo/cli@latest channel add
 ```
 
 ➕ Create a new channel for app distribution in Capgo Cloud to manage update delivery.
+
 
 **Example:**
 
@@ -582,6 +609,7 @@ npx @capgo/cli@latest channel delete
 
 🗑️ Delete a channel from Capgo Cloud, optionally removing associated bundles to free up resources.
 
+
 **Example:**
 
 ```bash
@@ -605,6 +633,7 @@ npx @capgo/cli@latest channel list
 
 📋 List all channels configured for an app in Capgo Cloud to review distribution settings.
 
+
 **Example:**
 
 ```bash
@@ -624,6 +653,7 @@ npx @capgo/cli@latest channel currentBundle
 ```
 
 📦 Get the current bundle linked to a specific channel in Capgo Cloud for update tracking.
+
 
 **Example:**
 
@@ -650,6 +680,7 @@ npx @capgo/cli@latest channel set
 ⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, emulator).
 
 One channel must be default.
+
 
 **Example:**
 
@@ -682,6 +713,7 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 | **--no-emulator** | <code>boolean</code> | Disable sending update to emulator devices |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 
+
 ### <a id="key"></a> 🔐 **Key**
 
 ```bash
@@ -701,6 +733,7 @@ npx @capgo/cli@latest key save
 💾 Save a base64 encryption key in the Capacitor config, useful for CI environments.
 
 Recommended not to commit the key for security.
+
 
 **Example:**
 
@@ -726,6 +759,7 @@ npx @capgo/cli@latest key create
 
 Do not commit or share the private key; save it securely.
 
+
 **Example:**
 
 ```bash
@@ -746,11 +780,13 @@ npx @capgo/cli@latest key delete_old
 
 🧹 Delete the old encryption key from the Capacitor config to ensure only the current key is used.
 
+
 **Example:**
 
 ```bash
 npx @capgo/cli@latest key delete_old
 ```
+
 
 ### <a id="account"></a> 👤 **Account**
 
@@ -770,6 +806,7 @@ npx @capgo/cli@latest account id
 
 🪪 Retrieve your account ID, safe to share for collaboration or support purposes in Discord or other platforms.
 
+
 **Example:**
 
 ```bash
@@ -781,6 +818,8 @@ npx @capgo/cli@latest account id
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+
+
 
 <!-- AUTO-GENERATED-DOCS-END -->
 
