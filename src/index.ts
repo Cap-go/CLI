@@ -348,6 +348,7 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('-b, --bundle <bundle>', `Bundle version number of the file to set`)
   .option('-s, --state <state>', `Set the state of the channel, default or normal`)
+  .option('--latest-remote', `Get the latest bundle uploaded in capgo cloud and set it to the channel`)
   .option('--latest', `Get the latest version key in the package.json to set it to the channel`)
   .option('--downgrade', `Allow to downgrade to version under native one`)
   .option('--no-downgrade', `Disable downgrade to version under native one`)

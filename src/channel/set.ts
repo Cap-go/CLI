@@ -26,6 +26,7 @@ interface Options extends OptionsBase {
   state?: string
   downgrade?: boolean
   latest?: boolean
+  latestRemote?: boolean
   ios?: boolean
   android?: boolean
   selfAssign?: boolean
@@ -58,7 +59,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
   const orgId = await getOrganizationId(supabase, appId)
 
-  const { bundle, state, downgrade, latest, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
+  const { bundle, state, downgrade, latest, latestRemote, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
   if (!channel) {
     log.error('Missing argument, you need to provide a channel')
     program.error('')
@@ -67,9 +68,18 @@ export async function setChannel(channel: string, appId: string, options: Option
     log.error('Cannot set latest and bundle at the same time')
     program.error('')
   }
+  if (latestRemote && bundle) {
+    log.error('Cannot set latest remote and bundle at the same time')
+    program.error('')
+  }
+  if (latestRemote && latest) {
+    log.error('Cannot set latest remote and latest at the same time')
+    program.error('')
+  }
   if (bundle == null
     && state == null
     && latest == null
+    && latestRemote == null
     && downgrade == null
     && ios == null
     && android == null
@@ -106,9 +116,27 @@ export async function setChannel(channel: string, appId: string, options: Option
       log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
       channelPayload.version = data.id
     }
+    if (latestRemote) {
+      const { data, error: vError } = await supabase
+        .from('app_versions')
+        .select()
+        .eq('app_id', appId)
+        .eq('user_id', userId)
+        .eq('deleted', false)
+        .order('created_at', { ascending: false })
+        .single()
+      if (vError || !data) {
+        log.error(`Cannot find latest remote version`)
+        program.error('')
+      }
+      log.info(`Set ${appId} channel: ${channel} to @${data.name}`)
+      channelPayload.version = data.id
+    }
     if (state != null) {
-      if (state === 'public' || state === 'private')
-        log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`)
+      if (state !== 'public' && state !== 'default') {
+        log.error(`State ${state} is not known. The possible values are: public, default.`)
+        program.error('')
+      }
 
       log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
       channelPayload.public = state === 'public' || state === 'default'
