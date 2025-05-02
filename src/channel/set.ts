@@ -99,6 +99,18 @@ export async function setChannel(channel: string, appId: string, options: Option
       owner_org: orgId,
       version: undefined as any,
     }
+    // check if channel already exists
+    const { error: channelError } = await supabase
+      .from('channels')
+      .select()
+      .eq('app_id', appId)
+      .eq('name', channel)
+      .single()
+    if (channelError) {
+      log.error(`Cannot find channel ${channel}`)
+      program.error('')
+    }
+
     const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || getBundleVersion('', options.packageJson)) : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
@@ -134,7 +146,7 @@ export async function setChannel(channel: string, appId: string, options: Option
     }
     if (state != null) {
       if (state !== 'normal' && state !== 'default') {
-        log.error(`State ${state} is not known. The possible values are: public, default.`)
+        log.error(`State ${state} is not known. The possible values are: normal, default.`)
         program.error('')
       }
 
