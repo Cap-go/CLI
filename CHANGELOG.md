@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.15](https://github.com/Cap-go/CLI/compare/v7.4.14...v7.4.15) (2025-05-02)
+
+
+### Bug Fixes
+
+* make sure channel exist first ([77e73a4](https://github.com/Cap-go/CLI/commit/77e73a46dfd1aedca6bd0382df952d3b91b14063))
+
 ### [7.4.14](https://github.com/Cap-go/CLI/compare/v7.4.13...v7.4.14) (2025-05-02)
 
 
