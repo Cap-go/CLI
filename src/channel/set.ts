@@ -138,8 +138,8 @@ export async function setChannel(channel: string, appId: string, options: Option
         program.error('')
       }
 
-      log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
-      channelPayload.public = state === 'public' || state === 'default'
+      log.info(`Set ${appId} channel: ${channel} to ${state}`)
+      channelPayload.public = state === 'public'
     }
     if (downgrade != null) {
       log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
