@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.12](https://github.com/Cap-go/CLI/compare/v7.4.11...v7.4.12) (2025-05-02)
+
+
+### Bug Fixes
+
+* add error for wrong state + add latest remote ([f60a62c](https://github.com/Cap-go/CLI/commit/f60a62c10a43bcb4b06a6b7a6d1e259d2cf6dacc))
+
 ### [7.4.11](https://github.com/Cap-go/CLI/compare/v7.4.10...v7.4.11) (2025-05-02)
 
 
