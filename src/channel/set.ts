@@ -133,13 +133,13 @@ export async function setChannel(channel: string, appId: string, options: Option
       channelPayload.version = data.id
     }
     if (state != null) {
-      if (state !== 'public' && state !== 'default') {
+      if (state !== 'normal' && state !== 'default') {
         log.error(`State ${state} is not known. The possible values are: public, default.`)
         program.error('')
       }
 
       log.info(`Set ${appId} channel: ${channel} to ${state}`)
-      channelPayload.public = state === 'public'
+      channelPayload.public = state === 'default'
     }
     if (downgrade != null) {
       log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
