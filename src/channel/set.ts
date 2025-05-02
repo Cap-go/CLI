@@ -129,6 +129,14 @@ export async function setChannel(channel: string, appId: string, options: Option
       log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`)
       channelPayload.allow_device_self_set = !!selfAssign
     }
+    if (dev != null) {
+      log.info(`Set ${appId} channel: ${channel} to ${dev ? 'allow' : 'disallow'} dev devices`)
+      channelPayload.allow_dev = !!dev
+    }
+    if (emulator != null) {
+      log.info(`Set ${appId} channel: ${channel} to ${emulator ? 'allow' : 'disallow'} emulator devices`)
+      channelPayload.allow_emulator = !!emulator
+    }
     if (disableAutoUpdate != null) {
       let finalDisableAutoUpdate = disableAutoUpdate.toLocaleLowerCase()
 
