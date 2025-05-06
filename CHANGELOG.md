@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.5.0](https://github.com/Cap-go/CLI/compare/v7.4.18...v7.5.0) (2025-05-06)
+
+
+### Features
+
+* add successIfNotFound option for channel delete ([35504a1](https://github.com/Cap-go/CLI/commit/35504a160a51698e1f47ac3423966e9c1c2e5982))
+
 ### [7.4.18](https://github.com/Cap-go/CLI/compare/v7.4.17...v7.4.18) (2025-05-06)
 
 
