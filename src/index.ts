@@ -316,6 +316,7 @@ Example: npx @capgo/cli@latest channel delete production com.example.app`)
   .action(deleteChannel)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('--delete-bundle', `Delete the bundle associated with the channel`)
+  .option('--success-if-not-found', `Success if the channel is not found`)
 
 channel
   .command('list [appId]')

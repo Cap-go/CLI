@@ -3,12 +3,13 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { delChannel, findBundleIdByChannelName } from '../api/channels'
+import { delChannel, findBundleIdByChannelName, findChannel } from '../api/channels'
 import { deleteAppVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 interface DeleteChannelOptions extends OptionsBase {
   deleteBundle: boolean
+  successIfNotFound: boolean
 }
 
 export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
@@ -40,6 +41,16 @@ export async function deleteChannel(channelId: string, appId: string, options: D
         log.info(`Deleting bundle ${bundle.name} from Capgo`)
         await deleteAppVersion(supabase, appId, bundle.name)
       }
+    }
+    // check if channel exists
+    const channel = await findChannel(supabase, appId, channelId)
+    if (!channel) {
+      log.error(`Channel ${channelId} not found`)
+      if (options.successIfNotFound) {
+        log.success(`Channel ${channelId} not found and successIfNotFound is true`)
+        exit()
+      }
+      program.error('')
     }
     log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
     const deleteStatus = await delChannel(supabase, channelId, appId, userId)
