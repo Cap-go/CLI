@@ -40,57 +40,57 @@ const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch'
 
 export async function setChannel(channel: string, appId: string, options: Options) {
   intro(`Set channel`)
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
-  }
-  if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
-  }
-  const supabase = await createSupabaseClient(options.apikey)
-
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
-  const orgId = await getOrganizationId(supabase, appId)
-
-  const { bundle, state, downgrade, latest, latestRemote, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
-  if (!channel) {
-    log.error('Missing argument, you need to provide a channel')
-    program.error('')
-  }
-  if (latest && bundle) {
-    log.error('Cannot set latest and bundle at the same time')
-    program.error('')
-  }
-  if (latestRemote && bundle) {
-    log.error('Cannot set latest remote and bundle at the same time')
-    program.error('')
-  }
-  if (latestRemote && latest) {
-    log.error('Cannot set latest remote and latest at the same time')
-    program.error('')
-  }
-  if (bundle == null
-    && state == null
-    && latest == null
-    && latestRemote == null
-    && downgrade == null
-    && ios == null
-    && android == null
-    && selfAssign == null
-    && dev == null
-    && emulator == null
-    && disableAutoUpdate == null) {
-    log.error('Missing argument, you need to provide a option to set')
-    program.error('')
-  }
   try {
+    options.apikey = options.apikey || findSavedKey()
+    const extConfig = await getConfig()
+    appId = getAppId(appId, extConfig?.config)
+
+    if (!options.apikey) {
+      log.error('Missing API key, you need to provide a API key to upload your bundle')
+      program.error('')
+    }
+    if (!appId) {
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+      program.error('')
+    }
+    const supabase = await createSupabaseClient(options.apikey)
+
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+    const orgId = await getOrganizationId(supabase, appId)
+
+    const { bundle, state, downgrade, latest, latestRemote, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
+    if (!channel) {
+      log.error('Missing argument, you need to provide a channel')
+      program.error('')
+    }
+    if (latest && bundle) {
+      log.error('Cannot set latest and bundle at the same time')
+      program.error('')
+    }
+    if (latestRemote && bundle) {
+      log.error('Cannot set latest remote and bundle at the same time')
+      program.error('')
+    }
+    if (latestRemote && latest) {
+      log.error('Cannot set latest remote and latest at the same time')
+      program.error('')
+    }
+    if (bundle == null
+      && state == null
+      && latest == null
+      && latestRemote == null
+      && downgrade == null
+      && ios == null
+      && android == null
+      && selfAssign == null
+      && dev == null
+      && emulator == null
+      && disableAutoUpdate == null) {
+      log.error('Missing argument, you need to provide a option to set')
+      program.error('')
+    }
     await checkPlanValid(supabase, orgId, options.apikey, appId)
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
