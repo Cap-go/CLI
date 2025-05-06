@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.17](https://github.com/Cap-go/CLI/compare/v7.4.16...v7.4.17) (2025-05-06)
+
+
+### Bug Fixes
+
+* replace wrong char in version npm ([46ca1e7](https://github.com/Cap-go/CLI/commit/46ca1e7fede48779dc49d304d368c5aae9971640))
+
 ### [7.4.16](https://github.com/Cap-go/CLI/compare/v7.4.15...v7.4.16) (2025-05-05)
 
 ### [7.4.15](https://github.com/Cap-go/CLI/compare/v7.4.14...v7.4.15) (2025-05-02)
