@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.4.18](https://github.com/Cap-go/CLI/compare/v7.4.17...v7.4.18) (2025-05-06)
+
+
+### Bug Fixes
+
+* error display ([1fc0b9d](https://github.com/Cap-go/CLI/commit/1fc0b9dab029d24be7ed511ae5d2e95552b3f89d))
+
 ### [7.4.17](https://github.com/Cap-go/CLI/compare/v7.4.16...v7.4.17) (2025-05-06)
 
 
