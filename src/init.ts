@@ -622,7 +622,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   }
   catch (e) {
     console.error(e)
-    pLog.error(`Error during onboarding, please try again later`)
+    pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
     exit(1)
   }
 
