@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.3](https://github.com/Cap-go/CLI/compare/v7.5.2...v7.5.3) (2025-05-13)
+
+
+### Bug Fixes
+
+* add appID in markSnag ([73ecf8b](https://github.com/Cap-go/CLI/commit/73ecf8bed04ed19c9febf3c1d30ed7b162d48142))
+
 ### [7.5.2](https://github.com/Cap-go/CLI/compare/v7.5.1...v7.5.2) (2025-05-09)
 
 
