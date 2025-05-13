@@ -66,7 +66,6 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       icon: '✅',
       user_id: orgId,
       tags: {
-        'user-id': userId,
         'app-id': appId,
         'channel': channelId,
       },
