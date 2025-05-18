@@ -578,7 +578,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       && !dirent.name.startsWith('node_modules')
       && !dirent.name.startsWith('dist')
     ) {
-      yield * getFiles(res)
+      yield* getFiles(res)
     }
     else {
       yield res
@@ -784,7 +784,7 @@ async function* walkDirectory(dir: string): AsyncGenerator<string> {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
-      yield * walkDirectory(fullPath)
+      yield* walkDirectory(fullPath)
     }
     else {
       yield fullPath
