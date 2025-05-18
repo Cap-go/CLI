@@ -80,7 +80,8 @@ function checkNotifyAppReady(options: OptionsUpload, path: string) {
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
     const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
     if (!isPluginConfigured) {
-      log.error(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready`)
+      log.error(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready
+      If you are sure your app has this code, you can use the --no-code-check option`)
       program.error('')
     }
     const foundIndex = checkIndexPosition(path)
@@ -236,6 +237,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   }
   else if (coerced) {
     isv7 = semverGte(coerced.version, '7.0.0')
+  }
+  else if (updaterVersion === 'link:@capgo/capacitor-updater') {
+    log.warn('Using local @capgo/capacitor-updater. Assuming v7')
+    isv7 = true
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
     checksum = await getChecksum(zipped, 'sha256')
@@ -548,6 +553,11 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
 
   const localConfig = await getLocalConfig()
+  if (options.supaHost && options.supaAnon) {
+    log.info('Using custom supabase instance from provided options')
+    localConfig.supaHost = options.supaHost
+    localConfig.supaKey = options.supaAnon
+  }
   const supabase = await createSupabaseClient(apikey)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
   const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'

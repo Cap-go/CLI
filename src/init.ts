@@ -104,8 +104,8 @@ async function cancelCommand(command: boolean | symbol, orgId: string, apikey: s
   }
 }
 
-async function markStep(orgId: string, apikey: string, step: number | string) {
-  return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`)
+async function markStep(orgId: string, apikey: string, step: number | string, appId: string) {
+  return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
 }
 
 async function step2(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
@@ -124,7 +124,7 @@ async function step2(organization: Organization, apikey: string, appId: string, 
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
-  await markStep(organization.gid, apikey, 2)
+  await markStep(organization.gid, apikey, 2, appId)
 }
 
 async function step3(orgId: string, apikey: string, appId: string) {
@@ -147,7 +147,7 @@ async function step3(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
-  await markStep(orgId, apikey, 3)
+  await markStep(orgId, apikey, 3, appId)
 }
 
 async function getAssistedDependencies(stepsDone: number) {
@@ -276,7 +276,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
-  await markStep(orgId, apikey, 4)
+  await markStep(orgId, apikey, 4, appId)
 }
 
 async function step5(orgId: string, apikey: string, appId: string) {
@@ -375,7 +375,7 @@ async function step5(orgId: string, apikey: string, appId: string) {
       }
     }
 
-    await markStep(orgId, apikey, 5)
+    await markStep(orgId, apikey, 5, appId)
   }
   else {
     pLog.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
@@ -410,9 +410,9 @@ async function step6(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
-    markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2')
+    markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
-  await markStep(orgId, apikey, 6)
+  await markStep(orgId, apikey, 6, appId)
 }
 
 async function step7(orgId: string, apikey: string, appId: string) {
@@ -438,7 +438,7 @@ async function step7(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
-  await markStep(orgId, apikey, 7)
+  await markStep(orgId, apikey, 7, appId)
 }
 
 async function step8(orgId: string, apikey: string, appId: string) {
@@ -480,10 +480,10 @@ async function step8(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
   }
-  await markStep(orgId, apikey, 8)
+  await markStep(orgId, apikey, 8, appId)
 }
 
-async function step9(orgId: string, apikey: string) {
+async function step9(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doRun = await pConfirm({ message: `Run in device now ?` })
   await cancelCommand(doRun, orgId, apikey)
@@ -509,7 +509,7 @@ async function step9(orgId: string, apikey: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
-  await markStep(orgId, apikey, 9)
+  await markStep(orgId, apikey, 9, appId)
 }
 
 async function step10(orgId: string, apikey: string, appId: string, hostWeb: string) {
@@ -523,7 +523,7 @@ async function step10(orgId: string, apikey: string, appId: string, hostWeb: str
     const appIdUrl = convertAppName(appId)
     pLog.info(`Check logs in ${hostWeb}/app/p/${appIdUrl}/logs to see if update works.`)
   }
-  await markStep(orgId, apikey, 10)
+  await markStep(orgId, apikey, 10, appId)
 }
 
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
@@ -574,7 +574,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   try {
     if (stepToSkip < 1)
-      await markStep(orgId, options.apikey, 1)
+      await markStep(orgId, options.apikey, 1, appId)
 
     if (stepToSkip < 2) {
       await step2(organization, options.apikey, appId, options)
@@ -612,17 +612,17 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 9) {
-      await step9(orgId, options.apikey)
+      await step9(orgId, options.apikey, appId)
       markStepDone(9)
     }
 
     await step10(orgId, options.apikey, appId, localConfig.hostWeb)
-    await markStep(orgId, options.apikey, 0)
+    await markStep(orgId, options.apikey, 0, appId)
     cleanupStepsDone()
   }
   catch (e) {
     console.error(e)
-    pLog.error(`Error during onboarding, please try again later`)
+    pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
     exit(1)
   }
 

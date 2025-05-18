@@ -26,7 +26,7 @@ interface Options extends OptionsBase {
   state?: string
   downgrade?: boolean
   latest?: boolean
-  upgrade?: boolean
+  latestRemote?: boolean
   ios?: boolean
   android?: boolean
   selfAssign?: boolean
@@ -40,49 +40,57 @@ const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch'
 
 export async function setChannel(channel: string, appId: string, options: Options) {
   intro(`Set channel`)
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
-  }
-  if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
-  }
-  const supabase = await createSupabaseClient(options.apikey)
-
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
-  const orgId = await getOrganizationId(supabase, appId)
-
-  const { bundle, state, downgrade, latest, upgrade, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
-  if (!channel) {
-    log.error('Missing argument, you need to provide a channel')
-    program.error('')
-  }
-  if (latest && bundle) {
-    log.error('Cannot set latest and bundle at the same time')
-    program.error('')
-  }
-  if (bundle == null
-    && state == null
-    && latest == null
-    && downgrade == null
-    && upgrade == null
-    && ios == null
-    && android == null
-    && selfAssign == null
-    && dev == null
-    && emulator == null
-    && disableAutoUpdate == null) {
-    log.error('Missing argument, you need to provide a option to set')
-    program.error('')
-  }
   try {
+    options.apikey = options.apikey || findSavedKey()
+    const extConfig = await getConfig()
+    appId = getAppId(appId, extConfig?.config)
+
+    if (!options.apikey) {
+      log.error('Missing API key, you need to provide a API key to upload your bundle')
+      program.error('')
+    }
+    if (!appId) {
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+      program.error('')
+    }
+    const supabase = await createSupabaseClient(options.apikey)
+
+    const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+    const orgId = await getOrganizationId(supabase, appId)
+
+    const { bundle, state, downgrade, latest, latestRemote, ios, android, selfAssign, disableAutoUpdate, dev, emulator } = options
+    if (!channel) {
+      log.error('Missing argument, you need to provide a channel')
+      program.error('')
+    }
+    if (latest && bundle) {
+      log.error('Cannot set latest and bundle at the same time')
+      program.error('')
+    }
+    if (latestRemote && bundle) {
+      log.error('Cannot set latest remote and bundle at the same time')
+      program.error('')
+    }
+    if (latestRemote && latest) {
+      log.error('Cannot set latest remote and latest at the same time')
+      program.error('')
+    }
+    if (bundle == null
+      && state == null
+      && latest == null
+      && latestRemote == null
+      && downgrade == null
+      && ios == null
+      && android == null
+      && selfAssign == null
+      && dev == null
+      && emulator == null
+      && disableAutoUpdate == null) {
+      log.error('Missing argument, you need to provide a option to set')
+      program.error('')
+    }
     await checkPlanValid(supabase, orgId, options.apikey, appId)
     const channelPayload: Database['public']['Tables']['channels']['Insert'] = {
       created_by: userId,
@@ -91,6 +99,18 @@ export async function setChannel(channel: string, appId: string, options: Option
       owner_org: orgId,
       version: undefined as any,
     }
+    // check if channel already exists
+    const { error: channelError } = await supabase
+      .from('channels')
+      .select()
+      .eq('app_id', appId)
+      .eq('name', channel)
+      .single()
+    if (channelError) {
+      log.error(`Cannot find channel ${channel}`)
+      program.error('')
+    }
+
     const bundleVersion = latest ? (extConfig?.config?.plugins?.CapacitorUpdater?.version || getBundleVersion('', options.packageJson)) : bundle
     if (bundleVersion != null) {
       const { data, error: vError } = await supabase
@@ -109,12 +129,30 @@ export async function setChannel(channel: string, appId: string, options: Option
       channelPayload.version = data.id
     }
     let publicChannel = null as boolean | null
+    if (latestRemote) {
+      const { data, error: vError } = await supabase
+        .from('app_versions')
+        .select()
+        .eq('app_id', appId)
+        .eq('user_id', userId)
+        .eq('deleted', false)
+        .order('created_at', { ascending: false })
+        .single()
+      if (vError || !data) {
+        log.error(`Cannot find latest remote version`)
+        program.error('')
+      }
+      log.info(`Set ${appId} channel: ${channel} to @${data.name}`)
+      channelPayload.version = data.id
+    }
     if (state != null) {
-      if (state === 'public' || state === 'private')
-        log.info(`Set ${appId} channel: ${channel} to public or private is deprecated, use default or normal instead`)
+      if (state !== 'normal' && state !== 'default') {
+        log.error(`State ${state} is not known. The possible values are: normal, default.`)
+        program.error('')
+      }
 
-      log.info(`Set ${appId} channel: ${channel} to ${state === 'public' || state === 'default' ? 'default' : 'normal'}`)
-      publicChannel = state === 'public' || state === 'default'
+      log.info(`Set ${appId} channel: ${channel} to ${state}`)
+      publicChannel = state === 'default'
     }
     if (downgrade != null) {
       log.info(`Set ${appId} channel: ${channel} to ${downgrade ? 'allow' : 'disallow'} downgrade`)
@@ -131,6 +169,14 @@ export async function setChannel(channel: string, appId: string, options: Option
     if (selfAssign != null) {
       log.info(`Set ${appId} channel: ${channel} to ${selfAssign ? 'allow' : 'disallow'} self assign to this channel`)
       channelPayload.allow_device_self_set = !!selfAssign
+    }
+    if (dev != null) {
+      log.info(`Set ${appId} channel: ${channel} to ${dev ? 'allow' : 'disallow'} dev devices`)
+      channelPayload.allow_dev = !!dev
+    }
+    if (emulator != null) {
+      log.info(`Set ${appId} channel: ${channel} to ${emulator ? 'allow' : 'disallow'} emulator devices`)
+      channelPayload.allow_emulator = !!emulator
     }
     if (disableAutoUpdate != null) {
       let finalDisableAutoUpdate = disableAutoUpdate.toLocaleLowerCase()

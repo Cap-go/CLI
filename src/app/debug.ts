@@ -17,12 +17,13 @@ export interface OptionsBaseDebug {
   device?: string
 }
 
-export async function markSnag(channel: string, orgId: string, apikey: string, event: string, icon = '✅') {
+export async function markSnag(channel: string, orgId: string, apikey: string, event: string, appId?: string, icon = '✅') {
   await sendEvent(apikey, {
     channel,
     event,
     icon,
     user_id: orgId,
+    ...(appId ? { tags: { 'app-id': appId } } : {}),
     notify: false,
   })
 }
@@ -182,7 +183,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
   const baseAppUrl = `${config.hostWeb}/app/p/${appIdUrl}`
-  await markSnag(channel, orgId, apikey, 'Use waitlog')
+  await markSnag(channel, orgId, apikey, 'Use waitlog', appId)
   const query: QueryStats = {
     appId,
     devicesId: deviceId ? [deviceId] : undefined,

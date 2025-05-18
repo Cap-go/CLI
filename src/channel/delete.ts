@@ -3,45 +3,56 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { delChannel, findBundleIdByChannelName } from '../api/channels'
+import { delChannel, findBundleIdByChannelName, findChannel } from '../api/channels'
 import { deleteAppVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 interface DeleteChannelOptions extends OptionsBase {
   deleteBundle: boolean
+  successIfNotFound: boolean
 }
 
 export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
   intro(`Delete channel`)
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
-  }
-  if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
-  }
-  const supabase = await createSupabaseClient(options.apikey)
-
-  const userId = await verifyUser(supabase, options.apikey, ['all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
-
-  if (options.deleteBundle) {
-    log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)
-    // first get the bundle id
-    const bundle = await findBundleIdByChannelName(supabase, appId, channelId)
-    if (bundle && bundle.name) {
-      log.info(`Deleting bundle ${bundle.name} from Capgo`)
-      await deleteAppVersion(supabase, appId, bundle.name)
-    }
-  }
-  log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
   try {
+    options.apikey = options.apikey || findSavedKey()
+    const extConfig = await getConfig()
+    appId = getAppId(appId, extConfig?.config)
+
+    if (!options.apikey) {
+      log.error('Missing API key, you need to provide a API key to upload your bundle')
+      program.error('')
+    }
+    if (!appId) {
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+      program.error('')
+    }
+    const supabase = await createSupabaseClient(options.apikey)
+
+    const userId = await verifyUser(supabase, options.apikey, ['all'])
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+
+    if (options.deleteBundle) {
+      log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)
+      // first get the bundle id
+      const bundle = await findBundleIdByChannelName(supabase, appId, channelId)
+      if (bundle && bundle.name) {
+        log.info(`Deleting bundle ${bundle.name} from Capgo`)
+        await deleteAppVersion(supabase, appId, bundle.name)
+      }
+    }
+    // check if channel exists
+    const channel = await findChannel(supabase, appId, channelId)
+    if (!channel) {
+      log.error(`Channel ${channelId} not found`)
+      if (options.successIfNotFound) {
+        log.success(`Channel ${channelId} not found and successIfNotFound is true`)
+        exit()
+      }
+      program.error('')
+    }
+    log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
     const deleteStatus = await delChannel(supabase, channelId, appId, userId)
     if (deleteStatus.error) {
       log.error(`Cannot delete Channel 🙀 ${formatError(deleteStatus.error)}`)
@@ -55,15 +66,14 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       icon: '✅',
       user_id: orgId,
       tags: {
-        'user-id': userId,
         'app-id': appId,
         'channel': channelId,
       },
       notify: false,
     }).catch()
   }
-  catch {
-    log.error(`Cannot delete Channel 🙀`)
+  catch (err) {
+    log.error(`Cannot delete Channel 🙀 ${formatError(err)}`)
   }
   outro(`Done ✅`)
   exit()

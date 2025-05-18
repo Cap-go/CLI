@@ -12,26 +12,26 @@ interface Options extends OptionsBase {
 
 export async function addChannel(channelId: string, appId: string, options: Options, shouldExit = true) {
   intro(`Create channel`)
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
-  }
-  if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
-  }
-  const supabase = await createSupabaseClient(options.apikey)
-
-  await verifyUser(supabase, options.apikey, ['write', 'all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
-
-  log.info(`Creating channel ${appId}#${channelId} to Capgo`)
   try {
+    options.apikey = options.apikey || findSavedKey()
+    const extConfig = await getConfig()
+    appId = getAppId(appId, extConfig?.config)
+
+    if (!options.apikey) {
+      log.error('Missing API key, you need to provide a API key to upload your bundle')
+      program.error('')
+    }
+    if (!appId) {
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+      program.error('')
+    }
+    const supabase = await createSupabaseClient(options.apikey)
+
+    await verifyUser(supabase, options.apikey, ['write', 'all'])
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+
+    log.info(`Creating channel ${appId}#${channelId} to Capgo`)
     const data = await findUnknownVersion(supabase, appId)
     const orgId = await getOrganizationId(supabase, appId)
     const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
@@ -65,8 +65,8 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       notify: false,
     }).catch()
   }
-  catch {
-    log.error(`Cannot create Channel 🙀`)
+  catch (err) {
+    log.error(`Cannot create Channel 🙀 ${formatError(err)}`)
     return false
   }
   if (shouldExit) {

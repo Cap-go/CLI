@@ -144,10 +144,11 @@ export function getBundleVersion(f: string = findRoot(cwd()), file: string | und
 }
 
 function returnVersion(version: string) {
-  if (validVersion(version)) {
-    return cleanVersion(version) ?? version
+  const tmpVersion = version.replace('^', '').replace('~', '')
+  if (validVersion(tmpVersion)) {
+    return cleanVersion(tmpVersion) ?? tmpVersion
   }
-  return version
+  return tmpVersion
 }
 
 export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {

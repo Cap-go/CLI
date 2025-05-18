@@ -50,7 +50,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
 
   const supabase = await createSupabaseClient(options.apikey)
 
-  await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
   const appExist = await checkAppExists(supabase, appId)
@@ -128,6 +128,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
     .insert({
       icon_url: signedURL,
       owner_org: organizationUid,
+      user_id: userId,
       name,
       app_id: appId,
     })

@@ -28,41 +28,41 @@ interface Options extends OptionsBase {
 
 export async function unlinkDevice(channel: string, appId: string, options: Options) {
   intro(`Unlink bundle ${options.apikey}`)
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-  let { bundle } = options
-
-  const packVersion = getBundleVersion('', options.packageJson)
-  bundle = bundle || packVersion
-
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
-  }
-  if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
-  }
-  if (!bundle) {
-    log.error('Missing argument, you need to provide a bundle, or be in a capacitor project')
-    program.error('')
-  }
-  const supabase = await createSupabaseClient(options.apikey)
-
-  const [userId, orgId] = await Promise.all([
-    verifyUser(supabase, options.apikey, ['all', 'write']),
-    getOrganizationId(supabase, appId),
-  ])
-
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
-
-  if (!channel) {
-    log.error('Missing argument, you need to provide a channel')
-    program.error('')
-  }
   try {
+    options.apikey = options.apikey || findSavedKey()
+    const extConfig = await getConfig()
+    appId = getAppId(appId, extConfig?.config)
+    let { bundle } = options
+
+    const packVersion = getBundleVersion('', options.packageJson)
+    bundle = bundle || packVersion
+
+    if (!options.apikey) {
+      log.error('Missing API key, you need to provide a API key to upload your bundle')
+      program.error('')
+    }
+    if (!appId) {
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+      program.error('')
+    }
+    if (!bundle) {
+      log.error('Missing argument, you need to provide a bundle, or be in a capacitor project')
+      program.error('')
+    }
+    const supabase = await createSupabaseClient(options.apikey)
+
+    const [userId, orgId] = await Promise.all([
+      verifyUser(supabase, options.apikey, ['all', 'write']),
+      getOrganizationId(supabase, appId),
+    ])
+
+    // Check we have app access to this appId
+    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
+
+    if (!channel) {
+      log.error('Missing argument, you need to provide a channel')
+      program.error('')
+    }
     await checkPlanValid(supabase, orgId, options.apikey, appId)
 
     const versionData = await getVersionData(supabase, appId, bundle)
@@ -77,11 +77,11 @@ export async function unlinkDevice(channel: string, appId: string, options: Opti
       },
       notify: false,
     }).catch()
+    outro('Done ✅')
+    exit()
   }
   catch (err) {
     log.error(`Unknow error ${formatError(err)}`)
     program.error('')
   }
-  outro('Done ✅')
-  exit()
 }

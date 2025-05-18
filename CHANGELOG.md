@@ -2,6 +2,207 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.5.5](https://github.com/Cap-go/CLI/compare/v7.5.4...v7.5.5) (2025-05-18)
+
+
+### Bug Fixes
+
+* issue with deploy ([9c6d845](https://github.com/Cap-go/CLI/commit/9c6d8451ac81fe31a380d73acccbf891b23bb810))
+
+### [7.5.4](https://github.com/Cap-go/CLI/compare/v7.5.3...v7.5.4) (2025-05-18)
+
+
+### Bug Fixes
+
+* better SEO for CLI ([0ea483e](https://github.com/Cap-go/CLI/commit/0ea483ee4ba7c5b32642f9b2ac2744c8a60f19fe))
+
+### [7.5.3](https://github.com/Cap-go/CLI/compare/v7.5.2...v7.5.3) (2025-05-13)
+
+
+### Bug Fixes
+
+* add appID in markSnag ([73ecf8b](https://github.com/Cap-go/CLI/commit/73ecf8bed04ed19c9febf3c1d30ed7b162d48142))
+
+### [7.5.2](https://github.com/Cap-go/CLI/compare/v7.5.1...v7.5.2) (2025-05-09)
+
+
+### Bug Fixes
+
+* better explain if fail ([9c62b86](https://github.com/Cap-go/CLI/commit/9c62b860877683d53a146b5da23214b01c42a4b3))
+
+### [7.5.1](https://github.com/Cap-go/CLI/compare/v7.5.0...v7.5.1) (2025-05-07)
+
+## [7.5.0](https://github.com/Cap-go/CLI/compare/v7.4.18...v7.5.0) (2025-05-06)
+
+
+### Features
+
+* add successIfNotFound option for channel delete ([35504a1](https://github.com/Cap-go/CLI/commit/35504a160a51698e1f47ac3423966e9c1c2e5982))
+
+### [7.4.18](https://github.com/Cap-go/CLI/compare/v7.4.17...v7.4.18) (2025-05-06)
+
+
+### Bug Fixes
+
+* error display ([1fc0b9d](https://github.com/Cap-go/CLI/commit/1fc0b9dab029d24be7ed511ae5d2e95552b3f89d))
+
+### [7.4.17](https://github.com/Cap-go/CLI/compare/v7.4.16...v7.4.17) (2025-05-06)
+
+
+### Bug Fixes
+
+* replace wrong char in version npm ([46ca1e7](https://github.com/Cap-go/CLI/commit/46ca1e7fede48779dc49d304d368c5aae9971640))
+
+### [7.4.16](https://github.com/Cap-go/CLI/compare/v7.4.15...v7.4.16) (2025-05-05)
+
+### [7.4.15](https://github.com/Cap-go/CLI/compare/v7.4.14...v7.4.15) (2025-05-02)
+
+
+### Bug Fixes
+
+* make sure channel exist first ([77e73a4](https://github.com/Cap-go/CLI/commit/77e73a46dfd1aedca6bd0382df952d3b91b14063))
+
+### [7.4.14](https://github.com/Cap-go/CLI/compare/v7.4.13...v7.4.14) (2025-05-02)
+
+
+### Bug Fixes
+
+* issue with naming ([5ca49f6](https://github.com/Cap-go/CLI/commit/5ca49f6af08ea5135b5fb774d42d0af9fedebad7))
+
+### [7.4.13](https://github.com/Cap-go/CLI/compare/v7.4.12...v7.4.13) (2025-05-02)
+
+
+### Bug Fixes
+
+* set state ([4c95568](https://github.com/Cap-go/CLI/commit/4c9556887aca9fd9034f03af96c506dc373ab4eb))
+
+### [7.4.12](https://github.com/Cap-go/CLI/compare/v7.4.11...v7.4.12) (2025-05-02)
+
+
+### Bug Fixes
+
+* add error for wrong state + add latest remote ([f60a62c](https://github.com/Cap-go/CLI/commit/f60a62c10a43bcb4b06a6b7a6d1e259d2cf6dacc))
+
+### [7.4.11](https://github.com/Cap-go/CLI/compare/v7.4.10...v7.4.11) (2025-05-02)
+
+
+### Bug Fixes
+
+* add missing options ([912ad06](https://github.com/Cap-go/CLI/commit/912ad06c4ef26edc0cd877895a639fee89a952ff))
+
+### [7.4.10](https://github.com/Cap-go/CLI/compare/v7.4.9...v7.4.10) (2025-05-01)
+
+
+### Bug Fixes
+
+* remove this function ([b78f823](https://github.com/Cap-go/CLI/commit/b78f823aab0df9063a145612be0cfde72bbe2567))
+
+### [7.4.9](https://github.com/Cap-go/CLI/compare/v7.4.8...v7.4.9) (2025-05-01)
+
+
+### Bug Fixes
+
+* perfect remove toc on website as it's already on the side ([4057444](https://github.com/Cap-go/CLI/commit/40574441e348d2bfcccb5c6830c004b9a7a4841e))
+
+### [7.4.8](https://github.com/Cap-go/CLI/compare/v7.4.7...v7.4.8) (2025-05-01)
+
+
+### Bug Fixes
+
+* generator ([0b403b2](https://github.com/Cap-go/CLI/commit/0b403b2650631d843cba9898fc31a47f2bfef037))
+
+### [7.4.7](https://github.com/Cap-go/CLI/compare/v7.4.6...v7.4.7) (2025-05-01)
+
+
+### Bug Fixes
+
+* better render of website ([e0e61a7](https://github.com/Cap-go/CLI/commit/e0e61a7fc7e31bb98195ceda9374a2f209f364a1))
+
+### [7.4.6](https://github.com/Cap-go/CLI/compare/v7.4.5...v7.4.6) (2025-05-01)
+
+
+### Bug Fixes
+
+* delete old md files ([38d9e2b](https://github.com/Cap-go/CLI/commit/38d9e2bc23b02a0a7d0feb989aaa935fff8e1d66))
+
+### [7.4.5](https://github.com/Cap-go/CLI/compare/v7.4.4...v7.4.5) (2025-05-01)
+
+
+### Bug Fixes
+
+* files names ([40ca86f](https://github.com/Cap-go/CLI/commit/40ca86ff3026e2a187a737da33c6a6496d583a07))
+
+### [7.4.4](https://github.com/Cap-go/CLI/compare/v7.4.3...v7.4.4) (2025-05-01)
+
+
+### Bug Fixes
+
+* concurrency issue ([cc91b67](https://github.com/Cap-go/CLI/commit/cc91b67ebd056fa92479c2641f87cfeb73768a60))
+
+### [7.4.3](https://github.com/Cap-go/CLI/compare/v7.4.2...v7.4.3) (2025-05-01)
+
+### [7.4.2](https://github.com/Cap-go/CLI/compare/v7.4.1...v7.4.2) (2025-05-01)
+
+
+### Bug Fixes
+
+* add webdoc do repo to allow copy ([d04110c](https://github.com/Cap-go/CLI/commit/d04110c4a0422177fc825e934eba1b1e8b8bcb53))
+
+### [7.4.1](https://github.com/Cap-go/CLI/compare/v7.4.0...v7.4.1) (2025-05-01)
+
+
+### Bug Fixes
+
+* folder name ([eb25ab9](https://github.com/Cap-go/CLI/commit/eb25ab9f89840e0084e6a07179b5bb51996c416c))
+* order ([9eb1c67](https://github.com/Cap-go/CLI/commit/9eb1c6741f21bbd0926a9dbc1935218f0abd7e72))
+* order as it clone ([927770e](https://github.com/Cap-go/CLI/commit/927770e017aa440c236c7b9ed0aeaf0f0b10812b))
+
+## [7.4.0](https://github.com/Cap-go/CLI/compare/v7.3.3...v7.4.0) (2025-05-01)
+
+
+### Features
+
+* redo CLI docs ([2ca87b8](https://github.com/Cap-go/CLI/commit/2ca87b8bba2e4354cd10f13a9e84e173adbe1c1e))
+
+
+### Bug Fixes
+
+* assume Capacitor V7 for linked versions of the updater ([4d67285](https://github.com/Cap-go/CLI/commit/4d672855beb070459af11cf9b6c5cb7bc89fdfc1))
+* build before genrerate docs ([9e1dc89](https://github.com/Cap-go/CLI/commit/9e1dc894c040715cd330be0d28a65fbb0e5e36d4))
+
+### [7.3.3](https://github.com/Cap-go/CLI/compare/v7.3.2...v7.3.3) (2025-05-01)
+
+### [7.3.2](https://github.com/Cap-go/CLI/compare/v7.3.1...v7.3.2) (2025-05-01)
+
+### [7.3.1](https://github.com/Cap-go/CLI/compare/v7.3.0...v7.3.1) (2025-04-30)
+
+## [7.3.0](https://github.com/Cap-go/CLI/compare/v7.2.11...v7.3.0) (2025-04-29)
+
+
+### Features
+
+* add in CLI to cleanup the ignore channel option ([bddd773](https://github.com/Cap-go/CLI/commit/bddd773744d0f5bae6358cdf05588f435ce7a9ff))
+
+### [7.2.11](https://github.com/Cap-go/CLI/compare/v7.2.10...v7.2.11) (2025-04-29)
+
+
+### Bug Fixes
+
+* allow set supaHost and supaKey from options ([7af2074](https://github.com/Cap-go/CLI/commit/7af20740038ac785d3bf3051a54ec8895cb888ee))
+
+### [7.2.10](https://github.com/Cap-go/CLI/compare/v7.2.9...v7.2.10) (2025-04-21)
+
+### [7.2.9](https://github.com/Cap-go/CLI/compare/v7.2.8...v7.2.9) (2025-04-15)
+
+### [7.2.8](https://github.com/Cap-go/CLI/compare/v7.2.7...v7.2.8) (2025-04-07)
+
+### [7.2.7](https://github.com/Cap-go/CLI/compare/v7.2.6...v7.2.7) (2025-04-03)
+
+
+### Bug Fixes
+
+* add userID in addAppInternal ([5bb199f](https://github.com/Cap-go/CLI/commit/5bb199f0a92edb0b9659a5c61d988aa4db034aeb))
+
 ### [7.2.6](https://github.com/Cap-go/CLI/compare/v7.2.5...v7.2.6) (2025-03-29)
 
 

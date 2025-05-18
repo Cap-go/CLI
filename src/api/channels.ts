@@ -78,6 +78,15 @@ export function delChannel(supabase: SupabaseClient<Database>, name: string, app
     .single()
 }
 
+export function findChannel(supabase: SupabaseClient<Database>, appId: string, name: string) {
+  return supabase
+    .from('channels')
+    .select()
+    .eq('app_id', appId)
+    .eq('name', name)
+    .single()
+}
+
 export function findBundleIdByChannelName(supabase: SupabaseClient<Database>, appId: string, name: string) {
   return supabase
     .from('channels')
