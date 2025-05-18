@@ -227,6 +227,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       // Generate frontmatter and content for the command
       let cmdFile = `---
 title: ${emoji} ${cmd.name}
+description: ${cmd.description}
 sidebar_label: ${cmd.name}
 sidebar:
   order: ${commands.indexOf(cmd) + 1}
