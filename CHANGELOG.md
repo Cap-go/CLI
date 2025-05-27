@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.6.2](https://github.com/Cap-go/CLI/compare/v7.6.1...v7.6.2) (2025-05-27)
+
+
+### Bug Fixes
+
+* enhance channel compatibility checks and logging ([a991353](https://github.com/Cap-go/CLI/commit/a991353b7d0c6ae7be8e182763a2f217bbc8a0fe))
+
 ### [7.6.1](https://github.com/Cap-go/CLI/compare/v7.6.0...v7.6.1) (2025-05-27)
 
 
