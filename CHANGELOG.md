@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.6.0](https://github.com/Cap-go/CLI/compare/v7.5.5...v7.6.0) (2025-05-27)
+
+
+### Features
+
+* add metadata check in cset channel and option to ignore it ([859a30d](https://github.com/Cap-go/CLI/commit/859a30d732e8da4d6bc83d2caba10e7723e11abd))
+
 ### [7.5.5](https://github.com/Cap-go/CLI/compare/v7.5.4...v7.5.5) (2025-05-18)
 
 
