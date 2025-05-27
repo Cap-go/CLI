@@ -1297,7 +1297,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
     log.error(`Error fetching native packages: ${error.message}`)
     program.error('')
   }
-  return convertNativePackages((remoteNativePackages as any).version.native_packages)
+  return convertNativePackages((remoteNativePackages.version.native_packages as any) ?? [])
 }
 
 export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
