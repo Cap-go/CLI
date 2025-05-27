@@ -7,6 +7,7 @@ import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
+  checkCompatibilityNativePackages,
   checkPlanValid,
   createSupabaseClient,
   findSavedKey,
@@ -15,6 +16,8 @@ import {
   getBundleVersion,
   getConfig,
   getOrganizationId,
+  getPMAndCommand,
+  isCompatible,
   OrganizationPerm,
   sendEvent,
   updateOrCreateChannel,
@@ -34,6 +37,7 @@ interface Options extends OptionsBase {
   dev?: boolean
   emulator?: boolean
   packageJson?: string
+  ignoreMetadataCheck?: boolean
 }
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
@@ -125,6 +129,20 @@ export async function setChannel(channel: string, appId: string, options: Option
         log.error(`Cannot find version ${bundleVersion}`)
         program.error('')
       }
+      if (!options.ignoreMetadataCheck) {
+        const {
+          finalCompatibility: finalCompatibilityWithChannel,
+        } = await checkCompatibilityNativePackages(supabase, appId, channel, (data.native_packages as any) ?? [])
+
+        const finalCompatibility = finalCompatibilityWithChannel
+        const pm = getPMAndCommand()
+        // Check if any package is incompatible
+        if (finalCompatibility.find(x => !isCompatible(x))) {
+          log.warn(`Bundle NOT compatible with ${channel} channel`)
+          log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          program.error('')
+        }
+      }
       log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
       channelPayload.version = data.id
     }
@@ -140,6 +158,20 @@ export async function setChannel(channel: string, appId: string, options: Option
       if (vError || !data) {
         log.error(`Cannot find latest remote version`)
         program.error('')
+      }
+      if (!options.ignoreMetadataCheck) {
+        const {
+          finalCompatibility: finalCompatibilityWithChannel,
+        } = await checkCompatibilityNativePackages(supabase, appId, channel, (data.native_packages as any) ?? [])
+
+        const finalCompatibility = finalCompatibilityWithChannel
+        const pm = getPMAndCommand()
+        // Check if any package is incompatible
+        if (finalCompatibility.find(x => !isCompatible(x))) {
+          log.warn(`Bundle NOT compatible with ${channel} channel`)
+          log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          program.error('')
+        }
       }
       log.info(`Set ${appId} channel: ${channel} to @${data.name}`)
       channelPayload.version = data.id

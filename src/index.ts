@@ -365,6 +365,7 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--emulator', `Allow sending update to emulator devices`)
   .option('--no-emulator', `Disable sending update to emulator devices`)
   .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
+  .option('--ignore-metadata-check', `Ignore checking node_modules compatibility if present in the bundle`)
 
 const keyV2 = program
   .command('key')

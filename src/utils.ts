@@ -1252,6 +1252,37 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   return channelData.version.checksum
 }
 
+export function convertNativePackages(nativePackages: { name: string, version: string }[]) {
+  if (!nativePackages) {
+    log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
+    program.error('')
+  }
+
+  // Check types
+  nativePackages.forEach((data: any) => {
+    if (typeof data !== 'object') {
+      log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
+      program.error('')
+    }
+
+    const { name, version } = data
+    if (!name || typeof name !== 'string') {
+      log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
+      program.error('')
+    }
+
+    if (!version || typeof version !== 'string') {
+      log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
+      program.error('')
+    }
+  })
+
+  const mappedRemoteNativePackages = new Map((nativePackages)
+    .map(a => [a.name, a]))
+
+  return mappedRemoteNativePackages
+}
+
 export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data: remoteNativePackages, error } = await supabase
     .from('channels')
@@ -1276,35 +1307,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
     log.error(`Error parsing native packages`)
     program.error('')
   }
-
-  if (!castedRemoteNativePackages) {
-    log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
-    program.error('')
-  }
-
-  // Check types
-  castedRemoteNativePackages.forEach((data: any) => {
-    if (typeof data !== 'object') {
-      log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
-      program.error('')
-    }
-
-    const { name, version } = data
-    if (!name || typeof name !== 'string') {
-      log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
-      program.error('')
-    }
-
-    if (!version || typeof version !== 'string') {
-      log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
-      program.error('')
-    }
-  })
-
-  const mappedRemoteNativePackages = new Map((castedRemoteNativePackages as { name: string, version: string }[])
-    .map(a => [a.name, a]))
-
-  return mappedRemoteNativePackages
+  return convertNativePackages(castedRemoteNativePackages)
 }
 
 export async function checkChecksum(supabase: SupabaseClient<Database>, appId: string, channel: string, currentChecksum: string) {
@@ -1384,5 +1387,40 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
   return {
     finalCompatibility: finalDepenencies,
     localDependencies: dependenciesObject,
+  }
+}
+
+export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: { name: string, version: string }[]) {
+  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+
+  const finalDepenencies: Compatibility[] = nativePackages
+    .map((local) => {
+      const remotePackage = mappedRemoteNativePackages.get(local.name)
+      if (remotePackage) {
+        return {
+          name: local.name,
+          localVersion: local.version,
+          remoteVersion: remotePackage.version,
+        }
+      }
+
+      return {
+        name: local.name,
+        localVersion: local.version,
+        remoteVersion: undefined,
+      }
+    })
+
+  // Only include remote packages that are not in local for informational purposes
+  // These won't affect compatibility
+  const removeNotInLocal = [...mappedRemoteNativePackages]
+    .filter(([remoteName]) => nativePackages.find(a => a.name === remoteName) === undefined)
+    .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
+
+  finalDepenencies.push(...removeNotInLocal)
+
+  return {
+    finalCompatibility: finalDepenencies,
+    localDependencies: nativePackages,
   }
 }
