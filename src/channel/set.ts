@@ -131,16 +131,22 @@ export async function setChannel(channel: string, appId: string, options: Option
       }
       if (!options.ignoreMetadataCheck) {
         const {
-          finalCompatibility: finalCompatibilityWithChannel,
+          finalCompatibility,
+          localDependencies,
         } = await checkCompatibilityNativePackages(supabase, appId, channel, (data.native_packages as any) ?? [])
 
-        const finalCompatibility = finalCompatibilityWithChannel
         const pm = getPMAndCommand()
         // Check if any package is incompatible
-        if (finalCompatibility.find(x => !isCompatible(x))) {
+        if (localDependencies.length > 0 && finalCompatibility.find(x => !isCompatible(x))) {
           log.warn(`Bundle NOT compatible with ${channel} channel`)
           log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
           program.error('')
+        }
+        else if (localDependencies.length === 0 && finalCompatibility.length > 0) {
+          log.info(`Ignoring check compatibility with ${channel} channel because the bundle does not contain any native packages`)
+        }
+        else {
+          log.info(`Bundle is compatible with ${channel} channel`)
         }
       }
       log.info(`Set ${appId} channel: ${channel} to @${bundleVersion}`)
