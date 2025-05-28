@@ -547,7 +547,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     localConfig.supaHost = options.supaHost
     localConfig.supaKey = options.supaAnon
   }
-  const supabase = await createSupabaseClient(apikey)
+  const supabase = await createSupabaseClient(apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
   const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
 

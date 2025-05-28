@@ -14,7 +14,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
   intro(`Create channel`)
   try {
     options.apikey = options.apikey || findSavedKey()
-    const extConfig = await getConfig()
+    const extConfig = await getConfig().catch(() => undefined)
     appId = getAppId(appId, extConfig?.config)
 
     if (!options.apikey) {
@@ -25,7 +25,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
       program.error('')
     }
-    const supabase = await createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
     await verifyUser(supabase, options.apikey, ['write', 'all'])
     // Check we have app access to this appId

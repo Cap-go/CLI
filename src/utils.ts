@@ -99,6 +99,8 @@ interface TrackOptions {
 
 export interface OptionsBase {
   apikey: string
+  supaHost?: string
+  supaAnon?: string
 }
 
 export function wait(ms: number) {
@@ -297,8 +299,13 @@ export async function getRemoteFileConfig() {
     })
 }
 
-export async function createSupabaseClient(apikey: string) {
+export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string) {
   const config = await getRemoteConfig()
+  if (supaHost && supaKey) {
+    log.info('Using custom supabase instance from provided options')
+    config.supaHost = supaHost
+    config.supaKey = supaKey
+  }
   if (!config.supaHost || !config.supaKey) {
     log.error('Cannot connect to server please try again later')
     program.error('')
@@ -1323,7 +1330,7 @@ interface Compatibility {
   remoteVersion: string | undefined
 }
 
-export function getAppId(appId: string | undefined, config: CapacitorConfig) {
+export function getAppId(appId: string | undefined, config: CapacitorConfig | undefined) {
   const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId
   return finalAppId
 }

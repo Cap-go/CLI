@@ -65,6 +65,8 @@ Use --apikey=******** in any command to override it.
 Example: npx @capgo/cli@latest login YOUR_API_KEY`)
   .action(loginCommand)
   .option('--local', `Only save in local folder, git ignored for security.`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 const bundle = program
   .command('bundle')
@@ -149,6 +151,8 @@ Example: npx @capgo/cli@latest bundle compatibility com.example.app --channel pr
   .option('--text', `Output text instead of emojis`)
   .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
   .option('--node-modules <nodeModules>', `A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules)`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 bundle
   .command('delete [bundleId] [appId]')
@@ -158,6 +162,8 @@ bundle
 Example: npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app`)
   .action(deleteBundle)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 bundle
   .command('list [appId]')
@@ -167,6 +173,8 @@ bundle
 Example: npx @capgo/cli@latest bundle list com.example.app`)
   .action(listBundle)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 bundle
   .command('cleanup [appId]')
@@ -182,6 +190,8 @@ Example: npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --kee
   .option('-k, --keep <keep>', `Number of versions to keep`)
   .option('-f, --force', `Force removal`)
   .option('--ignore-channel', `Delete all versions even if linked to a channel, this will delete channel as well`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 bundle
   .command('encrypt [zipPath] [checksum]')
@@ -239,6 +249,8 @@ Example: npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 app
   .command('delete [appId]')
@@ -247,6 +259,8 @@ app
 Example: npx @capgo/cli@latest app delete com.example.app`)
   .action(deleteApp)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 app
   .command('list')
@@ -256,9 +270,12 @@ app
 Example: npx @capgo/cli@latest app list`)
   .action(listApp)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 app
   .command('debug  [appId]')
+  .action(debugApp)
   .description(`🐞 Listen for live update events in Capgo Cloud to debug your app.
 
 Optionally target a specific device for detailed diagnostics.
@@ -266,7 +283,8 @@ Optionally target a specific device for detailed diagnostics.
 Example: npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('-d, --device <device>', `The specific device ID to debug`)
-  .action(debugApp)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 app
   .command('setting [path]')
@@ -292,6 +310,8 @@ Example: npx @capgo/cli@latest app set com.example.app --name "Updated App" --re
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('-r, --retention <retention>', `Retention period of app bundle in days, 0 by default = infinite`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 const channel = program
   .command('channel')
@@ -306,6 +326,8 @@ Example: npx @capgo/cli@latest channel add production com.example.app --default`
   .action(addChannelCommand)
   .option('-d, --default', `Set the channel as default`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
 channel
   .command('delete [channelId] [appId]')
@@ -317,6 +339,8 @@ Example: npx @capgo/cli@latest channel delete production com.example.app`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('--delete-bundle', `Delete the bundle associated with the channel`)
   .option('--success-if-not-found', `Success if the channel is not found`)
+  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
 channel
   .command('list [appId]')
@@ -326,6 +350,8 @@ channel
 Example: npx @capgo/cli@latest channel list com.example.app`)
   .action(listChannels)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
 channel
   .command('currentBundle [channel] [appId]')
@@ -336,6 +362,8 @@ Example: npx @capgo/cli@latest channel currentBundle production com.example.app`
   .option('-c, --channel <channel>', `Channel to get the current bundle from`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('--quiet', `Only print the bundle version`)
+  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
 channel
   .command('set [channelId] [appId]')
@@ -366,6 +394,8 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--no-emulator', `Disable sending update to emulator devices`)
   .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
   .option('--ignore-metadata-check', `Ignore checking node_modules compatibility if present in the bundle`)
+  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
 const keyV2 = program
   .command('key')

@@ -34,7 +34,7 @@ export async function currentBundle(channel: string, appId: string, options: Opt
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
       program.error('')
     }
-    const supabase = await createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
     const _userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read'])
     // Check we have app access to this appId

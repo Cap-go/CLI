@@ -21,7 +21,7 @@ export async function setApp(appId: string, options: Options) {
     log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     program.error(``)
   }
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const organizationUid = organization.gid
 

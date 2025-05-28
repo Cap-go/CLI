@@ -27,7 +27,7 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
       program.error('')
     }
-    const supabase = await createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
     const userId = await verifyUser(supabase, options.apikey, ['all'])
     // Check we have app access to this appId

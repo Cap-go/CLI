@@ -36,7 +36,7 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
       program.error('')
     }
 
-    const supabase = await createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
     await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
     // Check we have app access to this appId

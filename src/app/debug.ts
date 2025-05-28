@@ -1,4 +1,5 @@
 import type { Database } from '../types/supabase.types'
+import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import { program } from 'commander'
@@ -12,8 +13,7 @@ function wait(ms: number) {
   })
 }
 
-export interface OptionsBaseDebug {
-  apikey: string
+export interface OptionsBaseDebug extends OptionsBase {
   device?: string
 }
 
@@ -229,7 +229,7 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
     program.error('')
   }
 
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const orgId = await getOrganizationId(supabase, appId)
 
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })

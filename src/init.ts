@@ -20,8 +20,6 @@ import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, f
 
 interface SuperOptions extends Options {
   local: boolean
-  supaHost?: string
-  supaAnon?: string
 }
 const importInject = 'import { CapacitorUpdater } from \'@capgo/capacitor-updater\''
 const codeInject = 'CapacitorUpdater.notifyAppReady()'
@@ -564,7 +562,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     log.stop('Login Done ✅')
   }
 
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   await verifyUser(supabase, options.apikey, ['upload', 'all', 'read', 'write'])
 
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])

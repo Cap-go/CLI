@@ -23,7 +23,7 @@ export async function listBundle(appId: string, options: OptionsBase) {
       program.error('')
     }
 
-    const supabase = await createSupabaseClient(options.apikey)
+    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
     await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 

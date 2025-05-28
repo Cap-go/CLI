@@ -46,7 +46,7 @@ export async function listApp(options: OptionsBase) {
   await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
 
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 

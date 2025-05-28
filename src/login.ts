@@ -8,6 +8,8 @@ import { createSupabaseClient, sendEvent, verifyUser } from './utils'
 
 interface Options {
   local: boolean
+  supaHost?: string
+  supaAnon?: string
 }
 export async function doLoginExists() {
   const userHomeDir = homedir()
@@ -42,7 +44,7 @@ export async function login(apikey: string, options: Options, shouldExit = true)
       const userHomeDir = homedir()
       writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`)
     }
-    const supabase = await createSupabaseClient(apikey)
+    const supabase = await createSupabaseClient(apikey, options.supaHost, options.supaAnon)
     const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
     await sendEvent(apikey, {
       channel: 'user-login',

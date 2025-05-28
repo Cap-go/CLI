@@ -48,7 +48,7 @@ export async function addAppInternal(appId: string, options: Options, organizati
     program.error('')
   }
 
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
