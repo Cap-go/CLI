@@ -106,6 +106,8 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **--text** | <code>boolean</code> | Output text instead of emojis |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-delete"></a> 🗑️ **Delete**
 
@@ -128,6 +130,8 @@ npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-list"></a> 📋 **List**
 
@@ -150,6 +154,8 @@ npx @capgo/cli@latest bundle list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
 
@@ -177,6 +183,8 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 | **-k,** | <code>string</code> | Number of versions to keep |
 | **-f,** | <code>string</code> | Force removal |
 | **--ignore-channel** | <code>boolean</code> | Delete all versions even if linked to a channel, this will delete channel as well |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
 

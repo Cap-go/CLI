@@ -32,6 +32,8 @@ npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./icon.png
 | **-n,** | <code>string</code> | App name for display in Capgo Cloud |
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-delete"></a> 🗑️ **Delete**
 
@@ -52,6 +54,8 @@ npx @capgo/cli@latest app delete com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-list"></a> 📋 **List**
 
@@ -74,6 +78,8 @@ npx @capgo/cli@latest app list
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-debug"></a> 🐞 **Debug**
 
@@ -96,6 +102,8 @@ npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-d,** | <code>string</code> | The specific device ID to debug |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-setting"></a> ⚙️ **Setting**
 
@@ -144,4 +152,6 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-r,** | <code>string</code> | Retention period of app bundle in days, 0 by default = infinite |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 

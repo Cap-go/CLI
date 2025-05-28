@@ -126,6 +126,8 @@ npx @capgo/cli@latest login YOUR_API_KEY
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **--local** | <code>boolean</code> | Only save in local folder, git ignored for security. |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 
 ## <a id="bundle"></a> 📦 **Bundle**
@@ -230,6 +232,8 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **--text** | <code>boolean</code> | Output text instead of emojis |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-delete"></a> 🗑️ **Delete**
 
@@ -252,6 +256,8 @@ npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-list"></a> 📋 **List**
 
@@ -274,6 +280,8 @@ npx @capgo/cli@latest bundle list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
 
@@ -301,6 +309,8 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 | **-k,** | <code>string</code> | Number of versions to keep |
 | **-f,** | <code>string</code> | Force removal |
 | **--ignore-channel** | <code>boolean</code> | Delete all versions even if linked to a channel, this will delete channel as well |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
 
@@ -404,6 +414,8 @@ npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./icon.png
 | **-n,** | <code>string</code> | App name for display in Capgo Cloud |
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-delete"></a> 🗑️ **Delete**
 
@@ -424,6 +436,8 @@ npx @capgo/cli@latest app delete com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-list"></a> 📋 **List**
 
@@ -446,6 +460,8 @@ npx @capgo/cli@latest app list
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-debug"></a> 🐞 **Debug**
 
@@ -468,6 +484,8 @@ npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-d,** | <code>string</code> | The specific device ID to debug |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 ### <a id="app-setting"></a> ⚙️ **Setting**
 
@@ -516,6 +534,8 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-r,** | <code>string</code> | Retention period of app bundle in days, 0 by default = infinite |
+| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
+| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
 
 
 ## <a id="channel"></a> 📢 **Channel**
@@ -544,6 +564,8 @@ npx @capgo/cli@latest channel add production com.example.app --default
 | -------------- | ------------- | -------------------- |
 | **-d,** | <code>string</code> | Set the channel as default |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
+| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
 ### <a id="channel-delete"></a> 🗑️ **Delete**
 
@@ -568,6 +590,8 @@ npx @capgo/cli@latest channel delete production com.example.app
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--delete-bundle** | <code>boolean</code> | Delete the bundle associated with the channel |
 | **--success-if-not-found** | <code>boolean</code> | Success if the channel is not found |
+| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
+| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
 ### <a id="channel-list"></a> 📋 **List**
 
@@ -590,6 +614,8 @@ npx @capgo/cli@latest channel list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
+| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
 ### <a id="channel-currentBundle"></a> 📦 **CurrentBundle**
 
@@ -612,6 +638,8 @@ npx @capgo/cli@latest channel currentBundle production com.example.app
 | **-c,** | <code>string</code> | Channel to get the current bundle from |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--quiet** | <code>boolean</code> | Only print the bundle version |
+| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
+| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
 ### <a id="channel-set"></a> ⚙️ **Set**
 
@@ -654,6 +682,8 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 | **--no-emulator** | <code>boolean</code> | Disable sending update to emulator devices |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignore checking node_modules compatibility if present in the bundle |
+| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
+| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
 
 ## <a id="key"></a> 🔐 **Key**
