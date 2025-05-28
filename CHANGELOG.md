@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.7.0](https://github.com/Cap-go/CLI/compare/v7.6.4...v7.7.0) (2025-05-28)
+
+
+### Features
+
+* add Supabase options for custom setups in CLI commands ([9d13542](https://github.com/Cap-go/CLI/commit/9d135422c6f9fb37d4a7949a6698d071bbcda371))
+
 ### [7.6.4](https://github.com/Cap-go/CLI/compare/v7.6.3...v7.6.4) (2025-05-27)
 
 
