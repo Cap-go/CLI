@@ -3,17 +3,23 @@ import type {
 } from '../utils'
 import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
-import { exit } from 'node:process'
+import { join } from 'node:path'
+import { cwd, exit } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import { program } from 'commander'
+import coerceVersion from 'semver/functions/coerce'
+import semverGte from 'semver/functions/gte'
 import { checkAlerts } from '../api/update'
 import {
   baseKeyV2,
+  findRoot,
   formatError,
+  getAllPackagesDependencies,
   getAppId,
   getBundleVersion,
   getConfig,
+  PACKNAME,
   regexSemver,
   zipFile,
 } from '../utils'
@@ -90,7 +96,25 @@ export async function zipBundle(appId: string, options: Options) {
     if (!json)
       s.start(`Calculating checksum`)
     let checksum = ''
-    if (options.keyV2 || existsSync(baseKeyV2)) {
+    const root = join(findRoot(cwd()), PACKNAME)
+    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
+    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    let isv7 = false
+    const coerced = coerceVersion(updaterVersion)
+    if (!updaterVersion) {
+      // TODO: remove this once we have a proper way to check the version
+      log.warn('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
+      program.error('')
+      return undefined as any
+    }
+    else if (coerced) {
+      isv7 = semverGte(coerced.version, '7.0.0')
+    }
+    else if (updaterVersion === 'link:@capgo/capacitor-updater') {
+      log.warn('Using local @capgo/capacitor-updater. Assuming v7')
+      isv7 = true
+    }
+    if (options.keyV2 || existsSync(baseKeyV2) || isv7) {
       checksum = await getChecksum(zipped, 'sha256')
     }
     else {
