@@ -58,7 +58,7 @@ jobs:
 
     strategy:
       matrix:
-        os: [windows-2019, windows-2022]
+        os: [windows-2025, windows-2022]
 
     steps:
       - name: Checkout repository
@@ -133,10 +133,10 @@ jobs:
       - name: Verify ZIP file integrity for Linux build with Java
         run: java -cp ./test VerifyZip build-linux.zip
 
-      - name: Download build-windows-2019.zip artifact
+      - name: Download build-windows-2025.zip artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-zip-windows-2019
+          name: build-zip-windows-2025
 
       - name: Download build-windows-2022.zip artifact
         uses: actions/download-artifact@v4
@@ -149,13 +149,13 @@ jobs:
       - name: Check file sizes of Windows builds
         run: |
           echo "Checking file sizes..."
-          ls -lh build-windows-2019.zip
+          ls -lh build-windows-2025.zip
           ls -lh build-windows-2022.zip
 
       - name: Verify ZIP file integrity for Windows 2019 build with zipinfo
         run: |
           echo "Verifying ZIP file integrity for Windows 2019 build with zipinfo..."
-          zipinfo ./build-windows-2019.zip || (echo "ZIP file is corrupted: build-windows-2019.zip" && exit 1)
+          zipinfo ./build-windows-2025.zip || (echo "ZIP file is corrupted: build-windows-2025.zip" && exit 1)
 
       - name: Verify ZIP file integrity for Windows 2022 build with zipinfo
         run: |
@@ -164,12 +164,12 @@ jobs:
 
       - name: Verify POSIX paths for Windows 2019 build
         run: |
-          unzip build-windows-2019.zip -d extracted-2019
+          unzip build-windows-2025.zip -d extracted-2019
           if find extracted-2019 -type f | grep -qE '\\\\'; then
-            echo "Non-POSIX paths detected in build-windows-2019.zip."
+            echo "Non-POSIX paths detected in build-windows-2025.zip."
             exit 1
           else
-            echo "All paths are POSIX compliant in build-windows-2019.zip."
+            echo "All paths are POSIX compliant in build-windows-2025.zip."
           fi
 
       - name: Verify POSIX paths for Windows 2022 build
@@ -183,7 +183,7 @@ jobs:
           fi
 
       - name: Verify ZIP file integrity for Windows 2019 build with Java
-        run: java -cp ./test VerifyZip build-windows-2019.zip
+        run: java -cp ./test VerifyZip build-windows-2025.zip
 
       - name: Verify ZIP file integrity for Windows 2022 build with Java
         run: java -cp ./test VerifyZip build-windows-2022.zip
@@ -201,10 +201,10 @@ jobs:
         with:
           name: build-zip-linux
 
-      - name: Download build-windows-2019.zip artifact
+      - name: Download build-windows-2025.zip artifact
         uses: actions/download-artifact@v4
         with:
-          name: build-zip-windows-2019
+          name: build-zip-windows-2025
 
       - name: Download build-windows-2022.zip artifact
         uses: actions/download-artifact@v4
@@ -228,7 +228,7 @@ jobs:
         working-directory: ./test/test_zip_swift/
 
       - name: Run the swift test
-        run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-windows-2019.zip build-windows-2022.zip
+        run: ./test/test_zip_swift/.build/release/MyCLI --zip-files build-linux.zip build-windows-2025.zip build-windows-2022.zip
 
   posix-paths-final:
     needs: [check-posix-paths-unix, check-posix-paths-macos]
