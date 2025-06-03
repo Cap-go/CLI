@@ -201,6 +201,10 @@ bundle
 
 Used with external sources or for testing, prints ivSessionKey for upload or decryption.
 
+The command will return the ivSessionKey for upload or decryption.
+
+The checksum is the checksum of the zip file, you can get it with the --json option of the zip command.
+
 Example: npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM`)
   .action(encryptZipV2)
   .option('--key <key>', `Custom path for private signing key`)
@@ -224,6 +228,8 @@ bundle
   .description(`🗜️ Create a zip file of your app bundle for upload or local storage.
 
 Useful for preparing bundles before encryption or upload.
+
+The command will return the checksum of the zip file, you can use it to encrypt the zip file with the --key-v2 option.
 
 Example: npx @capgo/cli@latest bundle zip com.example.app --path ./dist`)
   .action(zipBundle)
