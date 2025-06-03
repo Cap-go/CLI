@@ -69,8 +69,10 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |
 | **--tus** | <code>boolean</code> | Upload the bundle using TUS to Capgo cloud |
 | **--tus-chunk-size** | <code>string</code> | Chunk size for the TUS upload |
-| **--partial** | <code>boolean</code> | Upload partial files to Capgo cloud |
-| **--partial-only** | <code>boolean</code> | Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle |
+| **--partial** | <code>boolean</code> | Upload partial files to Capgo cloud (deprecated, use --delta instead) |
+| **--partial-only** | <code>boolean</code> | Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle (deprecated, use --delta-only instead) |
+| **--delta** | <code>boolean</code> | Upload delta update to Capgo cloud (old name: --partial) |
+| **--delta-only** | <code>boolean</code> | Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only) |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
