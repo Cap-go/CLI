@@ -626,10 +626,10 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     options.tus = options.tus || fileConfig.TUSUploadForced
   }
   if (!fileConfig.partialUpload || options.external) {
-    options.partial = false
+    options.delta = false
   }
   else {
-    options.partial = options.partial || options.partialOnly || fileConfig.partialUploadForced
+    options.delta = options.partial || options.deltaOnly || options.partialOnly || fileConfig.partialUploadForced
   }
 
   if (options.encryptPartial && encryptionMethod === 'v1') {
@@ -638,7 +638,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   }
 
   // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
-  if (options.partial && encryptionMethod === 'v2' && !options.encryptPartial) {
+  if (options.delta && encryptionMethod === 'v2' && !options.encryptPartial) {
     // Check updater version
     const root = join(findRoot(cwd()), PACKNAME)
     const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
@@ -651,7 +651,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     }
   }
 
-  const manifest: manifestType = options.partial ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
+  const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError) {
@@ -690,14 +690,14 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     versionData.storage_provider = 'external'
   }
   else if (zipped) {
-    if (!options.partialOnly) {
+    if (!options.partialOnly && !options.deltaOnly) {
       await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options, options.tusChunkSize)
     }
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
       if (options.dryUpload) {
-        options.partial = false
+        options.delta = false
       }
       const encryptionData = versionData.session_key && options.encryptPartial && sessionKey
         ? {
@@ -706,7 +706,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
           }
         : undefined
 
-      finalManifest = options.partial
+      finalManifest = options.delta
         ? await uploadPartial(
           apikey,
           manifest,
@@ -775,8 +775,8 @@ function checkValidOptions(options: OptionsUpload) {
     log.error('You need to provide an external url if you want to use the --encrypted-checksum option')
     program.error('')
   }
-  if (options.partial && options.external) {
-    log.error('You cannot use the --partial option with an external url')
+  if ((options.partial || options.delta || options.partialOnly || options.deltaOnly) && options.external) {
+    log.error('You cannot use the --partial/--delta/--partial-only/--delta-only option with an external url')
     program.error('')
   }
   if (options.tus && options.external) {

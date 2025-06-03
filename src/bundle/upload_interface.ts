@@ -29,6 +29,8 @@ export interface OptionsUpload extends OptionsBase {
   multipart?: boolean
   partial?: boolean
   partialOnly?: boolean
+  delta?: boolean
+  deltaOnly?: boolean
   tus?: boolean
   encryptedChecksum?: string
   packageJson?: string
