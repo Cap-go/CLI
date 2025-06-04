@@ -411,11 +411,11 @@ const keyV2 = program
 
 keyV2
   .command('save')
-  .description(`💾 Save a base64 encryption key in the Capacitor config, useful for CI environments.
+  .description(`💾 Save the public key in the Capacitor config, useful for CI environments.
 
 Recommended not to commit the key for security.
 
-Example: npx @capgo/cli@latest key save --key ./path/to/key`)
+Example: npx @capgo/cli@latest key save --key ./path/to/key.pub`)
   .action(saveKeyCommandV2)
   .option('-f, --force', `Force generate a new one`)
   .option('--key <key>', `Key path to save in Capacitor config`)
@@ -426,6 +426,12 @@ keyV2
   .description(`🔨 Create a new encryption key pair for end-to-end encryption in Capgo Cloud.
 
 Do not commit or share the private key; save it securely.
+This command will create a new key pair with the name .capgo_key_v2 and .capgo_key_v2.pub in the root of the project.
+
+The public key is used to decrypt the zip file in the mobile app.
+The public key will also be stored in the capacitor config. This is the one used in the mobile app. The file is just a backup.
+
+The private key is used to encrypt the zip file in the CLI.
 
 Example: npx @capgo/cli@latest key create`)
   .action(createKeyCommandV2)
