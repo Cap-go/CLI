@@ -139,6 +139,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--delete-linked-bundle-on-upload', `Locates the currently linked bundle in the channel you are trying to upload to, and deletes it`)
   .option('--no-brotli-patterns <patterns>', `Glob patterns for files to exclude from brotli compression (comma-separated)`)
   .option('--disable-brotli', `Completely disable brotli compression even if updater version supports it`)
+  .option('--silent-fail', `Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos`)
   .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
   .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 

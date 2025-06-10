@@ -196,7 +196,7 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
   }
 }
 
-async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string) {
+async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, silentFail = false) {
   // check if app already exist
   // apikey is sooo legacy code, current prod does not use it
   // TODO: remove apikey and create a new function who not need it
@@ -205,6 +205,11 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     .single()
 
   if (appVersion || appVersionError) {
+    if (silentFail) {
+      log.warn(`Version ${bundle} already exists - exiting gracefully due to --silent-fail option`)
+      outro('Bundle version already exists - exiting gracefully 🎉')
+      exit(0)
+    }
     log.error(`Version ${bundle} already exists ${formatError(appVersionError)}`)
     program.error('')
   }
@@ -558,7 +563,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   await checkTrial(supabase, orgId, localConfig)
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
-  await checkVersionExists(supabase, appid, bundle)
+  await checkVersionExists(supabase, appid, bundle, options.silentFail)
 
   if (options.external && !options.external.startsWith('https://')) {
     log.error(`External link should should start with "https://" current is "${options.external}"`)

@@ -218,7 +218,7 @@ export async function uploadPartial(
   manifest: manifestType,
   path: string,
   appId: string,
-  name: string,
+  bundleName: string,
   orgId: string,
   encryptionOptions: PartialEncryptionOptions | undefined,
   options: OptionsUpload,
@@ -311,7 +311,7 @@ export async function uploadPartial(
       }
 
       const filePathUnixSafe = encodePathSegments(uploadPathUnix)
-      const filename = `orgs/${orgId}/apps/${appId}/${name}/${filePathUnixSafe}`
+      const filename = `orgs/${orgId}/apps/${appId}/${bundleName}/${filePathUnixSafe}`
 
       return new Promise((resolve, reject) => {
         const upload = new tus.Upload(finalBuffer as any, {
