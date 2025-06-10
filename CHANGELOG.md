@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.8.0](https://github.com/Cap-go/CLI/compare/v7.7.8...v7.8.0) (2025-06-10)
+
+
+### Features
+
+* add --silent-fail ([d4738d7](https://github.com/Cap-go/CLI/commit/d4738d79c0a6a571817b093c704ad87ecbdd2850))
+
 ### [7.7.8](https://github.com/Cap-go/CLI/compare/v7.7.7...v7.7.8) (2025-06-04)
 
 
