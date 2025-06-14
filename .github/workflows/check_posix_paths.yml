@@ -35,7 +35,7 @@ jobs:
 
       - name: Create a valid zip test
         id: create_zip
-        run: node ./dist/index.js bundle zip --path test/test_upload -n build-linux.zip
+        run: node ./dist/index.js bundle zip --path test/test_upload -n build-linux.zip --package-json test/test_upload/package.json
 
       - name: Check build directory contents
         run: |
@@ -79,7 +79,7 @@ jobs:
 
       - name: Create a zip test
         id: create_zip
-        run: node ./dist/index.js bundle zip --path test/test_upload -n build-${{ matrix.os }}.zip
+        run: node ./dist/index.js bundle zip --path test/test_upload -n build-${{ matrix.os }}.zip  --package-json test/test_upload/package.json
 
       - name: Upload build.zip artifact
         uses: actions/upload-artifact@v4
