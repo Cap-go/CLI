@@ -45,4 +45,5 @@ export interface OptionsUpload extends OptionsBase {
   noBrotliPatterns?: string
   disableBrotli?: boolean
   silentFail?: boolean
+  selfAssign?: boolean
 }

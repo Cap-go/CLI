@@ -140,6 +140,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--no-brotli-patterns <patterns>', `Glob patterns for files to exclude from brotli compression (comma-separated)`)
   .option('--disable-brotli', `Completely disable brotli compression even if updater version supports it`)
   .option('--silent-fail', `Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos`)
+  .option('--self-assign', `Allow device to self-assign to this channel, this will update the channel`)
   .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
   .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
 
@@ -334,6 +335,7 @@ channel
 Example: npx @capgo/cli@latest channel add production com.example.app --default`)
   .action(addChannelCommand)
   .option('-d, --default', `Set the channel as default`)
+  .option('--self-assign', `Allow device to self-assign to this channel`)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
   .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
   .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)

@@ -463,6 +463,7 @@ async function setVersionInChannel(
   orgId: string,
   appid: string,
   localConfig: localConfigType,
+  selfAssign?: boolean,
 ) {
   const { data: versionId } = await supabase
     .rpc('get_app_versions', { apikey, name_version: bundle, appid })
@@ -484,6 +485,7 @@ async function setVersionInChannel(
       created_by: userId,
       version: versionId,
       owner_org: orgId,
+      allow_device_self_set: selfAssign ?? false,
     })
     if (dbError3) {
       log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
@@ -748,7 +750,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   }
 
   if (hasOrganizationPerm(permissions, OrganizationPerm.write)) {
-    await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig)
+    await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, options.selfAssign)
   }
   else {
     log.warn('Cannot set channel as a upload organization member')

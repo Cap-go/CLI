@@ -8,6 +8,7 @@ import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, g
 
 interface Options extends OptionsBase {
   default?: boolean
+  selfAssign?: boolean
 }
 
 export async function addChannel(channelId: string, appId: string, options: Options, shouldExit = true) {
@@ -45,6 +46,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       version: data.id,
       created_by: userId,
       owner_org: orgId,
+      allow_device_self_set: options.selfAssign ?? false,
     })
 
     if (res.error) {
