@@ -74,10 +74,8 @@
     "pkg": "5.8.1",
     "prettyjson": "^1.2.5",
     "semver": "^7.7.2",
+    "tmp": "^0.2.3",
     "tus-js-client": "^4.3.1",
     "typescript": "^5.8.3"
-  },
-  "dependencies": {
-    "tmp": "^0.2.3"
   }
 }
