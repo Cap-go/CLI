@@ -715,15 +715,15 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
 
       finalManifest = options.delta
         ? await uploadPartial(
-          apikey,
-          manifest,
-          path,
-          appid,
-          bundle,
-          orgId,
-          encryptionData,
-          options,
-        )
+            apikey,
+            manifest,
+            path,
+            appid,
+            bundle,
+            orgId,
+            encryptionData,
+            options,
+          )
         : null
     }
     catch (err) {
