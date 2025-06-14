@@ -37,8 +37,8 @@ export const MAX_CHUNK_SIZE_BYTES = 1024 * 1024 * 99 // 99MB
 
 export const PACKNAME = 'package.json'
 
-export type ArrayElement<ArrayType extends readonly unknown[]> =
-  ArrayType extends readonly (infer ElementType)[] ? ElementType : never
+export type ArrayElement<ArrayType extends readonly unknown[]>
+  = ArrayType extends readonly (infer ElementType)[] ? ElementType : never
 export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v6']['Returns']>
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
@@ -585,7 +585,7 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
       && !dirent.name.startsWith('node_modules')
       && !dirent.name.startsWith('dist')
     ) {
-      yield * getFiles(res)
+      yield* getFiles(res)
     }
     else {
       yield res
@@ -791,7 +791,7 @@ async function* walkDirectory(dir: string): AsyncGenerator<string> {
   for (const entry of entries) {
     const fullPath = join(dir, entry.name)
     if (entry.isDirectory()) {
-      yield * walkDirectory(fullPath)
+      yield* walkDirectory(fullPath)
     }
     else {
       yield fullPath
@@ -1040,11 +1040,11 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   const organizationUidRaw = (adminOrgs.length > 1)
     ? await select({
-      message: 'Please pick the organization that you want to insert to',
-      options: adminOrgs.map((org) => {
-        return { value: org.gid, label: org.name }
-      }),
-    })
+        message: 'Please pick the organization that you want to insert to',
+        options: adminOrgs.map((org) => {
+          return { value: org.gid, label: org.name }
+        }),
+      })
     : adminOrgs[0].gid
 
   if (isCancel(organizationUidRaw)) {

@@ -532,14 +532,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const extConfig = (!options.supaAnon || !options.supaHost)
     ? await getConfig()
     : await updateConfig({
-      statsUrl: `${options.supaHost}/functions/v1/stats`,
-      channelUrl: `${options.supaHost}/functions/v1/channel_self`,
-      updateUrl: `${options.supaHost}/functions/v1/updates`,
-      localApiFiles: `${options.supaHost}/functions/v1`,
-      localS3: true,
-      localSupa: options.supaHost,
-      localSupaAnon: options.supaAnon,
-    })
+        statsUrl: `${options.supaHost}/functions/v1/stats`,
+        channelUrl: `${options.supaHost}/functions/v1/channel_self`,
+        updateUrl: `${options.supaHost}/functions/v1/updates`,
+        localApiFiles: `${options.supaHost}/functions/v1`,
+        localS3: true,
+        localSupa: options.supaHost,
+        localSupaAnon: options.supaAnon,
+      })
   const localConfig = await getLocalConfig()
   appId = getAppId(appId, extConfig?.config)
   options.apikey = apikeyCommand || findSavedKey()
