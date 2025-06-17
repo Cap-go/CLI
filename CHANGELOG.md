@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.9.6](https://github.com/Cap-go/CLI/compare/v7.9.5...v7.9.6) (2025-06-17)
+
+
+### Bug Fixes
+
+* sonarcloud ([76ef7e3](https://github.com/Cap-go/CLI/commit/76ef7e345bc8459c5b59b60bb895f10de084b0f3))
+
 ### [7.9.5](https://github.com/Cap-go/CLI/compare/v7.9.4...v7.9.5) (2025-06-17)
 
 
