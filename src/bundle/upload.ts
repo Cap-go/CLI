@@ -196,7 +196,7 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
   }
 }
 
-async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, silentFail = false) {
+async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false) {
   // check if app already exist
   // apikey is sooo legacy code, current prod does not use it
   // TODO: remove apikey and create a new function who not need it
@@ -205,7 +205,7 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     .single()
 
   if (appVersion || appVersionError) {
-    if (silentFail) {
+    if (versionExistsOk) {
       log.warn(`Version ${bundle} already exists - exiting gracefully due to --silent-fail option`)
       outro('Bundle version already exists - exiting gracefully 🎉')
       exit(0)
@@ -485,7 +485,7 @@ async function setVersionInChannel(
       created_by: userId,
       version: versionId,
       owner_org: orgId,
-      allow_device_self_set: selfAssign ?? false,
+      ...(selfAssign ? { allow_device_self_set: true } : {}),
     })
     if (dbError3) {
       log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
