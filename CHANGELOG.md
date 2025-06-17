@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.9.7](https://github.com/Cap-go/CLI/compare/v7.9.6...v7.9.7) (2025-06-17)
+
+
+### Bug Fixes
+
+* do not unset self assign in upload command ([173f095](https://github.com/Cap-go/CLI/commit/173f095d086d1ad57210b6557f2430cc0accf91c))
+
 ### [7.9.6](https://github.com/Cap-go/CLI/compare/v7.9.5...v7.9.6) (2025-06-17)
 
 
