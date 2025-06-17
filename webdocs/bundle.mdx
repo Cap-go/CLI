@@ -83,7 +83,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--no-brotli-patterns** | <code>string</code> | Glob patterns for files to exclude from brotli compression (comma-separated) |
 | **--disable-brotli** | <code>boolean</code> | Completely disable brotli compression even if updater version supports it |
 | **--version-exists-ok** | <code>boolean</code> | Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos |
-| **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel, this will update the channel |
+| **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel, this will update the channel, if not provided it will leave the channel as is |
 | **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
 | **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
 
