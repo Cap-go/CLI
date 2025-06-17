@@ -565,7 +565,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   await checkTrial(supabase, orgId, localConfig)
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
-  await checkVersionExists(supabase, appid, bundle, options.silentFail)
+  await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
 
   if (options.external && !options.external.startsWith('https://')) {
     log.error(`External link should should start with "https://" current is "${options.external}"`)
