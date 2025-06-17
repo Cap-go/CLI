@@ -41,12 +41,7 @@ export function encryptSourceV2(source: Buffer, sessionKey: Buffer, ivSessionKey
 }
 
 export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: string): Buffer {
-  // console.log('decryptKeyType - ', decryptKeyType);
-  // console.log(key);
-  // console.log('\nivSessionKey', ivSessionKey)
   const [ivB64, sessionb64Encrypted] = ivSessionKey.split(':')
-  // console.log('\nsessionb64Encrypted', sessionb64Encrypted)
-  // console.log('\nivB64', ivB64)
   const sessionKey: Buffer = publicDecrypt(
     {
       key,
