@@ -32,13 +32,11 @@ let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
 
 function readTmpObj() {
-  if (!tmpObject) {
-    tmpObject = readdirSync(tmp.tmpdir)
-      .map((name) => { return { name, full: `${tmp.tmpdir}/${name}` } })
-      .find(obj => obj.name.startsWith('capgocli'))
-      ?.full
-      ?? tmp.fileSync({ prefix: 'capgocli' }).name
-  }
+  tmpObject ??= readdirSync(tmp.tmpdir)
+    .map((name) => { return { name, full: `${tmp.tmpdir}/${name}` } })
+    .find(obj => obj.name.startsWith('capgocli'))
+    ?.full
+    ?? tmp.fileSync({ prefix: 'capgocli' }).name
 }
 
 function markStepDone(step: number, pathToPackageJson?: string) {
