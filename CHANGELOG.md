@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.10.0](https://github.com/Cap-go/CLI/compare/v7.9.7...v7.10.0) (2025-06-21)
+
+
+### Features
+
+* add export for SDK usage to allow whitelabel upload ([e1213a3](https://github.com/Cap-go/CLI/commit/e1213a3b5557ed1b39b65f1c3496a2beada8fea6))
+
 ### [7.9.7](https://github.com/Cap-go/CLI/compare/v7.9.6...v7.9.7) (2025-06-17)
 
 
