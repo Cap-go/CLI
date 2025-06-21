@@ -21,9 +21,22 @@
     "capgo",
     "cli",
     "upload",
-    "capgo-cli"
+    "capgo-cli",
+    "sdk"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./sdk": {
+      "types": "./dist/sdk.d.ts",
+      "import": "./dist/sdk.js",
+      "require": "./dist/sdk.js"
+    }
+  },
   "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "bin": {
     "capgo": "dist/index.js"
   },
