@@ -56,9 +56,9 @@
     "generate-docs": "node dist/index.js generate-docs README.md"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.14.1",
+    "@antfu/eslint-config": "^4.15.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.1",
-    "@capacitor/cli": "^7.3.0",
+    "@capacitor/cli": "^7.4.0",
     "@capgo/find-package-manager": "^0.0.17",
     "@clack/prompts": "^0.11.0",
     "@sauber/table": "npm:@jsr/sauber__table",
