@@ -763,7 +763,7 @@ export async function uploadUrl(supabase: SupabaseClient<Database>, appId: strin
     version: 0,
   }
   try {
-    const pathUploadLink = 'private/upload_link'
+    const pathUploadLink = 'files/upload_link'
     const res = await supabase.functions.invoke(pathUploadLink, { body: JSON.stringify(data) })
 
     if (res.error) {
