@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.10.2](https://github.com/Cap-go/CLI/compare/v7.10.1...v7.10.2) (2025-06-23)
+
+
+### Bug Fixes
+
+* delete channel when device assigned ([603ea52](https://github.com/Cap-go/CLI/commit/603ea523e136a85c955ffa222d935231ad36041c))
+
 ### [7.10.1](https://github.com/Cap-go/CLI/compare/v7.10.0...v7.10.1) (2025-06-21)
 
 
