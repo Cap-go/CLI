@@ -3,7 +3,7 @@ import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { delChannel, findBundleIdByChannelName, findChannel } from '../api/channels'
+import { delChannel, delChannelDevices, findBundleIdByChannelName, findChannel } from '../api/channels'
 import { deleteAppVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
@@ -43,8 +43,8 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       }
     }
     // check if channel exists
-    const channel = await findChannel(supabase, appId, channelId)
-    if (!channel) {
+    const { data: channel, error: channelError } = await findChannel(supabase, appId, channelId)
+    if (channelError || !channel) {
       log.error(`Channel ${channelId} not found`)
       if (options.successIfNotFound) {
         log.success(`Channel ${channelId} not found and successIfNotFound is true`)
@@ -52,6 +52,14 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       }
       program.error('')
     }
+
+    // delete any devices assigned to this channel
+    const { error: delDevicesError } = await delChannelDevices(supabase, appId, channel.id)
+    if (delDevicesError) {
+      log.error(`Cannot delete channel devices: ${formatError(delDevicesError)}`)
+      program.error('')
+    }
+
     log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
     const deleteStatus = await delChannel(supabase, channelId, appId, userId)
     if (deleteStatus.error) {
