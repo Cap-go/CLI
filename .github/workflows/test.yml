@@ -62,4 +62,4 @@ jobs:
         run: bun install
       - name: Run CLI tests
         working-directory: capgo
-        run: LOCAL_CLI_PATH="../dist/index.js" bun run test:cli
+        run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli
