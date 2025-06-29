@@ -18,6 +18,19 @@ import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
 
+// Check if file already exists on server
+async function fileExists(localConfig: any, filename: string): Promise<boolean> {
+  try {
+    const response = await fetch(`${localConfig.hostFilesApi}/files/read/attachments/${encodeURIComponent(filename)}`, {
+      method: 'HEAD',
+    })
+    return response.ok
+  }
+  catch {
+    return false
+  }
+}
+
 // Threshold for small files where Node.js might skip compression (in bytes)
 const SMALL_FILE_THRESHOLD = 4096
 
@@ -311,7 +324,17 @@ export async function uploadPartial(
       }
 
       const filePathUnixSafe = encodePathSegments(uploadPathUnix)
-      const filename = `orgs/${orgId}/apps/${appId}/${bundleName}/${filePathUnixSafe}`
+      const filename = `orgs/${orgId}/apps/${appId}/delta/${file.hash}_${filePathUnixSafe}`
+
+      // Check if file already exists
+      if (await fileExists(localConfig, filename)) {
+        uploadedFiles++
+        return Promise.resolve({
+          file_name: filePathUnixSafe,
+          s3_path: filename,
+          file_hash: file.hash,
+        })
+      }
 
       return new Promise((resolve, reject) => {
         const upload = new tus.Upload(finalBuffer as any, {
@@ -324,7 +347,7 @@ export async function uploadPartial(
             Authorization: apikey,
           },
           onError(error) {
-            log.info(`Failed to upload ${filePathUnixSafe}: ${error}`)
+            log.info(`Failed to upload ${filePathUnix}: ${error}`)
             reject(error)
           },
           onProgress() {
