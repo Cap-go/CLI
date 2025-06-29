@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.11.0](https://github.com/Cap-go/CLI/compare/v7.10.4...v7.11.0) (2025-06-29)
+
+
+### Features
+
+* reuse file instead of re upload them ([b503a9b](https://github.com/Cap-go/CLI/commit/b503a9b91f9ebfffce5742f3565526fc78a0c419))
+
 ### [7.10.4](https://github.com/Cap-go/CLI/compare/v7.10.3...v7.10.4) (2025-06-23)
 
 
