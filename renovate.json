@@ -19,6 +19,10 @@
       ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
+    },
+    {
+      "matchPackageNames": ["ky"],
+      "enabled": false
     }
   ]
 }
