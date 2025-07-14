@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.5](https://github.com/Cap-go/CLI/compare/v7.11.4...v7.11.5) (2025-07-14)
+
+
+### Bug Fixes
+
+* upload never ending issue ([c5874a0](https://github.com/Cap-go/CLI/commit/c5874a0e77379ad899dba8ebf12a2b22739953e3))
+
 ### [7.11.4](https://github.com/Cap-go/CLI/compare/v7.11.3...v7.11.4) (2025-06-30)
 
 ### [7.11.3](https://github.com/Cap-go/CLI/compare/v7.11.2...v7.11.3) (2025-06-29)
