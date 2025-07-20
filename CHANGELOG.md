@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.9](https://github.com/Cap-go/CLI/compare/v7.11.8...v7.11.9) (2025-07-20)
+
+
+### Bug Fixes
+
+* update version to install Capacitor v6 and add direct install option for instant updates ([65a1c28](https://github.com/Cap-go/CLI/commit/65a1c280144215ebc67e744d5d36851ea58c283b))
+
 ### [7.11.8](https://github.com/Cap-go/CLI/compare/v7.11.7...v7.11.8) (2025-07-14)
 
 ### [7.11.7](https://github.com/Cap-go/CLI/compare/v7.11.6...v7.11.7) (2025-07-14)
