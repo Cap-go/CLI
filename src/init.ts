@@ -248,13 +248,18 @@ async function step4(orgId: string, apikey: string, appId: string) {
     }
     else if (semverLt(coreVersion, '7.0.0')) {
       s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to get the best features of Capgo`)
-      versionToInstall = '^7.0.0'
+      versionToInstall = '^6.0.0'
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
       pLog.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
       pOutro(`Bye 👋`)
       exit()
+    }
+    let doDirectInstall: boolean | symbol = false
+    if (versionToInstall === 'latest') {
+      doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
+      await cancelCommand(doDirectInstall, orgId, apikey)
     }
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
@@ -265,7 +270,13 @@ async function step4(orgId: string, apikey: string, appId: string) {
     else {
       await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
       const pkgVersion = await getBundleVersion(undefined, path)
-      await updateConfig({ version: pkgVersion || '1.0.0', appId, autoUpdate: true })
+      const directInstall = doDirectInstall
+        ? {
+            directInstall: 'always',
+            autoSplashscreen: true,
+          }
+        : {}
+      await updateConfig({ version: pkgVersion || '1.0.0', appId, autoUpdate: true, ...directInstall })
       s.stop(`Install Done ✅`)
     }
   }
