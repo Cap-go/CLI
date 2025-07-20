@@ -16,7 +16,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfig, verifyUser } from './utils'
+import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -276,7 +276,10 @@ async function step4(orgId: string, apikey: string, appId: string) {
             autoSplashscreen: true,
           }
         : {}
-      await updateConfig({ version: pkgVersion || '1.0.0', appId, autoUpdate: true, ...directInstall })
+      if (doDirectInstall) {
+        await updateConfigbyKey('SplashScreen', { launchAutoHide: false })
+      }
+      await updateConfigUpdater({ version: pkgVersion || '1.0.0', appId, autoUpdate: true, ...directInstall })
       s.stop(`Install Done ✅`)
     }
   }
@@ -540,7 +543,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   const extConfig = (!options.supaAnon || !options.supaHost)
     ? await getConfig()
-    : await updateConfig({
+    : await updateConfigUpdater({
         statsUrl: `${options.supaHost}/functions/v1/stats`,
         channelUrl: `${options.supaHost}/functions/v1/channel_self`,
         updateUrl: `${options.supaHost}/functions/v1/updates`,

@@ -196,28 +196,32 @@ export async function getConfig() {
   }
 }
 
-export async function updateConfig(newConfig: any): Promise<ExtConfigPairs> {
+export async function updateConfigbyKey(key: string, newConfig: any): Promise<ExtConfigPairs> {
   const extConfig = await getConfig()
   if (extConfig?.config) {
     if (!extConfig.config.plugins) {
       extConfig.config.plugins = {
         extConfig: {},
-        CapacitorUpdater: {},
+        [key]: {},
       }
     }
 
-    if (!extConfig.config.plugins.CapacitorUpdater) {
-      extConfig.config.plugins.CapacitorUpdater = {}
+    if (!extConfig.config.plugins[key]) {
+      extConfig.config.plugins[key] = {}
     }
 
-    extConfig.config.plugins.CapacitorUpdater = {
-      ...extConfig.config.plugins.CapacitorUpdater,
+    extConfig.config.plugins[key] = {
+      ...extConfig.config.plugins[key],
       ...newConfig,
     }
     // console.log('extConfig', extConfig)
     writeConfig(extConfig)
   }
   return extConfig
+}
+
+export async function updateConfigUpdater(newConfig: any): Promise<ExtConfigPairs> {
+  return updateConfigbyKey('CapacitorUpdater', newConfig)
 }
 
 export async function getLocalConfig() {

@@ -19,7 +19,7 @@ import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfig, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, convertAppName, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -541,7 +541,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   const bundle = await getBundle(extConfig.config, options)
 
   if (options.autoSetBundle) {
-    await updateConfig({ version: bundle })
+    await updateConfigUpdater({ version: bundle })
   }
 
   checkNotifyAppReady(options, path)
