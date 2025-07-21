@@ -235,7 +235,7 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, orgId, options.apikey)
   if (doRun) {
-    log.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
+    log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
     await waitLog('debug', options.apikey, appId, orgId, deviceId)
     outro(`Done ✅`)
   }

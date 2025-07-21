@@ -215,7 +215,7 @@ export async function updateConfigbyKey(key: string, newConfig: any): Promise<Ex
       ...newConfig,
     }
     // console.log('extConfig', extConfig)
-    writeConfig(extConfig)
+    await writeConfig(key, extConfig)
   }
   return extConfig
 }

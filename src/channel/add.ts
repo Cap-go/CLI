@@ -47,6 +47,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
       created_by: userId,
       owner_org: orgId,
       allow_device_self_set: options.selfAssign ?? false,
+      public: options.default ?? false,
     })
 
     if (res.error) {

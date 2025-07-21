@@ -217,6 +217,8 @@ const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV7 = 'https://capacitorjs.com/docs/updating/7-0'
 async function step4(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
+  let pkgVersion = '1.0.0'
+  let delta = false
   const doInstall = await pConfirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
   await cancelCommand(doInstall, orgId, apikey)
   if (doInstall) {
@@ -265,13 +267,14 @@ async function step4(orgId: string, apikey: string, appId: string) {
     else {
       await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
       s.stop(`Install Done ✅`)
-      const pkgVersion = await getBundleVersion(undefined, path)
+      pkgVersion = await getBundleVersion(undefined, path) ?? '1.0.0'
       let doDirectInstall: boolean | symbol = false
       if (versionToInstall === 'latest') {
         doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
         await cancelCommand(doDirectInstall, orgId, apikey)
       }
       s.start(`Updating config file`)
+      delta = !!doDirectInstall
       const directInstall = doDirectInstall
         ? {
             directInstall: 'always',
@@ -281,7 +284,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
       if (doDirectInstall) {
         await updateConfigbyKey('SplashScreen', { launchAutoHide: false })
       }
-      await updateConfigUpdater({ version: pkgVersion || '1.0.0', appId, autoUpdate: true, ...directInstall })
+      await updateConfigUpdater({ version: pkgVersion, appId, autoUpdate: true, ...directInstall })
       s.stop(`Config file updated ✅`)
     }
   }
@@ -289,6 +292,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
   await markStep(orgId, apikey, 4, appId)
+  return { pkgVersion, delta }
 }
 
 async function step5(orgId: string, apikey: string, appId: string) {
@@ -456,49 +460,7 @@ async function step7(orgId: string, apikey: string, appId: string) {
 
 async function step8(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
-  const doBundle = await pConfirm({ message: `Automatic upload ${appId} bundle to Capgo?` })
-  await cancelCommand(doBundle, orgId, apikey)
-  if (doBundle) {
-    const s = pSpinner()
-    let nodeModulesPath: string | undefined
-    s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload`)
-    const isMonorepo = projectIsMonorepo(cwd())
-    if (globalPathToPackageJson && isMonorepo) {
-      pLog.warn(`You are most likely using a monorepo, please provide the path to your package.json file AND node_modules path folder when uploading your bundle`)
-      pLog.warn(`Example: ${pm.runner} @capgo/cli@latest bundle upload --package-json ./packages/my-app/package.json --node-modules ./packages/my-app/node_modules`)
-      nodeModulesPath = join(findRoot(cwd()), 'node_modules')
-      pLog.warn(`Guessed node modules path at: ${nodeModulesPath}`)
-      if (!existsSync(nodeModulesPath)) {
-        pLog.error(`Node modules path does not exist, upload skipped`)
-        pOutro(`Bye 👋`)
-        exit(1)
-      }
-    }
-    const uploadRes = await uploadBundle(appId, {
-      channel: defaultChannel,
-      apikey,
-      packageJson: isMonorepo ? globalPathToPackageJson : undefined,
-      nodeModules: isMonorepo ? nodeModulesPath : undefined,
-    }, false)
-    if (!uploadRes) {
-      s.stop('Error')
-      pLog.warn(`Upload failed ❌`)
-      pOutro(`Bye 👋`)
-      exit()
-    }
-    else {
-      s.stop(`Upload Done ✅`)
-    }
-  }
-  else {
-    pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
-  }
-  await markStep(orgId, apikey, 8, appId)
-}
-
-async function step9(orgId: string, apikey: string, appId: string) {
-  const pm = getPMAndCommand()
-  const doRun = await pConfirm({ message: `Run in device now ?` })
+  const doRun = await pConfirm({ message: `Run ${appId} in device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
     const plaformType = await pSelect({
@@ -517,26 +479,250 @@ async function step9(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
     await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
-    s.stop(`Started Done ✅`)
+    s.stop(`App started ✅`)
+    pLog.info(`📱 Your app should now be running on your ${platform} device with Capgo integrated`)
+    pLog.info(`🔄 This is your baseline version - we'll create an update next`)
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
-  await markStep(orgId, apikey, 9, appId)
+  await markStep(orgId, apikey, 8, appId)
 }
 
-async function step10(orgId: string, apikey: string, appId: string, hostWeb: string) {
-  const doRun = await pConfirm({ message: `Automatic check if update working in device ?` })
-  await cancelCommand(doRun, orgId, apikey)
-  if (doRun) {
-    pLog.info(`Wait logs sent to Capgo from ${appId} device, Please open your app 💪`)
+async function step9(orgId: string, apikey: string, appId: string, pkgVersion: string) {
+  pLog.info(`🎯 Now let's test Capgo by making a visible change and deploying an update!`)
+
+  const modificationType = await pSelect({
+    message: 'How would you like to test the update?',
+    options: [
+      { value: 'auto', label: 'Auto: Let Capgo CLI make a visible change for you' },
+      { value: 'manual', label: 'Manual: I\'ll make changes myself' },
+    ],
+  })
+  if (pIsCancel(modificationType)) {
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    exit()
+  }
+
+  if (modificationType === 'auto') {
+    const s = pSpinner()
+    s.start('Making automatic changes to test Capgo updates')
+
+    let changed = false
+
+    // Try to find and modify common files based on project type
+    const possibleFiles = [
+      'src/index.html',
+      'public/index.html',
+      'index.html',
+      'src/main.css',
+      'src/style.css',
+      'public/style.css',
+      'src/App.vue',
+      'src/app/app.component.html',
+      'src/app/home/home.page.html',
+    ]
+
+    for (const filePath of possibleFiles) {
+      if (existsSync(filePath)) {
+        try {
+          const content = readFileSync(filePath, 'utf8')
+          let newContent = content
+
+          if (filePath.endsWith('.html')) {
+            // Add a visible banner
+            if (content.includes('<body>') && !content.includes('capgo-test-banner')) {
+              newContent = content.replace(
+                '<body>',
+                `<body>
+                <div id="capgo-test-banner" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 10px; text-align: center; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999;">
+                  🚀 Capgo Update Test - This banner shows the update worked!
+                </div>
+                <div style="margin-top: 50px;">`,
+              )
+              if (content.includes('</body>')) {
+                newContent = newContent.replace('</body>', '</div></body>')
+              }
+            }
+          }
+          else if (filePath.endsWith('.css')) {
+            // Add body background change
+            if (!content.includes('capgo-test-background')) {
+              newContent = `/* Capgo test modification */
+body {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+  /* capgo-test-background */
+}
+
+${content}`
+            }
+          }
+          else if (filePath.endsWith('.vue')) {
+            // Add a test component banner
+            if (content.includes('<template>') && !content.includes('capgo-test-vue')) {
+              newContent = content.replace(
+                '<template>',
+                `<template>
+  <div class="capgo-test-vue" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 10px; text-align: center; font-weight: bold;">
+    🚀 Capgo Update Test - Vue component updated!
+  </div>`,
+              )
+            }
+          }
+
+          if (newContent !== content) {
+            writeFileSync(filePath, newContent, 'utf8')
+            s.stop(`✅ Made test changes to ${filePath}`)
+            pLog.info(`📝 Added visible test banner to verify the update works`)
+            changed = true
+            break
+          }
+        }
+        catch {
+          // Continue to next file
+        }
+      }
+    }
+
+    if (!changed) {
+      s.stop('⚠️  Could not automatically modify files')
+      pLog.warn('Please make a visible change manually (like editing a text or color)')
+      const continueManual = await pConfirm({ message: 'Continue after making your changes?' })
+      await cancelCommand(continueManual, orgId, apikey)
+    }
+  }
+  else {
+    pLog.info(`✋ Please make a visible change to your app now (example: change a text, color, or add an element)`)
+    pLog.info(`💡 This change will help you see that Capgo updates work correctly`)
+    const changesReady = await pConfirm({ message: 'Have you made your changes and ready to continue?' })
+    await cancelCommand(changesReady, orgId, apikey)
+  }
+
+  // Version bump
+  const versionChoice = await pSelect({
+    message: 'How do you want to handle the version for this update?',
+    options: [
+      { value: 'auto', label: 'Auto: Bump patch version automatically' },
+      { value: 'manual', label: 'Manual: I\'ll provide the version number' },
+    ],
+  })
+  if (pIsCancel(versionChoice)) {
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    exit()
+  }
+
+  let newVersion = pkgVersion
+  if (versionChoice === 'auto') {
+    // Auto bump patch version
+    const versionParts = pkgVersion.split('.')
+    if (versionParts.length === 3) {
+      const patch = Number.parseInt(versionParts[2]) + 1
+      newVersion = `${versionParts[0]}.${versionParts[1]}.${patch}`
+    }
+    else {
+      newVersion = '1.0.1' // fallback
+    }
+    pLog.info(`🔢 Auto-bumped version from ${pkgVersion} to ${newVersion}`)
+  }
+  else {
+    const userVersion = await pText({
+      message: `Current version is ${pkgVersion}. Enter new version:`,
+      validate: (value) => {
+        if (!value.match(/^\d+\.\d+\.\d+/))
+          return 'Please enter a valid version (x.y.z)'
+      },
+    })
+    if (pIsCancel(userVersion)) {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+      exit()
+    }
+    newVersion = userVersion as string
+  }
+
+  // Update package.json version
+  const s = pSpinner()
+  s.start('Updating version in package.json')
+  try {
+    const packageJsonPath = globalPathToPackageJson || join(findRoot(cwd()), 'package.json')
+    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
+    packageJson.version = newVersion
+    writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
+    s.stop(`✅ Version updated to ${newVersion}`)
+  }
+  catch {
+    s.stop('⚠️  Could not update package.json version automatically')
+    pLog.warn(`Please update your package.json version to ${newVersion} manually`)
+  }
+
+  await markStep(orgId, apikey, 9, appId)
+  return newVersion
+}
+
+async function step10(orgId: string, apikey: string, appId: string, newVersion: string, delta: boolean) {
+  const pm = getPMAndCommand()
+  const doBundle = await pConfirm({ message: `Upload the updated ${appId} bundle (v${newVersion}) to Capgo?` })
+  await cancelCommand(doBundle, orgId, apikey)
+  if (doBundle) {
+    const s = pSpinner()
+    let nodeModulesPath: string | undefined
+    s.start(`Running: ${pm.runner} @capgo/cli@latest bundle upload ${delta ? '--delta-only' : ''}`)
+    const isMonorepo = projectIsMonorepo(cwd())
+    if (globalPathToPackageJson && isMonorepo) {
+      pLog.warn(`You are most likely using a monorepo, please provide the path to your package.json file AND node_modules path folder when uploading your bundle`)
+      pLog.warn(`Example: ${pm.runner} @capgo/cli@latest bundle upload --package-json ./packages/my-app/package.json --node-modules ./packages/my-app/node_modules ${delta ? '--delta-only' : ''}`)
+      nodeModulesPath = join(findRoot(cwd()), 'node_modules')
+      pLog.warn(`Guessed node modules path at: ${nodeModulesPath}`)
+      if (!existsSync(nodeModulesPath)) {
+        pLog.error(`Node modules path does not exist, upload skipped`)
+        pOutro(`Bye 👋`)
+        exit(1)
+      }
+    }
+    const uploadRes = await uploadBundle(appId, {
+      channel: defaultChannel,
+      apikey,
+      packageJson: isMonorepo ? globalPathToPackageJson : undefined,
+      nodeModules: isMonorepo ? nodeModulesPath : undefined,
+      deltaOnly: delta,
+      bundle: newVersion,
+    }, false)
+    if (!uploadRes) {
+      s.stop('Error')
+      pLog.warn(`Upload failed ❌`)
+      pOutro(`Bye 👋`)
+      exit()
+    }
+    else {
+      s.stop(`✅ Update v${newVersion} uploaded successfully!`)
+      pLog.info(`🎉 Your updated bundle is now available on Capgo`)
+    }
+  }
+  else {
+    pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
+  }
+  await markStep(orgId, apikey, 10, appId)
+}
+
+async function step11(orgId: string, apikey: string, appId: string, hostWeb: string) {
+  pLog.info(`🧪 Time to test the Capgo update system!`)
+  pLog.info(`📱 Go to your device where the app is running`)
+  pLog.info(`🔄 IMPORTANT: Background your app (swipe up/press home button) and then reopen it`)
+  pLog.info(`⏱️  The update should be downloaded and applied automatically`)
+  pLog.info(`👀 You should see your changes appear in the app!`)
+
+  const doWaitLogs = await pConfirm({ message: `Monitor Capgo logs to verify the update worked?` })
+  await cancelCommand(doWaitLogs, orgId, apikey)
+
+  if (doWaitLogs) {
+    pLog.info(`📊 Watching logs from ${appId}...`)
+    pLog.info(`🔄 Please background and reopen your app now to trigger the update`)
     await waitLog('onboarding-v2', apikey, appId, apikey, orgId)
   }
   else {
     const appIdUrl = convertAppName(appId)
-    pLog.info(`Check logs in ${hostWeb}/app/p/${appIdUrl}/logs to see if update works.`)
+    pLog.info(`📊 Check logs manually at ${hostWeb}/app/p/${appIdUrl}/logs to verify the update`)
   }
-  await markStep(orgId, apikey, 10, appId)
+  await markStep(orgId, apikey, 11, appId)
 }
 
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
@@ -584,6 +770,9 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const orgId = organization.gid
 
   const stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
+  let pkgVersion = '1.0.0'
+  let delta = false
+  let currentVersion = pkgVersion
 
   try {
     if (stepToSkip < 1)
@@ -600,7 +789,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 4) {
-      await step4(orgId, options.apikey, appId)
+      const res = await step4(orgId, options.apikey, appId)
+      pkgVersion = res.pkgVersion
+      currentVersion = pkgVersion
+      delta = res.delta
       markStepDone(4)
     }
 
@@ -610,7 +802,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 6) {
-      await step6(orgId, options.apikey, appId) // TODO: Do not push more people to use encryption as it is not yet secure as it should be
+      await step6(orgId, options.apikey, appId)
       markStepDone(6)
     }
 
@@ -625,11 +817,20 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 9) {
-      await step9(orgId, options.apikey, appId)
+      currentVersion = await step9(orgId, options.apikey, appId, pkgVersion)
       markStepDone(9)
     }
 
-    await step10(orgId, options.apikey, appId, localConfig.hostWeb)
+    if (stepToSkip < 10) {
+      await step10(orgId, options.apikey, appId, currentVersion, delta)
+      markStepDone(10)
+    }
+
+    if (stepToSkip < 11) {
+      await step11(orgId, options.apikey, appId, localConfig.hostWeb)
+      markStepDone(11)
+    }
+
     await markStep(orgId, options.apikey, 0, appId)
     cleanupStepsDone()
   }

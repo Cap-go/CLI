@@ -1,7 +1,7 @@
 import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { writeConfig } from '../config'
+import { writeConfigUpdater } from '../config'
 import { formatError, getConfig } from '../utils'
 
 interface Options extends OptionsBase {
@@ -47,7 +47,7 @@ export async function setSetting(setting: string, options: Options) {
     const finalValue: boolean | string = options.bool ? options.bool === 'true' : options.string!
 
     baseObj[pathElements.at(-1)!] = finalValue
-    await writeConfig(config, true)
+    await writeConfigUpdater(config, true)
     log.success(`Set "${setting}" to "${finalValue}"`)
   }
   catch (error) {

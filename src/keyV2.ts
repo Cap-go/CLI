@@ -3,7 +3,7 @@ import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
 import { program } from 'commander'
 import { createRSA } from './api/cryptoV2'
 import { checkAlerts } from './api/update'
-import { writeConfig } from './config'
+import { writeConfigUpdater } from './config'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 
 interface saveOptions {
@@ -75,7 +75,7 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
 
     // console.log('extConfig', extConfig)
-    await writeConfig(extConfig)
+    await writeConfigUpdater(extConfig)
   }
   if (logg) {
     log.success(`public key saved into ${extConfig.path} file in local directory`)
@@ -92,7 +92,7 @@ export async function deleteOldPrivateKey(options: Options, logg = true): Promis
 
   if (extConfig?.config?.plugins?.CapacitorUpdater?.privateKey) {
     delete extConfig.config.plugins.CapacitorUpdater.privateKey
-    await writeConfig(extConfig)
+    await writeConfigUpdater(extConfig)
     // Delete the old private key file if it exists
     if (existsSync(baseKey)) {
       try {
@@ -197,7 +197,7 @@ export async function createKeyV2(options: Options, logg = true) {
 
     extConfig.config.plugins.CapacitorUpdater.publicKey = publicKey
     // console.log('extConfig', extConfig)
-    writeConfig(extConfig)
+    writeConfigUpdater(extConfig)
   }
 
   if (log) {
