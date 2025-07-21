@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.17](https://github.com/Cap-go/CLI/compare/v7.11.16...v7.11.17) (2025-07-21)
+
+
+### Bug Fixes
+
+* update log messages to instruct users to background the app before reopening ([bac4fe7](https://github.com/Cap-go/CLI/commit/bac4fe7510c0e034929c29dcabc8a028c840cc15))
+
 ### [7.11.16](https://github.com/Cap-go/CLI/compare/v7.11.15...v7.11.16) (2025-07-21)
 
 
