@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.12](https://github.com/Cap-go/CLI/compare/v7.11.11...v7.11.12) (2025-07-21)
+
+
+### Bug Fixes
+
+* move direct install option for instant updates to the correct position in step4 function ([abbd1d9](https://github.com/Cap-go/CLI/commit/abbd1d9821f52a8ab96f9e8bd0cf7289c77a5c78))
+
 ### [7.11.11](https://github.com/Cap-go/CLI/compare/v7.11.10...v7.11.11) (2025-07-21)
 
 
