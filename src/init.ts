@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
+import semverInc from 'semver/functions/inc'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import semverLt from 'semver/functions/lt'
 import tmp from 'tmp'
@@ -267,7 +268,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
     else {
       await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
       s.stop(`Install Done ✅`)
-      pkgVersion = await getBundleVersion(undefined, path) ?? '1.0.0'
+      pkgVersion = getBundleVersion(undefined, path) || '1.0.0'
       let doDirectInstall: boolean | symbol = false
       if (versionToInstall === 'latest') {
         doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
@@ -599,10 +600,11 @@ ${content}`
   }
 
   // Version bump
+  const nextVersion = semverInc(pkgVersion, 'patch') || '1.0.1'
   const versionChoice = await pSelect({
     message: 'How do you want to handle the version for this update?',
     options: [
-      { value: 'auto', label: 'Auto: Bump patch version automatically' },
+      { value: 'auto', label: `Auto: Bump patch version (${pkgVersion} → ${nextVersion})` },
       { value: 'manual', label: 'Manual: I\'ll provide the version number' },
     ],
   })
@@ -613,16 +615,16 @@ ${content}`
 
   let newVersion = pkgVersion
   if (versionChoice === 'auto') {
-    // Auto bump patch version
-    const versionParts = pkgVersion.split('.')
-    if (versionParts.length === 3) {
-      const patch = Number.parseInt(versionParts[2]) + 1
-      newVersion = `${versionParts[0]}.${versionParts[1]}.${patch}`
+    // Auto bump patch version using semver
+    const incrementedVersion = semverInc(pkgVersion, 'patch')
+    if (incrementedVersion) {
+      newVersion = incrementedVersion
+      pLog.info(`🔢 Auto-bumped version from ${pkgVersion} to ${newVersion}`)
     }
     else {
       newVersion = '1.0.1' // fallback
+      pLog.warn(`Could not parse version ${pkgVersion}, using fallback ${newVersion}`)
     }
-    pLog.info(`🔢 Auto-bumped version from ${pkgVersion} to ${newVersion}`)
   }
   else {
     const userVersion = await pText({
@@ -770,7 +772,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const orgId = organization.gid
 
   const stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
-  let pkgVersion = '1.0.0'
+  let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
   let delta = false
   let currentVersion = pkgVersion
 
