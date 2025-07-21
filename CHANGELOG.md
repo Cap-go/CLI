@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.15](https://github.com/Cap-go/CLI/compare/v7.11.14...v7.11.15) (2025-07-21)
+
+
+### Bug Fixes
+
+* update status messages in step4 function for installation and config update ([78d95bf](https://github.com/Cap-go/CLI/commit/78d95bf0af72696dc0f4066b640d779d27b4c35c))
+
 ### [7.11.14](https://github.com/Cap-go/CLI/compare/v7.11.13...v7.11.14) (2025-07-21)
 
 
