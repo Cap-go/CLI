@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.18](https://github.com/Cap-go/CLI/compare/v7.11.17...v7.11.18) (2025-07-21)
+
+
+### Bug Fixes
+
+* prioritize HTML file modification and enhance test banner styling ([6c7cd8a](https://github.com/Cap-go/CLI/commit/6c7cd8abdb2c4fc61a0a4f93d6a520839eb752ab))
+* use semver for automatic patch version bump and improve logging ([ea30a60](https://github.com/Cap-go/CLI/commit/ea30a60a1ff1c468c80568c88680461d3d9de67f))
+
 ### [7.11.17](https://github.com/Cap-go/CLI/compare/v7.11.16...v7.11.17) (2025-07-21)
 
 
