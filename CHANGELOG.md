@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.12.0](https://github.com/Cap-go/CLI/compare/v7.11.19...v7.12.0) (2025-07-21)
+
+
+### Features
+
+* add build confirmation and execution after modifications in init process ([2c4e2ea](https://github.com/Cap-go/CLI/commit/2c4e2ea9034faa0bbc8dcf05922ff9c81c3a9e15))
+
 ### [7.11.19](https://github.com/Cap-go/CLI/compare/v7.11.18...v7.11.19) (2025-07-21)
 
 
