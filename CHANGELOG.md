@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.11](https://github.com/Cap-go/CLI/compare/v7.11.10...v7.11.11) (2025-07-21)
+
+
+### Bug Fixes
+
+* add error handling for empty organizations in getOrganization function ([0a72e37](https://github.com/Cap-go/CLI/commit/0a72e37bed44005ffbb9fae07cacb772fec4d6fd))
+
 ### [7.11.10](https://github.com/Cap-go/CLI/compare/v7.11.9...v7.11.10) (2025-07-20)
 
 ### [7.11.9](https://github.com/Cap-go/CLI/compare/v7.11.8...v7.11.9) (2025-07-20)
