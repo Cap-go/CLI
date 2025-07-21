@@ -264,12 +264,14 @@ async function step4(orgId: string, apikey: string, appId: string) {
     }
     else {
       await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
+      s.stop(`Install Done ✅`)
       const pkgVersion = await getBundleVersion(undefined, path)
       let doDirectInstall: boolean | symbol = false
       if (versionToInstall === 'latest') {
         doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
         await cancelCommand(doDirectInstall, orgId, apikey)
       }
+      s.start(`Updating config file`)
       const directInstall = doDirectInstall
         ? {
             directInstall: 'always',
@@ -280,7 +282,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
         await updateConfigbyKey('SplashScreen', { launchAutoHide: false })
       }
       await updateConfigUpdater({ version: pkgVersion || '1.0.0', appId, autoUpdate: true, ...directInstall })
-      s.stop(`Install Done ✅`)
+      s.stop(`Config file updated ✅`)
     }
   }
   else {
