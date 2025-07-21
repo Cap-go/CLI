@@ -1037,8 +1037,13 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
 
+  if (allOrganizations.length === 0) {
+    log.error('Could not get organization please create an organization first')
+    program.error('')
+  }
+
   if (adminOrgs.length === 0) {
-    log.error(`Could not get organization with roles: ${roles.join(' or ')} because the user does not have any org`)
+    log.error(`Could not find organization with roles: ${roles.join(' or ')} please create an organization or ask the admin to add you to the organization with this roles`)
     program.error('')
   }
 
