@@ -263,7 +263,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
-      await execSync(`${pm.installCommand} @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
+      await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
       const pkgVersion = await getBundleVersion(undefined, path)
       let doDirectInstall: boolean | symbol = false
       if (versionToInstall === 'latest') {
