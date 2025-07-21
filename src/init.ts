@@ -278,7 +278,7 @@ async function step4(orgId: string, apikey: string, appId: string) {
       delta = !!doDirectInstall
       const directInstall = doDirectInstall
         ? {
-            directInstall: 'always',
+            directUpdate: 'always',
             autoSplashscreen: true,
           }
         : {}
