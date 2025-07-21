@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.11.14](https://github.com/Cap-go/CLI/compare/v7.11.13...v7.11.14) (2025-07-21)
+
+
+### Bug Fixes
+
+* force installation of @capgo/capacitor-updater in step4 function ([4d98557](https://github.com/Cap-go/CLI/commit/4d98557c6807465641760ef2405f88cdb981e4de))
+
 ### [7.11.13](https://github.com/Cap-go/CLI/compare/v7.11.12...v7.11.13) (2025-07-21)
 
 ### [7.11.12](https://github.com/Cap-go/CLI/compare/v7.11.11...v7.11.12) (2025-07-21)
