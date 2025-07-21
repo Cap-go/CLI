@@ -511,45 +511,56 @@ async function step9(orgId: string, apikey: string, appId: string, pkgVersion: s
 
     let changed = false
 
-    // Try to find and modify common files based on project type
+    // Try to find and modify ONE file only, prioritizing HTML files
     const possibleFiles = [
       'src/index.html',
       'public/index.html',
       'index.html',
-      'src/main.css',
-      'src/style.css',
-      'public/style.css',
       'src/App.vue',
       'src/app/app.component.html',
       'src/app/home/home.page.html',
+      'src/main.css',
+      'src/style.css',
+      'public/style.css',
     ]
 
     for (const filePath of possibleFiles) {
-      if (existsSync(filePath)) {
+      if (existsSync(filePath) && !changed) {
         try {
           const content = readFileSync(filePath, 'utf8')
           let newContent = content
 
           if (filePath.endsWith('.html')) {
-            // Add a visible banner
+            // Add a visible banner to HTML files
             if (content.includes('<body>') && !content.includes('capgo-test-banner')) {
               newContent = content.replace(
                 '<body>',
                 `<body>
-                <div id="capgo-test-banner" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 10px; text-align: center; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999;">
-                  🚀 Capgo Update Test - This banner shows the update worked!
-                </div>
-                <div style="margin-top: 50px;">`,
+  <div id="capgo-test-banner" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 15px; text-align: center; font-weight: bold; position: fixed; top: 0; left: 0; right: 0; z-index: 9999; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    🚀 Capgo Update Test - This banner shows the update worked!
+  </div>
+  <style>
+    body { padding-top: 60px !important; }
+  </style>`,
               )
-              if (content.includes('</body>')) {
-                newContent = newContent.replace('</body>', '</div></body>')
-              }
+            }
+          }
+          else if (filePath.endsWith('.vue')) {
+            // Add a test banner to Vue components
+            if (content.includes('<template>') && !content.includes('capgo-test-vue')) {
+              newContent = content.replace(
+                '<template>',
+                `<template>
+  <div class="capgo-test-vue" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 15px; text-align: center; font-weight: bold; margin-bottom: 20px;">
+    🚀 Capgo Update Test - Vue component updated!
+  </div>`,
+              )
             }
           }
           else if (filePath.endsWith('.css')) {
-            // Add body background change
+            // Add body background change as fallback
             if (!content.includes('capgo-test-background')) {
-              newContent = `/* Capgo test modification */
+              newContent = `/* Capgo test modification - background change */
 body {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
   /* capgo-test-background */
@@ -558,23 +569,11 @@ body {
 ${content}`
             }
           }
-          else if (filePath.endsWith('.vue')) {
-            // Add a test component banner
-            if (content.includes('<template>') && !content.includes('capgo-test-vue')) {
-              newContent = content.replace(
-                '<template>',
-                `<template>
-  <div class="capgo-test-vue" style="background: linear-gradient(90deg, #4CAF50, #2196F3); color: white; padding: 10px; text-align: center; font-weight: bold;">
-    🚀 Capgo Update Test - Vue component updated!
-  </div>`,
-              )
-            }
-          }
 
           if (newContent !== content) {
             writeFileSync(filePath, newContent, 'utf8')
             s.stop(`✅ Made test changes to ${filePath}`)
-            pLog.info(`📝 Added visible test banner to verify the update works`)
+            pLog.info(`📝 Added visible test modification to verify the update works`)
             changed = true
             break
           }
@@ -640,22 +639,6 @@ ${content}`
     }
     newVersion = userVersion as string
   }
-
-  // Update package.json version
-  const s = pSpinner()
-  s.start('Updating version in package.json')
-  try {
-    const packageJsonPath = globalPathToPackageJson || join(findRoot(cwd()), 'package.json')
-    const packageJson = JSON.parse(readFileSync(packageJsonPath, 'utf8'))
-    packageJson.version = newVersion
-    writeFileSync(packageJsonPath, JSON.stringify(packageJson, null, 2), 'utf8')
-    s.stop(`✅ Version updated to ${newVersion}`)
-  }
-  catch {
-    s.stop('⚠️  Could not update package.json version automatically')
-    pLog.warn(`Please update your package.json version to ${newVersion} manually`)
-  }
-
   await markStep(orgId, apikey, 9, appId)
   return newVersion
 }
