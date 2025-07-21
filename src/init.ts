@@ -433,9 +433,10 @@ async function step7(orgId: string, apikey: string, appId: string) {
   await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
     const s = pSpinner()
+    s.start(`Checking project type`)
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.start(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
+    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
     const packScripts = await getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
