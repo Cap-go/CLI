@@ -639,6 +639,32 @@ ${content}`
     }
     newVersion = userVersion as string
   }
+  // Build after modifications
+  const pm = getPMAndCommand()
+  const doBuild = await pConfirm({ message: `Build ${appId} with changes before uploading? If you need to build yourself please do it now in other terminal, and then select no` })
+  await cancelCommand(doBuild, orgId, apikey)
+  if (doBuild) {
+    const s = pSpinner()
+    s.start(`Checking project type`)
+    const projectType = await findProjectType()
+    const buildCommand = await findBuildCommandForProjectType(projectType)
+    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
+    const packScripts = await getPackageScripts()
+    // check in script build exist
+    if (!packScripts[buildCommand]) {
+      s.stop('Error')
+      pLog.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
+      pOutro(`Bye 👋`)
+      exit()
+    }
+    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
+    s.stop(`✅ Build with changes completed`)
+    pLog.info(`📦 Your modifications have been built and synced`)
+  }
+  else {
+    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
+  }
+
   await markStep(orgId, apikey, 9, appId)
   return newVersion
 }
