@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.13.0](https://github.com/Cap-go/CLI/compare/v7.12.1...v7.13.0) (2025-07-24)
+
+
+### Features
+
+* enhance step11 function to handle delta updates and provide clearer instructions for standard updates ([f3a3004](https://github.com/Cap-go/CLI/commit/f3a30045bbbadb5b396f3ab72b60bcce8b285d0e))
+
 ### [7.12.1](https://github.com/Cap-go/CLI/compare/v7.12.0...v7.12.1) (2025-07-22)
 
 
