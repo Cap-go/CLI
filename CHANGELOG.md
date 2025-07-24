@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.12.1](https://github.com/Cap-go/CLI/compare/v7.12.0...v7.12.1) (2025-07-22)
+
+
+### Bug Fixes
+
+* enhance test banner and body padding for safe area insets ([4dcc0ca](https://github.com/Cap-go/CLI/commit/4dcc0ca89cc3dfbfb7b6b88fd486674eb93e4bcf))
+
 ## [7.12.0](https://github.com/Cap-go/CLI/compare/v7.11.19...v7.12.0) (2025-07-21)
 
 
