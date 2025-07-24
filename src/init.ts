@@ -714,11 +714,21 @@ async function step10(orgId: string, apikey: string, appId: string, newVersion: 
   await markStep(orgId, apikey, 10, appId)
 }
 
-async function step11(orgId: string, apikey: string, appId: string, hostWeb: string) {
+async function step11(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean) {
   pLog.info(`🧪 Time to test the Capgo update system!`)
   pLog.info(`📱 Go to your device where the app is running`)
-  pLog.info(`🔄 IMPORTANT: Background your app (swipe up/press home button) and then reopen it`)
-  pLog.info(`⏱️  The update should be downloaded and applied automatically`)
+
+  if (delta) {
+    pLog.info(`🔄 IMPORTANT: Background your app (swipe up/press home button) and then reopen it`)
+    pLog.info(`⏱️  The update should be downloaded and applied automatically`)
+  }
+  else {
+    pLog.info(`📱 With standard updates, you will need to:`)
+    pLog.info(`   1. Background the app (swipe up/press home button) to start download`)
+    pLog.info(`   2. Wait a few seconds for download to complete`)
+    pLog.info(`   3. Background and foreground again to see the update`)
+  }
+
   pLog.info(`👀 You should see your changes appear in the app!`)
 
   const doWaitLogs = await pConfirm({ message: `Monitor Capgo logs to verify the update worked?` })
@@ -838,7 +848,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 11) {
-      await step11(orgId, options.apikey, appId, localConfig.hostWeb)
+      await step11(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(11)
     }
 
