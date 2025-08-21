@@ -5,6 +5,6 @@ export default antfu({
     'dist',
     'test',
     'webpack.config.js',
-    'src/types/types_supabase.ts',
+    'src/types/supabase.types.ts',
   ],
 })
