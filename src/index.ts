@@ -24,6 +24,7 @@ import { generateDocs } from './docs'
 import { initApp } from './init'
 import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './keyV2'
 import { loginCommand } from './login'
+import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
 
 program
@@ -457,6 +458,60 @@ account.command('id')
 Example: npx @capgo/cli@latest account id`)
   .action(getUserId)
   .option('-a, --apikey <apikey>', `API key to link to your account`)
+
+const organisation = program
+  .command('organisation')
+  .description(`🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.`)
+
+organisation
+  .command('list')
+  .alias('l')
+  .description(`📋 List all organizations you have access to in Capgo Cloud.
+
+Example: npx @capgo/cli@latest organisation list`)
+  .action(listOrganizations)
+  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+
+organisation
+  .command('add')
+  .alias('a')
+  .description(`➕ Create a new organization in Capgo Cloud for team collaboration.
+
+Example: npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompany.com`)
+  .action(addOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+
+organisation
+  .command('set [orgId]')
+  .alias('s')
+  .description(`⚙️ Update organization settings such as name and management email.
+
+Example: npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"`)
+  .action(setOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+
+organisation
+  .command('delete [orgId]')
+  .alias('d')
+  .description(`🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
+
+Only organization owners can delete organizations.
+
+Example: npx @capgo/cli@latest organisation delete ORG_ID`)
+  .action(deleteOrganization)
+  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
+  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
 
 program
   .command('generate-docs [filePath]')
