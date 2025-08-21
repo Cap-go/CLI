@@ -377,7 +377,7 @@ async function step5(orgId: string, apikey: string, appId: string) {
 
       if (!last) {
         s.stop('Error')
-        pLog.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
+        pLog.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/getting-started/add-an-app/`)
         pOutro(`Bye 👋`)
         exit()
       }
@@ -857,7 +857,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   }
   catch (e) {
     console.error(e)
-    pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/plugin/cloud-mode/auto-update/`)
+    pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/getting-started/add-an-app/`)
     exit(1)
   }
 
