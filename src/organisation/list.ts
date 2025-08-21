@@ -8,7 +8,6 @@ import {
   createSupabaseClient,
   findSavedKey,
   formatError,
-  getHumanDate,
   verifyUser,
 } from '../utils'
 
