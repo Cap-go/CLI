@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.14.0](https://github.com/Cap-go/CLI/compare/v7.13.1...v7.14.0) (2025-08-21)
+
+
+### Features
+
+* add organization management commands for Capgo Cloud including add, delete, list, and update functionalities ([60fbac4](https://github.com/Cap-go/CLI/commit/60fbac4bce0b9d7a36e29e4c6dca9e26fbdd4406))
+
 ### [7.13.1](https://github.com/Cap-go/CLI/compare/v7.13.0...v7.13.1) (2025-08-21)
 
 ## [7.13.0](https://github.com/Cap-go/CLI/compare/v7.12.1...v7.13.0) (2025-07-24)
