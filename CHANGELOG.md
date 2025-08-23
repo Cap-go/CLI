@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.15.0](https://github.com/Cap-go/CLI/compare/v7.14.5...v7.15.0) (2025-08-23)
+
+
+### Features
+
+* centralize option descriptions for Supabase and package management commands ([c776cc1](https://github.com/Cap-go/CLI/commit/c776cc19b198c36949c7226f9e34e34e8c534d68))
+
 ### [7.14.5](https://github.com/Cap-go/CLI/compare/v7.14.4...v7.14.5) (2025-08-23)
 
 
