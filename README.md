@@ -206,7 +206,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--delta-only** | <code>boolean</code> | Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only) |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
-| **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, meaning it will not upload the files but add the row in database (Used by Capgo for internal testing) |
+| **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
 | **--encrypt-partial** | <code>boolean</code> | Encrypt the partial update files (automatically applied for updater > 6.14.4) |
