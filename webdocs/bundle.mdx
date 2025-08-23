@@ -47,7 +47,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--s3-region** | <code>string</code> | Region for your S3 bucket |
 | **--s3-apikey** | <code>string</code> | API key for your S3 endpoint |
 | **--s3-apisecret** | <code>string</code> | API secret for your S3 endpoint |
-| **--s3-endoint** | <code>string</code> | URL of S3 endpoint |
+| **--s3-endpoint** | <code>string</code> | URL of S3 endpoint |
 | **--s3-bucket-name** | <code>string</code> | Name for your AWS S3 bucket |
 | **--s3-port** | <code>string</code> | Port for your S3 endpoint |
 | **--no-s3-ssl** | <code>boolean</code> | Disable SSL for S3 upload |
@@ -75,7 +75,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--delta-only** | <code>boolean</code> | Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only) |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
-| **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
+| **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, meaning it will not upload the files but add the row in database (Used by Capgo for internal testing) |
 | **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
 | **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
 | **--encrypt-partial** | <code>boolean</code> | Encrypt the partial update files (automatically applied for updater > 6.14.4) |

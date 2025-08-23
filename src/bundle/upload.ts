@@ -46,7 +46,7 @@ async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
 function getApikey(options: OptionsUpload) {
   const apikey = options.apikey || findSavedKey()
   if (!apikey) {
-    log.error(`Missing API key, you need to provide a API key to upload your bundle`)
+    log.error(`Missing API key, you need to provide an API key to upload your bundle`)
     program.error('')
   }
 

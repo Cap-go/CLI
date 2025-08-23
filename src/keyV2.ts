@@ -203,9 +203,9 @@ export async function createKeyV2(options: Options, logg = true) {
   if (log) {
     log.success('Your RSA key has been generated')
     log.success(`Private key saved in ${baseKeyV2}`)
-    log.success('This key will be use to encrypt your bundle before sending it to Capgo')
+    log.success('This key will be used to encrypt your bundle before sending it to Capgo')
     log.success('Keep it safe')
-    log.success('Than make it unreadable by Capgo and unmodifiable by anyone')
+    log.success('Then make it unreadable by Capgo and unmodifiable by anyone')
     log.success(`Public key saved in ${extConfig.path}`)
     log.success('Your app will be the only one having it')
     log.success('Only your users can decrypt your update')

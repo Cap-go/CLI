@@ -12,7 +12,7 @@ export async function deleteApp(appId: string, options: OptionsBase) {
   appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
-    log.error('Missing API key, you need to provide a API key to upload your bundle')
+    log.error('Missing API key, you need to provide an API key to upload your bundle')
     program.error('')
   }
   if (!appId) {

@@ -42,5 +42,6 @@
     "toml",
     "gql",
     "graphql"
-  ]
+  ],
+  "claudeCodeChat.permissions.yoloMode": true
 }

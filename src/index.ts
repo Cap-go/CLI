@@ -102,7 +102,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--s3-region <region>', `Region for your S3 bucket`)
   .option('--s3-apikey <apikey>', `API key for your S3 endpoint`)
   .option('--s3-apisecret <apisecret>', `API secret for your S3 endpoint`)
-  .option('--s3-endoint <s3Endpoint>', `URL of S3 endpoint`)
+  .option('--s3-endpoint <s3Endpoint>', `URL of S3 endpoint`)
   .option('--s3-bucket-name <bucketName>', `Name for your AWS S3 bucket`)
   .option('--s3-port <port>', `Port for your S3 endpoint`)
   .option('--no-s3-ssl', `Disable SSL for S3 upload`)
