@@ -27,6 +27,15 @@ import { loginCommand } from './login'
 import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
 
+// Common option descriptions used across multiple commands
+const optionDescriptions = {
+  apikey: `API key to link to your account`,
+  supaHost: `Custom Supabase host URL (for self-hosting or Capgo development)`,
+  supaAnon: `Custom Supabase anon key (for self-hosting)`,
+  packageJson: `Paths to package.json files for monorepos (comma-separated)`,
+  nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
+}
+
 program
   .name(pack.name)
   .description(`📦 Manage packages and bundle versions in Capgo Cloud`)
@@ -43,8 +52,8 @@ Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .action(initApp)
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 program
   .command('doctor')
@@ -53,7 +62,7 @@ program
 This command helps diagnose issues with your setup.
 
 Example: npx @capgo/cli@latest doctor`)
-  .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .action(getInfo)
 
 program
@@ -66,8 +75,8 @@ Use --apikey=******** in any command to override it.
 Example: npx @capgo/cli@latest login YOUR_API_KEY`)
   .action(loginCommand)
   .option('--local', `Only save in local folder, git ignored for security.`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 const bundle = program
   .command('bundle')
@@ -76,25 +85,16 @@ const bundle = program
 bundle
   .command('upload [appId]')
   .alias('u')
-  .description(`⬆️ Upload a new app bundle to Capgo Cloud for distribution, optionally linking to a channel or external URL.
+  .description(`⬆️ Upload a new app bundle to Capgo Cloud for distribution.
 
-External option supports privacy concerns or large apps (>200MB) by storing only the link.
+Version must be > 0.0.0 and unique. Deleted versions cannot be reused for security.
 
-Capgo never inspects external content. Encryption adds a trustless security layer.
-
-Version must be > 0.0.0 and unique.
-
-Note: External option helps with corporate privacy concerns and apps larger than 200MB by storing only the link.
-
-Note: Capgo Cloud never looks at the content in the link for external options or in the code when stored.
-
-Note: You can add a second layer of security with encryption, making Capgo trustless.
-
-Note: Version should be greater than "0.0.0" and cannot be overridden or reused after deletion for security reasons.
+External option: Store only a URL link (useful for apps >200MB or privacy requirements).
+Capgo never inspects external content. Add encryption for trustless security.
 
 Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel production`)
   .action(uploadCommand)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-p, --path <path>', `Path of the folder to upload, if not provided it will use the webDir set in capacitor.config`)
   .option('-c, --channel <channel>', `Channel to link to`)
   .option('-e, --external <url>', `Link to external URL instead of upload to Capgo Cloud`)
@@ -123,27 +123,27 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--ignore-metadata-check', `Ignores the metadata (node_modules) check when uploading`)
   .option('--ignore-checksum-check', `Ignores the checksum check when uploading`)
   .option('--timeout <timeout>', `Timeout for the upload process in seconds`)
-  .option('--multipart', `Uses multipart protocol to upload data to S3, Deprecated, use tus instead`)
+  .option('--multipart', `[DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads`)
   .option('--zip', `Upload the bundle using zip to Capgo cloud (legacy)`)
   .option('--tus', `Upload the bundle using TUS to Capgo cloud`)
-  .option('--tus-chunk-size <tusChunkSize>', `Chunk size for the TUS upload`)
-  .option('--partial', `Upload partial files to Capgo cloud (deprecated, use --delta instead)`)
-  .option('--partial-only', `Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle (deprecated, use --delta-only instead)`)
-  .option('--delta', `Upload delta update to Capgo cloud (old name: --partial)`)
-  .option('--delta-only', `Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only)`)
+  .option('--tus-chunk-size <tusChunkSize>', `Chunk size in bytes for TUS resumable uploads (default: auto)`)
+  .option('--partial', `[DEPRECATED] Use --delta instead. Upload incremental updates`)
+  .option('--partial-only', `[DEPRECATED] Use --delta-only instead. Upload only incremental updates, skip full bundle`)
+  .option('--delta', `Upload incremental/differential updates to reduce bandwidth`)
+  .option('--delta-only', `Upload only delta updates without full bundle (useful for large apps)`)
   .option('--encrypted-checksum <encryptedChecksum>', `An encrypted checksum (signature). Used only when uploading an external bundle.`)
   .option('--auto-set-bundle', `Set the bundle in capacitor.config.json`)
   .option('--dry-upload', `Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing)`)
-  .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
-  .option('--node-modules <nodeModules>', `A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules)`)
-  .option('--encrypt-partial', `Encrypt the partial update files (automatically applied for updater > 6.14.4)`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
+  .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
+  .option('--encrypt-partial', `Encrypt delta update files (auto-enabled for updater > 6.14.4)`)
   .option('--delete-linked-bundle-on-upload', `Locates the currently linked bundle in the channel you are trying to upload to, and deletes it`)
-  .option('--no-brotli-patterns <patterns>', `Glob patterns for files to exclude from brotli compression (comma-separated)`)
+  .option('--no-brotli-patterns <patterns>', `Files to exclude from Brotli compression (comma-separated globs, e.g., "*.jpg,*.png")`)
   .option('--disable-brotli', `Completely disable brotli compression even if updater version supports it`)
   .option('--version-exists-ok', `Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos`)
-  .option('--self-assign', `Allow device to self-assign to this channel, this will update the channel, if not provided it will leave the channel as is`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('--self-assign', `Allow devices to auto-join this channel (updates channel setting)`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 bundle
   .command('compatibility [appId]')
@@ -151,13 +151,13 @@ bundle
 
 Example: npx @capgo/cli@latest bundle compatibility com.example.app --channel production`)
   .action(checkCompatibilityCommand)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-c, --channel <channel>', `Channel to check the compatibility with`)
   .option('--text', `Output text instead of emojis`)
-  .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
-  .option('--node-modules <nodeModules>', `A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules)`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
+  .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 bundle
   .command('delete [bundleId] [appId]')
@@ -166,9 +166,9 @@ bundle
 
 Example: npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app`)
   .action(deleteBundle)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 bundle
   .command('list [appId]')
@@ -177,36 +177,32 @@ bundle
 
 Example: npx @capgo/cli@latest bundle list com.example.app`)
   .action(listBundle)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 bundle
   .command('cleanup [appId]')
   .alias('c')
-  .description(`🧹 Cleanup old bundles in Capgo Cloud, keeping a specified number of recent versions or those linked to channels.
+  .description(`🧹 Delete old bundles in Capgo Cloud, keeping specified number of recent versions.
 
-Ignores bundles in use.
+Bundles linked to channels are preserved unless --ignore-channel is used.
 
 Example: npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3`)
   .action(cleanupBundle)
   .option('-b, --bundle <bundle>', `Bundle version number of the app to delete`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-k, --keep <keep>', `Number of versions to keep`)
   .option('-f, --force', `Force removal`)
-  .option('--ignore-channel', `Delete all versions even if linked to a channel, this will delete channel as well`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('--ignore-channel', `Delete bundles even if linked to channels (WARNING: deletes channels too)`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 bundle
   .command('encrypt [zipPath] [checksum]')
-  .description(`🔒 Encrypt a zip bundle using the new encryption method for secure external storage or testing.
+  .description(`🔒 Encrypt a zip bundle for secure external storage.
 
-Used with external sources or for testing, prints ivSessionKey for upload or decryption.
-
-The command will return the ivSessionKey for upload or decryption.
-
-The checksum is the checksum of the zip file, you can get it with the --json option of the zip command.
+Returns ivSessionKey for upload/decryption. Get checksum using 'bundle zip --json'.
 
 Example: npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM`)
   .action(encryptZipV2)
@@ -216,9 +212,9 @@ Example: npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM`)
 
 bundle
   .command('decrypt [zipPath] [checksum]')
-  .description(`🔓 Decrypt a zip bundle using the new encryption method, mainly for testing purposes.
+  .description(`🔓 Decrypt an encrypted bundle (mainly for testing).
 
-Prints the base64 decrypted session key for verification.
+Prints base64 session key for verification.
 
 Example: npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM`)
   .action(decryptZipV2)
@@ -228,11 +224,9 @@ Example: npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM`)
 
 bundle
   .command('zip [appId]')
-  .description(`🗜️ Create a zip file of your app bundle for upload or local storage.
+  .description(`🗜️ Create a zip file of your app bundle.
 
-Useful for preparing bundles before encryption or upload.
-
-The command will return the checksum of the zip file, you can use it to encrypt the zip file with the --key-v2 option.
+Returns checksum for use with encryption. Use --json for machine-readable output.
 
 Example: npx @capgo/cli@latest bundle zip com.example.app --path ./dist`)
   .action(zipBundle)
@@ -242,7 +236,7 @@ Example: npx @capgo/cli@latest bundle zip com.example.app --path ./dist`)
   .option('-j, --json', `Output in JSON`)
   .option('--no-code-check', `Ignore checking if notifyAppReady() is called in source code and index present in root folder`)
   .option('--key-v2', `Use encryption v2`)
-  .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
 
 const app = program
   .command('app')
@@ -259,9 +253,9 @@ Example: npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./
   .action(addCommand)
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 app
   .command('delete [appId]')
@@ -269,9 +263,9 @@ app
 
 Example: npx @capgo/cli@latest app delete com.example.app`)
   .action(deleteApp)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 app
   .command('list')
@@ -280,9 +274,9 @@ app
 
 Example: npx @capgo/cli@latest app list`)
   .action(listApp)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 app
   .command('debug  [appId]')
@@ -292,16 +286,16 @@ app
 Optionally target a specific device for detailed diagnostics.
 
 Example: npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-d, --device <device>', `The specific device ID to debug`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 app
   .command('setting [path]')
-  .description(`⚙️ Modify Capacitor configuration programmatically by specifying the path to the setting.
+  .description(`⚙️ Modify Capacitor configuration programmatically.
 
-(e.g., plugins.CapacitorUpdater.defaultChannel). You MUST provide either --string or --bool.
+Specify setting path (e.g., plugins.CapacitorUpdater.defaultChannel) with --string or --bool.
 
 Example: npx @capgo/cli@latest app setting plugins.CapacitorUpdater.defaultChannel --string "Production"`)
   .option('--bool <bool>', `A value for the setting to modify as a boolean, ex: --bool true`)
@@ -319,10 +313,10 @@ Example: npx @capgo/cli@latest app set com.example.app --name "Updated App" --re
   .action(setApp)
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('-r, --retention <retention>', `Retention period of app bundle in days, 0 by default = infinite`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('-r, --retention <retention>', `Days to keep old bundles (0 = infinite, default: 0)`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 const channel = program
   .command('channel')
@@ -337,9 +331,9 @@ Example: npx @capgo/cli@latest channel add production com.example.app --default`
   .action(addChannelCommand)
   .option('-d, --default', `Set the channel as default`)
   .option('--self-assign', `Allow device to self-assign to this channel`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 channel
   .command('delete [channelId] [appId]')
@@ -348,11 +342,11 @@ channel
 
 Example: npx @capgo/cli@latest channel delete production com.example.app`)
   .action(deleteChannel)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--delete-bundle', `Delete the bundle associated with the channel`)
   .option('--success-if-not-found', `Success if the channel is not found`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 channel
   .command('list [appId]')
@@ -361,9 +355,9 @@ channel
 
 Example: npx @capgo/cli@latest channel list com.example.app`)
   .action(listChannels)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 channel
   .command('currentBundle [channel] [appId]')
@@ -372,10 +366,10 @@ channel
 Example: npx @capgo/cli@latest channel currentBundle production com.example.app`)
   .action(currentBundle)
   .option('-c, --channel <channel>', `Channel to get the current bundle from`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--quiet', `Only print the bundle version`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 channel
   .command('set [channelId] [appId]')
@@ -386,7 +380,7 @@ One channel must be default.
 
 Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --state default`)
   .action(setChannel)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-b, --bundle <bundle>', `Bundle version number of the file to set`)
   .option('-s, --state <state>', `Set the state of the channel, default or normal`)
   .option('--latest-remote', `Get the latest bundle uploaded in capgo cloud and set it to the channel`)
@@ -399,15 +393,15 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--no-android', `Disable sending update to Android devices`)
   .option('--self-assign', `Allow device to self-assign to this channel`)
   .option('--no-self-assign', `Disable devices to self-assign to this channel`)
-  .option('--disable-auto-update <disableAutoUpdate>', `Disable auto update strategy for this channel. The possible options are: major, minor, metadata, patch, none`)
+  .option('--disable-auto-update <disableAutoUpdate>', `Block updates by type: major, minor, metadata, patch, or none (allows all)`)
   .option('--dev', `Allow sending update to development devices`)
   .option('--no-dev', `Disable sending update to development devices`)
   .option('--emulator', `Allow sending update to emulator devices`)
   .option('--no-emulator', `Disable sending update to emulator devices`)
-  .option('--package-json <packageJson>', `A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json)`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .option('--ignore-metadata-check', `Ignore checking node_modules compatibility if present in the bundle`)
-  .option('--supa-host <supaHost>', `Supabase host URL, for self-hosted Capgo or testing`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token, for self-hosted Capgo or testing`)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 const keyV2 = program
   .command('key')
@@ -427,15 +421,11 @@ Example: npx @capgo/cli@latest key save --key ./path/to/key.pub`)
 
 keyV2
   .command('create')
-  .description(`🔨 Create a new encryption key pair for end-to-end encryption in Capgo Cloud.
+  .description(`🔨 Create RSA key pair for end-to-end encryption.
 
-Do not commit or share the private key; save it securely.
-This command will create a new key pair with the name .capgo_key_v2 and .capgo_key_v2.pub in the root of the project.
-
-The public key is used to decrypt the zip file in the mobile app.
-The public key will also be stored in the capacitor config. This is the one used in the mobile app. The file is just a backup.
-
-The private key is used to encrypt the zip file in the CLI.
+Creates .capgo_key_v2 (private) and .capgo_key_v2.pub (public) in project root.
+Public key is saved to capacitor.config for mobile app decryption.
+NEVER commit the private key - store it securely!
 
 Example: npx @capgo/cli@latest key create`)
   .action(createKeyCommandV2)
@@ -457,7 +447,7 @@ account.command('id')
 
 Example: npx @capgo/cli@latest account id`)
   .action(getUserId)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
 
 const organisation = program
   .command('organisation')
@@ -470,9 +460,9 @@ organisation
 
 Example: npx @capgo/cli@latest organisation list`)
   .action(listOrganizations)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 organisation
   .command('add')
@@ -483,9 +473,9 @@ Example: npx @capgo/cli@latest organisation add --name "My Company" --email admi
   .action(addOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 organisation
   .command('set [orgId]')
@@ -496,9 +486,9 @@ Example: npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company N
   .action(setOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 organisation
   .command('delete [orgId]')
@@ -509,9 +499,9 @@ Only organization owners can delete organizations.
 
 Example: npx @capgo/cli@latest organisation delete ORG_ID`)
   .action(deleteOrganization)
-  .option('-a, --apikey <apikey>', `API key to link to your account`)
-  .option('--supa-host <supaHost>', `Supabase host URL for custom setups`)
-  .option('--supa-anon <supaAnon>', `Supabase anon token for custom setups`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 program
   .command('generate-docs [filePath]')
