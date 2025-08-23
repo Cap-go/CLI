@@ -83,8 +83,8 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | -------------- | ------------- | -------------------- |
 | **-n,** | <code>string</code> | App name for display in Capgo Cloud |
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
 ## <a id="doctor"></a> 👨‍⚕️ **Doctor**
@@ -106,7 +106,7 @@ npx @capgo/cli@latest doctor
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 
 
 ## <a id="login"></a> 🔑 **Login**
@@ -131,8 +131,8 @@ npx @capgo/cli@latest login YOUR_API_KEY
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **--local** | <code>boolean</code> | Only save in local folder, git ignored for security. |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
 ## <a id="bundle"></a> 📦 **Bundle**
@@ -147,18 +147,10 @@ npx @capgo/cli@latest login YOUR_API_KEY
 npx @capgo/cli@latest bundle upload
 ```
 
-⬆️ Upload a new app bundle to Capgo Cloud for distribution, optionally linking to a channel or external URL.
-External option supports privacy concerns or large apps (>200MB) by storing only the link.
-Capgo never inspects external content. Encryption adds a trustless security layer.
-Version must be > 0.0.0 and unique.
-> ℹ️ External option helps with corporate privacy concerns and apps larger than 200MB by storing only the link.
-
-> ℹ️ Capgo Cloud never looks at the content in the link for external options or in the code when stored.
-
-> ℹ️ You can add a second layer of security with encryption, making Capgo trustless.
-
-> ℹ️ Version should be greater than "0.0.0" and cannot be overridden or reused after deletion for security reasons.
-
+⬆️ Upload a new app bundle to Capgo Cloud for distribution.
+Version must be > 0.0.0 and unique. Deleted versions cannot be reused for security.
+External option: Store only a URL link (useful for apps >200MB or privacy requirements).
+Capgo never inspects external content. Add encryption for trustless security.
 
 **Example:**
 
@@ -196,27 +188,27 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--ignore-metadata-check** | <code>boolean</code> | Ignores the metadata (node_modules) check when uploading |
 | **--ignore-checksum-check** | <code>boolean</code> | Ignores the checksum check when uploading |
 | **--timeout** | <code>string</code> | Timeout for the upload process in seconds |
-| **--multipart** | <code>boolean</code> | Uses multipart protocol to upload data to S3, Deprecated, use tus instead |
+| **--multipart** | <code>boolean</code> | [DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads |
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |
 | **--tus** | <code>boolean</code> | Upload the bundle using TUS to Capgo cloud |
-| **--tus-chunk-size** | <code>string</code> | Chunk size for the TUS upload |
-| **--partial** | <code>boolean</code> | Upload partial files to Capgo cloud (deprecated, use --delta instead) |
-| **--partial-only** | <code>boolean</code> | Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle (deprecated, use --delta-only instead) |
-| **--delta** | <code>boolean</code> | Upload delta update to Capgo cloud (old name: --partial) |
-| **--delta-only** | <code>boolean</code> | Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only) |
+| **--tus-chunk-size** | <code>string</code> | Chunk size in bytes for TUS resumable uploads (default: auto) |
+| **--partial** | <code>boolean</code> | [DEPRECATED] Use --delta instead. Upload incremental updates |
+| **--partial-only** | <code>boolean</code> | [DEPRECATED] Use --delta-only instead. Upload only incremental updates, skip full bundle |
+| **--delta** | <code>boolean</code> | Upload incremental/differential updates to reduce bandwidth |
+| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle (useful for large apps) |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
-| **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
-| **--encrypt-partial** | <code>boolean</code> | Encrypt the partial update files (automatically applied for updater > 6.14.4) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--encrypt-partial** | <code>boolean</code> | Encrypt delta update files (auto-enabled for updater > 6.14.4) |
 | **--delete-linked-bundle-on-upload** | <code>boolean</code> | Locates the currently linked bundle in the channel you are trying to upload to, and deletes it |
-| **--no-brotli-patterns** | <code>string</code> | Glob patterns for files to exclude from brotli compression (comma-separated) |
+| **--no-brotli-patterns** | <code>string</code> | Files to exclude from Brotli compression (comma-separated globs, e.g., "*.jpg,*.png") |
 | **--disable-brotli** | <code>boolean</code> | Completely disable brotli compression even if updater version supports it |
 | **--version-exists-ok** | <code>boolean</code> | Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos |
-| **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel, this will update the channel, if not provided it will leave the channel as is |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--self-assign** | <code>boolean</code> | Allow devices to auto-join this channel (updates channel setting) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-compatibility"></a> 🧪 **Compatibility**
 
@@ -239,10 +231,10 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-c,** | <code>string</code> | Channel to check the compatibility with |
 | **--text** | <code>boolean</code> | Output text instead of emojis |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
-| **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-delete"></a> 🗑️ **Delete**
 
@@ -265,8 +257,8 @@ npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-list"></a> 📋 **List**
 
@@ -289,8 +281,8 @@ npx @capgo/cli@latest bundle list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
 
@@ -300,8 +292,8 @@ npx @capgo/cli@latest bundle list com.example.app
 npx @capgo/cli@latest bundle cleanup
 ```
 
-🧹 Cleanup old bundles in Capgo Cloud, keeping a specified number of recent versions or those linked to channels.
-Ignores bundles in use.
+🧹 Delete old bundles in Capgo Cloud, keeping specified number of recent versions.
+Bundles linked to channels are preserved unless --ignore-channel is used.
 
 **Example:**
 
@@ -317,9 +309,9 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-k,** | <code>string</code> | Number of versions to keep |
 | **-f,** | <code>string</code> | Force removal |
-| **--ignore-channel** | <code>boolean</code> | Delete all versions even if linked to a channel, this will delete channel as well |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--ignore-channel** | <code>boolean</code> | Delete bundles even if linked to channels (WARNING: deletes channels too) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
 
@@ -327,10 +319,8 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 npx @capgo/cli@latest bundle encrypt
 ```
 
-🔒 Encrypt a zip bundle using the new encryption method for secure external storage or testing.
-Used with external sources or for testing, prints ivSessionKey for upload or decryption.
-The command will return the ivSessionKey for upload or decryption.
-The checksum is the checksum of the zip file, you can get it with the --json option of the zip command.
+🔒 Encrypt a zip bundle for secure external storage.
+Returns ivSessionKey for upload/decryption. Get checksum using 'bundle zip --json'.
 
 **Example:**
 
@@ -352,8 +342,8 @@ npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM
 npx @capgo/cli@latest bundle decrypt
 ```
 
-🔓 Decrypt a zip bundle using the new encryption method, mainly for testing purposes.
-Prints the base64 decrypted session key for verification.
+🔓 Decrypt an encrypted bundle (mainly for testing).
+Prints base64 session key for verification.
 
 **Example:**
 
@@ -375,9 +365,8 @@ npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM
 npx @capgo/cli@latest bundle zip
 ```
 
-🗜️ Create a zip file of your app bundle for upload or local storage.
-Useful for preparing bundles before encryption or upload.
-The command will return the checksum of the zip file, you can use it to encrypt the zip file with the --key-v2 option.
+🗜️ Create a zip file of your app bundle.
+Returns checksum for use with encryption. Use --json for machine-readable output.
 
 **Example:**
 
@@ -395,7 +384,7 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **-j,** | <code>string</code> | Output in JSON |
 | **--no-code-check** | <code>boolean</code> | Ignore checking if notifyAppReady() is called in source code and index present in root folder |
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 
 
 ## <a id="app"></a> 📱 **App**
@@ -426,8 +415,8 @@ npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./icon.png
 | **-n,** | <code>string</code> | App name for display in Capgo Cloud |
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="app-delete"></a> 🗑️ **Delete**
 
@@ -448,8 +437,8 @@ npx @capgo/cli@latest app delete com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="app-list"></a> 📋 **List**
 
@@ -472,8 +461,8 @@ npx @capgo/cli@latest app list
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="app-debug"></a> 🐞 **Debug**
 
@@ -496,8 +485,8 @@ npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-d,** | <code>string</code> | The specific device ID to debug |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="app-setting"></a> ⚙️ **Setting**
 
@@ -505,8 +494,8 @@ npx @capgo/cli@latest app debug com.example.app --device DEVICE_ID
 npx @capgo/cli@latest app setting
 ```
 
-⚙️ Modify Capacitor configuration programmatically by specifying the path to the setting.
-(e.g., plugins.CapacitorUpdater.defaultChannel). You MUST provide either --string or --bool.
+⚙️ Modify Capacitor configuration programmatically.
+Specify setting path (e.g., plugins.CapacitorUpdater.defaultChannel) with --string or --bool.
 
 **Example:**
 
@@ -545,9 +534,9 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 | **-n,** | <code>string</code> | App name for display in Capgo Cloud |
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **-r,** | <code>string</code> | Retention period of app bundle in days, 0 by default = infinite |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **-r,** | <code>string</code> | Days to keep old bundles (0 = infinite, default: 0) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
 ## <a id="channel"></a> 📢 **Channel**
@@ -577,8 +566,8 @@ npx @capgo/cli@latest channel add production com.example.app --default
 | **-d,** | <code>string</code> | Set the channel as default |
 | **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="channel-delete"></a> 🗑️ **Delete**
 
@@ -603,8 +592,8 @@ npx @capgo/cli@latest channel delete production com.example.app
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--delete-bundle** | <code>boolean</code> | Delete the bundle associated with the channel |
 | **--success-if-not-found** | <code>boolean</code> | Success if the channel is not found |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="channel-list"></a> 📋 **List**
 
@@ -627,8 +616,8 @@ npx @capgo/cli@latest channel list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="channel-currentBundle"></a> 📦 **CurrentBundle**
 
@@ -651,8 +640,8 @@ npx @capgo/cli@latest channel currentBundle production com.example.app
 | **-c,** | <code>string</code> | Channel to get the current bundle from |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--quiet** | <code>boolean</code> | Only print the bundle version |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="channel-set"></a> ⚙️ **Set**
 
@@ -688,15 +677,15 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 | **--no-android** | <code>boolean</code> | Disable sending update to Android devices |
 | **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel |
 | **--no-self-assign** | <code>boolean</code> | Disable devices to self-assign to this channel |
-| **--disable-auto-update** | <code>string</code> | Disable auto update strategy for this channel. The possible options are: major, minor, metadata, patch, none |
+| **--disable-auto-update** | <code>string</code> | Block updates by type: major, minor, metadata, patch, or none (allows all) |
 | **--dev** | <code>boolean</code> | Allow sending update to development devices |
 | **--no-dev** | <code>boolean</code> | Disable sending update to development devices |
 | **--emulator** | <code>boolean</code> | Allow sending update to emulator devices |
 | **--no-emulator** | <code>boolean</code> | Disable sending update to emulator devices |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignore checking node_modules compatibility if present in the bundle |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
 ## <a id="key"></a> 🔐 **Key**
@@ -732,12 +721,10 @@ npx @capgo/cli@latest key save --key ./path/to/key.pub
 npx @capgo/cli@latest key create
 ```
 
-🔨 Create a new encryption key pair for end-to-end encryption in Capgo Cloud.
-Do not commit or share the private key; save it securely.
-This command will create a new key pair with the name .capgo_key_v2 and .capgo_key_v2.pub in the root of the project.
-The public key is used to decrypt the zip file in the mobile app.
-The public key will also be stored in the capacitor config. This is the one used in the mobile app. The file is just a backup.
-The private key is used to encrypt the zip file in the CLI.
+🔨 Create RSA key pair for end-to-end encryption.
+Creates .capgo_key_v2 (private) and .capgo_key_v2.pub (public) in project root.
+Public key is saved to capacitor.config for mobile app decryption.
+NEVER commit the private key - store it securely!
 
 **Example:**
 
@@ -816,8 +803,8 @@ npx @capgo/cli@latest organisation list
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="organisation-add"></a> ➕ **Add**
 
@@ -842,8 +829,8 @@ npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompa
 | **-n,** | <code>string</code> | Organization name |
 | **-e,** | <code>string</code> | Management email for the organization |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="organisation-set"></a> ⚙️ **Set**
 
@@ -868,8 +855,8 @@ npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"
 | **-n,** | <code>string</code> | Organization name |
 | **-e,** | <code>string</code> | Management email for the organization |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="organisation-delete"></a> 🗑️ **Delete**
 
@@ -893,8 +880,8 @@ npx @capgo/cli@latest organisation delete ORG_ID
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
 
