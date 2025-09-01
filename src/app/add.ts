@@ -10,7 +10,6 @@ import { program } from 'commander'
 import { checkAppExists, newIconPath } from '../api/app'
 import { checkAlerts } from '../api/update'
 import {
-  checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
