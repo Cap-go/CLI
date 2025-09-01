@@ -101,11 +101,11 @@ async function cancelCommand(command: boolean | symbol, orgId: string, apikey: s
   }
 }
 
-async function markStep(orgId: string, apikey: string, step: number | string, appId: string) {
+async function markStep(orgId: string, apikey: string, step: string, appId: string) {
   return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
 }
 
-async function step2(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
+async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   const doAdd = await pConfirm({ message: `Add ${appId} in Capgo?` })
   await cancelCommand(doAdd, organization.gid, apikey)
@@ -121,10 +121,10 @@ async function step2(organization: Organization, apikey: string, appId: string, 
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
   }
-  await markStep(organization.gid, apikey, 2, appId)
+  await markStep(organization.gid, apikey, 'add-app', appId)
 }
 
-async function step3(orgId: string, apikey: string, appId: string) {
+async function addChannelStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doChannel = await pConfirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
   await cancelCommand(doChannel, orgId, apikey)
@@ -144,7 +144,7 @@ async function step3(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
   }
-  await markStep(orgId, apikey, 3, appId)
+  await markStep(orgId, apikey, 'add-channel', appId)
 }
 
 async function getAssistedDependencies(stepsDone: number) {
@@ -216,7 +216,7 @@ async function getAssistedDependencies(stepsDone: number) {
 
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV7 = 'https://capacitorjs.com/docs/updating/7-0'
-async function step4(orgId: string, apikey: string, appId: string) {
+async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   let pkgVersion = '1.0.0'
   let delta = false
@@ -292,11 +292,11 @@ async function step4(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
   }
-  await markStep(orgId, apikey, 4, appId)
+  await markStep(orgId, apikey, 'add-updater', appId)
   return { pkgVersion, delta }
 }
 
-async function step5(orgId: string, apikey: string, appId: string) {
+async function addCodeStep(orgId: string, apikey: string, appId: string) {
   const doAddCode = await pConfirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
   await cancelCommand(doAddCode, orgId, apikey)
 
@@ -392,14 +392,14 @@ async function step5(orgId: string, apikey: string, appId: string) {
       }
     }
 
-    await markStep(orgId, apikey, 5, appId)
+    await markStep(orgId, apikey, 'add-code', appId)
   }
   else {
     pLog.info(`Add to your main file the following code:\n\n${importInject};\n\n${codeInject};\n`)
   }
 }
 
-async function step6(orgId: string, apikey: string, appId: string) {
+async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const dependencies = await getAllPackagesDependencies()
   const coreVersion = dependencies.get('@capacitor/core')
   if (!coreVersion) {
@@ -429,10 +429,10 @@ async function step6(orgId: string, apikey: string, appId: string) {
     }
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
-  await markStep(orgId, apikey, 6, appId)
+  await markStep(orgId, apikey, 'add-encryption', appId)
 }
 
-async function step7(orgId: string, apikey: string, appId: string) {
+async function buildProjectStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, apikey)
@@ -456,10 +456,10 @@ async function step7(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
-  await markStep(orgId, apikey, 7, appId)
+  await markStep(orgId, apikey, 'build-project', appId)
 }
 
-async function step8(orgId: string, apikey: string, appId: string) {
+async function runDeviceStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   const doRun = await pConfirm({ message: `Run ${appId} in device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
@@ -487,10 +487,10 @@ async function step8(orgId: string, apikey: string, appId: string) {
   else {
     pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
   }
-  await markStep(orgId, apikey, 8, appId)
+  await markStep(orgId, apikey, 'run-device', appId)
 }
 
-async function step9(orgId: string, apikey: string, appId: string, pkgVersion: string) {
+async function addCodeChangeStep(orgId: string, apikey: string, appId: string, pkgVersion: string) {
   pLog.info(`🎯 Now let's test Capgo by making a visible change and deploying an update!`)
 
   const modificationType = await pSelect({
@@ -665,11 +665,11 @@ ${content}`
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
   }
 
-  await markStep(orgId, apikey, 9, appId)
+  await markStep(orgId, apikey, 'add-code-change', appId)
   return newVersion
 }
 
-async function step10(orgId: string, apikey: string, appId: string, newVersion: string, delta: boolean) {
+async function uploadStep(orgId: string, apikey: string, appId: string, newVersion: string, delta: boolean) {
   const pm = getPMAndCommand()
   const doBundle = await pConfirm({ message: `Upload the updated ${appId} bundle (v${newVersion}) to Capgo?` })
   await cancelCommand(doBundle, orgId, apikey)
@@ -711,10 +711,10 @@ async function step10(orgId: string, apikey: string, appId: string, newVersion: 
   else {
     pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload`)
   }
-  await markStep(orgId, apikey, 10, appId)
+  await markStep(orgId, apikey, 'upload', appId)
 }
 
-async function step11(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean) {
+async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean) {
   pLog.info(`🧪 Time to test the Capgo update system!`)
   pLog.info(`📱 Go to your device where the app is running`)
 
@@ -743,7 +743,7 @@ async function step11(orgId: string, apikey: string, appId: string, hostWeb: str
     const appIdUrl = convertAppName(appId)
     pLog.info(`📊 Check logs manually at ${hostWeb}/app/p/${appIdUrl}/logs to verify the update`)
   }
-  await markStep(orgId, apikey, 11, appId)
+  await markStep(orgId, apikey, 'test-update', appId)
 }
 
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
@@ -797,20 +797,20 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   try {
     if (stepToSkip < 1)
-      await markStep(orgId, options.apikey, 1, appId)
+      await markStep(orgId, options.apikey, 'add-app', appId)
 
     if (stepToSkip < 2) {
-      await step2(organization, options.apikey, appId, options)
+      await addAppStep(organization, options.apikey, appId, options)
       markStepDone(2)
     }
 
     if (stepToSkip < 3) {
-      await step3(orgId, options.apikey, appId)
+      await addChannelStep(orgId, options.apikey, appId)
       markStepDone(3)
     }
 
     if (stepToSkip < 4) {
-      const res = await step4(orgId, options.apikey, appId)
+      const res = await addUpdaterStep(orgId, options.apikey, appId)
       pkgVersion = res.pkgVersion
       currentVersion = pkgVersion
       delta = res.delta
@@ -818,41 +818,41 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 5) {
-      await step5(orgId, options.apikey, appId)
+      await addCodeStep(orgId, options.apikey, appId)
       markStepDone(5)
     }
 
     if (stepToSkip < 6) {
-      await step6(orgId, options.apikey, appId)
+      await addEncryptionStep(orgId, options.apikey, appId)
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
-      await step7(orgId, options.apikey, appId)
+      await buildProjectStep(orgId, options.apikey, appId)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
-      await step8(orgId, options.apikey, appId)
+      await runDeviceStep(orgId, options.apikey, appId)
       markStepDone(8)
     }
 
     if (stepToSkip < 9) {
-      currentVersion = await step9(orgId, options.apikey, appId, pkgVersion)
+      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion)
       markStepDone(9)
     }
 
     if (stepToSkip < 10) {
-      await step10(orgId, options.apikey, appId, currentVersion, delta)
+      await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
       markStepDone(10)
     }
 
     if (stepToSkip < 11) {
-      await step11(orgId, options.apikey, appId, localConfig.hostWeb, delta)
+      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(11)
     }
 
-    await markStep(orgId, options.apikey, 0, appId)
+    await markStep(orgId, options.apikey, 'done', appId)
     cleanupStepsDone()
   }
   catch (e) {
