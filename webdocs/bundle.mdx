@@ -16,18 +16,10 @@ sidebar:
 npx @capgo/cli@latest bundle upload
 ```
 
-⬆️ Upload a new app bundle to Capgo Cloud for distribution, optionally linking to a channel or external URL.
-External option supports privacy concerns or large apps (>200MB) by storing only the link.
-Capgo never inspects external content. Encryption adds a trustless security layer.
-Version must be > 0.0.0 and unique.
-> ℹ️ External option helps with corporate privacy concerns and apps larger than 200MB by storing only the link.
-
-> ℹ️ Capgo Cloud never looks at the content in the link for external options or in the code when stored.
-
-> ℹ️ You can add a second layer of security with encryption, making Capgo trustless.
-
-> ℹ️ Version should be greater than "0.0.0" and cannot be overridden or reused after deletion for security reasons.
-
+⬆️ Upload a new app bundle to Capgo Cloud for distribution.
+Version must be > 0.0.0 and unique. Deleted versions cannot be reused for security.
+External option: Store only a URL link (useful for apps >200MB or privacy requirements).
+Capgo never inspects external content. Add encryption for trustless security.
 
 **Example:**
 
@@ -65,27 +57,27 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--ignore-metadata-check** | <code>boolean</code> | Ignores the metadata (node_modules) check when uploading |
 | **--ignore-checksum-check** | <code>boolean</code> | Ignores the checksum check when uploading |
 | **--timeout** | <code>string</code> | Timeout for the upload process in seconds |
-| **--multipart** | <code>boolean</code> | Uses multipart protocol to upload data to S3, Deprecated, use tus instead |
+| **--multipart** | <code>boolean</code> | [DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads |
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |
 | **--tus** | <code>boolean</code> | Upload the bundle using TUS to Capgo cloud |
-| **--tus-chunk-size** | <code>string</code> | Chunk size for the TUS upload |
-| **--partial** | <code>boolean</code> | Upload partial files to Capgo cloud (deprecated, use --delta instead) |
-| **--partial-only** | <code>boolean</code> | Upload only partial files to Capgo cloud, skip the zipped file, useful for big bundle (deprecated, use --delta-only instead) |
-| **--delta** | <code>boolean</code> | Upload delta update to Capgo cloud (old name: --partial) |
-| **--delta-only** | <code>boolean</code> | Upload only delta update to Capgo cloud, skip the zipped file, useful for big bundle (old name: --partial-only) |
+| **--tus-chunk-size** | <code>string</code> | Chunk size in bytes for TUS resumable uploads (default: auto) |
+| **--partial** | <code>boolean</code> | [DEPRECATED] Use --delta instead. Upload incremental updates |
+| **--partial-only** | <code>boolean</code> | [DEPRECATED] Use --delta-only instead. Upload only incremental updates, skip full bundle |
+| **--delta** | <code>boolean</code> | Upload incremental/differential updates to reduce bandwidth |
+| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle (useful for large apps) |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
-| **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
-| **--encrypt-partial** | <code>boolean</code> | Encrypt the partial update files (automatically applied for updater > 6.14.4) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--encrypt-partial** | <code>boolean</code> | Encrypt delta update files (auto-enabled for updater > 6.14.4) |
 | **--delete-linked-bundle-on-upload** | <code>boolean</code> | Locates the currently linked bundle in the channel you are trying to upload to, and deletes it |
-| **--no-brotli-patterns** | <code>string</code> | Glob patterns for files to exclude from brotli compression (comma-separated) |
+| **--no-brotli-patterns** | <code>string</code> | Files to exclude from Brotli compression (comma-separated globs, e.g., "*.jpg,*.png") |
 | **--disable-brotli** | <code>boolean</code> | Completely disable brotli compression even if updater version supports it |
 | **--version-exists-ok** | <code>boolean</code> | Exit successfully if bundle version already exists, useful for CI/CD workflows with monorepos |
-| **--self-assign** | <code>boolean</code> | Allow device to self-assign to this channel, this will update the channel, if not provided it will leave the channel as is |
-| **--supa-host** | <code>string</code> | Supabase host URL, for self-hosted Capgo or testing |
-| **--supa-anon** | <code>string</code> | Supabase anon token, for self-hosted Capgo or testing |
+| **--self-assign** | <code>boolean</code> | Allow devices to auto-join this channel (updates channel setting) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-compatibility"></a> 🧪 **Compatibility**
 
@@ -108,10 +100,10 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-c,** | <code>string</code> | Channel to check the compatibility with |
 | **--text** | <code>boolean</code> | Output text instead of emojis |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
-| **--node-modules** | <code>string</code> | A list of paths to node_modules. Useful for monorepos (comma separated ex: ../../node_modules,./node_modules) |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-delete"></a> 🗑️ **Delete**
 
@@ -134,8 +126,8 @@ npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-list"></a> 📋 **List**
 
@@ -158,8 +150,8 @@ npx @capgo/cli@latest bundle list com.example.app
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-cleanup"></a> 🧹 **Cleanup**
 
@@ -169,8 +161,8 @@ npx @capgo/cli@latest bundle list com.example.app
 npx @capgo/cli@latest bundle cleanup
 ```
 
-🧹 Cleanup old bundles in Capgo Cloud, keeping a specified number of recent versions or those linked to channels.
-Ignores bundles in use.
+🧹 Delete old bundles in Capgo Cloud, keeping specified number of recent versions.
+Bundles linked to channels are preserved unless --ignore-channel is used.
 
 **Example:**
 
@@ -186,9 +178,9 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-k,** | <code>string</code> | Number of versions to keep |
 | **-f,** | <code>string</code> | Force removal |
-| **--ignore-channel** | <code>boolean</code> | Delete all versions even if linked to a channel, this will delete channel as well |
-| **--supa-host** | <code>string</code> | Supabase host URL for custom setups |
-| **--supa-anon** | <code>string</code> | Supabase anon token for custom setups |
+| **--ignore-channel** | <code>boolean</code> | Delete bundles even if linked to channels (WARNING: deletes channels too) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 ### <a id="bundle-encrypt"></a> 🔒 **Encrypt**
 
@@ -196,10 +188,8 @@ npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3
 npx @capgo/cli@latest bundle encrypt
 ```
 
-🔒 Encrypt a zip bundle using the new encryption method for secure external storage or testing.
-Used with external sources or for testing, prints ivSessionKey for upload or decryption.
-The command will return the ivSessionKey for upload or decryption.
-The checksum is the checksum of the zip file, you can get it with the --json option of the zip command.
+🔒 Encrypt a zip bundle for secure external storage.
+Returns ivSessionKey for upload/decryption. Get checksum using 'bundle zip --json'.
 
 **Example:**
 
@@ -221,8 +211,8 @@ npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM
 npx @capgo/cli@latest bundle decrypt
 ```
 
-🔓 Decrypt a zip bundle using the new encryption method, mainly for testing purposes.
-Prints the base64 decrypted session key for verification.
+🔓 Decrypt an encrypted bundle (mainly for testing).
+Prints base64 session key for verification.
 
 **Example:**
 
@@ -244,9 +234,8 @@ npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM
 npx @capgo/cli@latest bundle zip
 ```
 
-🗜️ Create a zip file of your app bundle for upload or local storage.
-Useful for preparing bundles before encryption or upload.
-The command will return the checksum of the zip file, you can use it to encrypt the zip file with the --key-v2 option.
+🗜️ Create a zip file of your app bundle.
+Returns checksum for use with encryption. Use --json for machine-readable output.
 
 **Example:**
 
@@ -264,5 +253,5 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **-j,** | <code>string</code> | Output in JSON |
 | **--no-code-check** | <code>boolean</code> | Ignore checking if notifyAppReady() is called in source code and index present in root folder |
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
-| **--package-json** | <code>string</code> | A list of paths to package.json. Useful for monorepos (comma separated ex: ../../package.json,./package.json) |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 

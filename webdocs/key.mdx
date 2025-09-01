@@ -37,12 +37,10 @@ npx @capgo/cli@latest key save --key ./path/to/key.pub
 npx @capgo/cli@latest key create
 ```
 
-🔨 Create a new encryption key pair for end-to-end encryption in Capgo Cloud.
-Do not commit or share the private key; save it securely.
-This command will create a new key pair with the name .capgo_key_v2 and .capgo_key_v2.pub in the root of the project.
-The public key is used to decrypt the zip file in the mobile app.
-The public key will also be stored in the capacitor config. This is the one used in the mobile app. The file is just a backup.
-The private key is used to encrypt the zip file in the CLI.
+🔨 Create RSA key pair for end-to-end encryption.
+Creates .capgo_key_v2 (private) and .capgo_key_v2.pub (public) in project root.
+Public key is saved to capacitor.config for mobile app decryption.
+NEVER commit the private key - store it securely!
 
 **Example:**
 
