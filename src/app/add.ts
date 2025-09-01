@@ -70,8 +70,6 @@ export async function addAppInternal(appId: string, options: Options, organizati
 
   const organizationUid = organization.gid
 
-  await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
-
   let { name, icon } = options
   name = name || extConfig.config?.appName || 'Unknown'
   icon = icon || 'resources/icon.png' // default path for capacitor app
