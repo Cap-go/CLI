@@ -2014,6 +2014,8 @@ export type Database = {
         | "setChannel"
         | "getChannel"
         | "rateLimited"
+        | "disableAutoUpdate"
+        | "InvalidIp"
       stripe_status:
         | "created"
         | "succeeded"
@@ -2247,6 +2249,8 @@ export const Constants = {
         "setChannel",
         "getChannel",
         "rateLimited",
+        "disableAutoUpdate",
+        "InvalidIp",
       ],
       stripe_status: [
         "created",

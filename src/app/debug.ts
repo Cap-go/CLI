@@ -2,6 +2,7 @@ import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
 import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
+import { Table } from '@sauber/table'
 import { program } from 'commander'
 import ky from 'ky'
 import { checkAlerts } from '../api/update'
@@ -11,6 +12,12 @@ function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+function formatTimeOnly(createdAt: string) {
+  const d = new Date(createdAt || '')
+  // Show only local time; include seconds for clarity
+  return d.toLocaleTimeString()
 }
 
 export interface OptionsBaseDebug extends OptionsBase {
@@ -60,20 +67,23 @@ interface LogData {
 export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData[]> {
   try {
     const localConfig = await getLocalConfig()
+    // If we already have a latest timestamp, query only after that point
+    const effectiveQuery: QueryStats = after ? { ...query, rangeStart: after } : { ...query }
     const dataD = await ky
       .post(`${localConfig.hostApi}/private/stats`, {
         headers: {
           'Content-Type': 'application/json',
           'capgkey': apikey,
         },
-        body: JSON.stringify(query),
+        body: JSON.stringify(effectiveQuery),
       })
       .then(res => res.json<LogData[]>())
       .catch((err) => {
         console.error('Cannot get devices', err)
         return [] as LogData[]
       })
-    if (dataD?.length > 0 && (after === null || after !== dataD[0].created_at))
+    // Always return data; deduping and ordering handled upstream
+    if (dataD?.length > 0)
       return dataD
   }
   catch (error) {
@@ -82,100 +92,70 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
   return []
 }
 
-async function displayError(data: LogData, channel: string, orgId: string, apikey: string, baseAppUrl: string, baseUrl: string) {
-  log.info(`Log from Device: ${data.device_id}`)
-  if (data.action === 'get') {
-    log.info('Update Sent your your device, wait until event download complete')
-    await markSnag(channel, orgId, apikey, 'done')
+type Level = 'info' | 'warn' | 'error'
+interface LogSpec { summary: (ctx: { data: LogData, baseAppUrl: string, baseUrl: string }) => string, level: Level, snag?: string, stop?: boolean }
+
+function summarizeAction(data: LogData): LogSpec | null {
+  const map: Record<string, LogSpec> = {
+    get: { summary: () => 'Update request by device. Waiting for download…', level: 'info', snag: 'done' },
+    delete: { summary: () => 'Bundle deleted on device', level: 'info' },
+    set: { summary: () => 'Bundle set on device ❤️', level: 'info', snag: 'set', stop: true },
+    NoChannelOrOverride: { summary: () => 'No default channel/override; create it in channel settings', level: 'error' },
+    needPlanUpgrade: { summary: ({ baseUrl }) => `Out of quota. Upgrade plan: ${baseUrl}/dashboard/settings/plans`, level: 'error' },
+    missingBundle: { summary: () => 'Requested bundle not found on server', level: 'error' },
+    noNew: { summary: () => 'Device already has latest available version', level: 'info' },
+    disablePlatformIos: { summary: () => 'iOS platform disabled in channel', level: 'error' },
+    disablePlatformAndroid: { summary: () => 'Android platform disabled in channel', level: 'error' },
+    disableAutoUpdate: { summary: () => 'Automatic updates disabled in channel', level: 'error' },
+    disableAutoUpdateToMajor: { summary: () => 'Auto-update to major versions disabled', level: 'error' },
+    disableAutoUpdateToMinor: { summary: () => 'Auto-update to minor versions disabled', level: 'error' },
+    disableAutoUpdateToPatch: { summary: () => 'Auto-update to patch versions disabled', level: 'error' },
+    disableAutoUpdateUnderNative: { summary: () => 'Channel update version is lower than device native', level: 'error' },
+    disableDevBuild: { summary: () => 'Dev build updates disabled in channel', level: 'error' },
+    disableEmulator: { summary: () => 'Emulator updates disabled in channel', level: 'error' },
+    cannotGetBundle: { summary: () => 'Cannot retrieve bundle from channel', level: 'error' },
+    cannotUpdateViaPrivateChannel: { summary: () => 'No access to private channel', level: 'error' },
+    channelMisconfigured: { summary: () => 'Channel configuration invalid or incomplete', level: 'error' },
+    disableAutoUpdateMetadata: { summary: () => 'Auto-update on metadata disabled', level: 'error' },
+    set_fail: { summary: () => 'Bundle set failed. Possibly corrupted', level: 'error' },
+    reset: { summary: () => 'Device reset to builtin bundle', level: 'warn' },
+    update_fail: { summary: () => 'Installed bundle failed to call notifyAppReady', level: 'error' },
+    checksum_fail: { summary: () => 'Downloaded bundle checksum validation failed', level: 'error' },
+    windows_path_fail: { summary: () => 'Bundle contains illegal Windows-style paths', level: 'error' },
+    canonical_path_fail: { summary: () => 'Bundle contains non-canonical paths', level: 'error' },
+    directory_path_fail: { summary: () => 'Bundle ZIP contains invalid directory paths', level: 'error' },
+    unzip_fail: { summary: () => 'Failed to unzip bundle on device', level: 'error' },
+    low_mem_fail: { summary: () => 'Download failed due to low device memory', level: 'error' },
+    app_moved_to_background: { summary: () => 'App moved to background', level: 'info' },
+    app_moved_to_foreground: { summary: () => 'App moved to foreground', level: 'info' },
+    decrypt_fail: { summary: () => 'Failed to decrypt downloaded bundle', level: 'error' },
+    getChannel: { summary: () => 'Queried current channel on device', level: 'info' },
+    setChannel: { summary: () => 'Channel set on device', level: 'info' },
+    InvalidIp: { summary: () => 'Device appears in Google datacenter; blocking recent updates (<4h)', level: 'warn' },
+    uninstall: { summary: () => 'App uninstalled or Capgo data cleared on device', level: 'warn' },
   }
-  else if (data.action.startsWith('download_')) {
-    const action = data.action.split('_')[1]
-    if (action === 'complete') {
-      log.info('Your bundle has been downloaded on your device, background the app now and open it again to see the update')
-      await markSnag(channel, orgId, apikey, 'downloaded')
-    }
-    else if (action === 'fail') {
-      log.error('Your bundle has failed to download on your device.')
-      log.error('Please check if you have network connection and try again')
-    }
-    else {
-      log.info(`Your bundle is downloading ${action}% ...`)
-    }
+  if (data.action.startsWith('download_')) {
+    const part = data.action.split('_')[1]
+    if (part === 'complete')
+      return { summary: () => 'Download complete; relaunch app to apply', level: 'info', snag: 'downloaded' }
+    if (part === 'fail')
+      return { summary: () => 'Download failed on device', level: 'error' }
+    return { summary: () => `Downloading ${part}%`, level: 'info' }
   }
-  else if (data.action === 'set') {
-    log.info('Your bundle has been set on your device ❤️')
-    await markSnag(channel, orgId, apikey, 'set')
-    return false
-  }
-  else if (data.action === 'NoChannelOrOverride') {
-    log.error(`No default channel or override (channel/device) found, please create it here ${baseAppUrl}`)
-  }
-  else if (data.action === 'needPlanUpgrade') {
-    log.error(`Your are out of quota, please upgrade your plan here ${baseUrl}/dashboard/settings/plans`)
-  }
-  else if (data.action === 'missingBundle') {
-    log.error('Your bundle is missing, please check how you build your app')
-  }
-  else if (data.action === 'noNew') {
-    log.error(`The version number you uploaded to your default channel in Capgo, is the same as the present in the device ${data.device_id}.`)
-    log.error(`To fix it, ensure the variable:
-      - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
-      - Android: versionName
-    Are lower than the version number you uploaded to Capgo.`)
-    log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
-  }
-  else if (data.action === 'disablePlatformIos') {
-    log.error(`iOS is disabled in the default channel and your device ${data.device_id} is an iOS device ${baseAppUrl}`)
-  }
-  else if (data.action === 'disablePlatformAndroid') {
-    log.error(`Android is disabled in the default channel and your device ${data.device_id} is an Android device ${baseAppUrl}`)
-  }
-  else if (data.action === 'disableAutoUpdateToMajor') {
-    log.error(`The version number you uploaded to your default channel in Capgo, is a major version higher (ex: 1.0.0 in device to 2.0.0 in Capgo) than the present in the device ${data.device_id}.`)
-    log.error('Capgo is set by default to protect you from this, and avoid sending breaking changes incompatible with the native code present in the device.')
-    log.error(`To fix it, ensure the variable:
-  - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
-  - Android: versionName
-Are lower than the version number you uploaded to Capgo.`)
-    log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
-  }
-  else if (data.action === 'disableAutoUpdateUnderNative') {
-    log.error(`The version number you uploaded to your default channel in Capgo, is lower than the present in the device ${data.device_id}.`)
-    log.error(`To fix it, ensure the variable:
-      - iOS: keyCFBundleShortVersionString or MARKETING_VERSION
-      - Android: versionName
-    Are lower than the version number you uploaded to Capgo.`)
-    log.error('More info here: https://capgo.app/blog/how-version-work-in-capgo/#versioning-system')
-  }
-  else if (data.action === 'disableDevBuild') {
-    log.error(`Dev build is disabled in the default channel. ${baseAppUrl}`)
-    log.error('Set your channel to allow it if you wanna test your app')
-  }
-  else if (data.action === 'disableEmulator') {
-    log.error(`Emulator is disabled in the default channel. ${baseAppUrl}`)
-    log.error('Set your channel to allow it if you wanna test your app')
-  }
-  else if (data.action === 'cannotGetBundle') {
-    log.error(`We cannot get your bundle from the default channel. ${baseAppUrl}`)
-    log.error('Are you sure your default channel has a bundle set?')
-  }
-  else if (data.action === 'set_fail') {
-    log.error(`Your bundle seems to be corrupted, try to download from ${baseAppUrl} to identify the issue`)
-  }
-  else if (data.action === 'reset') {
-    log.error('Your device has been reset to the builtin bundle, did notifyAppReady() is present in the code builded and uploaded to Capgo ?')
-  }
-  else if (data.action === 'update_fail') {
-    log.error('Your bundle has been installed but failed to call notifyAppReady()')
-    log.error('Please check if you have network connection and try again')
-  }
-  else if (data.action === 'checksum_fail') {
-    log.error('Your bundle has failed to validate checksum, please check your code and send it again to Capgo')
-  }
-  else {
-    log.error(`Log from Capgo ${data.action}`)
-  }
-  return true
+  return map[data.action] || null
+}
+
+async function toTableRow(data: LogData, channel: string, orgId: string, apikey: string, baseAppUrl: string, baseUrl: string): Promise<{ row?: string[], stop?: boolean }> {
+  const spec = summarizeAction(data)
+  if (!spec)
+    return {}
+  if (spec.snag)
+    await markSnag(channel, orgId, apikey, spec.snag)
+  const time = formatTimeOnly(data.created_at)
+  const key = data.action
+  const versionInfo = data.version ? ` (version ${data.version})` : (data.version_id ? ` (version #${data.version_id})` : '')
+  const msg = `${spec.summary({ data, baseAppUrl, baseUrl })}${versionInfo}`
+  return { row: [time, data.device_id, key, msg], stop: spec.stop }
 }
 
 export async function waitLog(channel: string, apikey: string, appId: string, orgId: string, deviceId?: string) {
@@ -194,17 +174,52 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
     rangeStart: new Date().toISOString(),
   }
   let after: string | null = null
+  // Track displayed log items to avoid duplicates across rounds
+  const seen = new Set<string>()
   const s = spinner()
-  s.start(`Waiting for logs (Expect delay of 30 sec)`)
+  const docsUrl = `${config.hostWeb}/docs/plugins/updater/debugging/#sent-from-the-backend`
+  s.start(`Waiting for logs (Expect delay of 30 sec) more info: ${docsUrl}`)
   while (loop) {
     await wait(5000)
     const data = await getStats(apikey, query, after)
     if (data.length > 0) {
-      after = data[0].created_at
-      for (const d of data) {
-        loop = await displayError(d, channel, orgId, apikey, baseAppUrl, config.hostWeb)
-        if (!loop)
-          break
+      // Update 'after' to the newest timestamp returned
+      const newest: number = data.reduce<number>((acc, d) => {
+        const t = new Date(d.created_at).getTime()
+        return t > acc ? t : acc
+      }, after ? new Date(after).getTime() : 0)
+      if (newest > 0)
+        after = new Date(newest).toISOString()
+
+      // Filter out already printed entries and sort chronologically
+      const fresh = data.filter((d) => {
+        const key = `${d.app_id}|${d.device_id}|${d.action}|${d.version_id}|${d.created_at}`
+        if (seen.has(key))
+          return false
+        seen.add(key)
+        return true
+      }).sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+
+      const t = new Table()
+      t.headers = ['Time', 'Device', 'Key', 'Message']
+      t.theme = Table.roundTheme
+      t.rows = []
+      let shouldStop = false
+      for (const d of fresh) {
+        const { row, stop } = await toTableRow(d, channel, orgId, apikey, baseAppUrl, config.hostWeb)
+        if (row)
+          t.rows.push(row)
+        if (stop)
+          shouldStop = true
+      }
+      if (t.rows.length) {
+        s.stop('')
+        log.info(t.toString())
+        s.start(`Waiting for logs (Expect delay of 30 sec) more info: ${docsUrl}`)
+      }
+      if (shouldStop) {
+        loop = false
+        break
       }
     }
   }
