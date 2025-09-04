@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.16.0](https://github.com/Cap-go/CLI/compare/v7.15.3...v7.16.0) (2025-09-04)
+
+
+### Features
+
+* enhance logging functionality and add new status actions ([4b618ce](https://github.com/Cap-go/CLI/commit/4b618cefad3d93031dedf14360093042a0dab823))
+
 ### [7.15.3](https://github.com/Cap-go/CLI/compare/v7.15.2...v7.15.3) (2025-09-01)
 
 ### [7.15.2](https://github.com/Cap-go/CLI/compare/v7.15.1...v7.15.2) (2025-09-01)
