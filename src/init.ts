@@ -243,7 +243,12 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       exit()
     }
 
-    if (semverLt(coreVersion, '6.0.0')) {
+    if (coreVersion === 'latest') {
+      s.stop(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
+      pOutro(`Bye 👋`)
+      exit()
+    }
+    else if (semverLt(coreVersion, '6.0.0')) {
       s.stop('Error')
       pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only support 2 last Capacitor versions, please update to Capacitor v6 minimum: ${urlMigrateV6}`)
       pOutro(`Bye 👋`)
@@ -410,6 +415,10 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
+    if (coreVersion === 'latest') {
+      pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
+      return
+    }
     if (coreVersion && semverLt(coreVersion, '6.0.0')) {
       pLog.warn(`Encryption is not supported in Capacitor V5.`)
       return
