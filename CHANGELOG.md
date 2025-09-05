@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.16.1](https://github.com/Cap-go/CLI/compare/v7.16.0...v7.16.1) (2025-09-05)
+
+
+### Bug Fixes
+
+* improve version check for @capacitor/core to prevent unexpected behavior ([45d5ee9](https://github.com/Cap-go/CLI/commit/45d5ee977d7f0d6524d8319c524f6797dff2d4d5))
+
 ## [7.16.0](https://github.com/Cap-go/CLI/compare/v7.15.3...v7.16.0) (2025-09-04)
 
 
