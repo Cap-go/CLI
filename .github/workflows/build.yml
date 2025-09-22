@@ -35,7 +35,7 @@ jobs:
         id: build_code
         run: bun run build
       - name: Wait for POSIX path check to succeed
-        uses: lewagon/wait-on-check-action@v1.4.0
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.ref }}
           check-regexp: .*check-posix-paths.*
@@ -43,7 +43,7 @@ jobs:
           wait-interval: 10
           verbose: true
       - name: Wait for tests to succeed
-        uses: lewagon/wait-on-check-action@v1.4.0
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.ref }}
           check-name: Run tests
