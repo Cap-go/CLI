@@ -1074,8 +1074,6 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
   return organization
 }
 
-export const convertAppName = (appName: string) => appName.replace(/\./g, '--')
-
 export async function verifyUser(supabase: SupabaseClient<Database>, apikey: string, keymod: Database['public']['Enums']['key_mode'][] = ['all']) {
   await checkKey(supabase, apikey, keymod)
 

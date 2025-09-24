@@ -17,7 +17,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { convertAppName, createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -749,8 +749,7 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
     await waitLog('onboarding-v2', apikey, appId, apikey, orgId)
   }
   else {
-    const appIdUrl = convertAppName(appId)
-    pLog.info(`📊 Check logs manually at ${hostWeb}/app/p/${appIdUrl}/logs to verify the update`)
+    pLog.info(`📊 Check logs manually at ${hostWeb}/app/p/${appId}/logs to verify the update`)
   }
   await markStep(orgId, apikey, 'test-update', appId)
 }

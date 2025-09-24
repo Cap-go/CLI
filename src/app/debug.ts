@@ -6,7 +6,7 @@ import { Table } from '@sauber/table'
 import { program } from 'commander'
 import ky from 'ky'
 import { checkAlerts } from '../api/update'
-import { convertAppName, createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
+import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
 function wait(ms: number) {
   return new Promise((resolve) => {
@@ -160,9 +160,8 @@ async function toTableRow(data: LogData, channel: string, orgId: string, apikey:
 
 export async function waitLog(channel: string, apikey: string, appId: string, orgId: string, deviceId?: string) {
   let loop = true
-  const appIdUrl = convertAppName(appId)
   const config = await getLocalConfig()
-  const baseAppUrl = `${config.hostWeb}/app/p/${appIdUrl}`
+  const baseAppUrl = `${config.hostWeb}/app/p/${appId}`
   await markSnag(channel, orgId, apikey, 'Use waitlog', appId)
   const query: QueryStats = {
     appId,
