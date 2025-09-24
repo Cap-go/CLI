@@ -53,7 +53,7 @@ jobs:
           git pull $remote_repo $CURRENT_BRANCH
           git push $remote_repo HEAD:$CURRENT_BRANCH --follow-tags --tags
       - name: Push generated doc to website
-        uses: nkoppel/push-files-to-another-repository@v1.1.4
+        uses: cpina/github-action-push-to-another-repository@v1.7.2
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
@@ -68,7 +68,7 @@ jobs:
     runs-on: ubuntu-latest
     name: Create global cache on main branch
     steps:
-      - name: Checkout
+      - name: Checkoutpsuh
         uses: actions/checkout@v4
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
