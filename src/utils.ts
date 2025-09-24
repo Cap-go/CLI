@@ -6,7 +6,7 @@ import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
-import { cwd, exit } from 'node:process'
+import { cwd, exit, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
@@ -557,6 +557,12 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
 }
 
 export function findSavedKey(quiet = false) {
+  const envKey = env.CAPGO_TOKEN?.trim()
+  if (envKey) {
+    if (!quiet)
+      log.info('Use CAPGO_TOKEN environment variable')
+    return envKey
+  }
   // search for key in home dir
   const userHomeDir = homedir()
   let key

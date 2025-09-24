@@ -11,7 +11,7 @@ interface Options {
   supaHost?: string
   supaAnon?: string
 }
-export async function doLoginExists() {
+export function doLoginExists() {
   const userHomeDir = homedir()
   return existsSync(`${userHomeDir}/.capgo`) || existsSync('.capgo')
 }
