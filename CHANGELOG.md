@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.17.2](https://github.com/Cap-go/CLI/compare/v7.17.1...v7.17.2) (2025-09-24)
+
+
+### Bug Fixes
+
+* allow use ENV var + fix sonar cloud issue ([61eeee7](https://github.com/Cap-go/CLI/commit/61eeee755fbf0f8f3e114406bd1f5c2a26f9958a))
+
 ### [7.17.1](https://github.com/Cap-go/CLI/compare/v7.17.0...v7.17.1) (2025-09-22)
 
 ## [7.17.0](https://github.com/Cap-go/CLI/compare/v7.16.1...v7.17.0) (2025-09-16)
