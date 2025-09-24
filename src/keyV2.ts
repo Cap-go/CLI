@@ -131,7 +131,7 @@ export async function deleteOldPrivateKey(options: Options, logg = true): Promis
   }
 }
 
-export async function saveKeyCommandV2(options: saveOptions) {
+export async function saveKeyCommandV2(options: SaveOptions) {
   intro(`Save keys 🔑`)
   await checkAlerts()
   await saveKeyV2(options)
