@@ -182,9 +182,9 @@ export async function prepareBundlePartialFiles(
   const manifest = await generateManifest(path)
 
   if (encryptionMethod === 'v2') {
-    manifest.forEach((file) => {
+    for (const file of manifest) {
       file.hash = encryptChecksumV2(file.hash, finalKeyData)
-    })
+    }
   }
 
   spinner.stop('Manifest generated successfully')

@@ -37,11 +37,11 @@ async function removeVersions(toRemove: Database['public']['Tables']['app_versio
 function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['app_versions']['Row'][], bundleVersion: SemVer, nextMajorVersion: SemVer) {
   const toRemove: Database['public']['Tables']['app_versions']['Row'][] = []
 
-  data?.forEach((row) => {
+  for (const row of data ?? []) {
     const rowVersion = parse(row.name)
     if (greaterThan(rowVersion, bundleVersion) && lessThan(rowVersion, nextMajorVersion))
       toRemove.push(row)
-  })
+  }
   return toRemove
 }
 
@@ -97,7 +97,7 @@ export async function cleanupBundle(appId: string, options: Options) {
     const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
     // Slice to keep and remove
     let kept = 0
-    allVersions.forEach((v) => {
+    for (const v of allVersions) {
       const isInUse = versionInUse.find(vi => vi === v.id)
       if (kept < keep || (isInUse && !ignoreChannel)) {
         if (isInUse)
@@ -110,7 +110,7 @@ export async function cleanupBundle(appId: string, options: Options) {
         v.keep = '❌'
         toRemove.push(v)
       }
-    })
+    }
 
     if (toRemove.length === 0) {
       log.warn('Nothing to be removed, aborting removal...')

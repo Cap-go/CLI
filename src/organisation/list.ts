@@ -20,14 +20,14 @@ function displayOrganizations(data: Organization[]) {
   t.headers = ['Name', 'ID', 'Role', 'Apps']
   t.rows = []
 
-  data.reverse().forEach((row) => {
+  for (const row of data.toReversed()) {
     t.rows.push([
       row.name ?? 'Unknown',
       row.gid,
       row.role,
       row.app_count?.toString() || '0',
     ])
-  })
+  }
 
   log.success('Organizations')
   log.success(t.toString())

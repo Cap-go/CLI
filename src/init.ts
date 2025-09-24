@@ -451,7 +451,7 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string) {
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
     s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
-    const packScripts = await getPackageScripts()
+    const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
       s.stop('Error')
@@ -658,7 +658,7 @@ ${content}`
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
     s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
-    const packScripts = await getPackageScripts()
+    const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
       s.stop('Error')

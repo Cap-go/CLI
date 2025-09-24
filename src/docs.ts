@@ -198,11 +198,11 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       }
       section += `| Param          | Type          | Description          |\n`
       section += `| -------------- | ------------- | -------------------- |\n`
-      cmd.options.forEach((opt) => {
+      for (const opt of cmd.options) {
         const param = opt.flags.split(' ')[0]
         const type = opt.flags.split(' ').length > 1 ? 'string' : 'boolean'
         section += `| **${param}** | <code>${type}</code> | ${opt.description} |\n`
-      })
+      }
       section += '\n'
     }
 
@@ -217,7 +217,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     }
 
     // Process each command
-    commands.forEach((cmd) => {
+    for (const cmd of commands) {
       if (cmd.name === 'generate-docs')
         return // Skip documenting this command
 
@@ -244,9 +244,9 @@ sidebar:
         cmdMarkdown = formatCommand(cmd, false, cmd.name, true) // Last param to skip the main heading
       }
       else {
-        cmd.subcommands.forEach((subCmd: any) => {
+        for (const subCmd of cmd.subcommands) {
           cmdMarkdown += formatCommand(subCmd, true, cmd.name)
-        })
+        }
       }
 
       cmdFile += cmdMarkdown
@@ -259,7 +259,7 @@ sidebar:
       catch (error) {
         console.error(`Error generating file for ${cmd.name}:`, error)
       }
-    })
+    }
     log.success(`Documentation files generated in ${folderPath}/`)
   }
   else {
@@ -268,26 +268,26 @@ sidebar:
 
     // Generate Table of Contents
     markdown += '## 📋 Table of Contents\n\n'
-    commands.forEach((cmd) => {
+    for (const cmd of commands) {
       if (cmd.name === 'generate-docs')
-        return // Skip documenting this command
+        continue // Skip documenting this command
 
       // Get emoji for this command
       const emoji = getCommandEmoji(cmd.name)
       markdown += `- ${emoji} [${cmd.name.charAt(0).toUpperCase() + cmd.name.slice(1)}](#${cmd.name})\n`
 
       if (cmd.subcommands.length > 0) {
-        cmd.subcommands.forEach((subCmd: any) => {
+        for (const subCmd of cmd.subcommands) {
           markdown += `  - [${subCmd.name.charAt(0).toUpperCase() + subCmd.name.slice(1)}](#${cmd.name}-${subCmd.name})\n`
-        })
+        }
       }
-    })
+    }
     markdown += '\n'
 
     // Generate documentation for each command
-    commands.forEach((cmd) => {
+    for (const cmd of commands) {
       if (cmd.name === 'generate-docs')
-        return // Skip documenting this command
+        continue // Skip documenting this command
 
       // Use the formatCommand function with the flag set to skip usage for command groups
       markdown += formatCommand(cmd, false, undefined, false)
@@ -298,13 +298,13 @@ sidebar:
           markdown += `#### ${cmd.name.toUpperCase()} Subcommands:\n\n`
         }
 
-        cmd.subcommands.forEach((subCmd) => {
+        for (const subCmd of cmd.subcommands) {
           markdown += formatCommand(subCmd, true, cmd.name)
-        })
+        }
       }
 
       markdown += '\n'
-    })
+    }
 
     // Update README.md or write to the specified file
     const startTag = '<!-- AUTO-GENERATED-DOCS-START -->'

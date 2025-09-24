@@ -6,7 +6,7 @@ import { checkAlerts } from './api/update'
 import { writeConfigUpdater } from './config'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
 
-interface saveOptions {
+interface SaveOptions {
   key?: string
   keyData?: string
 }
@@ -14,7 +14,7 @@ interface Options {
   force?: boolean
 }
 
-export async function saveKeyV2(options: saveOptions, logg = true) {
+export async function saveKeyV2(options: SaveOptions, logg = true) {
   if (logg)
     intro(`Save keys 🔑`)
 
@@ -55,14 +55,9 @@ export async function saveKeyV2(options: saveOptions, logg = true) {
   }
 
   if (extConfig?.config) {
-    if (!extConfig.config.plugins) {
-      extConfig.config.plugins = {
-        extConfig: {},
-        CapacitorUpdater: {},
-      }
-    }
-    if (!extConfig.config.plugins.CapacitorUpdater)
-      extConfig.config.plugins.CapacitorUpdater = {}
+    extConfig.config.plugins ??= {}
+    extConfig.config.plugins.extConfig ??= {}
+    extConfig.config.plugins.CapacitorUpdater ??= {}
     // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {
       delete extConfig.config.plugins.CapacitorUpdater.privateKey
@@ -174,16 +169,9 @@ export async function createKeyV2(options: Options, logg = true) {
   const extConfig = await getConfig()
 
   if (extConfig) {
-    if (!extConfig.config.plugins) {
-      extConfig.config.plugins = {
-        extConfig: {},
-        CapacitorUpdater: {},
-      }
-    }
-
-    if (!extConfig.config.plugins.CapacitorUpdater) {
-      extConfig.config.plugins.CapacitorUpdater = {}
-    }
+    extConfig.config.plugins ??= {}
+    extConfig.config.plugins.extConfig ??= {}
+    extConfig.config.plugins.CapacitorUpdater ??= {}
 
     // TODO: this might be a breaking change if user has other code looking at the specific value in the config file
     if (extConfig.config.plugins.CapacitorUpdater.privateKey) {

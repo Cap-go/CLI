@@ -153,7 +153,8 @@ async function toTableRow(data: LogData, channel: string, orgId: string, apikey:
     await markSnag(channel, orgId, apikey, spec.snag)
   const time = formatTimeOnly(data.created_at)
   const key = data.action
-  const versionInfo = data.version ? ` (version ${data.version})` : (data.version_id ? ` (version #${data.version_id})` : '')
+  const versionId = data.version_id ? `(version #${data.version_id})` : ''
+  const versionInfo = data.version ? ` (version ${data.version})` : versionId
   const msg = `${spec.summary({ data, baseAppUrl, baseUrl })}${versionInfo}`
   return { row: [time, data.device_id, key, msg], stop: spec.stop }
 }
@@ -185,7 +186,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
       // Update 'after' to the newest timestamp returned
       const newest: number = data.reduce<number>((acc, d) => {
         const t = new Date(d.created_at).getTime()
-        return t > acc ? t : acc
+        return Math.max(acc, t)
       }, after ? new Date(after).getTime() : 0)
       if (newest > 0)
         after = new Date(newest).toISOString()

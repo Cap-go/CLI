@@ -31,13 +31,13 @@ async function getInstalledDependencies() {
   const installedDependencies: { [key: string]: string } = {
     '@capgo/cli': pack.version,
   }
-  dependencies.forEach((version, dependency) => {
+  for (const [dependency, version] of dependencies) {
     if (dependency.startsWith('@capgo/')
       || dependency.startsWith('@capawesome/')
       || dependency.startsWith('capacitor')) {
       installedDependencies[dependency] = version
     }
-  })
+  }
   return installedDependencies
 }
 

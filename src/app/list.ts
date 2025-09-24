@@ -18,9 +18,9 @@ function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
   t.rows = []
 
   // add rows with color
-  data.reverse().forEach((row) => {
+  for (const row of data.toReversed()) {
     t.rows.push([row.name ?? '', row.app_id, getHumanDate(row.created_at)])
-  })
+  }
 
   log.success('Apps')
   log.success(t.toString())

@@ -132,7 +132,7 @@ function readPackageJson(f: string = findRoot(cwd()), file: string | undefined =
       exit(1)
     }
   }
-  const packageJson = readFileSync(!fileSplit ? join(f, PACKNAME) : fileSplit)
+  const packageJson = readFileSync(fileSplit ?? join(f, PACKNAME))
   return JSON.parse(packageJson as any)
 }
 
@@ -156,9 +156,7 @@ function returnVersion(version: string) {
 export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
   // if file contain , split by comma and return the array
   let files = file?.split(',')
-  if (!files) {
-    files = [join(f, PACKNAME)]
-  }
+  files ??= [join(f, PACKNAME)]
   if (files) {
     for (const file of files) {
       if (!existsSync(file)) {
@@ -198,17 +196,11 @@ export async function getConfig() {
 
 export async function updateConfigbyKey(key: string, newConfig: any): Promise<ExtConfigPairs> {
   const extConfig = await getConfig()
-  if (extConfig?.config) {
-    if (!extConfig.config.plugins) {
-      extConfig.config.plugins = {
-        extConfig: {},
-        [key]: {},
-      }
-    }
 
-    if (!extConfig.config.plugins[key]) {
-      extConfig.config.plugins[key] = {}
-    }
+  if (extConfig?.config) {
+    extConfig.config.plugins ??= {}
+    extConfig.config.plugins.extConfig ??= {}
+    extConfig.config.plugins[key] ??= {}
 
     extConfig.config.plugins[key] = {
       ...extConfig.config.plugins[key],
@@ -1279,7 +1271,7 @@ export function convertNativePackages(nativePackages: { name: string, version: s
   }
 
   // Check types
-  nativePackages.forEach((data: any) => {
+  for (const data of nativePackages) {
     if (typeof data !== 'object') {
       log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
       program.error('')
@@ -1295,7 +1287,7 @@ export function convertNativePackages(nativePackages: { name: string, version: s
       log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
       program.error('')
     }
-  })
+  }
 
   const mappedRemoteNativePackages = new Map((nativePackages)
     .map(a => [a.name, a]))

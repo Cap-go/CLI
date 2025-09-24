@@ -119,7 +119,7 @@ export function findBundleIdByChannelName(supabase: SupabaseClient<Database>, ap
     })
 }
 
-interface version {
+interface Version {
   id: string
   name: string
 }
@@ -135,7 +135,7 @@ interface Channel {
   allow_device_self_set: boolean
   allow_emulator: boolean
   allow_dev: boolean
-  version?: version
+  version?: Version
 }
 export function displayChannels(data: Channel[]) {
   const t = new Table()
@@ -147,7 +147,7 @@ export function displayChannels(data: Channel[]) {
   ]
 
   // add rows with color
-  data.reverse().forEach((row) => {
+  for (const row of data.toReversed()) {
     t.rows.push([
       row.name,
       row.version?.name,
@@ -160,7 +160,7 @@ export function displayChannels(data: Channel[]) {
       row.allow_emulator ? '✅' : '❌',
       row.allow_dev ? '✅' : '❌',
     ])
-  })
+  }
   log.success('Channels')
   log.success(t.toString())
 }

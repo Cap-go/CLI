@@ -42,13 +42,13 @@ export function displayBundles(data: (Database['public']['Tables']['app_versions
   t.headers = ['Version', 'Created', 'Keep']
 
   // add rows with color
-  data.reverse().forEach((row) => {
+  for (const row of data.toReversed()) {
     t.rows.push([
       row.name,
       getHumanDate(row.created_at),
-      row.keep != null ? row.keep : '',
+      row.keep ?? '',
     ])
-  })
+  }
 
   log.success('Bundles')
   log.success(t.toString())

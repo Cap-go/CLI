@@ -59,11 +59,11 @@ export async function checkCompatibilityCommand(appId: string, options: Options)
     const yesSymbol = options.text ? 'Yes' : '✅'
     const noSymbol = options.text ? 'No' : '❌'
 
-    finalCompatibility.forEach((data) => {
+    for (const data of finalCompatibility) {
       const { name, localVersion, remoteVersion } = data
       const compatible = isCompatible(data) ? yesSymbol : noSymbol
       t.rows.push([name, localVersion, remoteVersion, compatible])
-    })
+    }
 
     log.success('Compatibility')
     log.success(t.toString())

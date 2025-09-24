@@ -5,13 +5,13 @@ const zipEntries = zip.getEntries(); // an array of ZipEntry records
 
 let errorFound = false;
 
-zipEntries.forEach((zipEntry) => {
+for (const zipEntry of zipEntries) {
   const entryName = zipEntry.entryName;
   if (entryName.includes('\\')) {
     console.error(`Non-POSIX path detected: ${entryName}`);
     errorFound = true;
   }
-});
+};
 
 if (errorFound) {
   console.error('Non-POSIX paths detected in the zip file');

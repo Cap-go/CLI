@@ -1,8 +1,8 @@
 {
   "compilerOptions": {
-    "target": "ES2022",
+    "target": "es2023",
     "lib": [
-      "ES2022"
+      "es2023"
     ],
     "baseUrl": "src",
     "module": "ESNext",

@@ -1,5 +1,7 @@
+import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { Options } from '../api/app'
+import type { Database } from '../types/supabase.types'
 import type {
   Organization,
 } from '../utils'
@@ -24,15 +26,7 @@ export async function addApp(appId: string, options: Options, throwErr = true) {
   await addAppInternal(appId, options, undefined, throwErr)
 }
 
-export async function addAppInternal(appId: string, options: Options, organization?: Organization, throwErr = true) {
-  if (throwErr)
-    intro(`Adding`)
-
-  await checkAlerts()
-  options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
-
+function checkOptions(appId: string, options: Options) {
   if (!options.apikey) {
     log.error(`Missing API key, you need to provide an API key to upload your bundle`)
     program.error('')
@@ -46,23 +40,40 @@ export async function addAppInternal(appId: string, options: Options, organizati
     log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
     program.error('')
   }
+}
+
+async function checkAppExist(supabase: SupabaseClient<Database>, appId: string) {
+  const appExist = await checkAppExists(supabase, appId)
+  if (!appExist) {
+    return
+  }
+  if (appId === 'io.ionic.starter') {
+    // Prevent users from using the default appId
+    log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
+  }
+  else {
+    log.error(`App ${appId} already exist`)
+  }
+  program.error('')
+}
+
+export async function addAppInternal(appId: string, options: Options, organization?: Organization, throwErr = true) {
+  if (throwErr)
+    intro(`Adding`)
+
+  await checkAlerts()
+  options.apikey = options.apikey || findSavedKey()
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
+
+  checkOptions(appId, options)
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
   // Check we have app access to this appId
-  const appExist = await checkAppExists(supabase, appId)
-  if (appExist) {
-    if (appId === 'io.ionic.starter') {
-      // Prevent users from using the default appId
-      log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
-    }
-    else {
-      log.error(`App ${appId} already exist`)
-    }
-    program.error('')
-  }
+  await checkAppExist(supabase, appId)
 
   if (!organization)
     organization = await getOrganization(supabase, ['admin', 'super_admin'])

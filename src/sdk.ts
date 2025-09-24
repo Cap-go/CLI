@@ -59,9 +59,9 @@ export interface BundleInfo {
 
 // SDK class for programmatic access
 export class CapgoSDK {
-  private apikey?: string
-  private supaHost?: string
-  private supaAnon?: string
+  private readonly apikey?: string
+  private readonly supaHost?: string
+  private readonly supaAnon?: string
 
   constructor(options?: {
     apikey?: string
