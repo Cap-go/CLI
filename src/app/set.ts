@@ -39,6 +39,10 @@ export async function setApp(appId: string, options: Options) {
     log.error(`retention value cannot be less than 0`)
     program.error(``)
   }
+  else if (retention && retention >= 63113904) {
+    log.error(`retention value cannot be greater than 63113904 seconds (2 years)`)
+    program.error(``)
+  }
 
   let iconBuff
   let iconType

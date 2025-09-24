@@ -2,6 +2,22 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.17.1](https://github.com/Cap-go/CLI/compare/v7.17.0...v7.17.1) (2025-09-22)
+
+## [7.17.0](https://github.com/Cap-go/CLI/compare/v7.16.1...v7.17.0) (2025-09-16)
+
+
+### Features
+
+* limit retention to 2 years ([08fa863](https://github.com/Cap-go/CLI/commit/08fa86304708b1b62317e398d7dba972e1378ad6))
+
+### [7.16.1](https://github.com/Cap-go/CLI/compare/v7.16.0...v7.16.1) (2025-09-05)
+
+
+### Bug Fixes
+
+* improve version check for @capacitor/core to prevent unexpected behavior ([45d5ee9](https://github.com/Cap-go/CLI/commit/45d5ee977d7f0d6524d8319c524f6797dff2d4d5))
+
 ## [7.16.0](https://github.com/Cap-go/CLI/compare/v7.15.3...v7.16.0) (2025-09-04)
 
 
