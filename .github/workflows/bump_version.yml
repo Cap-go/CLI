@@ -53,7 +53,7 @@ jobs:
           git pull $remote_repo $CURRENT_BRANCH
           git push $remote_repo HEAD:$CURRENT_BRANCH --follow-tags --tags
       - name: Push generated doc to website
-        uses: cpina/github-action-push-to-another-repository@v1.7.2
+        uses: cpina/github-action-push-to-another-repository@v1.7.3
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
