@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.17.6](https://github.com/Cap-go/CLI/compare/v7.17.5...v7.17.6) (2025-09-27)
+
+### [7.17.5](https://github.com/Cap-go/CLI/compare/v7.17.4...v7.17.5) (2025-09-26)
+
+
+### Bug Fixes
+
+* correct type name in saveKeyCommandV2 function and update PostgrestVersion in supabase.types.ts ([77c10dc](https://github.com/Cap-go/CLI/commit/77c10dc8e3f637ef047f99dcb481bb8e6514bae4))
+* sonarcloud issues ([d7810ed](https://github.com/Cap-go/CLI/commit/d7810ed5a26b98f08c2f780fa29cb9ce96af8d92))
+* update action for pushing generated documentation and correct checkout step name ([14f065b](https://github.com/Cap-go/CLI/commit/14f065ba2b2727e95bb1747d4d36c4bd42414155))
+* use latest CI ([6dd0240](https://github.com/Cap-go/CLI/commit/6dd024058845aa41d473c6789871625f3ca67577))
+
 ### [7.17.4](https://github.com/Cap-go/CLI/compare/v7.17.3...v7.17.4) (2025-09-24)
 
 

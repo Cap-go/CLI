@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "7.17.4",
+  "version": "7.17.6",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -59,7 +59,7 @@
     "ky": "We temporarily fixed ky version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^4.15.0",
+    "@antfu/eslint-config": "^5.0.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.1",
     "@capacitor/cli": "^7.4.0",
     "@capgo/find-package-manager": "^0.0.18",

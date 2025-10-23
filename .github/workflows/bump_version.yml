@@ -13,7 +13,7 @@ jobs:
     name: Bump version and create changelog with standard version
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
           token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
@@ -69,7 +69,7 @@ jobs:
     name: Create global cache on main branch
     steps:
       - name: Checkoutpsuh
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:

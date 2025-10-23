@@ -21,7 +21,7 @@ jobs:
     name: Run tests
     steps:
       - name: Check out
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
@@ -46,7 +46,7 @@ jobs:
           path: ${{ env.DENO_DIR }}
           key: my_cache_key
       - name: Checkout capgo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           repository: Cap-go/capgo
           path: capgo
