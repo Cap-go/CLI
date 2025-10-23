@@ -177,7 +177,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   // Track displayed log items to avoid duplicates across rounds
   const seen = new Set<string>()
   const s = spinner()
-  const docsUrl = `${config.hostWeb}/docs/plugins/updater/debugging/#sent-from-the-backend`
+  const docsUrl = `${config.host}/docs/plugins/updater/debugging/#sent-from-the-backend`
   s.start(`Waiting for logs (Expect delay of 30 sec) more info: ${docsUrl}`)
   while (loop) {
     await wait(5000)
