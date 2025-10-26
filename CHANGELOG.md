@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.17.8](https://github.com/Cap-go/CLI/compare/v7.17.7...v7.17.8) (2025-10-26)
+
+
+### Bug Fixes
+
+* export SDK for usage in other nodejs script ([ea0ffda](https://github.com/Cap-go/CLI/commit/ea0ffdac3cd03d77ace217420410f7374c031f69))
+* update type definitions for SDK exports and make Channel interface public ([8cb2e56](https://github.com/Cap-go/CLI/commit/8cb2e560cdc7a39c4465aee5d33715a6e2d52a40))
+
 ### [7.17.7](https://github.com/Cap-go/CLI/compare/v7.17.6...v7.17.7) (2025-10-23)
 
 
