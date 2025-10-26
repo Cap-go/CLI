@@ -110,6 +110,8 @@ export interface UploadOptions {
   ignoreCompatibilityCheck?: boolean
   /** Disable code check for notifyAppReady() */
   disableCodeCheck?: boolean
+  /** Use legacy zip upload instead of TUS */
+  useZip?: boolean
 }
 
 export interface UploadResult {
@@ -478,6 +480,7 @@ export class CapgoSDK {
         packageJson: options.packageJsonPaths,
         ignoreMetadataCheck: options.ignoreCompatibilityCheck,
         codeCheck: !options.disableCodeCheck, // disable if requested, otherwise check
+        zip: options.useZip, // use legacy zip upload if requested
       }
 
       // Call internal upload function but suppress CLI behaviors
