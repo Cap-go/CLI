@@ -165,7 +165,9 @@ bundle
   .description(`🗑️ Delete a specific bundle from Capgo Cloud, optionally targeting a single version.
 
 Example: npx @capgo/cli@latest bundle delete BUNDLE_ID com.example.app`)
-  .action(deleteBundle)
+  .action(async (bundleId: string, appId: string, options: any) => {
+    await deleteBundle(bundleId, appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -189,7 +191,9 @@ bundle
 Bundles linked to channels are preserved unless --ignore-channel is used.
 
 Example: npx @capgo/cli@latest bundle cleanup com.example.app --bundle=1.0 --keep=3`)
-  .action(cleanupBundle)
+  .action(async (appId: string, options: any) => {
+    await cleanupBundle(appId, options)
+  })
   .option('-b, --bundle <bundle>', `Bundle version number of the app to delete`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-k, --keep <keep>', `Number of versions to keep`)
@@ -262,7 +266,9 @@ app
   .description(`🗑️ Delete an app from Capgo Cloud, optionally specifying a version to delete only that bundle.
 
 Example: npx @capgo/cli@latest app delete com.example.app`)
-  .action(deleteApp)
+  .action(async (appId: string, options: any) => {
+    await deleteApp(appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -273,7 +279,9 @@ app
   .description(`📋 List all apps registered under your account in Capgo Cloud.
 
 Example: npx @capgo/cli@latest app list`)
-  .action(listApp)
+  .action(async (options: any) => {
+    await listApp(options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -310,7 +318,9 @@ app
 Retention of 0 means infinite storage.
 
 Example: npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 30`)
-  .action(setApp)
+  .action(async (appId: string, options: any) => {
+    await setApp(appId, options)
+  })
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
@@ -341,7 +351,9 @@ channel
   .description(`🗑️ Delete a channel from Capgo Cloud, optionally removing associated bundles to free up resources.
 
 Example: npx @capgo/cli@latest channel delete production com.example.app`)
-  .action(deleteChannel)
+  .action(async (channelId: string, appId: string, options: any) => {
+    await deleteChannel(channelId, appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--delete-bundle', `Delete the bundle associated with the channel`)
   .option('--success-if-not-found', `Success if the channel is not found`)
@@ -354,7 +366,9 @@ channel
   .description(`📋 List all channels configured for an app in Capgo Cloud to review distribution settings.
 
 Example: npx @capgo/cli@latest channel list com.example.app`)
-  .action(listChannels)
+  .action(async (appId: string, options: any) => {
+    await listChannels(appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -379,7 +393,9 @@ channel
 One channel must be default.
 
 Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --state default`)
-  .action(setChannel)
+  .action(async (channelId: string, appId: string, options: any) => {
+    await setChannel(channelId, appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-b, --bundle <bundle>', `Bundle version number of the file to set`)
   .option('-s, --state <state>', `Set the state of the channel, default or normal`)

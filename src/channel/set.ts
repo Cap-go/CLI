@@ -42,8 +42,9 @@ interface Options extends OptionsBase {
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
-export async function setChannel(channel: string, appId: string, options: Options) {
-  intro(`Set channel`)
+export async function setChannel(channel: string, appId: string, options: Options, shouldExit = true) {
+  if (shouldExit)
+    intro(`Set channel`)
   try {
     options.apikey = options.apikey || findSavedKey()
     const extConfig = await getConfig()
@@ -51,11 +52,15 @@ export async function setChannel(channel: string, appId: string, options: Option
 
     if (!options.apikey) {
       log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing API key')
     }
     if (!appId) {
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing appId')
     }
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
@@ -256,8 +261,13 @@ export async function setChannel(channel: string, appId: string, options: Option
   }
   catch (err) {
     log.error(`Unknow error ${formatError(err)}`)
-    program.error('')
+    if (shouldExit)
+      program.error('')
+    throw err
   }
-  outro(`Done ✅`)
-  exit()
+  if (shouldExit) {
+    outro(`Done ✅`)
+    exit()
+  }
+  return true
 }

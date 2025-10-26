@@ -10,8 +10,9 @@ interface Options extends OptionsBase {
   bundle: string
 }
 
-export async function deleteBundle(bundleId: string, appId: string, options: Options) {
-  intro(`Delete bundle`)
+export async function deleteBundle(bundleId: string, appId: string, options: Options, shouldExit = true) {
+  if (shouldExit)
+    intro(`Delete bundle`)
   try {
     options.apikey = options.apikey || findSavedKey()
     const extConfig = await getConfig()
@@ -19,11 +20,15 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
 
     if (!options.apikey) {
       log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing API key')
     }
     if (!appId) {
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing appId')
     }
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
@@ -31,17 +36,11 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
     // Check we have app access to this appId
     await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
 
-    if (!options.apikey) {
-      log.error('Missing API key, you need to provide an API key to delete your app')
-      program.error('')
-    }
     if (!bundleId) {
       log.error('Missing argument, you need to provide a bundleId, or be in a capacitor project')
-      program.error('')
-    }
-    if (!appId) {
-      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing bundleId')
     }
 
     log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)
@@ -49,11 +48,16 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
 
     await deleteSpecificVersion(supabase, appId, bundleId)
     log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`)
-    outro(`Done`)
-    exit()
+    if (shouldExit) {
+      outro(`Done`)
+      exit()
+    }
+    return true
   }
   catch (err) {
     log.error(`Error deleting bundle ${formatError(err)}`)
-    program.error('')
+    if (shouldExit)
+      program.error('')
+    throw err
   }
 }

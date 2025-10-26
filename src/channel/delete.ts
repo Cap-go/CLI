@@ -12,8 +12,9 @@ interface DeleteChannelOptions extends OptionsBase {
   successIfNotFound: boolean
 }
 
-export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
-  intro(`Delete channel`)
+export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions, shouldExit = true) {
+  if (shouldExit)
+    intro(`Delete channel`)
   try {
     options.apikey = options.apikey || findSavedKey()
     const extConfig = await getConfig()
@@ -21,11 +22,15 @@ export async function deleteChannel(channelId: string, appId: string, options: D
 
     if (!options.apikey) {
       log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing API key')
     }
     if (!appId) {
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing appId')
     }
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
@@ -48,23 +53,31 @@ export async function deleteChannel(channelId: string, appId: string, options: D
       log.error(`Channel ${channelId} not found`)
       if (options.successIfNotFound) {
         log.success(`Channel ${channelId} not found and successIfNotFound is true`)
-        exit()
+        if (shouldExit)
+          exit()
+        return true
       }
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error(`Channel ${channelId} not found`)
     }
 
     // delete any devices assigned to this channel
     const { error: delDevicesError } = await delChannelDevices(supabase, appId, channel.id)
     if (delDevicesError) {
       log.error(`Cannot delete channel devices: ${formatError(delDevicesError)}`)
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error(`Cannot delete channel devices: ${formatError(delDevicesError)}`)
     }
 
     log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
     const deleteStatus = await delChannel(supabase, channelId, appId, userId)
     if (deleteStatus.error) {
       log.error(`Cannot delete Channel 🙀 ${formatError(deleteStatus.error)}`)
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error(`Cannot delete Channel: ${formatError(deleteStatus.error)}`)
     }
     const orgId = await getOrganizationId(supabase, appId)
     log.success(`Channel deleted`)
@@ -82,7 +95,13 @@ export async function deleteChannel(channelId: string, appId: string, options: D
   }
   catch (err) {
     log.error(`Cannot delete Channel 🙀 ${formatError(err)}`)
+    if (shouldExit)
+      program.error('')
+    throw err
   }
-  outro(`Done ✅`)
-  exit()
+  if (shouldExit) {
+    outro(`Done ✅`)
+    exit()
+  }
+  return true
 }

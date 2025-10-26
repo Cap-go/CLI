@@ -6,19 +6,26 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
-export async function listChannels(appId: string, options: OptionsBase) {
-  intro(`List channels`)
+export async function listChannels(appId: string, options: OptionsBase, shouldExit = true) {
+  if (shouldExit)
+    intro(`List channels`)
   try {
     options.apikey = options.apikey || findSavedKey()
     const extConfig = await getConfig()
     appId = getAppId(appId, extConfig?.config)
 
-    if (!options.apikey)
+    if (!options.apikey) {
       log.error('Missing API key, you need to provide an API key to upload your bundle')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing API key')
+    }
 
     if (!appId) {
       log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing appId')
     }
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
@@ -33,7 +40,9 @@ export async function listChannels(appId: string, options: OptionsBase) {
 
     log.info(`Active channels in Capgo: ${allVersions?.length}`)
 
-    displayChannels(allVersions)
+    if (shouldExit)
+      displayChannels(allVersions)
+
     await sendEvent(options.apikey, {
       channel: 'channel',
       event: 'List channel',
@@ -44,11 +53,18 @@ export async function listChannels(appId: string, options: OptionsBase) {
       },
       notify: false,
     }).catch()
-    outro(`Done ✅`)
-    exit()
+
+    if (shouldExit) {
+      outro(`Done ✅`)
+      exit()
+    }
+
+    return allVersions
   }
-  catch {
+  catch (err) {
     log.error(`Error listing channels`)
-    program.error('')
+    if (shouldExit)
+      program.error('')
+    throw err
   }
 }

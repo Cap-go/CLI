@@ -40,8 +40,9 @@ export async function getActiveApps(supabase: SupabaseClient<Database>) {
   return data
 }
 
-export async function listApp(options: OptionsBase) {
-  intro(`List apps in Capgo`)
+export async function listApp(options: OptionsBase, shouldExit = true) {
+  if (shouldExit)
+    intro(`List apps in Capgo`)
 
   await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
@@ -57,7 +58,13 @@ export async function listApp(options: OptionsBase) {
 
   log.info(`Active app in Capgo: ${allApps?.length}`)
 
-  displayApp(allApps)
-  outro(`Done ✅`)
-  exit()
+  if (shouldExit)
+    displayApp(allApps)
+
+  if (shouldExit) {
+    outro(`Done ✅`)
+    exit()
+  }
+
+  return allApps
 }

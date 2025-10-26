@@ -886,3 +886,56 @@ npx @capgo/cli@latest organisation delete ORG_ID
 
 
 <!-- AUTO-GENERATED-DOCS-END -->
+
+## Programmatic Usage (SDK)
+
+You can use the Capgo CLI programmatically in your Node.js/TypeScript projects for automation and CI/CD pipelines.
+
+### Installation
+
+```bash
+npm install @capgo/cli
+```
+
+### Example: Upload a Bundle
+
+```typescript
+import { CapgoSDK } from '@capgo/cli/sdk'
+
+const sdk = new CapgoSDK({
+  apikey: 'your-api-key'
+})
+
+await sdk.uploadBundle({
+  appId: 'com.example.app',
+  bundle: '1.0.0',
+  path: './dist',
+  channel: 'production'
+})
+```
+
+### Example: CI/CD Automation
+
+```typescript
+import { CapgoSDK } from '@capgo/cli/sdk'
+
+const sdk = new CapgoSDK({
+  apikey: process.env.CAPGO_API_KEY
+})
+
+// Upload new version
+await sdk.uploadBundle({
+  appId: 'com.example.app',
+  bundle: process.env.VERSION,
+  path: './dist',
+  channel: 'production'
+})
+
+// Cleanup old bundles
+await sdk.cleanupBundles({
+  appId: 'com.example.app',
+  keep: 10
+})
+```
+
+All CLI features are available as SDK methods. See the [TypeScript types](./src/sdk.ts) for the complete API reference.

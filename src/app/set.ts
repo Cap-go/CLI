@@ -7,19 +7,24 @@ import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getContentType, getOrganization, OrganizationPerm, verifyUser } from '../utils'
 
-export async function setApp(appId: string, options: Options) {
-  intro(`Set app`)
+export async function setApp(appId: string, options: Options, shouldExit = true) {
+  if (shouldExit)
+    intro(`Set app`)
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
   appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
     log.error(`Missing API key, you need to provide an API key to upload your bundle`)
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error('Missing API key')
   }
   if (!appId) {
     log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error('Missing appId')
   }
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
@@ -33,15 +38,21 @@ export async function setApp(appId: string, options: Options) {
 
   if (retention && Number.isNaN(Number(retention))) {
     log.error(`retention value must be a number`)
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error('retention value must be a number')
   }
   else if (retention && retention < 0) {
     log.error(`retention value cannot be less than 0`)
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error('retention value cannot be less than 0')
   }
   else if (retention && retention >= 63113904) {
     log.error(`retention value cannot be greater than 63113904 seconds (2 years)`)
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error('retention value cannot be greater than 63113904 seconds (2 years)')
   }
 
   let iconBuff
@@ -72,7 +83,9 @@ export async function setApp(appId: string, options: Options) {
       })
     if (error) {
       log.error(`Could not set app ${formatError(error)}`)
-      program.error(``)
+      if (shouldExit)
+        program.error(``)
+      throw new Error(`Could not set app: ${formatError(error)}`)
     }
     const { data: signedURLData } = await supabase
       .storage
@@ -92,8 +105,13 @@ export async function setApp(appId: string, options: Options) {
     .eq('user_id', userId)
   if (dbError) {
     log.error(`Could not set app ${formatError(dbError)}`)
-    program.error(``)
+    if (shouldExit)
+      program.error(``)
+    throw new Error(`Could not set app: ${formatError(dbError)}`)
   }
-  outro(`Done ✅`)
-  exit()
+  if (shouldExit) {
+    outro(`Done ✅`)
+    exit()
+  }
+  return true
 }

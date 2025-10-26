@@ -45,8 +45,9 @@ function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['a
   return toRemove
 }
 
-export async function cleanupBundle(appId: string, options: Options) {
-  intro(`Cleanup versions in Capgo`)
+export async function cleanupBundle(appId: string, options: Options, shouldExit = true) {
+  if (shouldExit)
+    intro(`Cleanup versions in Capgo`)
   try {
     await checkAlerts()
     options.apikey = options.apikey || findSavedKey()
@@ -58,11 +59,15 @@ export async function cleanupBundle(appId: string, options: Options) {
     appId = getAppId(appId, extConfig?.config)
     if (!options.apikey) {
       log.error('Missing API key, you need to provide an API key to delete your app')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing API key')
     }
     if (!appId) {
       log.error('Missing argument, you need to provide a appid, or be in a capacitor project')
-      program.error('')
+      if (shouldExit)
+        program.error('')
+      throw new Error('Missing appId')
     }
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
@@ -80,7 +85,7 @@ export async function cleanupBundle(appId: string, options: Options) {
     log.info(`Total active versions in Capgo: ${allVersions?.length}`)
     if (allVersions?.length === 0) {
       log.error('No versions found, aborting cleanup')
-      return
+      return { removed: 0, kept: 0 }
     }
     if (bundle) {
       const bundleVersion = parse(bundle)
@@ -114,11 +119,14 @@ export async function cleanupBundle(appId: string, options: Options) {
 
     if (toRemove.length === 0) {
       log.warn('Nothing to be removed, aborting removal...')
-      return
+      return { removed: 0, kept }
     }
-    displayBundles(allVersions)
+
+    if (shouldExit)
+      displayBundles(allVersions)
+
     // Check user wants to clean that all up
-    if (!force) {
+    if (!force && shouldExit) {
       const doDelete = await confirmC({ message: 'Do you want to continue removing the versions specified?' })
       if (isCancel(doDelete) || !doDelete) {
         log.warn('Not confirmed, aborting removal...')
@@ -126,14 +134,26 @@ export async function cleanupBundle(appId: string, options: Options) {
       }
     }
 
+    // In SDK mode with force=false, require explicit force flag
+    if (!force && !shouldExit) {
+      throw new Error('Cleanup requires force=true in SDK mode to prevent accidental deletions')
+    }
+
     // Yes, lets clean it up
     log.success('You have confirmed removal, removing versions now')
     await removeVersions(toRemove, supabase, appId)
-    outro(`Done ✅`)
-    exit()
+
+    if (shouldExit) {
+      outro(`Done ✅`)
+      exit()
+    }
+
+    return { removed: toRemove.length, kept }
   }
   catch (err) {
     log.error(`Error cleaning up versions ${formatError(err)}`)
-    program.error('')
+    if (shouldExit)
+      program.error('')
+    throw err
   }
 }
