@@ -1,9 +1,5 @@
-import type {
-  OptionsBase,
-} from '../utils'
-import { exit } from 'node:process'
+import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkVersionNotUsedInChannel } from '../api/channels'
 import { getVersionData } from '../api/versions'
@@ -26,62 +22,97 @@ interface Options extends OptionsBase {
   packageJson?: string
 }
 
-export async function unlinkDevice(channel: string, appId: string, options: Options) {
-  intro(`Unlink bundle ${options.apikey}`)
+export async function unlinkDeviceInternal(
+  channel: string,
+  appId: string,
+  options: Options,
+  silent = false,
+) {
+  if (!silent)
+    intro('Unlink bundle')
+
   try {
-    options.apikey = options.apikey || findSavedKey()
+    const enrichedOptions: Options = {
+      ...options,
+      apikey: options.apikey || findSavedKey(),
+    }
+
     const extConfig = await getConfig()
-    appId = getAppId(appId, extConfig?.config)
-    let { bundle } = options
-
+    const resolvedAppId = getAppId(appId, extConfig?.config)
     const packVersion = getBundleVersion('', options.packageJson)
-    bundle = bundle || packVersion
+    const bundle = enrichedOptions.bundle || packVersion
 
-    if (!options.apikey) {
-      log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
+    if (!enrichedOptions.apikey) {
+      if (!silent)
+        log.error('Missing API key, you need to provide an API key to upload your bundle')
+      throw new Error('Missing API key')
     }
-    if (!appId) {
-      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
+
+    if (!resolvedAppId) {
+      if (!silent)
+        log.error('Missing argument, you need to provide an appId, or be in a capacitor project')
+      throw new Error('Missing appId')
     }
+
     if (!bundle) {
-      log.error('Missing argument, you need to provide a bundle, or be in a capacitor project')
-      program.error('')
+      if (!silent)
+        log.error('Missing argument, you need to provide a bundle, or be in a capacitor project')
+      throw new Error('Missing bundle')
     }
-    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-
-    const [userId, orgId] = await Promise.all([
-      verifyUser(supabase, options.apikey, ['all', 'write']),
-      getOrganizationId(supabase, appId),
-    ])
-
-    // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
 
     if (!channel) {
-      log.error('Missing argument, you need to provide a channel')
-      program.error('')
+      if (!silent)
+        log.error('Missing argument, you need to provide a channel')
+      throw new Error('Missing channel')
     }
-    await checkPlanValid(supabase, orgId, options.apikey, appId)
 
-    const versionData = await getVersionData(supabase, appId, bundle)
-    await checkVersionNotUsedInChannel(supabase, appId, versionData)
-    await sendEvent(options.apikey, {
+    const supabase = await createSupabaseClient(
+      enrichedOptions.apikey,
+      enrichedOptions.supaHost,
+      enrichedOptions.supaAnon,
+    )
+
+    const [userId, orgId] = await Promise.all([
+      verifyUser(supabase, enrichedOptions.apikey, ['all', 'write']),
+      getOrganizationId(supabase, resolvedAppId),
+    ])
+
+    await checkAppExistsAndHasPermissionOrgErr(
+      supabase,
+      enrichedOptions.apikey,
+      resolvedAppId,
+      OrganizationPerm.write,
+      silent,
+    )
+
+    await checkPlanValid(supabase, orgId, enrichedOptions.apikey, resolvedAppId)
+
+    const versionData = await getVersionData(supabase, resolvedAppId, bundle, { silent })
+    await checkVersionNotUsedInChannel(supabase, resolvedAppId, versionData, { silent })
+
+    await sendEvent(enrichedOptions.apikey, {
       channel: 'bundle',
       event: 'Unlink bundle',
       icon: '✅',
       user_id: userId,
       tags: {
-        'app-id': appId,
+        'app-id': resolvedAppId,
       },
       notify: false,
-    }).catch()
-    outro('Done ✅')
-    exit()
+    }).catch(() => {})
+
+    if (!silent)
+      outro('Done ✅')
+
+    return true
   }
-  catch (err) {
-    log.error(`Unknow error ${formatError(err)}`)
-    program.error('')
+  catch (error) {
+    if (!silent)
+      log.error(`Unknown error ${formatError(error)}`)
+    throw error instanceof Error ? error : new Error(String(error))
   }
+}
+
+export async function unlinkDevice(channel: string, appId: string, options: Options) {
+  await unlinkDeviceInternal(channel, appId, options, false)
 }

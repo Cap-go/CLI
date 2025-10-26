@@ -6,7 +6,7 @@ import type { Database } from './types/supabase.types'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
-import { cwd, env, exit } from 'node:process'
+import { cwd, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
@@ -128,8 +128,9 @@ function readPackageJson(f: string = findRoot(cwd()), file: string | undefined =
   const fileSplit = file?.split(',')[0]
   if (fileSplit) {
     if (!existsSync(fileSplit)) {
-      log.error(`Package.json at ${fileSplit} does not exist`)
-      exit(1)
+      const message = `Package.json at ${fileSplit} does not exist`
+      log.error(message)
+      throw new Error(message)
     }
   }
   const packageJson = readFileSync(fileSplit ?? join(f, PACKNAME))
@@ -160,8 +161,9 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
   if (files) {
     for (const file of files) {
       if (!existsSync(file)) {
-        log.error(`Package.json at ${file} does not exist`)
-        exit(1)
+        const message = `Package.json at ${file} does not exist`
+        log.error(message)
+        throw new Error(message)
       }
     }
   }
@@ -183,14 +185,16 @@ export async function getConfig() {
   try {
     const extConfig = await loadConfig()
     if (!extConfig) {
-      log.error(`No capacitor config file found, run \`cap init\` first`)
-      program.error('')
+      const message = 'No capacitor config file found, run `cap init` first'
+      log.error(message)
+      throw new Error(message)
     }
     return extConfig
   }
   catch (err) {
-    log.error(`No capacitor config file found, run \`cap init\` first ${formatError(err)}`)
-    program.error('')
+    const message = `No capacitor config file found, run \`cap init\` first ${formatError(err)}`
+    log.error(message)
+    throw new Error(message)
   }
 }
 
@@ -304,7 +308,7 @@ export async function createSupabaseClient(apikey: string, supaHost?: string, su
   }
   if (!config.supaHost || !config.supaKey) {
     log.error('Cannot connect to server please try again later')
-    program.error('')
+    throw new Error('Cannot connect to server please try again later')
   }
   return createClient<Database>(config.supaHost, config.supaKey, {
     auth: {
@@ -334,8 +338,9 @@ export async function checkKey(supabase: SupabaseClient<Database>, apikey: strin
 
       return `"${k}", `
     }).join('')
-    log.error(`Your key should be: ${keymodeStr} mode.`)
-    program.error('')
+    const message = `Your key should be: ${keymodeStr} mode.`
+    log.error(message)
+    throw new Error('Invalid API key or insufficient permissions.')
   }
 }
 
@@ -394,7 +399,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
   if (error) {
     log.error('Cannot get permissions for organization!')
     console.error(error)
-    exit(1)
+    throw new Error('Cannot get permissions for organization')
   }
 
   const ok = (data as string).includes('perm')
@@ -429,11 +434,11 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
       default: {
         if ((data as string).includes('invite')) {
           log.info('Please accept/deny the organization invitation before trying to access the app')
-          exit(1)
+          throw new Error('Organization invitation pending')
         }
 
         log.error(`Invalid output when fetching organization permission. Response: ${data}`)
-        exit(1)
+        throw new Error(`Invalid output when fetching organization permission. Response: ${data}`)
       }
     }
 
@@ -461,7 +466,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
     }
     default: {
       log.error(`Invalid error when fetching organization permission. Response: ${data}`)
-      exit(1)
+      throw new Error(`Invalid error when fetching organization permission. Response: ${data}`)
     }
   }
 
@@ -479,7 +484,7 @@ export async function checkRemoteCliMessages(supabase: SupabaseClient<Database>,
   }
   if (messages.length > 0) {
     log.warn(`Found ${messages.length} cli warnings for your organization.`)
-    let exitAfter = false
+    let fatalError: Error | null = null
     for (const message of messages) {
       if (typeof message !== 'object' || typeof (message as any).message !== 'string' || typeof (message as any).fatal !== 'boolean') {
         log.error(`Invalid cli warning: ${message}`)
@@ -487,16 +492,16 @@ export async function checkRemoteCliMessages(supabase: SupabaseClient<Database>,
       }
       const msg = (message as any) as { message: string, fatal: boolean }
       if (msg.fatal) {
-        exitAfter = true
         log.error(`${msg.message.replaceAll('\\n', '\n')}`)
+        fatalError = new Error(msg.message)
       }
       else {
         log.warn(`${msg.message.replaceAll('\\n', '\n')}`)
       }
     }
-    if (exitAfter) {
+    if (fatalError) {
       log.error('Please fix the warnings and try again.')
-      program.error('')
+      throw fatalError
     }
     log.info('End of cli warnings.')
   }
@@ -515,7 +520,7 @@ export async function checkPlanValid(supabase: SupabaseClient<Database>, orgId: 
         module.default(`${config.hostWeb}/dashboard/settings/plans`)
       })
     wait(500)
-    program.error('')
+    throw new Error('Plan upgrade required')
   }
   const [trialDays, ispaying] = await Promise.all([
     isTrialOrg(supabase, orgId),
@@ -538,7 +543,7 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
         module.default(`${config.hostWeb}/dashboard/settings/plans`)
       })
     wait(500)
-    program.error('')
+    throw new Error('Plan upgrade required for upload')
   }
   const [trialDays, ispaying] = await Promise.all([
     isTrialOrg(supabase, orgId),
@@ -571,8 +576,9 @@ export function findSavedKey(quiet = false) {
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
-    log.error(`Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`)
-    program.error('')
+    const message = `Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`
+    log.error(message)
+    throw new Error(message)
   }
   return key
 }
@@ -711,8 +717,9 @@ export async function findBuildCommandForProjectType(projectType: string) {
     log.warn('Please make sure you have the output: \'export\' and distDir: \'dist\' in your next.config.js')
     const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
-      log.error('Aborted')
-      program.error('')
+      const message = 'Build command selection aborted by user'
+      log.error(message)
+      throw new Error(message)
     }
     return 'build'
   }
@@ -723,8 +730,9 @@ export async function findBuildCommandForProjectType(projectType: string) {
     log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
     const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
-      log.error('Aborted')
-      program.error('')
+      const message = 'Build command selection aborted by user'
+      log.error(message)
+      throw new Error(message)
     }
     return 'build'
   }
@@ -1030,19 +1038,19 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
   if (orgError) {
     log.error('Cannot get the list of organizations - exiting')
     log.error(`Error ${JSON.stringify(orgError)}`)
-    program.error('')
+    throw new Error('Cannot get the list of organizations')
   }
 
   const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
 
   if (allOrganizations.length === 0) {
     log.error('Could not get organization please create an organization first')
-    program.error('')
+    throw new Error('No organizations available')
   }
 
   if (adminOrgs.length === 0) {
     log.error(`Could not find organization with roles: ${roles.join(' or ')} please create an organization or ask the admin to add you to the organization with this roles`)
-    program.error('')
+    throw new Error('Could not find organization with required roles')
   }
 
   const organizationUidRaw = (adminOrgs.length > 1)
@@ -1056,7 +1064,7 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   if (isCancel(organizationUidRaw)) {
     log.error('Canceled organization selection, exiting')
-    program.error('')
+    throw new Error('Organization selection cancelled')
   }
 
   const organizationUid = organizationUidRaw as string
@@ -1077,7 +1085,7 @@ export async function verifyUser(supabase: SupabaseClient<Database>, apikey: str
 
   if (!userId || userIdError) {
     log.error(`Cannot auth user with apikey`)
-    program.error('')
+    throw new Error('Cannot authenticate user with provided API key')
   }
   return userId
 }
@@ -1091,7 +1099,7 @@ export async function getOrganizationId(supabase: SupabaseClient<Database>, appI
   if (!data || error) {
     log.error(`Cannot get organization id for app id ${appId}`)
     formatError(error)
-    program.error('')
+    throw new Error(`Cannot get organization id for app id ${appId}`)
   }
   return data.owner_org
 }
@@ -1106,7 +1114,7 @@ export async function requireUpdateMetadata(supabase: SupabaseClient<Database>, 
 
   if (error) {
     log.error(`Cannot check if disableAutoUpdate is required ${formatError(error)}`)
-    program.error('')
+    throw new Error('Cannot check if disableAutoUpdate is required')
   }
 
   // Channel does not exist and the default is never 'version_number'
@@ -1161,19 +1169,19 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
   catch (err) {
     log.error('Invalid package.json, JSON parsing failed')
     console.error('json parse error: ', err)
-    program.error('')
+    throw err instanceof Error ? err : new Error('Invalid package.json')
   }
   const firstPackageJson = packageJsonPath?.split(',')[0]
   const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace(PACKNAME, '')
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
-    program.error('')
+    throw new Error('Missing dependencies section in package.json')
   }
 
   for (const [key, value] of Object.entries(dependencies)) {
     if (typeof value !== 'string') {
       log.error(`Invalid dependency ${key}: ${value}, expected string, got ${typeof value}`)
-      program.error('')
+      throw new Error(`Invalid dependency ${key}: expected string version`)
     }
   }
 
@@ -1186,7 +1194,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
     const pm = findPackageManagerType(dir, 'npm')
     const installCmd = findInstallCommand(pm)
     log.error(`Missing node_modules folder at ${nodeModulesPaths.join(', ')}, please run ${pm} ${installCmd}`)
-    program.error('')
+    throw new Error('Missing node_modules folder')
   }
 
   let anyInvalid = false
@@ -1209,7 +1217,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
           catch (error) {
             log.error(`Error reading node_modules files for ${key} package in ${modulePath}`)
             console.error(error)
-            program.error('')
+            throw error instanceof Error ? error : new Error(`Error reading node_modules files for ${key}`)
           }
         }
       }
@@ -1232,7 +1240,7 @@ export async function getLocalDepenencies(packageJsonPath: string | undefined, n
   if (anyInvalid || dependenciesObject.find(a => a.native === undefined)) {
     log.error('Missing dependencies or invalid dependencies')
     log.error('If you use monorepo, workspace or any special package manager you can use the --package-json [path,] and --node-modules [path,] options to make the command work properly')
-    program.error('')
+    throw new Error('Missing dependencies or invalid dependencies')
   }
 
   return dependenciesObject as { name: string, version: string, native: boolean }[]
@@ -1267,25 +1275,25 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
 export function convertNativePackages(nativePackages: { name: string, version: string }[]) {
   if (!nativePackages) {
     log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
-    program.error('')
+    throw new Error('Error parsing native packages')
   }
 
   // Check types
   for (const data of nativePackages) {
     if (typeof data !== 'object') {
       log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
-      program.error('')
+      throw new Error('Invalid remote native package data')
     }
 
     const { name, version } = data
     if (!name || typeof name !== 'string') {
       log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
-      program.error('')
+      throw new Error('Invalid remote native package name')
     }
 
     if (!version || typeof version !== 'string') {
       log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
-      program.error('')
+      throw new Error('Invalid remote native package version')
     }
   }
 
@@ -1307,7 +1315,7 @@ export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, a
 
   if (error) {
     log.error(`Error fetching native packages: ${error.message}`)
-    program.error('')
+    throw new Error(`Error fetching native packages: ${error.message}`)
   }
   return convertNativePackages((remoteNativePackages.version.native_packages as any) ?? [])
 }
@@ -1324,7 +1332,7 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
     log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)
-    program.error('')
+    throw new Error('Cannot upload the same bundle content')
   }
   s.stop(`Checksum compatible with ${channel} channel`)
 }

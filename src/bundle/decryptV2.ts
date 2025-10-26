@@ -1,8 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import { program } from 'commander'
 import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { baseKeyPubV2, formatError, getConfig } from '../utils'
@@ -13,61 +11,100 @@ interface Options {
   checksum?: string
 }
 
-export async function decryptZipV2(zipPath: string, ivsessionKey: string, options: Options) {
-  intro(`Decrypt zip file`)
+export interface DecryptResult {
+  outputPath: string
+  checksumMatches?: boolean
+}
+
+function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof getConfig>>) {
+  const fallbackKeyPath = options.key || baseKeyPubV2
+  let publicKey = extConfig.config.plugins?.CapacitorUpdater?.publicKey
+
+  if (existsSync(fallbackKeyPath)) {
+    publicKey = readFileSync(fallbackKeyPath, 'utf8')
+  }
+  else if (!publicKey && options.keyData)
+    publicKey = options.keyData
+
+  return { publicKey, fallbackKeyPath }
+}
+
+export async function decryptZipV2Internal(
+  zipPath: string,
+  ivsessionKey: string,
+  options: Options,
+  silent = false,
+): Promise<DecryptResult> {
+  if (!silent)
+    intro('Decrypt zip file')
+
   try {
     await checkAlerts()
-    // write in file .capgo the apikey in home directory
 
     if (!existsSync(zipPath)) {
-      log.error(`Zip not found at the path ${zipPath}`)
-      program.error('')
+      const message = `Zip not found at the path ${zipPath}`
+      if (!silent)
+        log.error(message)
+      throw new Error(message)
     }
 
     const extConfig = await getConfig()
 
     if (!options.key && !existsSync(baseKeyPubV2) && !extConfig.config.plugins?.CapacitorUpdater?.privateKey) {
-      log.error(`Private Key not found at the path ${baseKeyPubV2} or in ${extConfig.path}`)
-      program.error('')
+      const message = `Private Key not found at the path ${baseKeyPubV2} or in ${extConfig.path}`
+      if (!silent)
+        log.error(message)
+      throw new Error(message)
     }
-    const keyPath = options.key || baseKeyPubV2
-    // check if publicKey exist
 
-    let publicKey = extConfig.config.plugins?.CapacitorUpdater?.publicKey
+    const { publicKey, fallbackKeyPath } = resolvePublicKey(options, extConfig)
 
-    if (!existsSync(keyPath) && !publicKey) {
-      log.error(`Cannot find public key ${keyPath} or as keyData option or in ${extConfig.path}`)
-      program.error('')
+    if (!publicKey) {
+      const message = `Cannot find public key ${fallbackKeyPath} or as keyData option or in ${extConfig.path}`
+      if (!silent)
+        log.error(message)
+      throw new Error(message)
     }
-    else if (existsSync(keyPath)) {
-    // open with fs publicKey path
-      const keyFile = readFileSync(keyPath)
-      publicKey = keyFile.toString()
-    }
-    // console.log('privateKey', privateKey)
 
     const zipFile = readFileSync(zipPath)
 
-    const decodedZip = decryptSourceV2(zipFile, ivsessionKey, options.keyData ?? publicKey ?? '')
-    // write decodedZip in a file
-    writeFileSync(`${zipPath}_decrypted.zip`, decodedZip)
-    log.info(`Decrypted zip file at ${zipPath}_decrypted.zip`)
+    const decodedZip = decryptSourceV2(zipFile, ivsessionKey, options.keyData ?? publicKey)
+    const outputPath = `${zipPath}_decrypted.zip`
+    writeFileSync(outputPath, decodedZip)
+
+    if (!silent)
+      log.info(`Decrypted zip file at ${outputPath}`)
+
+    let checksumMatches: boolean | undefined
+
     if (options.checksum) {
       const checksum = await getChecksum(decodedZip, 'sha256')
-      const decryptedChecksum = decryptChecksumV2(options.checksum, options.keyData ?? publicKey ?? '')
-      if (checksum !== decryptedChecksum) {
-        log.error(`Checksum does not match ${checksum} !== ${decryptedChecksum}`)
-        program.error('')
+      const decryptedChecksum = decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
+      checksumMatches = checksum === decryptedChecksum
+
+      if (!checksumMatches) {
+        const message = `Checksum does not match ${checksum} !== ${decryptedChecksum}`
+        if (!silent)
+          log.error(message)
+        throw new Error(message)
       }
-      else {
-        log.info(`Checksum matches`)
-      }
+
+      if (!silent)
+        log.info('Checksum matches')
     }
-    outro('✅ done')
-    exit()
+
+    if (!silent)
+      outro('✅ done')
+
+    return { outputPath, checksumMatches }
   }
-  catch (err) {
-    log.error(`Error decrypting zip file ${formatError(err)}`)
-    program.error('')
+  catch (error) {
+    if (!silent)
+      log.error(`Error decrypting zip file ${formatError(error)}`)
+    throw error instanceof Error ? error : new Error(String(error))
   }
+}
+
+export async function decryptZipV2(zipPath: string, ivsessionKey: string, options: Options) {
+  await decryptZipV2Internal(zipPath, ivsessionKey, options, false)
 }

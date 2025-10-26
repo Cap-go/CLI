@@ -19,8 +19,8 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  bundle: string
+export interface OptionsSetChannel extends OptionsBase {
+  bundle?: string
   state?: string
   downgrade?: boolean
   latest?: boolean
@@ -37,7 +37,7 @@ interface Options extends OptionsBase {
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
-export async function setChannel(channel: string, appId: string, options: Options, silent = false) {
+export async function setChannel(channel: string, appId: string, options: OptionsSetChannel, silent = false) {
   if (!silent)
     intro('Set channel')
 
@@ -66,7 +66,7 @@ export async function setChannel(channel: string, appId: string, options: Option
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
   const orgId = await getOrganizationId(supabase, appId)
 
   const {

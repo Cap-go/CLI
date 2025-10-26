@@ -43,7 +43,7 @@ export async function deleteChannel(channelId: string, appId: string, options: D
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, options.apikey, ['all'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
 
   if (options.deleteBundle && !silent)
     log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)

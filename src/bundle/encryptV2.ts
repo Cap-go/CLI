@@ -1,7 +1,5 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { program } from 'commander'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { baseKeyV2, formatError, getConfig } from '../utils'
@@ -12,103 +10,131 @@ interface Options {
   json?: boolean
 }
 
-export async function encryptZipV2(zipPath: string, checksum: string, options: Options) {
-  const { json } = options
+export interface EncryptResult {
+  checksum: string
+  filename: string
+  ivSessionKey: string
+}
 
-  if (!json) {
-    intro(`Encryption`)
+function emitJsonError(error: unknown) {
+  // eslint-disable-next-line no-console
+  console.error(formatError(error))
+}
+
+export async function encryptZipV2Internal(
+  zipPath: string,
+  checksum: string,
+  options: Options,
+  silent = false,
+): Promise<EncryptResult> {
+  const { json } = options
+  const shouldShowPrompts = !json && !silent
+
+  if (shouldShowPrompts) {
+    intro('Encryption')
     await checkAlerts()
   }
+
   try {
     const extConfig = await getConfig()
 
     const hasPrivateKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.privateKey
     const hasPublicKeyInConfig = !!extConfig.config.plugins?.CapacitorUpdater?.publicKey
 
-    if (hasPrivateKeyInConfig && !json)
-      log.warning(`There is still a privateKey in the config`)
-
-    // write in file .capgo the apikey in home directory
+    if (hasPrivateKeyInConfig && shouldShowPrompts)
+      log.warning('There is still a privateKey in the config')
 
     if (!existsSync(zipPath)) {
-      if (!json)
-        log.error(`Error: Zip not found at the path ${zipPath}`)
-      else
-        console.error(formatError({ error: 'zip_not_found' }))
-      program.error('')
+      const message = `Zip not found at the path ${zipPath}`
+      if (!silent) {
+        if (json)
+          emitJsonError({ error: 'zip_not_found' })
+        else
+          log.error(`Error: ${message}`)
+      }
+      throw new Error(message)
     }
 
     if (!hasPublicKeyInConfig) {
-      if (!json)
-        log.warning(`Warning: Missing Public Key in config`)
-      else
-        console.error(formatError({ error: 'missing_public_key' }))
-      program.error('')
+      if (!silent) {
+        if (json)
+          emitJsonError({ error: 'missing_public_key' })
+        else
+          log.warning('Warning: Missing Public Key in config')
+      }
+      throw new Error('Missing public key in config')
     }
 
     const keyPath = options.key || baseKeyV2
-    // check if publicKey exist
-
-    // let publicKey = options.keyData || ''
     let privateKey = options.keyData || ''
 
     if (!existsSync(keyPath) && !privateKey) {
-      if (!json) {
-        log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
-        log.error(`Error: Missing key`)
+      if (!silent) {
+        if (json)
+          emitJsonError({ error: 'missing_key' })
+        else {
+          log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
+          log.error('Error: Missing key')
+        }
       }
-      else {
-        console.error(formatError({ error: 'missing_key' }))
-      }
-      program.error('')
+      throw new Error('Missing private key')
     }
     else if (existsSync(keyPath)) {
-    // open with fs key path
-      const keyFile = readFileSync(keyPath)
-      privateKey = keyFile.toString()
+      privateKey = readFileSync(keyPath, 'utf8')
     }
 
-    // let's doublecheck and make sure the key we are using is the right type based on the decryption strategy
     if (privateKey && !privateKey.startsWith('-----BEGIN RSA PRIVATE KEY-----')) {
-      if (!json) {
-        log.error(`the private key provided is not a valid RSA Private key`)
+      if (!silent) {
+        if (json)
+          emitJsonError({ error: 'invalid_private_key' })
+        else
+          log.error('The private key provided is not a valid RSA Private key')
       }
-      else {
-        console.error(formatError({ error: 'invalid_private_key' }))
-      }
-      program.error('')
+      throw new Error('Invalid private key format')
     }
 
     const zipFile = readFileSync(zipPath)
     const { sessionKey, ivSessionKey } = generateSessionKey(privateKey)
     const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
     const encodedChecksum = encryptChecksumV2(checksum, privateKey)
+    const filenameEncrypted = `${zipPath}_encrypted.zip`
 
-    const filename_encrypted = `${zipPath}_encrypted.zip`
-    if (json) {
-    // Keep the console log and stringify for user who parse the output
-    // eslint-disable-next-line no-console
-      console.log(JSON.stringify({
-        checksum: encodedChecksum,
-        filename: filename_encrypted,
-        ivSessionKey,
-      }, null, 2))
-    }
-    else {
-      log.success(`Encoded Checksum: ${encodedChecksum}`)
-      log.success(`ivSessionKey: ${ivSessionKey}`)
+    writeFileSync(filenameEncrypted, encryptedData)
+
+    if (!silent) {
+      if (json) {
+        // eslint-disable-next-line no-console
+        console.log(JSON.stringify({
+          checksum: encodedChecksum,
+          filename: filenameEncrypted,
+          ivSessionKey,
+        }, null, 2))
+      }
+      else {
+        log.success(`Encoded Checksum: ${encodedChecksum}`)
+        log.success(`ivSessionKey: ${ivSessionKey}`)
+        log.success(`Encrypted zip saved at ${filenameEncrypted}`)
+        outro('Done ✅')
+      }
     }
 
-    // write decodedZip in a file
-    writeFileSync(filename_encrypted, encryptedData)
-    if (!json) {
-      log.success(`Encrypted zip saved at ${filename_encrypted}`)
-      outro(`Done ✅`)
+    return {
+      checksum: encodedChecksum,
+      filename: filenameEncrypted,
+      ivSessionKey,
     }
-    exit()
   }
-  catch (err) {
-    log.error(`Error encrypting zip file ${formatError(err)}`)
-    program.error('')
+  catch (error) {
+    if (!silent) {
+      if (options.json)
+        emitJsonError(error)
+      else
+        log.error(`Error encrypting zip file ${formatError(error)}`)
+    }
+    throw error instanceof Error ? error : new Error(String(error))
   }
+}
+
+export async function encryptZipV2(zipPath: string, checksum: string, options: Options) {
+  await encryptZipV2Internal(zipPath, checksum, options, false)
 }

@@ -1,5 +1,7 @@
 import type { Options as AppOptions } from './api/app'
+import type { Channel } from './api/channels'
 import type { OptionsUpload } from './bundle/upload_interface'
+import type { OptionsSetChannel } from './channel/set'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
 import { deleteApp as deleteAppInternal } from './app/delete'
@@ -200,15 +202,6 @@ export interface UpdateChannelOptions {
   supaHost?: string
   /** Custom Supabase anon key */
   supaAnon?: string
-}
-
-export interface ChannelInfo {
-  id: string
-  name: string
-  appId: string
-  version?: string
-  createdAt: Date
-  isDefault: boolean
 }
 
 // ============================================================================
@@ -664,17 +657,17 @@ export class CapgoSDK {
    */
   async updateChannel(options: UpdateChannelOptions): Promise<SDKResult> {
     try {
-      const internalOptions = {
+      const internalOptions: OptionsSetChannel = {
         apikey: options.apikey || this.apikey || findSavedKey(true),
         supaHost: options.supaHost || this.supaHost,
         supaAnon: options.supaAnon || this.supaAnon,
-        bundle: options.bundle || '',
+        bundle: options.bundle ?? undefined,
         state: options.state,
         downgrade: options.downgrade,
         ios: options.ios,
         android: options.android,
         selfAssign: options.selfAssign,
-        disableAutoUpdate: options.disableAutoUpdate || '',
+        disableAutoUpdate: options.disableAutoUpdate ?? undefined,
         dev: options.dev,
         emulator: options.emulator,
         latest: false,
@@ -738,7 +731,7 @@ export class CapgoSDK {
    * }
    * ```
    */
-  async listChannels(appId: string): Promise<SDKResult<ChannelInfo[]>> {
+  async listChannels(appId: string): Promise<SDKResult<Channel[]>> {
     try {
       const internalOptions = {
         apikey: this.apikey || findSavedKey(true),
@@ -748,18 +741,9 @@ export class CapgoSDK {
 
       const channels = await listChannelsInternal(appId, internalOptions, true)
 
-      const channelInfos: ChannelInfo[] = channels.map((channel: any) => ({
-        id: channel.id.toString(),
-        name: channel.name,
-        appId: channel.app_id || appId,
-        version: channel.version?.name,
-        createdAt: new Date(channel.created_at || Date.now()),
-        isDefault: channel.public || false,
-      }))
-
       return {
         success: true,
-        data: channelInfos,
+        data: channels,
       }
     }
     catch (error) {

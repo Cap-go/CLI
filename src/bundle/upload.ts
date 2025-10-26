@@ -6,7 +6,7 @@ import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path/posix'
-import { cwd, exit } from 'node:process'
+import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
@@ -27,6 +27,11 @@ type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
 
+function uploadFail(message: string): never {
+  log.error(message)
+  throw new Error(message)
+}
+
 async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
   const pkgVersion = getBundleVersion('', options.packageJson)
   // create bundle name format : 1.0.0-beta.x where x is a uuid
@@ -36,8 +41,7 @@ async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
     || `0.0.1-beta.${randomUUID().split('-')[0]}`
 
   if (!regexSemver.test(bundle)) {
-    log.error(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`)
-    program.error('')
+    uploadFail(`Your bundle name ${bundle}, is not valid it should follow semver convention : https://semver.org/`)
   }
 
   return bundle
@@ -46,8 +50,7 @@ async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
 function getApikey(options: OptionsUpload) {
   const apikey = options.apikey || findSavedKey()
   if (!apikey) {
-    log.error(`Missing API key, you need to provide an API key to upload your bundle`)
-    program.error('')
+    uploadFail('Missing API key, you need to provide an API key to upload your bundle')
   }
 
   return apikey
@@ -58,17 +61,14 @@ function getAppIdAndPath(appId: string | undefined, options: OptionsUpload, conf
   const path = options.path || config?.webDir
 
   if (!finalAppId) {
-    log.error('Missing argument, you need to provide a appid or be in a capacitor project')
-    program.error('')
+    uploadFail('Missing argument, you need to provide a appid or be in a capacitor project')
   }
   if (!path) {
-    log.error('Missing argument, you need to provide a path (--path), or be in a capacitor project')
-    program.error('')
+    uploadFail('Missing argument, you need to provide a path (--path), or be in a capacitor project')
   }
 
   if (!existsSync(path)) {
-    log.error(`Path ${path} does not exist, build your app first, or provide a valid path`)
-    program.error('')
+    uploadFail(`Path ${path} does not exist, build your app first, or provide a valid path`)
   }
 
   return { appid: finalAppId, path }
@@ -80,14 +80,12 @@ function checkNotifyAppReady(options: OptionsUpload, path: string) {
   if (typeof checkNotifyAppReady === 'undefined' || checkNotifyAppReady) {
     const isPluginConfigured = searchInDirectory(path, 'notifyAppReady')
     if (!isPluginConfigured) {
-      log.error(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready
+      uploadFail(`notifyAppReady() is missing in the build folder of your app. see: https://capgo.app/docs/plugin/api/#notifyappready
       If you are sure your app has this code, you can use the --no-code-check option`)
-      program.error('')
     }
     const foundIndex = checkIndexPosition(path)
     if (!foundIndex) {
-      log.error(`index.html is missing in the root folder of ${path}`)
-      program.error('')
+      uploadFail(`index.html is missing in the root folder of ${path}`)
     }
   }
 }
@@ -135,17 +133,14 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     else if (autoMinUpdateVersion) {
       try {
         const { min_update_version: lastMinUpdateVersion } = channelData.version as any
-        if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion)) {
-          log.error('Invalid remote min update version, skipping auto setting compatibility')
-          program.error('')
-        }
+        if (!lastMinUpdateVersion || !regexSemver.test(lastMinUpdateVersion))
+          uploadFail('Invalid remote min update version, skipping auto setting compatibility')
 
         minUpdateVersion = lastMinUpdateVersion
         spinner.stop(`Auto set min-update-version to ${minUpdateVersion}`)
       }
       catch {
-        log.error(`Cannot auto set compatibility, invalid data ${channelData}`)
-        program.error('')
+        uploadFail(`Cannot auto set compatibility, invalid data ${channelData}`)
       }
     }
     else {
@@ -163,15 +158,12 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
 
   if (updateMetadataRequired && !minUpdateVersion && !ignoreMetadataCheck) {
-    log.error(`You need to provide a min-update-version to upload a bundle to this channel`)
-    program.error('')
+    uploadFail('You need to provide a min-update-version to upload a bundle to this channel')
   }
 
   if (minUpdateVersion) {
-    if (!regexSemver.test(minUpdateVersion)) {
-      log.error(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`)
-      program.error('')
-    }
+    if (!regexSemver.test(minUpdateVersion))
+      uploadFail(`Your minimal version update ${minUpdateVersion}, is not valid it should follow semver convention : https://semver.org/`)
   }
 
   const hashedLocalDependencies = localDependencies
@@ -196,7 +188,7 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
   }
 }
 
-async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false) {
+async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
   // check if app already exist
   // apikey is sooo legacy code, current prod does not use it
   // TODO: remove apikey and create a new function who not need it
@@ -208,11 +200,12 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
     if (versionExistsOk) {
       log.warn(`Version ${bundle} already exists - exiting gracefully due to --silent-fail option`)
       outro('Bundle version already exists - exiting gracefully 🎉')
-      exit(0)
+      return true
     }
-    log.error(`Version ${bundle} already exists ${formatError(appVersionError)}`)
-    program.error('')
+    uploadFail(`Version ${bundle} already exists ${formatError(appVersionError)}`)
   }
+
+  return false
 }
 
 async function prepareBundleFile(path: string, options: OptionsUpload, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number) {
@@ -235,10 +228,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   let isv7 = false
   const coerced = coerceVersion(updaterVersion)
   if (!updaterVersion) {
-    // TODO: remove this once we have a proper way to check the version
-    log.warn('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
-    program.error('')
-    return undefined as any
+    uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
   }
   else if (coerced) {
     isv7 = semverGte(coerced.version, '7.0.0')
@@ -261,10 +251,8 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   else if ((keyV2 || existsSync(baseKeyV2) || options.keyDataV2) && !options.oldEncryption) {
     const privateKey = typeof keyV2 === 'string' ? keyV2 : baseKeyV2
     let keyDataV2 = options.keyDataV2 || ''
-    if (!keyDataV2 && !existsSync(privateKey)) {
-      log.error(`Cannot find private key ${privateKey}`)
-      program.error('')
-    }
+    if (!keyDataV2 && !existsSync(privateKey))
+      uploadFail(`Cannot find private key ${privateKey}`)
     await sendEvent(apikey, {
       channel: 'app',
       event: 'App encryption v2',
@@ -297,8 +285,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   const mbSize = Math.floor((zipped?.byteLength ?? 0) / 1024 / 1024)
   const mbSizeMax = Math.floor(maxUploadLength / 1024 / 1024)
   if (zipped?.byteLength > maxUploadLength) {
-    log.error(`The bundle size is ${mbSize} Mb, this is greater than the maximum upload length ${mbSizeMax} Mb, please reduce the size of your bundle`)
-    program.error('')
+    uploadFail(`The bundle size is ${mbSize} Mb, this is greater than the maximum upload length ${mbSizeMax} Mb, please reduce the size of your bundle`)
   }
   else if (zipped?.byteLength > alertUploadSize) {
     log.warn(`WARNING !!\nThe bundle size is ${mbSize} Mb, this may take a while to download for users\n`)
@@ -397,7 +384,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
     }
     // call delete version on path /delete_failed_version to delete the version
     await deletedFailedVersion(supabase, appid, bundle)
-    program.error('')
+    throw errorUpload instanceof Error ? errorUpload : new Error(String(errorUpload))
   }
 
   const endTime = performance.now()
@@ -469,10 +456,8 @@ async function setVersionInChannel(
     .rpc('get_app_versions', { apikey, name_version: bundle, appid })
     .single()
 
-  if (!versionId) {
-    log.warn('Cannot get version id, cannot set channel')
-    program.error('')
-  }
+  if (!versionId)
+    uploadFail('Cannot get version id, cannot set channel')
 
   const { data: apiAccess } = await supabase
     .rpc('is_allowed_capgkey', { apikey, keymode: ['write', 'all'] })
@@ -487,23 +472,16 @@ async function setVersionInChannel(
       owner_org: orgId,
       ...(selfAssign ? { allow_device_self_set: true } : {}),
     })
-    if (dbError3) {
-      log.error(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
-      program.error('')
-    }
+    if (dbError3)
+      uploadFail(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
     const bundleUrl = `${localConfig.hostWeb}/app/p/${appid}/channel/${data.id}`
     if (data?.public)
       log.info('Your update is now available in your public channel 🎉')
     else if (data?.id)
       log.info(`Link device to this bundle to try it: ${bundleUrl}`)
 
-    if (displayBundleUrl) {
+    if (displayBundleUrl)
       log.info(`Bundle url: ${bundleUrl}`)
-    }
-    else if (!versionId) {
-      log.warn('Cannot set bundle with upload key, use key with more rights for that')
-      program.error('')
-    }
   }
   else {
     log.warn('The upload key is not allowed to set the version in the channel')
@@ -563,11 +541,12 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   await checkTrial(supabase, orgId, localConfig)
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
-  await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
+  const versionAlreadyExists = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
+  if (versionAlreadyExists)
+    return true
 
   if (options.external && !options.external.startsWith('https://')) {
-    log.error(`External link should should start with "https://" current is "${options.external}"`)
-    program.error('')
+    uploadFail(`External link should should start with "https://" current is "${options.external}"`)
   }
 
   if (options.deleteLinkedBundleOnUpload) {
@@ -637,10 +616,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     options.delta = options.partial || options.deltaOnly || options.partialOnly || fileConfig.partialUploadForced
   }
 
-  if (options.encryptPartial && encryptionMethod === 'v1') {
-    log.error('You cannot encrypt the partial update if you are not using the v2 encryption method')
-    program.error('')
-  }
+  if (options.encryptPartial && encryptionMethod === 'v1')
+    uploadFail('You cannot encrypt the partial update if you are not using the v2 encryption method')
 
   // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
   if (options.delta && encryptionMethod === 'v2' && !options.encryptPartial) {
@@ -659,10 +636,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
-  if (dbError) {
-    log.error(`Cannot add bundle ${formatError(dbError)}`)
-    program.error('')
-  }
+  if (dbError)
+    uploadFail(`Cannot add bundle ${formatError(dbError)}`)
   if (options.tusChunkSize && options.tusChunkSize > fileConfig.maxChunkSize) {
     log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${fileConfig.maxChunkSize}, using the maximum chunk size`)
     options.tusChunkSize = fileConfig.maxChunkSize
@@ -672,10 +647,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   }
 
   if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
-    if (!s3BucketName || !s3Endpoint || !s3Region || !s3Apikey || !s3Apisecret || !s3Port) {
-      log.error('Missing argument, for S3 upload you need to provide a bucket name, endpoint, region, port, API key, and API secret')
-      program.error('')
-    }
+    if (!s3BucketName || !s3Endpoint || !s3Region || !s3Apikey || !s3Apisecret || !s3Port)
+      uploadFail('Missing argument, for S3 upload you need to provide a bucket name, endpoint, region, port, API key, and API secret')
 
     log.info('Uploading to S3')
     const endPoint = s3SSL ? `https://${s3Endpoint}` : `http://${s3Endpoint}`
@@ -731,10 +704,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     versionData.storage_provider = 'r2'
     versionData.manifest = finalManifest
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
-    if (dbError2) {
-      log.error(`Cannot update bundle ${formatError(dbError2)}`)
-      program.error('')
-    }
+    if (dbError2)
+      uploadFail(`Cannot update bundle ${formatError(dbError2)}`)
   }
 
   // Check we have app access to this appId
@@ -766,60 +737,49 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   })
   if (shouldExit) {
     outro('Time to share your update to the world 🌍')
-    exit()
+    return true
   }
   return true
 }
 
 function checkValidOptions(options: OptionsUpload) {
   if (options.ivSessionKey && !options.external) {
-    log.error('You need to provide an external url if you want to use the --iv-session-key option')
-    program.error('')
+    uploadFail('You need to provide an external url if you want to use the --iv-session-key option')
   }
   if (options.encryptedChecksum && !options.external) {
-    log.error('You need to provide an external url if you want to use the --encrypted-checksum option')
-    program.error('')
+    uploadFail('You need to provide an external url if you want to use the --encrypted-checksum option')
   }
   if ((options.partial || options.delta || options.partialOnly || options.deltaOnly) && options.external) {
-    log.error('You cannot use the --partial/--delta/--partial-only/--delta-only option with an external url')
-    program.error('')
+    uploadFail('You cannot use the --partial/--delta/--partial-only/--delta-only option with an external url')
   }
   if (options.tus && options.external) {
-    log.error('You cannot use the --tus option with an external url')
-    program.error('')
+    uploadFail('You cannot use the --tus option with an external url')
   }
   if (options.dryUpload && options.external) {
-    log.error('You cannot use the --dry-upload option with an external url')
-    program.error('')
+    uploadFail('You cannot use the --dry-upload option with an external url')
   }
   if (options.multipart && options.external) {
-    log.error('You cannot use the --multipart option with an external url')
-    program.error('')
+    uploadFail('You cannot use the --multipart option with an external url')
   }
   // cannot set key if external
   if (options.external && (options.keyV2 || options.keyDataV2)) {
-    log.error('You cannot set a key if you are uploading to an external url')
-    program.error('')
+    uploadFail('You cannot set a key if you are uploading to an external url')
   }
   // cannot set key-v2 and key-data-v2
   if (options.keyV2 && options.keyDataV2) {
-    log.error('You cannot set both key-v2 and key-data-v2')
-    program.error('')
+    uploadFail('You cannot set both key-v2 and key-data-v2')
   }
   // cannot set s3 and external
   if (options.external && (options.s3Region || options.s3Apikey || options.s3Apisecret || options.s3Endpoint || options.s3BucketName || options.s3Port || options.s3SSL)) {
-    log.error('You cannot set S3 options if you are uploading to an external url, it\'s automatically handled')
-    program.error('')
+    uploadFail('You cannot set S3 options if you are uploading to an external url, it\'s automatically handled')
   }
   // cannot set --encrypted-checksum if not external
   if (options.encryptedChecksum && !options.external) {
-    log.error('You cannot set the --encrypted-checksum option if you are not uploading to an external url')
-    program.error('')
+    uploadFail('You cannot set the --encrypted-checksum option if you are not uploading to an external url')
   }
   // cannot set min-update-version and auto-min-update-version
   if (options.minUpdateVersion && options.autoMinUpdateVersion) {
-    log.error('You cannot set both min-update-version and auto-min-update-version, use only one of them')
-    program.error('')
+    uploadFail('You cannot set both min-update-version and auto-min-update-version, use only one of them')
   }
 }
 
@@ -830,6 +790,6 @@ export async function uploadCommand(appid: string, options: OptionsUpload) {
   }
   catch (error) {
     log.error(formatError(error))
-    program.error('')
+    throw error instanceof Error ? error : new Error(String(error))
   }
 }

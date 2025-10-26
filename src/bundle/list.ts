@@ -29,7 +29,7 @@ export async function listBundle(appId: string, options: OptionsBase, silent = f
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent)
 
   if (!silent)
     log.info(`Querying available versions of: ${appId} in Capgo`)

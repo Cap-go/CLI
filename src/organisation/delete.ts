@@ -1,7 +1,5 @@
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro, select } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -11,26 +9,44 @@ import {
   verifyUser,
 } from '../utils'
 
-export async function deleteOrganization(orgId: string, options: OptionsBase) {
-  intro(`Deleting organization`)
+interface DeleteOrganizationOptions extends OptionsBase {
+  autoConfirm?: boolean
+}
+
+export async function deleteOrganizationInternal(
+  orgId: string,
+  options: DeleteOrganizationOptions,
+  silent = false,
+) {
+  if (!silent)
+    intro('Deleting organization')
 
   await checkAlerts()
-  options.apikey = options.apikey || findSavedKey()
 
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide an API key to delete an organization')
-    program.error('')
+  const enrichedOptions: DeleteOrganizationOptions = {
+    ...options,
+    apikey: options.apikey || findSavedKey(),
+  }
+
+  if (!enrichedOptions.apikey) {
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to delete an organization')
+    throw new Error('Missing API key')
   }
 
   if (!orgId) {
-    log.error('Missing argument, you need to provide an organization ID')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide an organization ID')
+    throw new Error('Missing organization id')
   }
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const supabase = await createSupabaseClient(
+    enrichedOptions.apikey,
+    enrichedOptions.supaHost,
+    enrichedOptions.supaAnon,
+  )
+  const userId = await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
 
-  // Check if user is the owner
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')
     .select('created_by, name')
@@ -38,11 +54,15 @@ export async function deleteOrganization(orgId: string, options: OptionsBase) {
     .single()
 
   if (orgError || !orgData) {
-    log.error(`Cannot get organization details ${formatError(orgError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Cannot get organization details ${formatError(orgError)}`)
+    throw new Error(`Cannot get organization details: ${formatError(orgError)}`)
   }
 
   if (orgData.created_by !== userId) {
+    if (silent)
+      throw new Error('Deleting an organization is restricted to the organization owner')
+
     log.warn('Deleting an organization is restricted to the organization owner')
     log.warn('You are not the owner of this organization')
     log.warn('It\'s strongly recommended that you do not continue!')
@@ -57,34 +77,36 @@ export async function deleteOrganization(orgId: string, options: OptionsBase) {
 
     if (isCancel(shouldContinue) || shouldContinue === 'no') {
       log.error('Canceled deleting the organization')
-      program.error('')
+      throw new Error('Organization deletion cancelled')
     }
   }
 
-  // Final confirmation
-  const confirmDelete = await confirmC({
-    message: `Are you sure you want to delete organization "${orgData.name}"? This action cannot be undone.`,
-  })
+  if (!silent && !enrichedOptions.autoConfirm) {
+    const confirmDelete = await confirmC({
+      message: `Are you sure you want to delete organization "${orgData.name}"? This action cannot be undone.`,
+    })
 
-  if (isCancel(confirmDelete) || !confirmDelete) {
-    log.error('Canceled deleting the organization')
-    program.error('')
+    if (isCancel(confirmDelete) || !confirmDelete) {
+      log.error('Canceled deleting the organization')
+      throw new Error('Organization deletion cancelled')
+    }
   }
 
-  log.info(`Deleting organization "${orgData.name}"`)
+  if (!silent)
+    log.info(`Deleting organization "${orgData.name}"`)
 
-  // Delete organization (cascading deletes should handle related records)
   const { error: dbError } = await supabase
     .from('orgs')
     .delete()
     .eq('id', orgId)
 
   if (dbError) {
-    log.error(`Could not delete organization ${formatError(dbError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not delete organization ${formatError(dbError)}`)
+    throw new Error(`Could not delete organization: ${formatError(dbError)}`)
   }
 
-  await sendEvent(options.apikey, {
+  await sendEvent(enrichedOptions.apikey, {
     channel: 'organization',
     event: 'Organization Deleted',
     icon: '🗑️',
@@ -93,9 +115,16 @@ export async function deleteOrganization(orgId: string, options: OptionsBase) {
       'org-name': orgData.name,
     },
     notify: false,
-  }).catch()
+  }).catch(() => {})
 
-  log.success(`Organization "${orgData.name}" deleted from Capgo`)
-  outro('Done ✅')
-  exit()
+  if (!silent) {
+    log.success(`Organization "${orgData.name}" deleted from Capgo`)
+    outro('Done ✅')
+  }
+
+  return true
+}
+
+export async function deleteOrganization(orgId: string, options: DeleteOrganizationOptions) {
+  await deleteOrganizationInternal(orgId, options, false)
 }

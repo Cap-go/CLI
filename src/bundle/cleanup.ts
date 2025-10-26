@@ -89,7 +89,7 @@ export async function cleanupBundle(appId: string, options: Options, silent = fa
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
 
   if (!silent)
     log.info('Querying all available versions in Capgo')

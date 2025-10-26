@@ -2,7 +2,6 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
 import { log } from '@clack/prompts'
-import { program } from 'commander'
 import { getPMAndCommand, isAllowedAppOrg, OrganizationPerm } from '../utils'
 
 export async function checkAppExists(supabase: SupabaseClient<Database>, appid: string) {
@@ -12,25 +11,34 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
   return !!app
 }
 
-export async function checkAppExistsAndHasPermissionOrgErr(supabase: SupabaseClient<Database>, apikey: string, appid: string, requiredPermission: OrganizationPerm) {
+export async function checkAppExistsAndHasPermissionOrgErr(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  appid: string,
+  requiredPermission: OrganizationPerm,
+  silent = false,
+) {
   const pm = getPMAndCommand()
   const permissions = await isAllowedAppOrg(supabase, apikey, appid)
   if (!permissions.okay) {
     switch (permissions.error) {
       case 'INVALID_APIKEY': {
-        log.error('Invalid apikey, such apikey does not exists!')
-        program.error('')
-        break
+        const msg = 'Invalid apikey, such apikey does not exists!'
+        if (!silent)
+          log.error(msg)
+        throw new Error(msg)
       }
       case 'NO_APP': {
-        log.error(`App ${appid} does not exist, run first \`${pm.runner} @capgo/cli app add ${appid}\` to create it`)
-        program.error('')
-        break
+        const msg = `App ${appid} does not exist, run first \`${pm.runner} @capgo/cli app add ${appid}\` to create it`
+        if (!silent)
+          log.error(msg)
+        throw new Error(msg)
       }
       case 'NO_ORG': {
-        log.error('Could not find organization, please contact support to resolve this!')
-        program.error('')
-        break
+        const msg = 'Could not find organization, please contact support to resolve this!'
+        if (!silent)
+          log.error(msg)
+        throw new Error(msg)
       }
     }
   }
@@ -39,8 +47,10 @@ export async function checkAppExistsAndHasPermissionOrgErr(supabase: SupabaseCli
   const requiredPermNumber = requiredPermission as number
 
   if (requiredPermNumber > remotePermNumber) {
-    log.error(`Insuficcent permissions for app ${appid}. Current permission: ${OrganizationPerm[permissions.data]}, required for this action: ${OrganizationPerm[requiredPermission]}.`)
-    program.error('')
+    const msg = `Insuficcent permissions for app ${appid}. Current permission: ${OrganizationPerm[permissions.data]}, required for this action: ${OrganizationPerm[requiredPermission]}.`
+    if (!silent)
+      log.error(msg)
+    throw new Error(msg)
   }
 
   return permissions.data

@@ -46,7 +46,7 @@ export async function currentBundle(channel: string, appId: string, options: Opt
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent)
 
   if (!channel) {
     if (!silent)

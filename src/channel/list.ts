@@ -27,7 +27,7 @@ export async function listChannels(appId: string, options: OptionsBase, silent =
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent)
 
   if (!silent)
     log.info('Querying available channels in Capgo')

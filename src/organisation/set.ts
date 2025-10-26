@@ -1,7 +1,5 @@
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { intro, isCancel, log, outro, text } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -16,26 +14,40 @@ interface OptionsOrganization extends OptionsBase {
   email?: string
 }
 
-export async function setOrganization(orgId: string, options: OptionsOrganization) {
-  intro(`Updating organization`)
+export async function setOrganizationInternal(
+  orgId: string,
+  options: OptionsOrganization,
+  silent = false,
+) {
+  if (!silent)
+    intro('Updating organization')
 
   await checkAlerts()
-  options.apikey = options.apikey || findSavedKey()
 
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide an API key to update an organization')
-    program.error('')
+  const enrichedOptions: OptionsOrganization = {
+    ...options,
+    apikey: options.apikey || findSavedKey(),
+  }
+
+  if (!enrichedOptions.apikey) {
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to update an organization')
+    throw new Error('Missing API key')
   }
 
   if (!orgId) {
-    log.error('Missing argument, you need to provide an organization ID')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide an organization ID')
+    throw new Error('Missing organization id')
   }
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-  await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const supabase = await createSupabaseClient(
+    enrichedOptions.apikey,
+    enrichedOptions.supaHost,
+    enrichedOptions.supaAnon,
+  )
+  await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
 
-  // Get current organization data
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')
     .select('name, management_email, created_by')
@@ -43,12 +55,14 @@ export async function setOrganization(orgId: string, options: OptionsOrganizatio
     .single()
 
   if (orgError || !orgData) {
-    log.error(`Cannot get organization details ${formatError(orgError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Cannot get organization details ${formatError(orgError)}`)
+    throw new Error(`Cannot get organization details: ${formatError(orgError)}`)
   }
 
-  let { name, email } = options
-  if (!name) {
+  let { name, email } = enrichedOptions
+
+  if (!silent && !name) {
     const nameInput = await text({
       message: 'New organization name:',
       placeholder: orgData.name || 'My Organization',
@@ -56,12 +70,12 @@ export async function setOrganization(orgId: string, options: OptionsOrganizatio
 
     if (isCancel(nameInput)) {
       log.error('Canceled updating organization')
-      program.error('')
+      throw new Error('Organization update cancelled')
     }
     name = nameInput as string
   }
 
-  if (!email) {
+  if (!silent && !email) {
     const emailInput = await text({
       message: 'Management email:',
       placeholder: orgData.management_email || 'admin@example.com',
@@ -69,17 +83,19 @@ export async function setOrganization(orgId: string, options: OptionsOrganizatio
 
     if (isCancel(emailInput)) {
       log.error('Canceled updating organization')
-      program.error('')
+      throw new Error('Organization update cancelled')
     }
     email = emailInput as string
   }
 
   if (!name || !email) {
-    log.error('Missing arguments, you need to provide an organization name and management email')
-    program.error('')
+    if (!silent)
+      log.error('Missing arguments, you need to provide an organization name and management email')
+    throw new Error('Missing organization name or management email')
   }
 
-  log.info(`Updating organization "${orgId}"`)
+  if (!silent)
+    log.info(`Updating organization "${orgId}"`)
 
   const { error: dbError } = await supabase
     .from('orgs')
@@ -90,11 +106,12 @@ export async function setOrganization(orgId: string, options: OptionsOrganizatio
     .eq('id', orgId)
 
   if (dbError) {
-    log.error(`Could not update organization ${formatError(dbError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not update organization ${formatError(dbError)}`)
+    throw new Error(`Could not update organization: ${formatError(dbError)}`)
   }
 
-  await sendEvent(options.apikey, {
+  await sendEvent(enrichedOptions.apikey, {
     channel: 'organization',
     event: 'Organization Updated',
     icon: '✏️',
@@ -103,9 +120,16 @@ export async function setOrganization(orgId: string, options: OptionsOrganizatio
       'org-name': name,
     },
     notify: false,
-  }).catch()
+  }).catch(() => {})
 
-  log.success(`Organization updated`)
-  outro('Done ✅')
-  exit()
+  if (!silent) {
+    log.success('Organization updated')
+    outro('Done ✅')
+  }
+
+  return { orgId, name, email }
+}
+
+export async function setOrganization(orgId: string, options: OptionsOrganization) {
+  await setOrganizationInternal(orgId, options, false)
 }

@@ -41,7 +41,7 @@ export async function deleteApp(
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.super_admin)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.super_admin, silent)
 
   const { data: appOwnerRaw, error: appOwnerError } = await supabase.from('apps')
     .select('owner_org ( created_by, id )')

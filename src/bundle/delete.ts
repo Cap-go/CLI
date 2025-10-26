@@ -37,7 +37,7 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
 
   if (!silent) {
     log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)

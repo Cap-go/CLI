@@ -42,7 +42,7 @@ export async function addChannel(channelId: string, appId: string, options: Opti
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
 
   if (!silent)
     log.info(`Creating channel ${appId}#${channelId} to Capgo`)

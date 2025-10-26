@@ -1,8 +1,6 @@
 import type { OptionsBase, Organization } from '../utils'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { program } from 'commander'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -11,11 +9,15 @@ import {
   verifyUser,
 } from '../utils'
 
-function displayOrganizations(data: Organization[]) {
+function displayOrganizations(data: Organization[], silent: boolean) {
+  if (silent)
+    return
+
   if (!data.length) {
     log.error('No organizations found')
     return
   }
+
   const t = new Table()
   t.headers = ['Name', 'ID', 'Role', 'Apps']
   t.rows = []
@@ -33,32 +35,52 @@ function displayOrganizations(data: Organization[]) {
   log.success(t.toString())
 }
 
-export async function listOrganizations(options: OptionsBase) {
-  intro(`List organizations`)
+export async function listOrganizationsInternal(options: OptionsBase, silent = false) {
+  if (!silent)
+    intro('List organizations')
 
   await checkAlerts()
-  options.apikey = options.apikey || findSavedKey()
 
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide an API key to list organizations')
-    program.error('')
+  const enrichedOptions: OptionsBase = {
+    ...options,
+    apikey: options.apikey || findSavedKey(),
   }
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-  await verifyUser(supabase, options.apikey, ['read', 'write', 'all'])
+  if (!enrichedOptions.apikey) {
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to list organizations')
+    throw new Error('Missing API key')
+  }
 
-  log.info('Getting organizations from Capgo')
+  const supabase = await createSupabaseClient(
+    enrichedOptions.apikey,
+    enrichedOptions.supaHost,
+    enrichedOptions.supaAnon,
+  )
+  await verifyUser(supabase, enrichedOptions.apikey, ['read', 'write', 'all'])
 
-  const { error, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v6')
+  if (!silent)
+    log.info('Getting organizations from Capgo')
+
+  const { error, data: allOrganizations } = await supabase.rpc('get_orgs_v6')
 
   if (error) {
-    log.error(`Cannot get organizations ${formatError(error)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Cannot get organizations ${formatError(error)}`)
+    throw new Error(`Cannot get organizations: ${formatError(error)}`)
   }
 
-  log.info(`Organizations found: ${allOrganizations?.length || 0}`)
-  displayOrganizations(allOrganizations || [])
-  outro('Done ✅')
-  exit()
+  const organizations = allOrganizations || []
+
+  if (!silent) {
+    log.info(`Organizations found: ${organizations.length}`)
+    displayOrganizations(organizations, silent)
+    outro('Done ✅')
+  }
+
+  return organizations
+}
+
+export async function listOrganizations(options: OptionsBase) {
+  await listOrganizationsInternal(options, false)
 }

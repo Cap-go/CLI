@@ -1,7 +1,5 @@
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { intro, isCancel, log, outro, text } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -16,22 +14,33 @@ interface OptionsOrganization extends OptionsBase {
   email?: string
 }
 
-export async function addOrganization(options: OptionsOrganization) {
-  intro(`Adding organization`)
+export async function addOrganizationInternal(options: OptionsOrganization, silent = false) {
+  if (!silent)
+    intro('Adding organization')
 
   await checkAlerts()
-  options.apikey = options.apikey || findSavedKey()
 
-  if (!options.apikey) {
-    log.error('Missing API key, you need to provide an API key to add an organization')
-    program.error('')
+  const enrichedOptions: OptionsOrganization = {
+    ...options,
+    apikey: options.apikey || findSavedKey(),
   }
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  if (!enrichedOptions.apikey) {
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to add an organization')
+    throw new Error('Missing API key')
+  }
 
-  let { name, email } = options
-  if (!name) {
+  const supabase = await createSupabaseClient(
+    enrichedOptions.apikey,
+    enrichedOptions.supaHost,
+    enrichedOptions.supaAnon,
+  )
+  const userId = await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
+
+  let { name, email } = enrichedOptions
+
+  if (!silent && !name) {
     const nameInput = await text({
       message: 'Organization name:',
       placeholder: 'My Organization',
@@ -39,12 +48,12 @@ export async function addOrganization(options: OptionsOrganization) {
 
     if (isCancel(nameInput)) {
       log.error('Canceled adding organization')
-      program.error('')
+      throw new Error('Organization creation cancelled')
     }
     name = nameInput as string
   }
 
-  if (!email) {
+  if (!silent && !email) {
     const emailInput = await text({
       message: 'Management email:',
       placeholder: 'admin@example.com',
@@ -52,17 +61,19 @@ export async function addOrganization(options: OptionsOrganization) {
 
     if (isCancel(emailInput)) {
       log.error('Canceled adding organization')
-      program.error('')
+      throw new Error('Organization creation cancelled')
     }
     email = emailInput as string
   }
 
   if (!name || !email) {
-    log.error('Missing arguments, you need to provide an organization name and management email')
-    program.error('')
+    if (!silent)
+      log.error('Missing arguments, you need to provide an organization name and management email')
+    throw new Error('Missing organization name or management email')
   }
 
-  log.info(`Adding organization "${name}" to Capgo`)
+  if (!silent)
+    log.info(`Adding organization "${name}" to Capgo`)
 
   const { data: orgData, error: dbError } = await supabase
     .from('orgs')
@@ -75,11 +86,12 @@ export async function addOrganization(options: OptionsOrganization) {
     .single()
 
   if (dbError) {
-    log.error(`Could not add organization ${formatError(dbError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not add organization ${formatError(dbError)}`)
+    throw new Error(`Could not add organization: ${formatError(dbError)}`)
   }
 
-  await sendEvent(options.apikey, {
+  await sendEvent(enrichedOptions.apikey, {
     channel: 'organization',
     event: 'Organization Created',
     icon: '🏢',
@@ -88,9 +100,16 @@ export async function addOrganization(options: OptionsOrganization) {
       'org-name': name,
     },
     notify: false,
-  }).catch()
+  }).catch(() => {})
 
-  log.success(`Organization "${name}" added to Capgo`)
-  outro('Done ✅')
-  exit()
+  if (!silent) {
+    log.success(`Organization "${name}" added to Capgo`)
+    outro('Done ✅')
+  }
+
+  return orgData
+}
+
+export async function addOrganization(options: OptionsOrganization) {
+  await addOrganizationInternal(options, false)
 }

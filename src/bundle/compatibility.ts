@@ -1,10 +1,18 @@
 import type { OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { program } from 'commander'
-// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkCompatibility, createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, isCompatible, OrganizationPerm, verifyUser } from '../utils'
+import {
+  checkCompatibility,
+  createSupabaseClient,
+  findSavedKey,
+  formatError,
+  getAppId,
+  getConfig,
+  isCompatible,
+  OrganizationPerm,
+  verifyUser,
+} from '../utils'
 
 interface Options extends OptionsBase {
   channel?: string
@@ -13,63 +21,98 @@ interface Options extends OptionsBase {
   nodeModules?: string
 }
 
-export async function checkCompatibilityCommand(appId: string, options: Options) {
-  intro(`Check compatibility`)
-  try {
-    options.apikey = options.apikey || findSavedKey()
-    const extConfig = await getConfig()
-    appId = getAppId(appId, extConfig?.config)
+interface CompatibilityResult {
+  finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
+}
 
-    const { channel } = options
+export async function checkCompatibilityCommandInternal(
+  appId: string,
+  options: Options,
+  silent = false,
+): Promise<CompatibilityResult> {
+  if (!silent)
+    intro('Check compatibility')
 
-    if (!channel) {
+  const enrichedOptions: Options = {
+    ...options,
+    apikey: options.apikey || findSavedKey(),
+  }
+
+  const extConfig = await getConfig()
+  const resolvedAppId = getAppId(appId, extConfig?.config)
+  const channel = enrichedOptions.channel
+
+  if (!channel) {
+    if (!silent)
       log.error('Missing argument, you need to provide a channel')
-      program.error('')
-    }
+    throw new Error('Missing channel')
+  }
 
-    if (!options.apikey) {
+  if (!enrichedOptions.apikey) {
+    if (!silent)
       log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
-    }
-    if (!appId) {
-      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-      program.error('')
-    }
+    throw new Error('Missing API key')
+  }
 
-    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-    await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
+  if (!resolvedAppId) {
+    if (!silent)
+      log.error('Missing argument, you need to provide an appId, or be in a capacitor project')
+    throw new Error('Missing appId')
+  }
 
-    // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
+  const supabase = await createSupabaseClient(
+    enrichedOptions.apikey,
+    enrichedOptions.supaHost,
+    enrichedOptions.supaAnon,
+  )
 
-    // const hashedLocalDependencies = new Map(dependenciesObject
-    //     .filter((a) => !!a.native && a.native !== undefined)
-    //     .map((a) => [a.name, a]))
+  await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all', 'read', 'upload'])
+  await checkAppExistsAndHasPermissionOrgErr(
+    supabase,
+    enrichedOptions.apikey,
+    resolvedAppId,
+    OrganizationPerm.read,
+    silent,
+  )
 
-    // const nativePackages = Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version }))
-    // await supabase.from('app_versions').update({ native_packages: nativePackages }).eq('id', '9654')
+  const compatibility = await checkCompatibility(
+    supabase,
+    resolvedAppId,
+    channel,
+    enrichedOptions.packageJson,
+    enrichedOptions.nodeModules,
+  )
 
-    const { finalCompatibility } = await checkCompatibility(supabase, appId, channel, options.packageJson, options.nodeModules)
+  if (!silent) {
+    const table = new Table()
+    table.headers = ['Package', 'Local version', 'Remote version', 'Compatible']
+    table.theme = Table.roundTheme
+    table.rows = []
 
-    const t = new Table()
-    t.headers = ['Package', 'Local version', 'Remote version', 'Compatible']
-    t.theme = Table.roundTheme
-    t.rows = []
+    const yesSymbol = enrichedOptions.text ? 'Yes' : '✅'
+    const noSymbol = enrichedOptions.text ? 'No' : '❌'
 
-    const yesSymbol = options.text ? 'Yes' : '✅'
-    const noSymbol = options.text ? 'No' : '❌'
-
-    for (const data of finalCompatibility) {
-      const { name, localVersion, remoteVersion } = data
-      const compatible = isCompatible(data) ? yesSymbol : noSymbol
-      t.rows.push([name, localVersion, remoteVersion, compatible])
+    for (const entry of compatibility.finalCompatibility) {
+      const { name, localVersion, remoteVersion } = entry
+      const compatible = isCompatible(entry) ? yesSymbol : noSymbol
+      table.rows.push([name, localVersion, remoteVersion, compatible])
     }
 
     log.success('Compatibility')
-    log.success(t.toString())
+    log.success(table.toString())
   }
-  catch (err) {
-    log.error(`Error checking compatibility ${formatError(err)}`)
-    program.error('')
+
+  return {
+    finalCompatibility: compatibility.finalCompatibility,
+  }
+}
+
+export async function checkCompatibilityCommand(appId: string, options: Options) {
+  try {
+    await checkCompatibilityCommandInternal(appId, options, false)
+  }
+  catch (error) {
+    log.error(`Error checking compatibility ${formatError(error)}`)
+    throw error
   }
 }
