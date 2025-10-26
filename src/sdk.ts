@@ -108,6 +108,8 @@ export interface UploadOptions {
   packageJsonPaths?: string
   /** Ignore compatibility checks */
   ignoreCompatibilityCheck?: boolean
+  /** Disable code check for notifyAppReady() */
+  disableCodeCheck?: boolean
 }
 
 export interface UploadResult {
@@ -475,7 +477,7 @@ export class CapgoSDK {
         selfAssign: options.selfAssign,
         packageJson: options.packageJsonPaths,
         ignoreMetadataCheck: options.ignoreCompatibilityCheck,
-        codeCheck: true, // always check by default in SDK
+        codeCheck: !options.disableCodeCheck, // disable if requested, otherwise check
       }
 
       // Call internal upload function but suppress CLI behaviors
