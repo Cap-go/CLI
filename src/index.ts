@@ -1,3 +1,4 @@
+import { exit } from 'node:process'
 import { program } from 'commander'
 import pack from '../package.json'
 import { addCommand } from './app/add'
@@ -527,4 +528,8 @@ program
     generateDocs(filePath, options.folder)
   })
 
-program.parseAsync()
+program.exitOverride()
+
+program.parseAsync().catch(() => {
+  exit(1)
+})
