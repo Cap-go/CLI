@@ -2,13 +2,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { Options } from '../api/app'
 import type { Database } from '../types/supabase.types'
-import type {
-  Organization,
-} from '../utils'
+import type { Organization } from '../utils'
 import { existsSync, readFileSync } from 'node:fs'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAppExists, newIconPath } from '../api/app'
 import { checkAlerts } from '../api/update'
 import {
@@ -22,58 +18,71 @@ import {
   verifyUser,
 } from '../utils'
 
-export async function addApp(appId: string, options: Options, throwErr = true) {
-  await addAppInternal(appId, options, undefined, throwErr)
-}
-
-function checkOptions(appId: string, options: Options) {
+function ensureOptions(appId: string, options: Options, silent: boolean) {
   if (!options.apikey) {
-    log.error(`Missing API key, you need to provide an API key to upload your bundle`)
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to upload your bundle')
+    throw new Error('Missing API key')
   }
+
   if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
 
   if (appId.includes('--')) {
-    log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
-    program.error('')
+    if (!silent)
+      log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
+    throw new Error('App id includes illegal symbols')
   }
 }
 
-async function checkAppExist(supabase: SupabaseClient<Database>, appId: string) {
+async function ensureAppDoesNotExist(
+  supabase: SupabaseClient<Database>,
+  appId: string,
+  silent: boolean,
+) {
   const appExist = await checkAppExists(supabase, appId)
-  if (!appExist) {
+  if (!appExist)
     return
-  }
+
   if (appId === 'io.ionic.starter') {
-    // Prevent users from using the default appId
-    log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
+    if (!silent)
+      log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
+    throw new Error('Reserved appId, please change it in capacitor config')
   }
-  else {
+
+  if (!silent)
     log.error(`App ${appId} already exist`)
-  }
-  program.error('')
+  throw new Error(`App ${appId} already exists`)
 }
 
-export async function addAppInternal(appId: string, options: Options, organization?: Organization, throwErr = true) {
-  if (throwErr)
-    intro(`Adding`)
+export async function addApp(appId: string, options: Options, silent = false) {
+  return addAppInternal(appId, options, undefined, silent)
+}
+
+export async function addAppInternal(
+  initialAppId: string,
+  options: Options,
+  organization?: Organization,
+  silent = false,
+) {
+  if (!silent)
+    intro('Adding')
 
   await checkAlerts()
+
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()
-  appId = getAppId(appId, extConfig?.config)
+  const appId = getAppId(initialAppId, extConfig?.config)
 
-  checkOptions(appId, options)
+  ensureOptions(appId, options, silent)
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  const supabase = await createSupabaseClient(options.apikey!, options.supaHost, options.supaAnon)
+  const userId = await verifyUser(supabase, options.apikey!, ['write', 'all'])
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-
-  // Check we have app access to this appId
-  await checkAppExist(supabase, appId)
+  await ensureAppDoesNotExist(supabase, appId, silent)
 
   if (!organization)
     organization = await getOrganization(supabase, ['admin', 'super_admin'])
@@ -82,12 +91,15 @@ export async function addAppInternal(appId: string, options: Options, organizati
 
   let { name, icon } = options
   name = name || extConfig.config?.appName || 'Unknown'
-  icon = icon || 'resources/icon.png' // default path for capacitor app
+  icon = icon || 'resources/icon.png'
+
   if (!icon || !name) {
-    log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
+    throw new Error('Missing app name or icon path')
   }
-  if (throwErr)
+
+  if (!silent)
     log.info(`Adding ${appId} to Capgo`)
 
   let iconBuff: Buffer | null = null
@@ -97,40 +109,43 @@ export async function addAppInternal(appId: string, options: Options, organizati
     iconBuff = readFileSync(icon)
     const contentType = getContentType(icon)
     iconType = contentType || 'image/png'
-    log.warn(`Found app icon ${icon}`)
+    if (!silent)
+      log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
     const contentType = getContentType(newIconPath)
     iconType = contentType || 'image/png'
-    log.warn(`Found app icon ${newIconPath}`)
+    if (!silent)
+      log.warn(`Found app icon ${newIconPath}`)
   }
-  else {
+  else if (!silent) {
     log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
 
-  const fileName = `icon`
+  const fileName = 'icon'
   let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
 
-  // upload image if available
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
       .from(`images/org/${organizationUid}/${appId}`)
-      .upload(fileName, iconBuff, {
-        contentType: iconType,
-      })
+      .upload(fileName, iconBuff, { contentType: iconType })
+
     if (error) {
-      console.error(error)
-      log.error(`Could not add app ${formatError(error)}`)
-      program.error('')
+      if (!silent)
+        console.error(error)
+      if (!silent)
+        log.error(`Could not add app ${formatError(error)}`)
+      throw new Error(`Could not add app ${formatError(error)}`)
     }
-    const { data: signedURLData } = await supabase
-      .storage
+
+    const { data: signedURLData } = await supabase.storage
       .from(`images/org/${organizationUid}/${appId}`)
       .getPublicUrl(fileName)
+
     signedURL = signedURLData?.publicUrl || signedURL
   }
-  // add app to db
+
   const { error: dbError } = await supabase
     .from('apps')
     .insert({
@@ -140,35 +155,50 @@ export async function addAppInternal(appId: string, options: Options, organizati
       name,
       app_id: appId,
     })
+
   if (dbError) {
-    log.error(`Could not add app ${formatError(dbError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not add app ${formatError(dbError)}`)
+    throw new Error(`Could not add app ${formatError(dbError)}`)
   }
+
   const { error: dbVersionError } = await supabase
     .from('app_versions')
-    .insert([{
-      owner_org: organizationUid,
-      deleted: true,
-      name: 'unknown',
-      app_id: appId,
-    }, {
-      owner_org: organizationUid,
-      deleted: true,
-      name: 'builtin',
-      app_id: appId,
-    }])
+    .insert([
+      {
+        owner_org: organizationUid,
+        deleted: true,
+        name: 'unknown',
+        app_id: appId,
+      },
+      {
+        owner_org: organizationUid,
+        deleted: true,
+        name: 'builtin',
+        app_id: appId,
+      },
+    ])
+
   if (dbVersionError) {
-    log.error(`Could not add app ${formatError(dbVersionError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not add app ${formatError(dbVersionError)}`)
+    throw new Error(`Could not add app ${formatError(dbVersionError)}`)
   }
-  log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
-  if (throwErr) {
-    outro(`Done ✅`)
-    exit()
+
+  if (!silent) {
+    log.success(`App ${appId} added to Capgo. You can upload a bundle now`)
+    outro('Done ✅')
   }
-  return true
+
+  return {
+    appId,
+    organizationUid,
+    userId,
+    name,
+    signedURL,
+  }
 }
 
-export async function addCommand(apikey: string, options: Options) {
-  addApp(apikey, options, true)
+export async function addCommand(appId: string, options: Options) {
+  await addApp(appId, options, false)
 }

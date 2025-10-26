@@ -1,5 +1,4 @@
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { writeConfigUpdater } from '../config'
 import { formatError, getConfig } from '../utils'
@@ -9,22 +8,26 @@ interface Options extends OptionsBase {
   string?: string
 }
 
-export async function setSetting(setting: string, options: Options) {
-  intro(`Set a specific setting in capacitor config`)
+export async function setSetting(setting: string, options: Options, silent = false) {
+  if (!silent)
+    intro('Set a specific setting in capacitor config')
 
   if (options.bool && options.string) {
-    log.error(`Bool and string CANNOT be set at the same time`)
-    exit(1)
+    if (!silent)
+      log.error('Bool and string CANNOT be set at the same time')
+    throw new Error('Bool and string cannot both be provided')
   }
 
   if (!options.bool && !options.string) {
-    log.error(`You MUST provide either bool or string as the value`)
-    exit(1)
+    if (!silent)
+      log.error('You MUST provide either bool or string as the value')
+    throw new Error('Either bool or string value is required')
   }
 
   if (options.bool && options.bool !== 'true' && options.bool !== 'false') {
-    log.error(`Invalid bool`)
-    exit(1)
+    if (!silent)
+      log.error('Invalid bool')
+    throw new Error('Invalid bool value; expected true or false')
   }
 
   try {
@@ -33,14 +36,14 @@ export async function setSetting(setting: string, options: Options) {
     const pathElements = setting.split('.')
 
     if (pathElements.length === 0) {
-      log.error(`Invalid path`)
-      exit(1)
+      if (!silent)
+        log.error('Invalid path')
+      throw new Error('Invalid config path')
     }
 
     for (const path of pathElements.slice(0, -1)) {
-      if (!Object.prototype.hasOwnProperty.call(baseObj, path)) {
+      if (!Object.prototype.hasOwnProperty.call(baseObj, path))
         baseObj[path] = {}
-      }
       baseObj = baseObj[path]
     }
 
@@ -48,12 +51,16 @@ export async function setSetting(setting: string, options: Options) {
 
     baseObj[pathElements.at(-1)!] = finalValue
     await writeConfigUpdater(config, true)
-    log.success(`Set "${setting}" to "${finalValue}"`)
+
+    if (!silent)
+      log.success(`Set "${setting}" to "${finalValue}"`)
   }
   catch (error) {
-    log.error(`Cannot set config in capacitor settings ${formatError(error)}`)
-    exit(1)
+    if (!silent)
+      log.error(`Cannot set config in capacitor settings ${formatError(error)}`)
+    throw new Error(`Cannot set capacitor config: ${formatError(error)}`)
   }
 
-  outro(`Done ✅`)
+  if (!silent)
+    outro('Done ✅')
 }

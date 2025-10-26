@@ -1,9 +1,7 @@
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { program } from 'commander'
 import ky from 'ky'
 import { checkAlerts } from '../api/update'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
@@ -36,10 +34,11 @@ export async function markSnag(channel: string, orgId: string, apikey: string, e
 }
 
 export async function cancelCommand(channel: string, command: boolean | symbol, orgId: string, apikey: string) {
-  if (isCancel(command)) {
-    await markSnag(channel, orgId, apikey, 'canceled', '🤷')
-    exit()
-  }
+  if (!isCancel(command))
+    return
+
+  await markSnag(channel, orgId, apikey, 'canceled', undefined, '🤷')
+  throw new Error('Command cancelled')
 }
 
 interface Order {
@@ -227,8 +226,9 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   return Promise.resolve()
 }
 
-export async function debugApp(appId: string, options: OptionsBaseDebug) {
-  intro(`Debug Live update in Capgo`)
+export async function debugApp(appId: string, options: OptionsBaseDebug, silent = false) {
+  if (!silent)
+    intro('Debug Live update in Capgo')
 
   await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
@@ -236,13 +236,18 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   appId = getAppId(appId, extConfig?.config)
   const deviceId = options.device
   if (!options.apikey) {
-    log.error(`Missing API key, you need to provide an API key to delete your app`)
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to delete your app')
+    throw new Error('Missing API key')
   }
   if (!appId) {
-    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
+
+  if (silent)
+    throw new Error('Debug command requires an interactive terminal')
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const orgId = await getOrganizationId(supabase, appId)
@@ -250,13 +255,14 @@ export async function debugApp(appId: string, options: OptionsBaseDebug) {
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, orgId, options.apikey)
   if (doRun) {
-    log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
+    if (!silent)
+      log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
     await waitLog('debug', options.apikey, appId, orgId, deviceId)
-    outro(`Done ✅`)
+    if (!silent)
+      outro('Done ✅')
   }
   else {
-    outro(`Canceled ❌`)
+    if (!silent)
+      outro('Canceled ❌')
   }
-  outro(`Done ✅`)
-  exit()
 }

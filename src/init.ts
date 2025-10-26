@@ -112,7 +112,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
   if (doAdd) {
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${appId}`)
-    const addRes = await addAppInternal(appId, options, organization, false)
+    const addRes = await addAppInternal(appId, options, organization, true)
     if (!addRes)
       s.stop(`App already add ✅`)
     else
@@ -135,7 +135,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     const addChannelRes = await addChannel(defaultChannel, appId, {
       default: true,
       apikey,
-    }, false)
+    }, true)
     if (!addChannelRes)
       s.stop(`Channel already added ✅`)
     else

@@ -317,7 +317,7 @@ export class CapgoSDK {
         icon: options.icon,
       }
 
-      await addAppInternal(options.appId, internalOptions, undefined, false)
+      await addAppInternal(options.appId, internalOptions, undefined, true)
 
       return { success: true }
     }
@@ -355,7 +355,7 @@ export class CapgoSDK {
         retention: options.retention,
       }
 
-      await setAppInternal(options.appId, internalOptions, false)
+      await setAppInternal(options.appId, internalOptions, true)
 
       return { success: true }
     }
@@ -560,7 +560,7 @@ export class CapgoSDK {
         bundle: bundleId,
       }
 
-      await deleteBundleInternal(bundleId, appId, internalOptions, false)
+      await deleteBundleInternal(bundleId, appId, internalOptions, true)
 
       return { success: true }
     }
@@ -597,7 +597,7 @@ export class CapgoSDK {
         ignoreChannel: options.ignoreChannel || false,
       }
 
-      const result = await cleanupBundleInternal(options.appId, internalOptions, false)
+      const result = await cleanupBundleInternal(options.appId, internalOptions, true)
 
       return {
         success: true,
@@ -638,7 +638,7 @@ export class CapgoSDK {
         selfAssign: options.selfAssign,
       }
 
-      await addChannelInternal(options.channelId, options.appId, internalOptions, false)
+      await addChannelInternal(options.channelId, options.appId, internalOptions, true)
 
       return { success: true }
     }
@@ -683,7 +683,7 @@ export class CapgoSDK {
         ignoreMetadataCheck: false,
       }
 
-      await setChannelInternal(options.channelId, options.appId, internalOptions, false)
+      await setChannelInternal(options.channelId, options.appId, internalOptions, true)
 
       return { success: true }
     }
@@ -713,7 +713,7 @@ export class CapgoSDK {
         successIfNotFound: false,
       }
 
-      await deleteChannelInternal(channelId, appId, internalOptions, false)
+      await deleteChannelInternal(channelId, appId, internalOptions, true)
 
       return { success: true }
     }
@@ -746,7 +746,7 @@ export class CapgoSDK {
         supaAnon: this.supaAnon,
       }
 
-      const channels = await listChannelsInternal(appId, internalOptions, false)
+      const channels = await listChannelsInternal(appId, internalOptions, true)
 
       const channelInfos: ChannelInfo[] = channels.map((channel: any) => ({
         id: channel.id.toString(),

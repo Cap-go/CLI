@@ -1,48 +1,46 @@
 import type { OptionsBase } from '../utils'
-import { exit } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { program } from 'commander'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkAlerts } from '../api/update'
 import { displayBundles, getActiveAppVersions } from '../api/versions'
-import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
-export async function listBundle(appId: string, options: OptionsBase) {
-  intro(`List bundles`)
-  try {
-    await checkAlerts()
-    options.apikey = options.apikey || findSavedKey()
-    const extConfig = await getConfig()
-    appId = getAppId(appId, extConfig?.config)
-    if (!options.apikey) {
+export async function listBundle(appId: string, options: OptionsBase, silent = false) {
+  if (!silent)
+    intro('List bundles')
+
+  await checkAlerts()
+  options.apikey = options.apikey || findSavedKey()
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
+
+  if (!options.apikey) {
+    if (!silent)
       log.error('Missing API key, you need to provide an API key to upload your bundle')
-      program.error('')
-    }
-    if (!appId) {
+    throw new Error('Missing API key')
+  }
+
+  if (!appId) {
+    if (!silent)
       log.error('Missing argument, you need to provide a appid, or be in a capacitor project')
-      program.error('')
-    }
+    throw new Error('Missing appId')
+  }
 
-    const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
-    await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
+  await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
+  if (!silent)
     log.info(`Querying available versions of: ${appId} in Capgo`)
 
-    // Check we have app access to this appId
-    await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
+  const allVersions = await getActiveAppVersions(supabase, appId)
 
-    // Get all active app versions we might possibly be able to cleanup
-    const allVersions = await getActiveAppVersions(supabase, appId)
-
-    log.info(`Active versions in Capgo: ${allVersions?.length}`)
-
+  if (!silent) {
+    log.info(`Active versions in Capgo: ${allVersions?.length ?? 0}`)
     displayBundles(allVersions)
-    outro(`Done ✅`)
-    exit()
+    outro('Done ✅')
   }
-  catch (err) {
-    log.error(`Error listing bundles ${formatError(err)}`)
-    program.error('')
-  }
+
+  return allVersions
 }

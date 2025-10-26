@@ -64,7 +64,10 @@ This command helps diagnose issues with your setup.
 
 Example: npx @capgo/cli@latest doctor`)
   .option('--package-json <packageJson>', optionDescriptions.packageJson)
-  .action(getInfo)
+  .action(async (...args) => {
+    const options = args.at(-1)
+    await getInfo(options)
+  })
 
 program
   .command('login [apikey]')
@@ -179,7 +182,9 @@ bundle
   .description(`📋 List all bundles uploaded for an app in Capgo Cloud.
 
 Example: npx @capgo/cli@latest bundle list com.example.app`)
-  .action(listBundle)
+  .action(async (appId: string, options: any) => {
+    await listBundle(appId, options)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -379,7 +384,9 @@ channel
   .description(`📦 Get the current bundle linked to a specific channel in Capgo Cloud for update tracking.
 
 Example: npx @capgo/cli@latest channel currentBundle production com.example.app`)
-  .action(currentBundle)
+  .action(async (channelId: string, appId: string, options: any) => {
+    await currentBundle(channelId, appId, options)
+  })
   .option('-c, --channel <channel>', `Channel to get the current bundle from`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--quiet', `Only print the bundle version`)

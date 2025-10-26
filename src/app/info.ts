@@ -1,96 +1,105 @@
 import { platform, version } from 'node:os'
-import { exit, version as nodeVersion } from 'node:process'
+import { version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
 import latestVersion from 'latest-version'
 import pack from '../../package.json'
 import { getAllPackagesDependencies, getAppId, getBundleVersion, getConfig } from '../utils'
 
-async function getLatestDependencies(installedDependencies: { [key: string]: string }) {
-  const latestDependencies: { [key: string]: string } = {}
-  const all = []
-  for (const dependency in installedDependencies) {
-    if (Object.prototype.hasOwnProperty.call(installedDependencies, dependency)) {
-      // get in npm the last version of the dependency
-      all.push(latestVersion(dependency))
-    }
-  }
-  await Promise.all(all)
-    .then((values) => {
-      const keys = Object.keys(installedDependencies)
-      for (let i = 0; i < values.length; i += 1) {
-        const v = values[i]
-        if (v)
-          latestDependencies[keys[i]] = v
-      }
-    })
+async function getLatestDependencies(installedDependencies: Record<string, string>) {
+  const latestDependencies: Record<string, string> = {}
+  const keys = Object.keys(installedDependencies)
+  const versions = await Promise.all(keys.map(dependency => latestVersion(dependency).catch(() => null)))
+
+  versions.forEach((v, index) => {
+    if (v)
+      latestDependencies[keys[index]] = v
+  })
+
   return latestDependencies
 }
 
 async function getInstalledDependencies() {
   const dependencies = await getAllPackagesDependencies()
-  const installedDependencies: { [key: string]: string } = {
+  const installedDependencies: Record<string, string> = {
     '@capgo/cli': pack.version,
   }
-  for (const [dependency, version] of dependencies) {
-    if (dependency.startsWith('@capgo/')
-      || dependency.startsWith('@capawesome/')
-      || dependency.startsWith('capacitor')) {
-      installedDependencies[dependency] = version
-    }
+
+  for (const [dependency, depVersion] of dependencies) {
+    if (dependency.startsWith('@capgo/') || dependency.startsWith('@capawesome/') || dependency.startsWith('capacitor'))
+      installedDependencies[dependency] = depVersion
   }
+
   return installedDependencies
 }
 
-export async function getInfo(options: { packageJson?: string }) {
-  log.warn(' 💊   Capgo Doctor  💊')
-  // app name
+interface DoctorInfoOptions {
+  packageJson?: string
+}
+
+export async function getInfo(options: DoctorInfoOptions, silent = false) {
+  if (!silent)
+    log.warn(' 💊   Capgo Doctor  💊')
+
   const extConfig = await getConfig()
   const pkgVersion = getBundleVersion('', options.packageJson)
-  // create bundle name format : 1.0.0-beta.x where x is a uuid
-  const appVersion = extConfig?.config?.plugins?.CapacitorUpdater?.version
-    || pkgVersion
+  const appVersion = extConfig?.config?.plugins?.CapacitorUpdater?.version || pkgVersion
   const appName = extConfig?.config?.appName || ''
-  log.info(` App Name: ${appName}`)
-  // app id
   const appId = getAppId('', extConfig?.config)
-  log.info(` App ID: ${appId}`)
-  // app version
-  log.info(` App Version: ${appVersion}`)
-  // webdir
   const webDir = extConfig?.config?.webDir || ''
-  log.info(` Web Dir: ${webDir}`)
-  // os
-  log.info(` OS: ${platform()} ${version()}`)
-  log.info(` Node: ${nodeVersion}`)
-  log.info(' Installed Dependencies:')
+
+  if (!silent) {
+    log.info(` App Name: ${appName}`)
+    log.info(` App ID: ${appId}`)
+    log.info(` App Version: ${appVersion}`)
+    log.info(` Web Dir: ${webDir}`)
+    log.info(` OS: ${platform()} ${version()}`)
+    log.info(` Node: ${nodeVersion}`)
+    log.info(' Installed Dependencies:')
+  }
+
   const installedDependencies = await getInstalledDependencies()
+
   if (Object.keys(installedDependencies).length === 0) {
-    // display in red color in shell with console log
-    log.warning('\x1B[31m%s\x1B[0m 🚨 No dependencies found')
-    exit(1)
+    if (!silent)
+      log.warning('\x1B[31m%s\x1B[0m 🚨 No dependencies found')
+    throw new Error('No dependencies found')
   }
-  for (const dependency in installedDependencies) {
-    if (Object.prototype.hasOwnProperty.call(installedDependencies, dependency)) {
-      const installedVersion = (installedDependencies as any)[dependency]
-      log.info(`   ${dependency}: ${installedVersion}`)
-    }
+
+  if (!silent) {
+    for (const dependency of Object.keys(installedDependencies))
+      log.info(`   ${dependency}: ${installedDependencies[dependency]}`)
   }
-  const s = spinner()
-  s.start(`Running: Loading latest dependencies`)
-  const latestDependencies = await getLatestDependencies(installedDependencies)
-  s.stop(`Latest Dependencies:`)
-  for (const dependency in latestDependencies) {
-    if (Object.prototype.hasOwnProperty.call(latestDependencies, dependency)) {
-      const latestVersion = (latestDependencies as any)[dependency]
-      log.info(`   ${dependency}: ${latestVersion}`)
-    }
+
+  let latestDependencies: Record<string, string> = {}
+
+  if (!silent) {
+    const s = spinner()
+    s.start('Running: Loading latest dependencies')
+    latestDependencies = await getLatestDependencies(installedDependencies)
+    s.stop('Latest Dependencies:')
+
+    for (const dependency of Object.keys(latestDependencies))
+      log.info(`   ${dependency}: ${latestDependencies[dependency]}`)
   }
+  else {
+    latestDependencies = await getLatestDependencies(installedDependencies)
+  }
+
   if (JSON.stringify(installedDependencies) !== JSON.stringify(latestDependencies)) {
-    // display in red color in shell with console log
-    log.warn('\x1B[31m🚨 Some dependencies are not up to date\x1B[0m')
-    exit(1)
+    if (!silent)
+      log.warn('\x1B[31m🚨 Some dependencies are not up to date\x1B[0m')
+    throw new Error('Some dependencies are not up to date')
   }
-  // display in green color in shell with console log
-  log.success('\x1B[32m✅ All dependencies are up to date\x1B[0m')
-  exit()
+
+  if (!silent)
+    log.success('\x1B[32m✅ All dependencies are up to date\x1B[0m')
+
+  return {
+    appName,
+    appId,
+    appVersion,
+    webDir,
+    installedDependencies,
+    latestDependencies,
+  }
 }
