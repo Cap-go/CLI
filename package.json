@@ -59,7 +59,7 @@
     "ky": "We temporarily fixed ky version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^5.0.0",
+    "@antfu/eslint-config": "^6.0.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.1",
     "@capacitor/cli": "^7.4.0",
     "@capgo/find-package-manager": "^0.0.18",
