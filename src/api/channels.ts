@@ -124,7 +124,7 @@ interface Version {
   name: string
 }
 
-interface Channel {
+export interface Channel {
   id: number
   name: string
   public: boolean
