@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.18.5](https://github.com/Cap-go/CLI/compare/v7.18.4...v7.18.5) (2025-10-27)
+
+
+### Bug Fixes
+
+* improve delta option handling in uploadBundle function ([9afc7e2](https://github.com/Cap-go/CLI/commit/9afc7e29746f233f6686a35380dc231c8d6b37ea))
+
 ### [7.18.4](https://github.com/Cap-go/CLI/compare/v7.18.3...v7.18.4) (2025-10-27)
 
 
