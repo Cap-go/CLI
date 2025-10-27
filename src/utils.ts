@@ -13,7 +13,6 @@ import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from 
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
-import { program } from 'commander'
 import ky from 'ky'
 import prettyjson from 'prettyjson'
 import cleanVersion from 'semver/functions/clean'

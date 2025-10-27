@@ -46,7 +46,6 @@ function emitJson(value: unknown) {
 }
 
 function emitJsonError(error: unknown) {
-  // eslint-disable-next-line no-console
   console.error(formatError(error))
 }
 
