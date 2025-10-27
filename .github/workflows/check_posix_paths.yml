@@ -48,7 +48,7 @@ jobs:
           unzip -l build-linux.zip
 
       - name: Upload build-linux.zip artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build-zip-linux
           path: build-linux.zip
@@ -82,7 +82,7 @@ jobs:
         run: node ./dist/index.js bundle zip --path test/test_upload -n build-${{ matrix.os }}.zip  --package-json test/test_upload/package.json
 
       - name: Upload build.zip artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: build-zip-${{ matrix.os }}
           path: build-${{ matrix.os }}.zip
@@ -96,7 +96,7 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download build-linux.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-linux
 
@@ -134,12 +134,12 @@ jobs:
         run: java -cp ./test VerifyZip build-linux.zip
 
       - name: Download build-windows-2025.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-windows-2025
 
       - name: Download build-windows-2022.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-windows-2022
 
@@ -197,17 +197,17 @@ jobs:
         uses: actions/checkout@v5
 
       - name: Download build-linux.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-linux
 
       - name: Download build-windows-2025.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-windows-2025
 
       - name: Download build-windows-2022.zip artifact
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v6
         with:
           name: build-zip-windows-2022
 
