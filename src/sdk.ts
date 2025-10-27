@@ -2,6 +2,7 @@ import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
 import type { OptionsUpload } from './bundle/upload_interface'
 import type { OptionsSetChannel } from './channel/set'
+import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
 import { deleteApp as deleteAppInternal } from './app/delete'
@@ -14,6 +15,12 @@ import { addChannel as addChannelInternal } from './channel/add'
 import { deleteChannel as deleteChannelInternal } from './channel/delete'
 import { listChannels as listChannelsInternal } from './channel/list'
 import { setChannel as setChannelInternal } from './channel/set'
+import { createKeyV2Internal, deleteOldPrivateKeyInternal, saveKeyV2Internal } from './keyV2'
+import { addOrganizationInternal } from './organisation/add'
+import { deleteOrganizationInternal } from './organisation/delete'
+import { listOrganizationsInternal } from './organisation/list'
+import { setOrganizationInternal } from './organisation/set'
+import { getUserIdInternal } from './user/account'
 import { createSupabaseClient, findSavedKey, getConfig } from './utils'
 
 // ============================================================================
@@ -152,6 +159,29 @@ export interface CleanupOptions {
   supaAnon?: string
 }
 
+export interface GenerateKeyOptions {
+  /** Overwrite existing keys if they already exist */
+  force?: boolean
+  /** Automatically configure the default encryption channel instead of prompting */
+  setupChannel?: boolean
+}
+
+export interface SaveKeyOptions {
+  /** Path to the public key file (.pub) */
+  keyPath?: string
+  /** Public key contents as string (used if keyPath not provided) */
+  keyData?: string
+  /** Automatically configure the default encryption channel instead of prompting */
+  setupChannel?: boolean
+}
+
+export interface DeleteOldKeyOptions {
+  /** Force deletion if legacy files are present */
+  force?: boolean
+  /** Automatically configure the default encryption channel instead of prompting */
+  setupChannel?: boolean
+}
+
 // ============================================================================
 // Channel Management Types
 // ============================================================================
@@ -208,11 +238,7 @@ export interface UpdateChannelOptions {
 // Organization Management Types
 // ============================================================================
 
-export interface AddOrganizationOptions {
-  /** Organization name */
-  name: string
-  /** Management email */
-  email: string
+export interface AccountIdOptions {
   /** API key for authentication */
   apikey?: string
   /** Custom Supabase host */
@@ -221,26 +247,35 @@ export interface AddOrganizationOptions {
   supaAnon?: string
 }
 
-export interface UpdateOrganizationOptions {
+export interface ListOrganizationsOptions extends AccountIdOptions {}
+
+export interface AddOrganizationOptions extends AccountIdOptions {
+  /** Organization name */
+  name: string
+  /** Management email */
+  email: string
+}
+
+export interface UpdateOrganizationOptions extends AccountIdOptions {
   /** Organization ID */
   orgId: string
   /** Updated name */
   name?: string
   /** Updated management email */
   email?: string
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
 }
 
 export interface OrganizationInfo {
   id: string
   name: string
+  role?: string
+  appCount?: number
   email?: string
-  createdAt: Date
+  createdAt?: Date
+}
+
+export interface DeleteOrganizationOptions extends AccountIdOptions {
+  autoConfirm?: boolean
 }
 
 // ============================================================================
@@ -424,6 +459,32 @@ export class CapgoSDK {
       return {
         success: true,
         data: appInfos,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  /**
+   * Retrieve the account ID associated with the configured API key
+   */
+  async getAccountId(options?: AccountIdOptions): Promise<SDKResult<string>> {
+    try {
+      const resolvedOptions = {
+        apikey: options?.apikey || this.apikey || findSavedKey(true),
+        supaHost: options?.supaHost || this.supaHost,
+        supaAnon: options?.supaAnon || this.supaAnon,
+      }
+
+      const userId = await getUserIdInternal(resolvedOptions, true)
+
+      return {
+        success: true,
+        data: userId,
       }
     }
     catch (error) {
@@ -759,75 +820,187 @@ export class CapgoSDK {
   // ==========================================================================
 
   /**
-   * Create a new organization
-   *
-   * Note: Organization management is best done through the Capgo web dashboard.
-   * This SDK method is not yet implemented. Use the CLI command instead:
-   * `npx @capgo/cli organisation add`
-   *
-   * @example
-   * ```typescript
-   * // Not yet implemented - use CLI instead
-   * // npx @capgo/cli organisation add --name "My Company" --email admin@company.com
-   * ```
+   * Generate Capgo encryption keys (private/public pair)
    */
-  async addOrganization(_options: AddOrganizationOptions): Promise<SDKResult> {
-    return {
-      success: false,
-      error: 'Organization management is not yet available in the SDK. Use the Capgo CLI or web dashboard instead.',
-      warnings: [
-        'Run: npx @capgo/cli organisation add --name "My Company" --email admin@company.com',
-        'Or manage organizations at: https://web.capgo.app',
-      ],
+  async generateEncryptionKeys(options?: GenerateKeyOptions): Promise<SDKResult> {
+    try {
+      await createKeyV2Internal({
+        force: options?.force,
+        setupChannel: options?.setupChannel,
+      }, true)
+
+      return { success: true }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
     }
   }
 
   /**
-   * Update organization settings
-   *
-   * Note: Organization management is best done through the Capgo web dashboard.
-   * This SDK method is not yet implemented. Use the CLI command instead:
-   * `npx @capgo/cli organisation set [orgId]`
-   *
-   * @example
-   * ```typescript
-   * // Not yet implemented - use CLI instead
-   * // npx @capgo/cli organisation set ORG_ID --name "Updated Name"
-   * ```
+   * Save a public encryption key into the Capacitor config
    */
-  async updateOrganization(_options: UpdateOrganizationOptions): Promise<SDKResult> {
-    return {
-      success: false,
-      error: 'Organization management is not yet available in the SDK. Use the Capgo CLI or web dashboard instead.',
-      warnings: [
-        'Run: npx @capgo/cli organisation set ORG_ID --name "New Name"',
-        'Or manage organizations at: https://web.capgo.app',
-      ],
+  async saveEncryptionKey(options?: SaveKeyOptions): Promise<SDKResult> {
+    try {
+      await saveKeyV2Internal({
+        key: options?.keyPath,
+        keyData: options?.keyData,
+        setupChannel: options?.setupChannel,
+      }, true)
+
+      return { success: true }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
     }
   }
 
   /**
-   * Delete an organization
-   *
-   * Note: Organization management is best done through the Capgo web dashboard.
-   * This SDK method is not yet implemented. Use the CLI command instead:
-   * `npx @capgo/cli organisation delete [orgId]`
-   *
-   * @example
-   * ```typescript
-   * // Not yet implemented - use CLI instead
-   * // npx @capgo/cli organisation delete ORG_ID
-   * ```
+   * Delete legacy (v1) encryption keys from the project
    */
-  async deleteOrganization(_orgId: string): Promise<SDKResult> {
-    return {
-      success: false,
-      error: 'Organization management is not yet available in the SDK. Use the Capgo CLI or web dashboard instead.',
-      warnings: [
-        'Run: npx @capgo/cli organisation delete ORG_ID',
-        'Or manage organizations at: https://web.capgo.app',
-        'WARNING: This action cannot be undone!',
-      ],
+  async deleteLegacyEncryptionKey(options?: DeleteOldKeyOptions): Promise<SDKResult<{ deleted: boolean }>> {
+    try {
+      const deleted = await deleteOldPrivateKeyInternal({
+        force: options?.force,
+        setupChannel: options?.setupChannel,
+      }, true)
+
+      return {
+        success: true,
+        data: { deleted },
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async listOrganizations(options?: ListOrganizationsOptions): Promise<SDKResult<OrganizationInfo[]>> {
+    try {
+      const requestOptions = {
+        apikey: options?.apikey || this.apikey || findSavedKey(true),
+        supaHost: options?.supaHost || this.supaHost,
+        supaAnon: options?.supaAnon || this.supaAnon,
+      }
+
+      const organizations = await listOrganizationsInternal(requestOptions, true)
+
+      const data: OrganizationInfo[] = organizations.map((org: Organization) => ({
+        id: String((org as any).id ?? (org as any).gid ?? ''),
+        name: (org as any).name ?? 'Unknown',
+        role: (org as any).role ?? undefined,
+        appCount: typeof (org as any).app_count === 'number' ? (org as any).app_count : undefined,
+        email: (org as any).management_email ?? undefined,
+        createdAt: (org as any).created_at ? new Date((org as any).created_at) : undefined,
+      }))
+
+      return {
+        success: true,
+        data,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async addOrganization(options: AddOrganizationOptions): Promise<SDKResult<OrganizationInfo>> {
+    try {
+      const requestOptions = {
+        apikey: options.apikey || this.apikey || findSavedKey(true),
+        supaHost: options.supaHost || this.supaHost,
+        supaAnon: options.supaAnon || this.supaAnon,
+        name: options.name,
+        email: options.email,
+      }
+
+      const org = await addOrganizationInternal(requestOptions, true)
+
+      const info: OrganizationInfo = {
+        id: String((org as any).id ?? (org as any).gid ?? ''),
+        name: (org as any).name ?? options.name,
+        role: 'owner',
+        appCount: 0,
+        email: (org as any).management_email ?? options.email,
+        createdAt: (org as any).created_at ? new Date((org as any).created_at) : undefined,
+      }
+
+      return {
+        success: true,
+        data: info,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async updateOrganization(options: UpdateOrganizationOptions): Promise<SDKResult<OrganizationInfo>> {
+    try {
+      const requestOptions = {
+        apikey: options.apikey || this.apikey || findSavedKey(true),
+        supaHost: options.supaHost || this.supaHost,
+        supaAnon: options.supaAnon || this.supaAnon,
+        name: options.name,
+        email: options.email,
+      }
+
+      const updated = await setOrganizationInternal(options.orgId, requestOptions, true)
+
+      const info: OrganizationInfo = {
+        id: updated.orgId,
+        name: updated.name,
+        email: updated.email,
+      }
+
+      return {
+        success: true,
+        data: info,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async deleteOrganization(orgId: string, options?: DeleteOrganizationOptions): Promise<SDKResult<{ deleted: boolean }>> {
+    try {
+      const requestOptions = {
+        apikey: options?.apikey || this.apikey || findSavedKey(true),
+        supaHost: options?.supaHost || this.supaHost,
+        supaAnon: options?.supaAnon || this.supaAnon,
+        autoConfirm: options?.autoConfirm ?? true,
+      }
+
+      const deleted = await deleteOrganizationInternal(orgId, requestOptions, true)
+
+      return {
+        success: true,
+        data: { deleted },
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
     }
   }
 }
@@ -856,6 +1029,66 @@ export async function uploadBundle(options: UploadOptions): Promise<UploadResult
     supaAnon: options.supaAnon,
   })
   return sdk.uploadBundle(options)
+}
+
+export async function generateEncryptionKeys(options?: GenerateKeyOptions): Promise<SDKResult> {
+  const sdk = new CapgoSDK()
+  return sdk.generateEncryptionKeys(options)
+}
+
+export async function saveEncryptionKey(options?: SaveKeyOptions): Promise<SDKResult> {
+  const sdk = new CapgoSDK()
+  return sdk.saveEncryptionKey(options)
+}
+
+export async function deleteLegacyEncryptionKey(options?: DeleteOldKeyOptions): Promise<SDKResult<{ deleted: boolean }>> {
+  const sdk = new CapgoSDK()
+  return sdk.deleteLegacyEncryptionKey(options)
+}
+
+export async function getAccountId(options?: AccountIdOptions): Promise<SDKResult<string>> {
+  const sdk = new CapgoSDK({
+    apikey: options?.apikey,
+    supaHost: options?.supaHost,
+    supaAnon: options?.supaAnon,
+  })
+  return sdk.getAccountId(options)
+}
+
+export async function listOrganizations(options?: ListOrganizationsOptions): Promise<SDKResult<OrganizationInfo[]>> {
+  const sdk = new CapgoSDK({
+    apikey: options?.apikey,
+    supaHost: options?.supaHost,
+    supaAnon: options?.supaAnon,
+  })
+  return sdk.listOrganizations(options)
+}
+
+export async function addOrganization(options: AddOrganizationOptions): Promise<SDKResult<OrganizationInfo>> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.addOrganization(options)
+}
+
+export async function updateOrganization(options: UpdateOrganizationOptions): Promise<SDKResult<OrganizationInfo>> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.updateOrganization(options)
+}
+
+export async function deleteOrganization(orgId: string, options?: DeleteOrganizationOptions): Promise<SDKResult<{ deleted: boolean }>> {
+  const sdk = new CapgoSDK({
+    apikey: options?.apikey,
+    supaHost: options?.supaHost,
+    supaAnon: options?.supaAnon,
+  })
+  return sdk.deleteOrganization(orgId, options)
 }
 
 /**
