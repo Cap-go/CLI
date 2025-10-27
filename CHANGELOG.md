@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+### [7.18.1](https://github.com/Cap-go/CLI/compare/v7.18.0...v7.18.1) (2025-10-27)
+
+
+### Bug Fixes
+
+* improve error handling in program.parseAsync ([b4c263f](https://github.com/Cap-go/CLI/commit/b4c263f20e9da65d91cb0f8baffff505936901ae))
+* package ([aa9b8bf](https://github.com/Cap-go/CLI/commit/aa9b8bf28f0903d6cebf476facbe83c0d1f52607))
+
 ## [7.18.0](https://github.com/Cap-go/CLI/compare/v7.17.11...v7.18.0) (2025-10-27)
 
 
