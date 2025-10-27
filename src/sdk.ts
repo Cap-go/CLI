@@ -1,27 +1,42 @@
 import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
+import type { DecryptResult } from './bundle/decryptV2'
+import type { EncryptResult } from './bundle/encryptV2'
 import type { OptionsUpload } from './bundle/upload_interface'
+import type { ZipResult } from './bundle/zip'
 import type { OptionsSetChannel } from './channel/set'
 import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
 import { deleteApp as deleteAppInternal } from './app/delete'
+import { getInfo as doctorInternal } from './app/info'
 import { listApp as listAppInternal } from './app/list'
 import { setApp as setAppInternal } from './app/set'
+import { setSetting as setSettingInternal } from './app/setting'
 import { cleanupBundle as cleanupBundleInternal } from './bundle/cleanup'
+import { checkCompatibilityCommandInternal } from './bundle/compatibility'
+import { decryptZipV2Internal } from './bundle/decryptV2'
 import { deleteBundle as deleteBundleInternal } from './bundle/delete'
+import { encryptZipV2Internal } from './bundle/encryptV2'
 import { uploadBundle as uploadBundleInternal } from './bundle/upload'
+import { zipBundleInternal } from './bundle/zip'
 import { addChannel as addChannelInternal } from './channel/add'
+import { currentBundle as currentBundleInternal } from './channel/currentBundle'
 import { deleteChannel as deleteChannelInternal } from './channel/delete'
 import { listChannels as listChannelsInternal } from './channel/list'
 import { setChannel as setChannelInternal } from './channel/set'
 import { createKeyV2Internal, deleteOldPrivateKeyInternal, saveKeyV2Internal } from './keyV2'
+import { login as loginInternal } from './login'
 import { addOrganizationInternal } from './organisation/add'
 import { deleteOrganizationInternal } from './organisation/delete'
 import { listOrganizationsInternal } from './organisation/list'
 import { setOrganizationInternal } from './organisation/set'
 import { getUserIdInternal } from './user/account'
 import { createSupabaseClient, findSavedKey, getConfig } from './utils'
+
+export type DoctorInfo = Awaited<ReturnType<typeof doctorInternal>>
+type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityCommandInternal>>['finalCompatibility']
+export type BundleCompatibilityEntry = CompatibilityReport[number]
 
 // ============================================================================
 // Base Types
@@ -278,6 +293,63 @@ export interface DeleteOrganizationOptions extends AccountIdOptions {
   autoConfirm?: boolean
 }
 
+export interface LoginOptions {
+  apikey: string
+  local?: boolean
+  supaHost?: string
+  supaAnon?: string
+}
+
+export interface DoctorOptions {
+  packageJson?: string
+}
+
+export interface BundleCompatibilityOptions {
+  appId: string
+  channel: string
+  packageJson?: string
+  nodeModules?: string
+  textOutput?: boolean
+  apikey?: string
+  supaHost?: string
+  supaAnon?: string
+}
+
+export interface EncryptBundleOptions {
+  zipPath: string
+  checksum: string
+  keyPath?: string
+  keyData?: string
+  json?: boolean
+}
+
+export interface DecryptBundleOptions {
+  zipPath: string
+  ivSessionKey: string
+  keyPath?: string
+  keyData?: string
+  checksum?: string
+}
+
+export interface ZipBundleOptions {
+  appId: string
+  path: string
+  bundle?: string
+  name?: string
+  codeCheck?: boolean
+  json?: boolean
+  keyV2?: boolean
+  packageJson?: string
+}
+
+export interface CurrentBundleOptions extends AccountIdOptions {}
+
+export interface SetSettingOptions {
+  apikey?: string
+  bool?: string
+  string?: string
+}
+
 // ============================================================================
 // SDK Class - Main Entry Point
 // ============================================================================
@@ -322,6 +394,47 @@ export class CapgoSDK {
   // ==========================================================================
   // App Management Methods
   // ==========================================================================
+
+  /**
+   * Save an API key locally or in the home directory
+   */
+  async login(options: LoginOptions): Promise<SDKResult> {
+    try {
+      await loginInternal(options.apikey, {
+        local: options.local ?? false,
+        supaHost: options.supaHost || this.supaHost,
+        supaAnon: options.supaAnon || this.supaAnon,
+      }, true)
+
+      return { success: true }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  /**
+   * Run Capgo Doctor diagnostics and return the report
+   */
+  async doctor(options?: DoctorOptions): Promise<SDKResult<DoctorInfo>> {
+    try {
+      const info = await doctorInternal({ packageJson: options?.packageJson }, true)
+
+      return {
+        success: true,
+        data: info,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
 
   /**
    * Add a new app to Capgo Cloud
@@ -499,6 +612,101 @@ export class CapgoSDK {
   // Bundle Management Methods
   // ==========================================================================
 
+  async checkBundleCompatibility(options: BundleCompatibilityOptions): Promise<SDKResult<BundleCompatibilityEntry[]>> {
+    try {
+      const requestOptions = {
+        apikey: options.apikey || this.apikey || findSavedKey(true),
+        channel: options.channel,
+        text: options.textOutput ?? false,
+        packageJson: options.packageJson,
+        nodeModules: options.nodeModules,
+        supaHost: options.supaHost || this.supaHost,
+        supaAnon: options.supaAnon || this.supaAnon,
+      }
+
+      const compatibility = await checkCompatibilityCommandInternal(options.appId, requestOptions, true)
+
+      return {
+        success: true,
+        data: compatibility.finalCompatibility,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async encryptBundle(options: EncryptBundleOptions): Promise<SDKResult<EncryptResult>> {
+    try {
+      const result = await encryptZipV2Internal(options.zipPath, options.checksum, {
+        key: options.keyPath,
+        keyData: options.keyData,
+        json: options.json,
+      }, true)
+
+      return {
+        success: true,
+        data: result,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async decryptBundle(options: DecryptBundleOptions): Promise<SDKResult<DecryptResult>> {
+    try {
+      const result = await decryptZipV2Internal(options.zipPath, options.ivSessionKey, {
+        key: options.keyPath,
+        keyData: options.keyData,
+        checksum: options.checksum,
+      }, true)
+
+      return {
+        success: true,
+        data: result,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  async zipBundle(options: ZipBundleOptions): Promise<SDKResult<ZipResult>> {
+    try {
+      const result = await zipBundleInternal(options.appId, {
+        apikey: this.apikey || findSavedKey(true),
+        path: options.path,
+        bundle: options.bundle,
+        name: options.name,
+        codeCheck: options.codeCheck,
+        json: options.json,
+        keyV2: options.keyV2,
+        packageJson: options.packageJson,
+      }, true)
+
+      return {
+        success: true,
+        data: result,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
   /**
    * Upload a bundle to Capgo Cloud
    *
@@ -669,6 +877,30 @@ export class CapgoSDK {
   // ==========================================================================
   // Channel Management Methods
   // ==========================================================================
+
+  async getCurrentBundle(appId: string, channelId: string, options?: CurrentBundleOptions): Promise<SDKResult<string>> {
+    try {
+      const requestOptions = {
+        apikey: options?.apikey || this.apikey || findSavedKey(true),
+        quiet: true,
+        supaHost: options?.supaHost || this.supaHost,
+        supaAnon: options?.supaAnon || this.supaAnon,
+      }
+
+      const bundle = await currentBundleInternal(channelId, appId, requestOptions as any, true)
+
+      return {
+        success: true,
+        data: bundle,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
 
   /**
    * Create a new channel for app distribution
@@ -1003,6 +1235,28 @@ export class CapgoSDK {
       }
     }
   }
+
+  // ==========================================================================
+  // Miscellaneous Helpers
+  // ==========================================================================
+
+  async setAppSetting(path: string, options: SetSettingOptions): Promise<SDKResult> {
+    try {
+      await setSettingInternal(path, {
+        apikey: options.apikey || this.apikey || findSavedKey(true),
+        bool: options.bool,
+        string: options.string,
+      }, true)
+
+      return { success: true }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
 }
 
 // ============================================================================
@@ -1031,6 +1285,43 @@ export async function uploadBundle(options: UploadOptions): Promise<UploadResult
   return sdk.uploadBundle(options)
 }
 
+export async function login(options: LoginOptions): Promise<SDKResult> {
+  const sdk = new CapgoSDK({
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.login(options)
+}
+
+export async function doctor(options?: DoctorOptions): Promise<SDKResult<DoctorInfo>> {
+  const sdk = new CapgoSDK()
+  return sdk.doctor(options)
+}
+
+export async function checkBundleCompatibility(options: BundleCompatibilityOptions): Promise<SDKResult<BundleCompatibilityEntry[]>> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.checkBundleCompatibility(options)
+}
+
+export async function encryptBundle(options: EncryptBundleOptions): Promise<SDKResult<EncryptResult>> {
+  const sdk = new CapgoSDK()
+  return sdk.encryptBundle(options)
+}
+
+export async function decryptBundle(options: DecryptBundleOptions): Promise<SDKResult<DecryptResult>> {
+  const sdk = new CapgoSDK()
+  return sdk.decryptBundle(options)
+}
+
+export async function zipBundle(options: ZipBundleOptions): Promise<SDKResult<ZipResult>> {
+  const sdk = new CapgoSDK()
+  return sdk.zipBundle(options)
+}
+
 export async function generateEncryptionKeys(options?: GenerateKeyOptions): Promise<SDKResult> {
   const sdk = new CapgoSDK()
   return sdk.generateEncryptionKeys(options)
@@ -1044,6 +1335,22 @@ export async function saveEncryptionKey(options?: SaveKeyOptions): Promise<SDKRe
 export async function deleteLegacyEncryptionKey(options?: DeleteOldKeyOptions): Promise<SDKResult<{ deleted: boolean }>> {
   const sdk = new CapgoSDK()
   return sdk.deleteLegacyEncryptionKey(options)
+}
+
+export async function getCurrentBundle(appId: string, channelId: string, options?: CurrentBundleOptions): Promise<SDKResult<string>> {
+  const sdk = new CapgoSDK({
+    apikey: options?.apikey,
+    supaHost: options?.supaHost,
+    supaAnon: options?.supaAnon,
+  })
+  return sdk.getCurrentBundle(appId, channelId, options)
+}
+
+export async function updateAppSetting(path: string, options: SetSettingOptions): Promise<SDKResult> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+  })
+  return sdk.setAppSetting(path, options)
 }
 
 export async function getAccountId(options?: AccountIdOptions): Promise<SDKResult<string>> {
