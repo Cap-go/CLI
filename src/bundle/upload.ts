@@ -635,7 +635,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     options.delta = false
   }
   else {
-    options.delta = options.partial || options.deltaOnly || options.partialOnly || fileConfig.partialUploadForced
+    options.delta = options.delta || options.partial || options.deltaOnly || options.partialOnly || fileConfig.partialUploadForced
   }
 
   if (options.encryptPartial && encryptionMethod === 'v1')
