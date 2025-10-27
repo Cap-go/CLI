@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [7.18.0](https://github.com/Cap-go/CLI/compare/v7.17.11...v7.18.0) (2025-10-27)
+
+
+### Features
+
+* add autoMinUpdateVersion option to UploadOptions for automatic compatibility handling ([1276c10](https://github.com/Cap-go/CLI/commit/1276c10e71bc0b4698ee06c600742ca7fad3c177))
+* add new methods for bundle encryption, decryption, and compatibility checks in SDK ([c76dc79](https://github.com/Cap-go/CLI/commit/c76dc79ab31a5872cfa801a65bd945d1a70e593d))
+* enhance organization management with CRUD operations and encryption key handling ([8dbfdbf](https://github.com/Cap-go/CLI/commit/8dbfdbfe8fcd2963ea97891823a8f6b55768bb50))
+
+
+### Bug Fixes
+
+* SDK ([4975959](https://github.com/Cap-go/CLI/commit/497595950ded33f9885a6c197b4bd70cb663ec58))
+* Upload result ([873db27](https://github.com/Cap-go/CLI/commit/873db2716d076912ce390bc2e2e517743ed31975))
+
 ### [7.17.11](https://github.com/Cap-go/CLI/compare/v7.17.10...v7.17.11) (2025-10-26)
 
 
