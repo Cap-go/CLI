@@ -537,6 +537,11 @@ program
 
 program.exitOverride()
 
-program.parseAsync().catch(() => {
+program.parseAsync().catch((error: unknown) => {
+  if (typeof error === 'object' && error !== null && 'exitCode' in error) {
+    const exitCode = (error as { exitCode?: number }).exitCode
+    if (typeof exitCode === 'number')
+      exit(exitCode)
+  }
   exit(1)
 })
