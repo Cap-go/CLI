@@ -179,8 +179,8 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const hashedLocalDependencies = localDependencies
     ? new Map(localDependencies
-      .filter(a => !!a.native && a.native !== undefined)
-      .map(a => [a.name, a]))
+        .filter(a => !!a.native && a.native !== undefined)
+        .map(a => [a.name, a]))
     : new Map()
 
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
