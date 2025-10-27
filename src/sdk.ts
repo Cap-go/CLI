@@ -127,6 +127,8 @@ export interface UploadOptions {
   comment?: string
   /** Minimum update version required */
   minUpdateVersion?: string
+  /** Automatically set min-update-version when compatibility fails */
+  autoMinUpdateVersion?: boolean
   /** Allow self-assignment to channel */
   selfAssign?: boolean
   /** Package.json paths for monorepos */
@@ -746,6 +748,7 @@ export class CapgoSDK {
         tus: options.useTus,
         comment: options.comment,
         minUpdateVersion: options.minUpdateVersion,
+        autoMinUpdateVersion: options.autoMinUpdateVersion,
         selfAssign: options.selfAssign,
         packageJson: options.packageJsonPaths,
         ignoreMetadataCheck: options.ignoreCompatibilityCheck,
