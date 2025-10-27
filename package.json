@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "7.18.1",
+  "version": "7.18.2",
   "description": "A CLI to upload to capgo servers",
   "author": "github.com/riderx",
   "license": "Apache 2.0",
@@ -31,8 +31,8 @@
     },
     "./sdk": {
       "types": "./dist/src/sdk.d.ts",
-      "import": "./dist/sdk.js",
-      "require": "./dist/sdk.js"
+      "import": "./dist/src/sdk.js",
+      "require": "./dist/src/sdk.js"
     }
   },
   "main": "dist/index.js",

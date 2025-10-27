@@ -155,7 +155,7 @@ const buildSDK = esbuild.build({
   bundle: true,
   platform: 'node',
   target: 'node20',
-  outfile: 'dist/sdk.js',
+  outfile: 'dist/src/sdk.js',
   sourcemap: env.NODE_ENV === 'development',
   metafile: true,
   minify: true,
