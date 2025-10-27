@@ -2,6 +2,7 @@ import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
 import type { DecryptResult } from './bundle/decryptV2'
 import type { EncryptResult } from './bundle/encryptV2'
+import type { UploadBundleResult } from './bundle/upload'
 import type { OptionsUpload } from './bundle/upload_interface'
 import type { ZipResult } from './bundle/zip'
 import type { OptionsSetChannel } from './channel/set'
@@ -142,6 +143,13 @@ export interface UploadResult {
   success: boolean
   bundleId?: string
   bundleUrl?: string
+  checksum?: string | null
+  encryptionMethod?: UploadBundleResult['encryptionMethod']
+  sessionKey?: string
+  ivSessionKey?: string | null
+  storageProvider?: string
+  skipped?: boolean
+  reason?: string
   error?: string
   warnings?: string[]
 }
@@ -746,12 +754,18 @@ export class CapgoSDK {
       }
 
       // Call internal upload function but suppress CLI behaviors
-      await uploadBundleInternal(options.appId, internalOptions, false)
+      const uploadResponse = await uploadBundleInternal(options.appId, internalOptions, false)
 
       return {
-        success: true,
-        bundleId: options.bundle,
-        // Add more result data as needed
+        success: uploadResponse.success,
+        bundleId: uploadResponse.bundle,
+        checksum: uploadResponse.checksum ?? null,
+        encryptionMethod: uploadResponse.encryptionMethod,
+        sessionKey: uploadResponse.sessionKey,
+        ivSessionKey: uploadResponse.ivSessionKey,
+        storageProvider: uploadResponse.storageProvider,
+        skipped: uploadResponse.skipped,
+        reason: uploadResponse.reason,
       }
     }
     catch (error) {

@@ -10,7 +10,6 @@ import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import { program } from 'commander'
 import ky, { HTTPError } from 'ky'
 import coerceVersion from 'semver/functions/coerce'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
@@ -26,6 +25,18 @@ import { prepareBundlePartialFiles, uploadPartial } from './partial'
 type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
+
+export interface UploadBundleResult {
+  success: boolean
+  bundle: string
+  checksum?: string | null
+  encryptionMethod: 'none' | 'v1' | 'v2'
+  sessionKey?: string
+  ivSessionKey?: string | null
+  storageProvider?: string
+  skipped?: boolean
+  reason?: string
+}
 
 function uploadFail(message: string): never {
   log.error(message)
@@ -502,8 +513,9 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
   return data.default_upload_channel
 }
 
-export async function uploadBundle(preAppid: string, options: OptionsUpload, shouldExit = true) {
-  intro(`Uploading with CLI version ${pack.version}`)
+export async function uploadBundle(preAppid: string, options: OptionsUpload, shouldExit = true): Promise<UploadBundleResult> {
+  if (shouldExit)
+    intro(`Uploading with CLI version ${pack.version}`)
   let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
   await checkAlerts()
@@ -515,6 +527,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   const fileConfig = await getRemoteFileConfig()
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
   const bundle = await getBundle(extConfig.config, options)
+  const defaultStorageProvider: Exclude<UploadBundleResult['storageProvider'], undefined> = options.external ? 'external' : 'r2-direct'
+  let encryptionMethod: UploadBundleResult['encryptionMethod'] = 'none'
 
   if (options.autoSetBundle) {
     await updateConfigUpdater({ version: bundle })
@@ -542,8 +556,17 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
   const versionAlreadyExists = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
-  if (versionAlreadyExists)
-    return true
+  if (versionAlreadyExists) {
+    return {
+      success: true,
+      skipped: true,
+      reason: 'VERSION_EXISTS',
+      bundle,
+      checksum: null,
+      encryptionMethod,
+      storageProvider: defaultStorageProvider,
+    }
+  }
 
   if (options.external && !options.external.startsWith('https://')) {
     uploadFail(`External link should should start with "https://" current is "${options.external}"`)
@@ -559,7 +582,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     app_id: appid,
     session_key: undefined as undefined | string,
     external_url: options.external,
-    storage_provider: options.external ? 'external' : 'r2-direct',
+    storage_provider: defaultStorageProvider,
     min_update_version: minUpdateVersion,
     native_packages: nativePackages,
     owner_org: orgId,
@@ -570,7 +593,6 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null
-  let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
   let finalKeyData = ''
   if (!options.external) {
     const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd } = await prepareBundleFile(path, options, apikey, orgId, appid, fileConfig.maxUploadLength, fileConfig.alertUploadSize)
@@ -735,11 +757,20 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     },
     notify: false,
   })
-  if (shouldExit) {
-    outro('Time to share your update to the world 🌍')
-    return true
+  const result: UploadBundleResult = {
+    success: true,
+    bundle,
+    checksum: versionData.checksum ?? null,
+    encryptionMethod,
+    sessionKey: sessionKey ? sessionKey.toString('base64') : undefined,
+    ivSessionKey: typeof versionData.session_key === 'string' ? versionData.session_key : undefined,
+    storageProvider: versionData.storage_provider,
   }
-  return true
+
+  if (shouldExit && !result.skipped)
+    outro('Time to share your update to the world 🌍')
+
+  return result
 }
 
 function checkValidOptions(options: OptionsUpload) {

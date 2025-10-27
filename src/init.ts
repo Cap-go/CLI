@@ -706,7 +706,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
       deltaOnly: delta,
       bundle: newVersion,
     }, false)
-    if (!uploadRes) {
+    if (!uploadRes?.success) {
       s.stop('Error')
       pLog.warn(`Upload failed ❌`)
       pOutro(`Bye 👋`)
