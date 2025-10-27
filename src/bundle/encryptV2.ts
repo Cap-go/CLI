@@ -17,7 +17,6 @@ export interface EncryptResult {
 }
 
 function emitJsonError(error: unknown) {
-  // eslint-disable-next-line no-console
   console.error(formatError(error))
 }
 
@@ -70,8 +69,9 @@ export async function encryptZipV2Internal(
 
     if (!existsSync(keyPath) && !privateKey) {
       if (!silent) {
-        if (json)
+        if (json) {
           emitJsonError({ error: 'missing_key' })
+        }
         else {
           log.warning(`Cannot find a private key at ${keyPath} or as a keyData option`)
           log.error('Error: Missing key')

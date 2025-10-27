@@ -23,8 +23,9 @@ function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof
   if (existsSync(fallbackKeyPath)) {
     publicKey = readFileSync(fallbackKeyPath, 'utf8')
   }
-  else if (!publicKey && options.keyData)
+  else if (!publicKey && options.keyData) {
     publicKey = options.keyData
+  }
 
   return { publicKey, fallbackKeyPath }
 }
