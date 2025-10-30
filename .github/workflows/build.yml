@@ -1,24 +1,28 @@
-name: Build source code and send to Capgo
+name: Build source code and send to NPM
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-build
+  cancel-in-progress: true
 
 on:
   push:
     tags:
-      - "*"
+      - '*'
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    name: "Build code and release"
+    name: Build code and release
     permissions:
       contents: read
       id-token: write
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
       - name: Setup bun
-        uses: oven-sh/setup-bun@v1.1.1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Install dependencies
@@ -30,15 +34,27 @@ jobs:
       - name: Build
         id: build_code
         run: bun run build
-      - name: Run
-        id: run_cli
-        run: node dist/index.js --help
-      - uses: JS-DevTools/npm-publish@v3
+      - name: Wait for POSIX path check to succeed
+        uses: lewagon/wait-on-check-action@v1.4.1
+        with:
+          ref: ${{ github.ref }}
+          check-regexp: .*check-posix-paths.*
+          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          wait-interval: 10
+          verbose: true
+      - name: Wait for tests to succeed
+        uses: lewagon/wait-on-check-action@v1.4.1
+        with:
+          ref: ${{ github.ref }}
+          check-name: Run tests
+          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+          wait-interval: 10
+      - uses: JS-DevTools/npm-publish@v4
         if: ${{ !contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
           provenance: true
-      - uses: JS-DevTools/npm-publish@v3
+      - uses: JS-DevTools/npm-publish@v4
         if: ${{ contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}

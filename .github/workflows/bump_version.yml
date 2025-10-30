@@ -10,24 +10,36 @@ jobs:
   bump-version:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
-    name: "Bump version and create changelog with standard version"
+    name: Bump version and create changelog with standard version
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
-          token: "${{ secrets.PERSONAL_ACCESS_TOKEN }}"
+          token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
       - name: Setup bun
-        uses: oven-sh/setup-bun@v1.1.1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Install dependencies
         id: install_code
-        run: bun install --frozen-lockfile
+        run: bun i
       - name: Git config
         run: |
           git config --local user.name "github-actions[bot]"
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
+      - name: Build command
+        id: build_command
+        run: bun run build
+      - name: Update README.md
+        run: bun run generate-docs
+      - name: Update Doc
+        run: bun run generate-docs --folder webdocs
+      - name: Add doc to github
+        run: |
+          git add README.md
+          git add webdocs/*
+          git commit --m "docs: update README.md" || true
       - name: Create bump and changelog main
         if: github.ref == 'refs/heads/main'
         run: npx standard-version
@@ -40,15 +52,26 @@ jobs:
           remote_repo="https://${GITHUB_ACTOR}:${{ secrets.PERSONAL_ACCESS_TOKEN }}@github.com/${GITHUB_REPOSITORY}.git"
           git pull $remote_repo $CURRENT_BRANCH
           git push $remote_repo HEAD:$CURRENT_BRANCH --follow-tags --tags
+      - name: Push generated doc to website
+        uses: cpina/github-action-push-to-another-repository@v1.7.3
+        env:
+          API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
+        with:
+          source-files: webdocs/*
+          destination-username: Cap-go
+          destination-repository: website
+          destination-directory: src/content/docs/docs/cli/reference
+          destination-branch: main
+          commit-email: martindonadieu@gmail.com
   create-cache:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
-    name: "Create global cache on main branch"
+    name: Create global cache on main branch
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - name: Checkoutpsuh
+        uses: actions/checkout@v5
       - name: Setup bun
-        uses: oven-sh/setup-bun@v1.1.1
+        uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
       - name: Install dependencies

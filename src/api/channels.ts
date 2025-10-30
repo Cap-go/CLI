@@ -1,60 +1,108 @@
-import process from 'node:process'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
-import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
+import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
+import { Table } from '@sauber/table'
 import { formatError } from '../utils'
 
-export async function checkVersionNotUsedInChannel(supabase: SupabaseClient<Database>, appid: string, versionData: Database['public']['Tables']['app_versions']['Row']) {
+interface CheckVersionOptions {
+  silent?: boolean
+  autoUnlink?: boolean
+}
+
+export async function checkVersionNotUsedInChannel(
+  supabase: SupabaseClient<Database>,
+  appid: string,
+  versionData: Database['public']['Tables']['app_versions']['Row'],
+  options: CheckVersionOptions = {},
+) {
+  const { silent = false, autoUnlink = false } = options
   const { data: channelFound, error: errorChannel } = await supabase
     .from('channels')
     .select()
     .eq('app_id', appid)
     .eq('version', versionData.id)
+
   if (errorChannel) {
-    p.log.error(`Cannot check Version ${appid}@${versionData.name}`)
-    program.error('')
+    if (!silent)
+      log.error(`Cannot check Version ${appid}@${versionData.name}: ${formatError(errorChannel)}`)
+    throw new Error(`Cannot check version ${appid}@${versionData.name}: ${formatError(errorChannel)}`)
   }
-  if (channelFound && channelFound.length > 0) {
-    p.intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel`)
-    if (await p.confirm({ message: 'unlink it?' })) {
-      // loop on all channels and set version to unknown
-      for (const channel of channelFound) {
-        const s = p.spinner()
-        s.start(`Unlinking channel ${channel.name}`)
-        const { error: errorChannelUpdate } = await supabase
-          .from('channels')
-          .update({
-            version: (await findUnknownVersion(supabase, appid))?.id,
-          })
-          .eq('id', channel.id)
-        if (errorChannelUpdate) {
-          s.stop(`Cannot update channel ${channel.name} ${formatError(errorChannelUpdate)}`)
-          process.exit(1)
-        }
-        s.stop(`✅ Channel ${channel.name} unlinked`)
-      }
-    }
-    else {
-      p.log.error(`Unlink it first`)
-      program.error('')
-    }
-    p.outro(`Version unlinked from ${channelFound.length} channel`)
+
+  if (!channelFound?.length)
+    return
+
+  if (silent)
+    throw new Error(`Version ${appid}@${versionData.name} is used in ${channelFound.length} channel(s)`) // No interactivity allowed
+
+  intro(`❌ Version ${appid}@${versionData.name} is used in ${channelFound.length} channel${channelFound.length > 1 ? 's' : ''}`)
+
+  let shouldUnlink = autoUnlink
+  if (!autoUnlink) {
+    const response = await confirmC({ message: 'unlink it?' })
+    shouldUnlink = response === true
   }
+
+  if (!shouldUnlink) {
+    log.error('Unlink it first')
+    throw new Error(`Version ${appid}@${versionData.name} is still linked to channel(s)`) // Stop command
+  }
+
+  for (const channel of channelFound) {
+    const s = spinner()
+    s.start(`Unlinking channel ${channel.name}`)
+
+    const unknownVersion = await findUnknownVersion(supabase, appid, { silent })
+    if (!unknownVersion) {
+      s.stop(`Cannot find unknown version for ${appid}`)
+      throw new Error(`Cannot find unknown version for ${appid}`)
+    }
+    const { error: errorChannelUpdate } = await supabase
+      .from('channels')
+      .update({ version: unknownVersion.id })
+      .eq('id', channel.id)
+
+    if (errorChannelUpdate) {
+      s.stop(`Cannot update channel ${channel.name} ${formatError(errorChannelUpdate)}`)
+      throw new Error(`Cannot update channel ${channel.name}: ${formatError(errorChannelUpdate)}`)
+    }
+
+    s.stop(`✅ Channel ${channel.name} unlinked`)
+  }
+
+  outro(`Version unlinked from ${channelFound.length} channel${channelFound.length > 1 ? 's' : ''}`)
 }
 
-export function findUnknownVersion(supabase: SupabaseClient<Database>, appId: string) {
-  return supabase
+interface FindUnknownOptions {
+  silent?: boolean
+}
+
+export async function findUnknownVersion(
+  supabase: SupabaseClient<Database>,
+  appId: string,
+  options: FindUnknownOptions = {},
+) {
+  const { silent = false } = options
+
+  const { data, error } = await supabase
     .from('app_versions')
     .select('id')
     .eq('app_id', appId)
     .eq('name', 'unknown')
-    .throwOnError()
-    .single().then(({ data }) => data)
+    .single()
+
+  if (error) {
+    if (!silent)
+      log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
+    throw new Error(`Cannot retrieve unknown version for app ${appId}: ${formatError(error)}`)
+  }
+
+  return data
 }
 
-export function createChannel(supabase: SupabaseClient<Database>, update: Database['public']['Tables']['channels']['Insert']) {
+export function createChannel(
+  supabase: SupabaseClient<Database>,
+  update: Database['public']['Tables']['channels']['Insert'],
+) {
   return supabase
     .from('channels')
     .insert(update)
@@ -70,42 +118,98 @@ export function delChannel(supabase: SupabaseClient<Database>, name: string, app
     .eq('app_id', appId)
     .single()
 }
-interface version {
-  id: string
+
+export function findChannel(supabase: SupabaseClient<Database>, appId: string, name: string) {
+  return supabase
+    .from('channels')
+    .select()
+    .eq('app_id', appId)
+    .eq('name', name)
+    .single()
+}
+
+export function findChannelDevices(supabase: SupabaseClient<Database>, appId: string, channelId: number) {
+  return supabase
+    .from('channel_devices')
+    .select('id')
+    .eq('app_id', appId)
+    .eq('channel_id', channelId)
+}
+
+export function delChannelDevices(supabase: SupabaseClient<Database>, appId: string, channelId: number) {
+  return supabase
+    .from('channel_devices')
+    .delete()
+    .eq('app_id', appId)
+    .eq('channel_id', channelId)
+}
+
+export function findBundleIdByChannelName(supabase: SupabaseClient<Database>, appId: string, name: string) {
+  return supabase
+    .from('channels')
+    .select(`
+      id,
+      version (id, name)
+    `)
+    .eq('app_id', appId)
+    .eq('name', name)
+    .single()
+    .throwOnError()
+    .then(({ data }) => data?.version)
+}
+
+interface Version {
+  id: string | number
   name: string
 }
-export function displayChannels(data: (Database['public']['Tables']['channels']['Row'] & { version?: version, secondVersion?: version })[]) {
-  const t = new Table({
-    title: 'Channels',
-    charLength: { '❌': 2, '✅': 2 },
-  })
 
-  // add rows with color
-  data.reverse().forEach((row) => {
-    t.addRow({
-      'Name': row.name,
-      ...(row.version ? { Version: row.version.name } : undefined),
-      'Public': row.public ? '✅' : '❌',
-      'iOS': row.ios ? '❌' : '✅',
-      'Android': row.android ? '❌' : '✅',
-      '⬆️ limit': row.disableAutoUpdate,
-      '⬇️ under native': row.disableAutoUpdateUnderNative ? '❌' : '✅',
-      'Self assign': row.allow_device_self_set ? '✅' : '❌',
-      'Progressive': row.enable_progressive_deploy ? '✅' : '❌',
-      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next version': row.secondVersion.name } : undefined),
-      ...(row.enable_progressive_deploy && row.secondVersion ? { 'Next %': row.secondaryVersionPercentage } : undefined),
-      'AB Testing': row.enableAbTesting ? '✅' : '❌',
-      ...(row.enableAbTesting && row.secondVersion ? { 'Version B': row.secondVersion } : undefined),
-      ...(row.enableAbTesting && row.secondVersion ? { 'A/B %': row.secondaryVersionPercentage } : undefined),
-      'Emulator': row.allow_emulator ? '✅' : '❌',
-      'Dev 📱': row.allow_dev ? '✅' : '❌',
-    })
-  })
-
-  p.log.success(t.render())
+export interface Channel {
+  id: number
+  name: string
+  public: boolean
+  ios: boolean
+  android: boolean
+  disable_auto_update: string
+  disable_auto_update_under_native: boolean
+  allow_device_self_set: boolean
+  allow_emulator: boolean
+  allow_dev: boolean
+  version?: Version
 }
 
-export async function getActiveChannels(supabase: SupabaseClient<Database>, appid: string) {
+export function displayChannels(data: Channel[], silent = false) {
+  if (silent)
+    return
+
+  const t = new Table()
+  t.theme = Table.roundTheme
+  t.headers = ['Name', 'Version', 'Public', 'iOS', 'Android', 'Auto Update', 'Native Auto Update', 'Device Self Set', 'Progressive Deploy', 'Secondary Version', 'Secondary Version Percentage', 'AB Testing', 'AB Testing Version', 'AB Testing Percentage', 'Emulator', 'Dev']
+  t.rows = []
+
+  for (const row of data.toReversed()) {
+    t.rows.push([
+      row.name,
+      row.version?.name,
+      row.public ? '✅' : '❌',
+      row.ios ? '✅' : '❌',
+      row.android ? '✅' : '❌',
+      row.disable_auto_update,
+      row.disable_auto_update_under_native ? '❌' : '✅',
+      row.allow_device_self_set ? '✅' : '❌',
+      row.allow_emulator ? '✅' : '❌',
+      row.allow_dev ? '✅' : '❌',
+    ])
+  }
+
+  log.success('Channels')
+  log.success(t.toString())
+}
+
+export async function getActiveChannels(
+  supabase: SupabaseClient<Database>,
+  appid: string,
+  silent = false,
+) {
   const { data, error: vError } = await supabase
     .from('channels')
     .select(`
@@ -117,24 +221,21 @@ export async function getActiveChannels(supabase: SupabaseClient<Database>, appi
       ios,
       android,
       allow_device_self_set,
-      disableAutoUpdateUnderNative,
-      disableAutoUpdate,
-      enable_progressive_deploy,
-      enableAbTesting,
-      secondaryVersionPercentage,
-      secondVersion (id, name),
+      disable_auto_update_under_native,
+      disable_auto_update,
       created_at,
       created_by,
       app_id,
       version (id, name)
     `)
     .eq('app_id', appid)
-    // .eq('created_by', userId)
     .order('created_at', { ascending: false })
 
   if (vError) {
-    p.log.error(`App ${appid} not found in database`)
-    program.error('')
+    if (!silent)
+      log.error(`App ${appid} not found in database`)
+    throw new Error(`App ${appid} not found in database: ${formatError(vError)}`)
   }
-  return data
+
+  return data as Channel[]
 }

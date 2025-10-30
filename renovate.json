@@ -4,6 +4,7 @@
     "config:base",
     "schedule:earlyMondays"
   ],
+  "dependencyDashboard": false,
   "lockFileMaintenance": {
     "enabled": true,
     "automerge": true,
@@ -18,6 +19,10 @@
       ],
       "matchCurrentVersion": "!/^0/",
       "automerge": true
+    },
+    {
+      "matchPackageNames": ["ky"],
+      "enabled": false
     }
   ]
 }

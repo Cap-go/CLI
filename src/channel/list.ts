@@ -1,40 +1,45 @@
-import process from 'node:process'
-import { program } from 'commander'
-import * as p from '@clack/prompts'
+import type { OptionsBase } from '../utils'
+import { intro, log, outro } from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
-import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
-export async function listChannels(appId: string, options: OptionsBase) {
-  p.intro(`List channels`)
+export async function listChannels(appId: string, options: OptionsBase, silent = false) {
+  if (!silent)
+    intro('List channels')
+
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
-  const snag = useLogSnag()
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
 
-  if (!options.apikey)
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
+  if (!options.apikey) {
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to upload your bundle')
+    throw new Error('Missing API key')
+  }
 
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
-  const supabase = await createSupabaseClient(options.apikey)
 
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read)
 
-  p.log.info(`Querying available channels in Capgo`)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent)
 
-  // Get all active app versions we might possibly be able to cleanup
-  const allVersions = await getActiveChannels(supabase, appId)
+  if (!silent)
+    log.info('Querying available channels in Capgo')
 
-  p.log.info(`Active channels in Capgo: ${allVersions?.length}`)
+  const allChannels = await getActiveChannels(supabase, appId)
 
-  displayChannels(allVersions)
-  await snag.track({
+  if (!silent) {
+    log.info(`Active channels in Capgo: ${allChannels?.length ?? 0}`)
+    displayChannels(allChannels)
+  }
+
+  await sendEvent(options.apikey, {
     channel: 'channel',
     event: 'List channel',
     icon: '✅',
@@ -43,7 +48,10 @@ export async function listChannels(appId: string, options: OptionsBase) {
       'app-id': appId,
     },
     notify: false,
-  }).catch()
-  p.outro(`Done ✅`)
-  process.exit()
+  }).catch(() => {})
+
+  if (!silent)
+    outro('Done ✅')
+
+  return allChannels
 }

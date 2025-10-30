@@ -1,67 +1,69 @@
-import process from 'node:process'
-import { program } from 'commander'
-import { Table } from 'console-table-printer'
 import type { SupabaseClient } from '@supabase/supabase-js'
-import * as p from '@clack/prompts'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
+import { intro, log, outro } from '@clack/prompts'
+import { Table } from '@sauber/table'
+import { checkAlerts } from '../api/update'
 import { createSupabaseClient, findSavedKey, getHumanDate, verifyUser } from '../utils'
-import { checkLatest } from '../api/update'
 
-function displayApp(data: Database['public']['Tables']['apps']['Row'][]) {
-  if (!data.length) {
-    p.log.error('No apps found')
-    process.exit(1)
-  }
-  const t = new Table({
-    title: 'Apps',
-    charLength: { '❌': 2, '✅': 2 },
-  })
+function displayApps(data: Database['public']['Tables']['apps']['Row'][]) {
+  const table = new Table()
+  table.headers = ['Name', 'id', 'Created']
+  table.rows = []
 
-  // add rows with color
-  data.reverse().forEach((row) => {
-    t.addRow({
-      Name: row.name,
-      id: row.app_id,
-      Created: getHumanDate(row.created_at),
-    })
-  })
+  for (const row of data.toReversed())
+    table.rows.push([row.name ?? '', row.app_id, getHumanDate(row.created_at)])
 
-  p.log.success(t.render())
+  log.success('Apps')
+  log.success(table.toString())
 }
 
-export async function getActiveApps(supabase: SupabaseClient<Database>) {
+async function getActiveApps(
+  supabase: SupabaseClient<Database>,
+  silent: boolean,
+) {
   const { data, error: vError } = await supabase
     .from('apps')
     .select()
-    // .eq('user_id', userId)
     .order('created_at', { ascending: false })
 
   if (vError) {
-    p.log.error('Apps not found')
-    program.error('')
+    if (!silent)
+      log.error('Apps not found')
+    throw new Error('Apps not found')
   }
-  return data
+
+  return data ?? []
 }
 
-export async function listApp(options: OptionsBase) {
-  p.intro(`List apps in Capgo`)
+export async function listApp(options: OptionsBase, silent = false) {
+  if (!silent)
+    intro('List apps in Capgo')
 
-  await checkLatest()
+  await checkAlerts()
+
   options.apikey = options.apikey || findSavedKey()
 
-  const supabase = await createSupabaseClient(options.apikey)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read', 'upload'])
 
-  p.log.info(`Getting active bundle in Capgo`)
+  if (!silent)
+    log.info('Getting active bundle in Capgo')
 
-  // Get all active app versions we might possibly be able to cleanup
-  const allApps = await getActiveApps(supabase)
+  const allApps = await getActiveApps(supabase, silent)
 
-  p.log.info(`Active app in Capgo: ${allApps?.length}`)
+  if (!allApps.length) {
+    if (!silent)
+      log.error('No apps found')
+    throw new Error('No apps found')
+  }
 
-  displayApp(allApps)
-  p.outro(`Done ✅`)
-  process.exit()
+  if (!silent) {
+    log.info(`Active app in Capgo: ${allApps.length}`)
+    displayApps(allApps)
+    outro('Done ✅')
+  }
+
+  return allApps
 }

@@ -1,127 +1,169 @@
-import process from 'node:process'
-import { program } from 'commander'
-import semver from 'semver/preload'
-import * as p from '@clack/prompts'
-import promptSync from 'prompt-sync'
+import type { SemVer } from '@std/semver'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, getHumanDate, verifyUser } from '../utils'
-import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
+import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
+import {
+  format,
+  greaterThan,
+  increment,
+  lessThan,
+  parse,
+} from '@std/semver'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { checkLatest } from '../api/update'
+import { checkAlerts } from '../api/update'
+import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
+import {
+  createSupabaseClient,
+  findSavedKey,
+  getAppId,
+  getConfig,
+  getHumanDate,
+  OrganizationPerm,
+  verifyUser,
+} from '../utils'
 
 interface Options extends OptionsBase {
   version: string
   bundle: string
   keep: number
   force: boolean
+  ignoreChannel: boolean
 }
 
-const prompt = promptSync()
-
-async function removeVersions(toRemove: Database['public']['Tables']['app_versions']['Row'][], supabase: SupabaseClient<Database>, appid: string, userId: string) {
-  // call deleteSpecificVersion one by one from toRemove sync
+async function removeVersions(
+  toRemove: Database['public']['Tables']['app_versions']['Row'][],
+  supabase: SupabaseClient<Database>,
+  appId: string,
+  silent: boolean,
+) {
   for await (const row of toRemove) {
-    p.log.warn(`Removing ${row.name} created on ${(getHumanDate(row.created_at))}`)
-    await deleteSpecificVersion(supabase, appid, userId, row.name)
+    if (!silent)
+      log.warn(`Removing ${row.name} created on ${getHumanDate(row.created_at)}`)
+    await deleteSpecificVersion(supabase, appId, row.name)
   }
 }
 
-function getRemovableVersionsInSemverRange(data: Database['public']['Tables']['app_versions']['Row'][], bundle: string, nextMajor: string) {
+function getRemovableVersionsInSemverRange(
+  data: Database['public']['Tables']['app_versions']['Row'][],
+  bundleVersion: SemVer,
+  nextMajorVersion: SemVer,
+) {
   const toRemove: Database['public']['Tables']['app_versions']['Row'][] = []
 
-  data?.forEach((row) => {
-    if (semver.gte(row.name, bundle) && semver.lt(row.name, `${nextMajor}`))
+  for (const row of data ?? []) {
+    const rowVersion = parse(row.name)
+    if (greaterThan(rowVersion, bundleVersion) && lessThan(rowVersion, nextMajorVersion))
       toRemove.push(row)
-  })
+  }
+
   return toRemove
 }
 
-export async function cleanupBundle(appid: string, options: Options) {
-  p.intro(`Cleanup versions in Capgo`)
-  await checkLatest()
+export async function cleanupBundle(appId: string, options: Options, silent = false) {
+  if (!silent)
+    intro('Cleanup versions in Capgo')
+
+  await checkAlerts()
+
   options.apikey = options.apikey || findSavedKey()
   const { bundle, keep = 4 } = options
   const force = options.force || false
+  const ignoreChannel = options.ignoreChannel || false
 
-  const config = await getConfig()
-  appid = appid || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
+
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide an API key to delete your app')
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to delete your app')
+    throw new Error('Missing API key')
   }
-  if (!appid) {
-    p.log.error('Missing argument, you need to provide a appid, or be in a capacitor project')
-    program.error('')
+
+  if (!appId) {
+    if (!silent)
+      log.error('Missing argument, you need to provide a appid, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
-  const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appid, OrganizationPerm.write)
-  p.log.info(`Querying all available versions in Capgo`)
+  await verifyUser(supabase, options.apikey, ['write', 'all'])
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
 
-  // Get all active app versions we might possibly be able to cleanup
-  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await getActiveAppVersions(supabase, appid, userId)
+  if (!silent)
+    log.info('Querying all available versions in Capgo')
 
-  const versionInUse = await getChannelsVersion(supabase, appid)
+  let allVersions: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = await getActiveAppVersions(supabase, appId)
+  const versionInUse = await getChannelsVersion(supabase, appId)
 
-  p.log.info(`Total active versions in Capgo: ${allVersions?.length}`)
-  if (allVersions?.length === 0) {
-    p.log.error('No versions found, aborting cleanup')
-    return
+  if (!silent)
+    log.info(`Total active versions in Capgo: ${allVersions?.length ?? 0}`)
+
+  if (!allVersions?.length) {
+    if (!silent)
+      log.error('No versions found, aborting cleanup')
+    throw new Error('No versions found')
   }
+
   if (bundle) {
-    const nextMajor = `${semver.inc(bundle, 'major')}`
-    p.log.info(`Querying available versions in Capgo between ${bundle} and ${nextMajor}`)
+    const bundleVersion = parse(bundle)
+    const nextMajorVersion = increment(bundleVersion, 'major')
 
-    // Get all app versions that are in the given range
-    allVersions = getRemovableVersionsInSemverRange(allVersions, bundle, nextMajor) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[]
+    if (!silent)
+      log.info(`Querying available versions in Capgo between ${format(bundleVersion)} and ${format(nextMajorVersion)}`)
 
-    p.log.info(`Active versions in Capgo between ${bundle} and ${nextMajor}: ${allVersions?.length}`)
+    allVersions = getRemovableVersionsInSemverRange(allVersions, bundleVersion, nextMajorVersion) as (Database['public']['Tables']['app_versions']['Row'] & { keep: string })[]
+
+    if (!silent)
+      log.info(`Active versions in Capgo between ${format(bundleVersion)} and ${format(nextMajorVersion)}: ${allVersions?.length ?? 0}`)
   }
-
-  // Slice to keep and remove
 
   const toRemove: (Database['public']['Tables']['app_versions']['Row'] & { keep?: string })[] = []
-  // Slice to keep and remove
   let kept = 0
-  allVersions.forEach((v) => {
-    const isInUse = versionInUse.find(vi => vi === v.id)
-    if (kept < keep || isInUse) {
-      if (isInUse)
-        v.keep = '✅ (Linked to channel)'
-      else
-        v.keep = '✅'
 
+  for (const v of allVersions) {
+    const isInUse = versionInUse.find(vi => vi === v.id)
+
+    if (kept < keep || (isInUse && !ignoreChannel)) {
+      v.keep = isInUse ? '✅ (Linked to channel)' : '✅'
       kept += 1
     }
     else {
       v.keep = '❌'
       toRemove.push(v)
     }
-  })
-
-  if (toRemove.length === 0) {
-    p.log.warn('Nothing to be removed, aborting removal...')
-    return
   }
-  displayBundles(allVersions)
 
-  // Check user wants to clean that all up
+  if (!toRemove.length) {
+    if (!silent)
+      log.warn('Nothing to be removed, aborting removal...')
+    return { removed: 0, kept }
+  }
+
+  if (!silent)
+    displayBundles(allVersions)
+
   if (!force) {
-    const result = prompt('Do you want to continue removing the versions specified? Type yes to confirm: ')
-    if (result !== 'yes') {
-      p.log.warn('Not confirmed, aborting removal...')
-      return
+    if (!silent) {
+      const doDelete = await confirmC({ message: 'Do you want to continue removing the versions specified?' })
+      if (isCancel(doDelete) || !doDelete) {
+        log.warn('Not confirmed, aborting removal...')
+        throw new Error('Cleanup cancelled by user')
+      }
+    }
+    else {
+      throw new Error('Cleanup requires force=true in SDK mode to prevent accidental deletions')
     }
   }
 
-  // Yes, lets clean it up
-  p.log.success('You have confirmed removal, removing versions now')
-  await removeVersions(toRemove, supabase, appid, userId)
-  p.outro(`Done ✅`)
-  process.exit()
+  if (!silent)
+    log.success('You have confirmed removal, removing versions now')
+
+  await removeVersions(toRemove, supabase, appId, silent)
+
+  if (!silent)
+    outro('Done ✅')
+
+  return { removed: toRemove.length, kept }
 }

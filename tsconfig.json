@@ -1,23 +1,12 @@
 {
   "compilerOptions": {
-    "strict": true,
-    "forceConsistentCasingInFileNames": true,
-    "module": "commonjs",
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "target": "es6",
-    "moduleResolution": "node",
-    "sourceMap": true,
-    "outDir": "dist",
-    "baseUrl": "src",
+    "target": "es2023",
     "lib": [
-      "es2016",
-      "dom"
+      "es2023"
     ],
-    "typeRoots": [
-      "src/types/*"
-    ],
+    "baseUrl": "src",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "paths": {
       "*": [
         "src/types/*"
@@ -25,7 +14,17 @@
       "@capacitor/cli/dist/config": [
         "src/types/capacitor-cli.d.ts"
       ]
-    }
+    },
+    "resolveJsonModule": true,
+    "typeRoots": ["src/types/*", "node_modules/@types"],
+    "strict": true,
+    "declaration": true,
+    "declarationMap": true,
+    "outDir": "dist",
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true
   },
   "include": [
     "src/**/*"
@@ -35,5 +34,5 @@
     "dist",
     "__tests__",
     "**/*.spec.ts"
-  ],
+  ]
 }

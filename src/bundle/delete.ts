@@ -1,53 +1,55 @@
-import process from 'node:process'
-import { program } from 'commander'
-import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { intro, log, outro } from '@clack/prompts'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { deleteSpecificVersion } from '../api/versions'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   bundle: string
 }
 
-export async function deleteBundle(bundleId: string, appId: string, options: Options) {
-  p.intro(`Delete bundle`)
+export async function deleteBundle(bundleId: string, appId: string, options: Options, silent = false) {
+  if (!silent)
+    intro('Delete bundle')
+
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to upload your bundle')
+    throw new Error('Missing API key')
   }
+
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
-  const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write)
-
-  appId = appId || config?.app?.appId
-  if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide an API key to delete your app')
-    program.error('')
-  }
   if (!bundleId) {
-    p.log.error('Missing argument, you need to provide a bundleId, or be in a capacitor project')
-    program.error('')
-  }
-  if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a bundleId, or be in a capacitor project')
+    throw new Error('Missing bundleId')
   }
 
-  p.log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
 
-  await deleteSpecificVersion(supabase, appId, userId, bundleId)
-  p.log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`)
-  p.outro(`Done`)
-  process.exit()
+  await verifyUser(supabase, options.apikey, ['write', 'all'])
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
+
+  if (!silent) {
+    log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)
+    log.info(`Keep in mind that you will not be able to reuse this bundle version, it's gone forever`)
+  }
+
+  await deleteSpecificVersion(supabase, appId, bundleId)
+
+  if (!silent) {
+    log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`)
+    outro('Done')
+  }
+
+  return true
 }

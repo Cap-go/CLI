@@ -1,51 +1,110 @@
-import process from 'node:process'
-import { program } from 'commander'
-import * as p from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { delChannel } from '../api/channels'
 import type { OptionsBase } from '../utils'
-import { OrganizationPerm, createSupabaseClient, findSavedKey, getConfig, useLogSnag, verifyUser } from '../utils'
+import { intro, log, outro } from '@clack/prompts'
+import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { delChannel, delChannelDevices, findBundleIdByChannelName, findChannel } from '../api/channels'
+import { deleteAppVersion } from '../api/versions'
+import {
+  createSupabaseClient,
+  findSavedKey,
+  formatError,
+  getAppId,
+  getConfig,
+  getOrganizationId,
+  OrganizationPerm,
+  sendEvent,
+  verifyUser,
+} from '../utils'
 
-export async function deleteChannel(channelId: string, appId: string, options: OptionsBase) {
-  p.intro(`Delete channel`)
+interface DeleteChannelOptions extends OptionsBase {
+  deleteBundle: boolean
+  successIfNotFound: boolean
+}
+
+export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions, silent = false) {
+  if (!silent)
+    intro('Delete channel')
+
   options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
-  const snag = useLogSnag()
+  const extConfig = await getConfig()
+  appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
-    p.log.error('Missing API key, you need to provide a API key to upload your bundle')
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to upload your bundle')
+    throw new Error('Missing API key')
   }
+
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
-  const supabase = await createSupabaseClient(options.apikey)
 
-  const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-  // Check we have app access to this appId
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  const userId = await verifyUser(supabase, options.apikey, ['all'])
 
-  p.log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
-  try {
-    await delChannel(supabase, channelId, appId, userId)
-    p.log.success(`Channel deleted`)
-    await snag.track({
-      channel: 'channel',
-      event: 'Delete channel',
-      icon: '✅',
-      tags: {
-        'user-id': userId,
-        'app-id': appId,
-        'channel': channelId,
-      },
-      notify: false,
-    }).catch()
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
+
+  if (options.deleteBundle && !silent)
+    log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)
+
+  if (options.deleteBundle) {
+    const bundle = await findBundleIdByChannelName(supabase, appId, channelId)
+    if (bundle?.name && !silent)
+      log.info(`Deleting bundle ${bundle.name} from Capgo`)
+    if (bundle?.name)
+      await deleteAppVersion(supabase, appId, bundle.name)
   }
-  catch (error) {
-    p.log.error(`Cannot delete Channel 🙀`)
+
+  const { data: channel, error: channelError } = await findChannel(supabase, appId, channelId)
+  if (channelError || !channel) {
+    if (!silent)
+      log.error(`Channel ${channelId} not found`)
+
+    if (options.successIfNotFound) {
+      if (!silent)
+        log.success(`Channel ${channelId} not found and successIfNotFound is true`)
+      return true
+    }
+
+    throw new Error(`Channel ${channelId} not found`)
   }
-  p.outro(`Done ✅`)
-  process.exit()
+
+  const { error: delDevicesError } = await delChannelDevices(supabase, appId, channel.id)
+  if (delDevicesError) {
+    if (!silent)
+      log.error(`Cannot delete channel devices: ${formatError(delDevicesError)}`)
+    throw new Error(`Cannot delete channel devices: ${formatError(delDevicesError)}`)
+  }
+
+  if (!silent)
+    log.info(`Deleting channel ${appId}#${channelId} from Capgo`)
+
+  const deleteStatus = await delChannel(supabase, channelId, appId, userId)
+  if (deleteStatus.error) {
+    if (!silent)
+      log.error(`Cannot delete Channel 🙀 ${formatError(deleteStatus.error)}`)
+    throw new Error(`Cannot delete channel: ${formatError(deleteStatus.error)}`)
+  }
+
+  const orgId = await getOrganizationId(supabase, appId)
+
+  await sendEvent(options.apikey, {
+    channel: 'channel',
+    event: 'Delete channel',
+    icon: '✅',
+    user_id: orgId,
+    tags: {
+      'app-id': appId,
+      'channel': channelId,
+    },
+    notify: false,
+  }).catch(() => {})
+
+  if (!silent) {
+    log.success('Channel deleted')
+    outro('Done ✅')
+  }
+
+  return true
 }

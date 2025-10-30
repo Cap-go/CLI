@@ -1,22 +1,16 @@
 {
   "name": "@capgo/cli",
-  "version": "5.0.0-alpha.7",
+  "version": "7.18.5",
   "description": "A CLI to upload to capgo servers",
-  "main": "dist/index.js",
-  "bin": {
-    "capgo": "dist/index.js"
-  },
+  "author": "github.com/riderx",
+  "license": "Apache 2.0",
+  "homepage": "https://github.com/Cap-go/CLI#readme",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Cap-go/CLI.git"
   },
   "bugs": {
     "url": "https://github.com/Cap-go/CLI/issues"
-  },
-  "homepage": "https://github.com/Cap-go/CLIl#readme",
-  "engines": {
-    "npm": ">=8.0.0",
-    "node": ">=20.0.0"
   },
   "keywords": [
     "appflow alternative",
@@ -27,71 +21,77 @@
     "capgo",
     "cli",
     "upload",
-    "capgo-cli"
+    "capgo-cli",
+    "sdk"
   ],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    },
+    "./sdk": {
+      "types": "./dist/src/sdk.d.ts",
+      "import": "./dist/src/sdk.js",
+      "require": "./dist/src/sdk.js"
+    }
+  },
+  "main": "dist/index.js",
+  "types": "dist/src/index.d.ts",
+  "bin": {
+    "capgo": "dist/index.js"
+  },
+  "engines": {
+    "npm": ">=8.0.0",
+    "node": ">=20.0.0"
+  },
   "scripts": {
-    "build": "node build.mjs",
-    "dev": "NODE_ENV=development node build.mjs",
+    "build": "tsc && node build.mjs",
+    "dev": "NODE_ENV=development ncc build",
     "no-debug": "node dist/index.js",
-    "test": "npx --yes ts-node -T src/index.ts",
-    "dev-build": "SUPA_DB=development node build.mjs",
+    "dev-build": "SUPA_DB=development ncc build",
     "pack": "pkg",
     "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
-    "test_rls": "ts-node ./test/test_headers_rls.ts",
-    "lint": "eslint \"src/**/*.ts\" --fix"
+    "lint": "eslint \"src/**/*.ts\" --fix",
+    "check-posix-paths": "node test/check-posix-paths.js",
+    "generate-docs": "node dist/index.js generate-docs README.md"
   },
-  "author": "github.com/riderx",
-  "license": "Apache 2.0",
-  "dependencies": {
-    "@aws-sdk/client-s3": "^3.540.0",
-    "@capacitor/cli": "5.7.0",
-    "@capgo/find-package-manager": "0.0.10",
-    "@clack/prompts": "^0.7.0",
-    "@supabase/supabase-js": "^2.39.3",
-    "@tomasklaen/checksum": "^1.1.0",
-    "@trufflesuite/spinnies": "^0.1.1",
-    "adm-zip": "^0.5.10",
-    "ci-info": "^4.0.0",
-    "commander": "12.0.0",
-    "console-table-printer": "^2.12.0",
-    "get-latest-version": "^5.1.0",
-    "ky": "^1.2.0",
-    "logsnag": "1.0.0",
-    "mime": "^4.0.1",
-    "node-dir": "^0.1.17",
-    "open": "^10.0.3",
-    "prettyjson": "^1.2.5",
-    "prompt-sync": "^4.2.0",
-    "qrcode": "^1.5.3",
-    "semver": "^7.6.0"
+  "//dependencies": {
+    "ky": "We temporarily fixed ky version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.6.4",
-    "@types/adm-zip": "0.5.5",
-    "@types/mime": "^3.0.4",
-    "@types/node": "^20.11.17",
-    "@types/node-dir": "^0.0.37",
-    "@types/npmcli__ci-detect": "^2.0.3",
+    "@antfu/eslint-config": "^6.1.0",
+    "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.4",
+    "@capacitor/cli": "^7.4.4",
+    "@capgo/find-package-manager": "^0.0.18",
+    "@clack/prompts": "^0.11.0",
+    "@sauber/table": "npm:@jsr/sauber__table",
+    "@std/semver": "npm:@jsr/std__semver@1.0.6",
+    "@supabase/supabase-js": "^2.76.1",
+    "@tomasklaen/checksum": "^1.1.0",
+    "@types/adm-zip": "^0.5.7",
+    "@types/brotli": "^1.3.4",
+    "@types/node": "^24.9.1",
     "@types/prettyjson": "^0.0.33",
-    "@types/prompt-sync": "^4.2.3",
-    "@types/qrcode": "^1.5.5",
-    "@types/semver": "^7.5.6",
-    "@typescript-eslint/eslint-plugin": "6.21.0",
-    "@typescript-eslint/parser": "6.21.0",
-    "esbuild": "^0.20.0",
-    "eslint": "8.56.0",
-    "eslint-config-airbnb-base": "^15.0.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-import-resolver-typescript": "3.6.1",
-    "eslint-plugin-import": "2.29.1",
-    "eslint-plugin-prettier": "^5.1.3",
-    "git-format-staged": "3.0.0",
-    "husky": "^9.0.10",
+    "@types/semver": "^7.7.1",
+    "@types/tmp": "^0.2.6",
+    "@vercel/ncc": "^0.38.4",
+    "adm-zip": "^0.5.16",
+    "brotli": "^1.3.3",
+    "ci-info": "^4.3.1",
+    "commander": "^14.0.2",
+    "esbuild": "^0.25.11",
+    "eslint": "^9.38.0",
+    "git-format-staged": "3.1.1",
+    "husky": "^9.1.7",
+    "is-wsl": "^3.1.0",
+    "ky": "1.13.0",
+    "latest-version": "^9.0.0",
+    "open": "^10.1.2",
     "pkg": "5.8.1",
-    "prettier": "3.2.5",
-    "ts-loader": "^9.5.1",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "4.2.0",
-    "typescript": "5.3.3"
+    "prettyjson": "^1.2.5",
+    "semver": "^7.7.3",
+    "tmp": "^0.2.5",
+    "tus-js-client": "^4.3.1",
+    "typescript": "^5.9.3"
   }
 }

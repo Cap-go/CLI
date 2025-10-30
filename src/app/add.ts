@@ -1,191 +1,204 @@
-import { randomUUID } from 'node:crypto'
-import { existsSync, readFileSync } from 'node:fs'
-import process from 'node:process'
-import mime from 'mime'
-import { program } from 'commander'
-import * as p from '@clack/prompts'
-import { checkLatest } from '../api/update'
+import type { SupabaseClient } from '@supabase/supabase-js'
+import type { Buffer } from 'node:buffer'
 import type { Options } from '../api/app'
+import type { Database } from '../types/supabase.types'
+import type { Organization } from '../utils'
+import { existsSync, readFileSync } from 'node:fs'
+import { intro, log, outro } from '@clack/prompts'
 import { checkAppExists, newIconPath } from '../api/app'
+import { checkAlerts } from '../api/update'
 import {
-  checkPlanValid,
   createSupabaseClient,
   findSavedKey,
   formatError,
+  getAppId,
   getConfig,
-  useLogSnag,
+  getContentType,
+  getOrganization,
   verifyUser,
 } from '../utils'
 
-export async function addApp(appId: string, options: Options, throwErr = true) {
-  if (throwErr)
-    p.intro(`Adding`)
-
-  await checkLatest()
-  options.apikey = options.apikey || findSavedKey()
-  const config = await getConfig()
-  appId = appId || config?.app?.appId
-  const snag = useLogSnag()
-
+function ensureOptions(appId: string, options: Options, silent: boolean) {
   if (!options.apikey) {
-    p.log.error(`Missing API key, you need to provide a API key to upload your bundle`)
-    program.error('')
+    if (!silent)
+      log.error('Missing API key, you need to provide an API key to upload your bundle')
+    throw new Error('Missing API key')
   }
+
   if (!appId) {
-    p.log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
-    program.error('')
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    throw new Error('Missing appId')
   }
 
   if (appId.includes('--')) {
-    p.log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
-    program.error('')
+    if (!silent)
+      log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
+    throw new Error('App id includes illegal symbols')
   }
+}
 
-  const supabase = await createSupabaseClient(options.apikey)
-
-  let userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
-
-  // Check we have app access to this appId
+async function ensureAppDoesNotExist(
+  supabase: SupabaseClient<Database>,
+  appId: string,
+  silent: boolean,
+) {
   const appExist = await checkAppExists(supabase, appId)
-  if (throwErr && appExist) {
-    p.log.error(`App ${appId} already exist`)
-    program.error('')
-  }
-  else if (appExist) {
-    return true
-  }
+  if (!appExist)
+    return
 
-  const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v5')
-
-  if (orgError) {
-    p.log.error('Cannot get the list of organizations - exiting')
-    p.log.error(`Error ${JSON.stringify(orgError)}`)
-    program.error('')
+  if (appId === 'io.ionic.starter') {
+    if (!silent)
+      log.error(`This appId ${appId} cannot be used it's reserved, please change it in your capacitor config.`)
+    throw new Error('Reserved appId, please change it in capacitor config')
   }
 
-  const adminOrgs = allOrganizations.filter(org => org.role === 'admin' || org.role === 'super_admin')
+  if (!silent)
+    log.error(`App ${appId} already exist`)
+  throw new Error(`App ${appId} already exists`)
+}
 
-  const organizationUidRaw = (adminOrgs.length > 1)
-    ? await p.select({
-      message: 'Please pick the organization that you want to insert to',
-      options: adminOrgs.map((org) => {
-        return { value: org.gid, label: org.name }
-      }),
-    })
-    : adminOrgs[0].gid
+export async function addApp(appId: string, options: Options, silent = false) {
+  return addAppInternal(appId, options, undefined, silent)
+}
 
-  if (p.isCancel(organizationUidRaw)) {
-    p.log.error('Canceled organization selection, exiting')
-    program.error('')
-  }
+export async function addAppInternal(
+  initialAppId: string,
+  options: Options,
+  organization?: Organization,
+  silent = false,
+) {
+  if (!silent)
+    intro('Adding')
 
-  const organizationUid = organizationUidRaw as string
-  const organization = allOrganizations.find(org => org.gid === organizationUid)!
-  userId = organization.created_by
+  await checkAlerts()
 
-  p.log.info(`Using the organization "${organization.name}" as the app owner`)
+  options.apikey = options.apikey || findSavedKey()
+  const extConfig = await getConfig()
+  const appId = getAppId(initialAppId, extConfig?.config)
 
-  await checkPlanValid(supabase, organizationUid, options.apikey, undefined, false)
+  ensureOptions(appId, options, silent)
+
+  const supabase = await createSupabaseClient(options.apikey!, options.supaHost, options.supaAnon)
+  const userId = await verifyUser(supabase, options.apikey!, ['write', 'all'])
+
+  await ensureAppDoesNotExist(supabase, appId, silent)
+
+  if (!organization)
+    organization = await getOrganization(supabase, ['admin', 'super_admin'])
+
+  const organizationUid = organization.gid
 
   let { name, icon } = options
-  appId = appId || config?.app?.appId
-  name = name || config?.app?.appName || 'Unknown'
-  icon = icon || 'resources/icon.png' // default path for capacitor app
-  if (!icon || !name) {
-    p.log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
-    program.error('')
-  }
-  if (throwErr)
-    p.log.info(`Adding ${appId} to Capgo`)
+  name = name || extConfig.config?.appName || 'Unknown'
+  icon = icon || 'resources/icon.png'
 
-  let iconBuff
-  let iconType
+  if (!icon || !name) {
+    if (!silent)
+      log.error('Missing argument, you need to provide a appId and a name, or be in a capacitor project')
+    throw new Error('Missing app name or icon path')
+  }
+
+  if (!silent)
+    log.info(`Adding ${appId} to Capgo`)
+
+  let iconBuff: Buffer | null = null
+  let iconType: string | null = null
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)
-    const contentType = mime.getType(icon)
+    const contentType = getContentType(icon)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${icon}`)
+    if (!silent)
+      log.warn(`Found app icon ${icon}`)
   }
   else if (existsSync(newIconPath)) {
     iconBuff = readFileSync(newIconPath)
-    const contentType = mime.getType(newIconPath)
+    const contentType = getContentType(newIconPath)
     iconType = contentType || 'image/png'
-    p.log.warn(`Found app icon ${newIconPath}`)
+    if (!silent)
+      log.warn(`Found app icon ${newIconPath}`)
   }
-  else {
-    p.log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
+  else if (!silent) {
+    log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
 
-  const fileName = `icon_${randomUUID()}`
+  const fileName = 'icon'
   let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
 
-  // upload image if available
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/${userId}/${appId}`)
-      .upload(fileName, iconBuff, {
-        contentType: iconType,
-      })
+      .from(`images/org/${organizationUid}/${appId}`)
+      .upload(fileName, iconBuff, { contentType: iconType })
+
     if (error) {
-      p.log.error(`Could not add app ${formatError(error)}`)
-      program.error('')
+      if (!silent)
+        console.error(error)
+      if (!silent)
+        log.error(`Could not add app ${formatError(error)}`)
+      throw new Error(`Could not add app ${formatError(error)}`)
     }
-    const { data: signedURLData } = await supabase
-      .storage
-      .from(`images/${userId}/${appId}`)
+
+    const { data: signedURLData } = await supabase.storage
+      .from(`images/org/${organizationUid}/${appId}`)
       .getPublicUrl(fileName)
+
     signedURL = signedURLData?.publicUrl || signedURL
   }
-  // add app to db
+
   const { error: dbError } = await supabase
     .from('apps')
     .insert({
       icon_url: signedURL,
       owner_org: organizationUid,
+      user_id: userId,
       name,
       app_id: appId,
     })
+
   if (dbError) {
-    p.log.error(`Could not add app ${formatError(dbError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not add app ${formatError(dbError)}`)
+    throw new Error(`Could not add app ${formatError(dbError)}`)
   }
+
   const { error: dbVersionError } = await supabase
     .from('app_versions')
-    .insert([{
-      owner_org: organizationUid,
-      deleted: true,
-      name: 'unknown',
-      app_id: appId,
-    }, {
-      owner_org: organizationUid,
-      deleted: true,
-      name: 'builtin',
-      app_id: appId,
-    }])
+    .insert([
+      {
+        owner_org: organizationUid,
+        deleted: true,
+        name: 'unknown',
+        app_id: appId,
+      },
+      {
+        owner_org: organizationUid,
+        deleted: true,
+        name: 'builtin',
+        app_id: appId,
+      },
+    ])
+
   if (dbVersionError) {
-    p.log.error(`Could not add app ${formatError(dbVersionError)}`)
-    program.error('')
+    if (!silent)
+      log.error(`Could not add app ${formatError(dbVersionError)}`)
+    throw new Error(`Could not add app ${formatError(dbVersionError)}`)
   }
-  await snag.track({
-    channel: 'app',
-    event: 'App Added',
-    icon: '🎉',
-    user_id: userId,
-    tags: {
-      'app-id': appId,
-    },
-    notify: false,
-  }).catch()
-  p.log.success(`App ${appId} added to Capgo. ${throwErr ? 'You can upload a bundle now' : ''}`)
-  if (throwErr) {
-    p.outro(`Done ✅`)
-    process.exit()
+
+  if (!silent) {
+    log.success(`App ${appId} added to Capgo. You can upload a bundle now`)
+    outro('Done ✅')
   }
-  return true
+
+  return {
+    appId,
+    organizationUid,
+    userId,
+    name,
+    signedURL,
+  }
 }
 
-export async function addCommand(apikey: string, options: Options) {
-  addApp(apikey, options, true)
+export async function addCommand(appId: string, options: Options) {
+  await addApp(appId, options, false)
 }
