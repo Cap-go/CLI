@@ -4,6 +4,59 @@ All notable changes to this project will be documented in this file. See [standa
 
 ## [8.0.0-alpha.0](https://github.com/Cap-go/CLI/compare/v7.18.5...v8.0.0-alpha.0) (2025-10-30)
 
+
+### Bug Fixes
+
+* version ([547e574](https://github.com/Cap-go/CLI/commit/547e574ff147e1bbc1005fdad4a3809e2e20e348))
+
+## [5.0.0-alpha.7](https://github.com/Cap-go/CLI/compare/v4.3.6...v5.0.0-alpha.7) (2024-04-21)
+
+## [5.0.0-alpha.6](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2024-04-10)
+
+
+### Bug Fixes
+
+* add check for private key ([aa5c949](https://github.com/Cap-go/CLI/commit/aa5c94905fd4888aafa60d3cf2fc1dc9a6d5c7a7))
+
+## [5.0.0-alpha.5](https://github.com/Cap-go/CLI/compare/v4.3.0...v5.0.0-alpha.5) (2024-04-10)
+
+
+### Bug Fixes
+
+* typo text ([08574a4](https://github.com/Cap-go/CLI/commit/08574a429f99bd61212b488290d25455521a0035))
+
+## [5.0.0-alpha.4](https://github.com/Cap-go/CLI/compare/v4.2.5...v5.0.0-alpha.4) (2024-03-22)
+
+## [5.0.0-alpha.3](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.2...v5.0.0-alpha.3) (2024-03-22)
+
+## [5.0.0-alpha.2](https://github.com/Cap-go/CLI/compare/v4.2.4...v5.0.0-alpha.2) (2024-03-22)
+
+## [5.0.0-alpha.1](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.0...v5.0.0-alpha.1) (2024-03-22)
+
+## [5.0.0-alpha.0](https://github.com/Cap-go/CLI/compare/v4.2.3...v5.0.0-alpha.0) (2024-03-22)
+
+
+### ⚠ BREAKING CHANGES
+
+* Merge branch 'jawa-the-hutt/main' into development
+* use new end to end
+
+### Features
+
+* Merge branch 'jawa-the-hutt/main' into development ([b3fa8f5](https://github.com/Cap-go/CLI/commit/b3fa8f5d7af8a04e94527e8444aa1fa1ecb4ec12))
+* use new end to end ([37b9475](https://github.com/Cap-go/CLI/commit/37b9475ce62b557d39c4046f7dee3d196943db4c))
+
+
+### Bug Fixes
+
+* add better warning for old system ([df89bfc](https://github.com/Cap-go/CLI/commit/df89bfc561515618272d304de20098024a23c3ce))
+
+### [4.2.2-alpha.0](https://github.com/Cap-go/CLI/compare/v4.2.1...v4.2.2-alpha.0) (2024-03-08)
+
+### [3.14.56-alpha.0](https://github.com/Cap-go/CLI/compare/v3.14.55...v3.14.56-alpha.0) (2023-12-29)
+
+## [8.0.0-alpha.0](https://github.com/Cap-go/CLI/compare/v7.18.5...v8.0.0-alpha.0) (2025-10-30)
+
 ## [5.0.0-alpha.7](https://github.com/Cap-go/CLI/compare/v4.3.6...v5.0.0-alpha.7) (2024-04-21)
 
 ## [5.0.0-alpha.6](https://github.com/Cap-go/CLI/compare/v5.0.0-alpha.5...v5.0.0-alpha.6) (2024-04-10)
