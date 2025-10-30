@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. See [standard-version](https://github.com/conventional-changelog/standard-version) for commit guidelines.
 
+## [8.0.0-alpha.1](https://github.com/Cap-go/CLI/compare/v8.0.0-alpha.0...v8.0.0-alpha.1) (2025-10-30)
+
+
+### Bug Fixes
+
+* update defaultHostWeb to point to console.capgo.app ([7ecf07d](https://github.com/Cap-go/CLI/commit/7ecf07dcde0127d63dc1e8ce4d02d37a1d484aeb))
+
 ## [8.0.0-alpha.0](https://github.com/Cap-go/CLI/compare/v7.18.5...v8.0.0-alpha.0) (2025-10-30)
 
 
