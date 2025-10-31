@@ -436,6 +436,29 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
+
+    // Ask user if they want to sync with Capacitor after key creation
+    const shouldSync = await pConfirm({
+      message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
+    })
+
+    if (shouldSync) {
+      try {
+        const syncSpinner = pSpinner()
+        syncSpinner.start(`Running: ${pm.runner} cap sync`)
+        execSync(`${pm.runner} cap sync`, execOption as ExecSyncOptions)
+        syncSpinner.stop('Capacitor sync completed ✅')
+      }
+      catch (error) {
+        pLog.error(`Failed to run Capacitor sync: ${error}`)
+        pLog.warn('Please run "npx cap sync" manually to ensure encrypted updates work properly')
+      }
+    }
+    else {
+      pLog.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
+      pLog.info('Remember to run "npx cap sync" before uploading encrypted bundles')
+    }
+
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
