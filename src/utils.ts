@@ -3,13 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
+import { execSync, spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
-import { cwd, env } from 'node:process'
+import { cwd, env, exit } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
+import { confirm as confirmC, isCancel, log, select, spinner as spinnerC, confirm as pConfirm } from '@clack/prompts'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
@@ -20,6 +21,7 @@ import validVersion from 'semver/functions/valid'
 import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
 import { loadConfig, writeConfig } from './config'
+import { markSnag } from './app/debug'
 
 export const baseKey = '.capgo_key'
 export const baseKeyV2 = '.capgo_key_v2'
@@ -1431,5 +1433,100 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
   return {
     finalCompatibility: finalDepenencies,
     localDependencies: nativePackages,
+  }
+}
+
+export async function promptAndSyncCapacitor(): Promise<void> {
+  // Ask user if they want to sync with Capacitor
+  const shouldSync = await pConfirm({
+    message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
+  })
+
+  if (shouldSync) {
+    const pm = getPMAndCommand()
+    const s = spinnerC()
+    s.start('Running the command...')
+    
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
+        
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve()
+          } else {
+            reject(new Error(`Command failed with exit code ${code}`))
+          }
+        })
+        
+        child.on('error', (error) => {
+          reject(error)
+        })
+      })
+      
+      s.stop('Capacitor sync completed ✅')
+    }
+    catch (error) {
+      s.stop('Error')
+      log.error(`Failed to run Capacitor sync: ${error}`)
+      log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
+    }
+  }
+  else {
+    const pm = getPMAndCommand()
+    log.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
+    log.info(`Remember to run "${pm.runner} cap sync" before uploading encrypted bundles`)
+  }
+}
+
+export async function promptAndSyncCapacitorForInit(
+  orgId: string,
+  apikey: string
+): Promise<void> {
+  // Ask user if they want to sync with Capacitor
+  const shouldSync = await pConfirm({
+    message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
+  })
+
+  // Handle cancelCommand logic inline
+  if (isCancel(shouldSync)) {
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    exit()
+  }
+
+  const pm = getPMAndCommand()
+
+  if (shouldSync) {
+    const s = spinnerC()
+    s.start('Running the command...')
+    
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
+        
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve()
+          } else {
+            reject(new Error(`Command failed with exit code ${code}`))
+          }
+        })
+        
+        child.on('error', (error) => {
+          reject(error)
+        })
+      })
+      
+      s.stop('Capacitor sync completed ✅')
+    }
+    catch (error) {
+      s.stop('Error')
+      log.error(`Failed to run Capacitor sync: ${error}`)
+      log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
+    }
+  }
+  else {
+    log.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
+    log.info(`Remember to run "${pm.runner} cap sync" before uploading encrypted bundles`)
   }
 }

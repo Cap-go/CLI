@@ -1,10 +1,9 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { execSync } from 'node:child_process'
-import { intro, log, outro, confirm as pConfirm, spinner } from '@clack/prompts'
+import { intro, log, outro, spinner, confirm as pConfirm } from '@clack/prompts'
 import { createRSA } from './api/cryptoV2'
 import { checkAlerts } from './api/update'
 import { writeConfigUpdater } from './config'
-import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig, getPMAndCommand } from './utils'
+import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig, promptAndSyncCapacitor } from './utils'
 
 interface SaveOptions {
   key?: string
@@ -194,27 +193,7 @@ export async function createKeyV2Internal(options: Options, silent = false) {
     log.success('Only you can send them an update')
 
     // Ask user if they want to sync with Capacitor
-    const shouldSync = await pConfirm({
-      message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
-    })
-
-    if (shouldSync) {
-      try {
-        const pm = getPMAndCommand()
-        const syncSpinner = spinner()
-        syncSpinner.start(`Running: ${pm.runner} cap sync`)
-        execSync(`${pm.runner} cap sync`, { stdio: 'pipe' })
-        syncSpinner.stop('Capacitor sync completed ✅')
-      }
-      catch (error) {
-        log.error(`Failed to run Capacitor sync: ${error}`)
-        log.warn('Please run "npx cap sync" manually to ensure encrypted updates work properly')
-      }
-    }
-    else {
-      log.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
-      log.info('Remember to run "npx cap sync" before uploading encrypted bundles')
-    }
+    await promptAndSyncCapacitor()
 
     outro('Done ✅')
   }

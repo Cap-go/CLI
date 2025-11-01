@@ -17,7 +17,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitorForInit, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -437,27 +437,8 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.stop(`key created 🔑`)
     }
 
-    // Ask user if they want to sync with Capacitor after key creation
-    const shouldSync = await pConfirm({
-      message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
-    })
-
-    if (shouldSync) {
-      try {
-        const syncSpinner = pSpinner()
-        syncSpinner.start(`Running: ${pm.runner} cap sync`)
-        execSync(`${pm.runner} cap sync`, execOption as ExecSyncOptions)
-        syncSpinner.stop('Capacitor sync completed ✅')
-      }
-      catch (error) {
-        pLog.error(`Failed to run Capacitor sync: ${error}`)
-        pLog.warn('Please run "npx cap sync" manually to ensure encrypted updates work properly')
-      }
-    }
-    else {
-      pLog.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
-      pLog.info('Remember to run "npx cap sync" before uploading encrypted bundles')
-    }
+      // Ask user if they want to sync with Capacitor after key creation
+      await promptAndSyncCapacitorForInit(orgId, apikey)
 
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
