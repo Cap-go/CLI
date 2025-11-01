@@ -3,7 +3,7 @@ import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
 import { createRSA } from './api/cryptoV2'
 import { checkAlerts } from './api/update'
 import { writeConfigUpdater } from './config'
-import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig } from './utils'
+import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig, promptAndSyncCapacitor } from './utils'
 
 interface SaveOptions {
   key?: string
@@ -191,6 +191,10 @@ export async function createKeyV2Internal(options: Options, silent = false) {
     log.success('Your app will be the only one having it')
     log.success('Only your users can decrypt your update')
     log.success('Only you can send them an update')
+
+    // Ask user if they want to sync with Capacitor
+    await promptAndSyncCapacitor()
+
     outro('Done ✅')
   }
 
