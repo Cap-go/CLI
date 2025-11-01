@@ -1,5 +1,5 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
-import { intro, log, outro, spinner, confirm as pConfirm } from '@clack/prompts'
+import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
 import { createRSA } from './api/cryptoV2'
 import { checkAlerts } from './api/update'
 import { writeConfigUpdater } from './config'

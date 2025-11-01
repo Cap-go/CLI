@@ -3,14 +3,14 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
-import { execSync, spawn } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
 import { cwd, env, exit } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-import { confirm as confirmC, isCancel, log, select, spinner as spinnerC, confirm as pConfirm } from '@clack/prompts'
+import { confirm as confirmC, isCancel, log, confirm as pConfirm, select, spinner as spinnerC } from '@clack/prompts'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
@@ -20,8 +20,8 @@ import cleanVersion from 'semver/functions/clean'
 import validVersion from 'semver/functions/valid'
 import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
-import { loadConfig, writeConfig } from './config'
 import { markSnag } from './app/debug'
+import { loadConfig, writeConfig } from './config'
 
 export const baseKey = '.capgo_key'
 export const baseKeyV2 = '.capgo_key_v2'
@@ -1446,24 +1446,25 @@ export async function promptAndSyncCapacitor(): Promise<void> {
     const pm = getPMAndCommand()
     const s = spinnerC()
     s.start('Running the command...')
-    
+
     try {
       await new Promise<void>((resolve, reject) => {
         const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
-        
+
         child.on('close', (code) => {
           if (code === 0) {
             resolve()
-          } else {
+          }
+          else {
             reject(new Error(`Command failed with exit code ${code}`))
           }
         })
-        
+
         child.on('error', (error) => {
           reject(error)
         })
       })
-      
+
       s.stop('Capacitor sync completed ✅')
     }
     catch (error) {
@@ -1481,7 +1482,7 @@ export async function promptAndSyncCapacitor(): Promise<void> {
 
 export async function promptAndSyncCapacitorForInit(
   orgId: string,
-  apikey: string
+  apikey: string,
 ): Promise<void> {
   // Ask user if they want to sync with Capacitor
   const shouldSync = await pConfirm({
@@ -1499,24 +1500,25 @@ export async function promptAndSyncCapacitorForInit(
   if (shouldSync) {
     const s = spinnerC()
     s.start('Running the command...')
-    
+
     try {
       await new Promise<void>((resolve, reject) => {
         const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
-        
+
         child.on('close', (code) => {
           if (code === 0) {
             resolve()
-          } else {
+          }
+          else {
             reject(new Error(`Command failed with exit code ${code}`))
           }
         })
-        
+
         child.on('error', (error) => {
           reject(error)
         })
       })
-      
+
       s.stop('Capacitor sync completed ✅')
     }
     catch (error) {

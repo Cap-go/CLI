@@ -437,8 +437,8 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.stop(`key created 🔑`)
     }
 
-      // Ask user if they want to sync with Capacitor after key creation
-      await promptAndSyncCapacitorForInit(orgId, apikey)
+    // Ask user if they want to sync with Capacitor after key creation
+    await promptAndSyncCapacitorForInit(orgId, apikey)
 
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
