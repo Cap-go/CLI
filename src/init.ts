@@ -17,7 +17,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitorForInit, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -437,8 +437,8 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.stop(`key created 🔑`)
     }
 
-      // Ask user if they want to sync with Capacitor after key creation
-      await promptAndSyncCapacitorForInit(orgId, apikey)
+    // Ask user if they want to sync with Capacitor after key creation
+    await promptAndSyncCapacitor(true, orgId, apikey)
 
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
