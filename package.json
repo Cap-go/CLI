@@ -51,6 +51,7 @@
     "dev-build": "SUPA_DB=development ncc build",
     "pack": "pkg",
     "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js",
     "generate-docs": "node dist/index.js generate-docs README.md"

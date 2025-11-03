@@ -8,6 +8,7 @@ import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
+import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibilityCommand } from './bundle/compatibility'
 import { decryptZipV2 } from './bundle/decryptV2'
@@ -523,6 +524,23 @@ Only organization owners can delete organizations.
 
 Example: npx @capgo/cli@latest organisation delete ORG_ID`)
   .action(deleteOrganization)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+program
+  .command('build [appId]')
+  .description(`🏗️  Request a native iOS/Android build from Capgo Cloud.
+
+This command will zip your project directory and upload it to Capgo for building.
+The build will be processed in the cloud and artifacts will be available when complete.
+
+Example: npx @capgo/cli@latest build com.example.app --platform ios --path .`)
+  .action(requestBuildCommand)
+  .option('--path <path>', `Path to the project directory to build (default: current directory)`)
+  .option('--platform <platform>', `Target platform: ios, android, or both (default: both)`)
+  .option('--build-mode <buildMode>', `Build mode: debug or release (default: release)`)
+  .option('--build-config <buildConfig>', `Additional build configuration as JSON string`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)

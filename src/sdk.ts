@@ -1,5 +1,6 @@
 import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
+import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from './build/request'
 import type { DecryptResult } from './bundle/decryptV2'
 import type { EncryptResult } from './bundle/encryptV2'
 import type { UploadBundleResult } from './bundle/upload'
@@ -14,6 +15,7 @@ import { getInfo as doctorInternal } from './app/info'
 import { listApp as listAppInternal } from './app/list'
 import { setApp as setAppInternal } from './app/set'
 import { setSetting as setSettingInternal } from './app/setting'
+import { requestBuildInternal } from './build/request'
 import { cleanupBundle as cleanupBundleInternal } from './bundle/cleanup'
 import { checkCompatibilityCommandInternal } from './bundle/compatibility'
 import { decryptZipV2Internal } from './bundle/decryptV2'
@@ -350,6 +352,25 @@ export interface ZipBundleOptions {
   json?: boolean
   keyV2?: boolean
   packageJson?: string
+}
+
+export interface RequestBuildOptions {
+  /** App ID (e.g., com.example.app) */
+  appId: string
+  /** Path to project directory */
+  path?: string
+  /** Fastlane lane - must be exactly "ios" or "android" */
+  lane: 'ios' | 'android'
+  /** Credentials for signing and publishing to stores (all credentials go here as environment variables) */
+  credentials?: BuildCredentials
+  /** User ID for the build job (optional, will be auto-detected if not provided) */
+  userId?: string
+  /** API key for authentication */
+  apikey?: string
+  /** Custom Supabase host */
+  supaHost?: string
+  /** Custom Supabase anon key */
+  supaAnon?: string
 }
 
 export interface CurrentBundleOptions extends AccountIdOptions {}
@@ -881,6 +902,69 @@ export class CapgoSDK {
       return {
         success: true,
         data: result,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  /**
+   * Request a native build for your app with store publishing
+   *
+   * @example
+   * ```typescript
+   * const result = await sdk.requestBuild({
+   *   appId: 'com.example.app',
+   *   path: './my-project',
+   *   lane: 'ios', // Must be exactly "ios" or "android"
+   *   credentials: {
+   *     BUILD_CERTIFICATE_BASE64: 'base64-cert...',
+   *     BUILD_PROVISION_PROFILE_BASE64: 'base64-profile...',
+   *     P12_PASSWORD: 'cert-password',
+   *     APPLE_KEY_ID: 'KEY123',
+   *     APPLE_ISSUER_ID: 'issuer-uuid',
+   *     APPLE_KEY_CONTENT: 'base64-p8...',
+   *     APP_STORE_CONNECT_TEAM_ID: 'team-id'
+   *   }
+   * })
+   *
+   * if (result.success) {
+   *   console.log('Job ID:', result.data.jobId)
+   * }
+   * ```
+   */
+  async requestBuild(options: RequestBuildOptions): Promise<SDKResult<{ jobId: string, uploadUrl: string, status: string }>> {
+    try {
+      const internalOptions: BuildRequestOptions = {
+        apikey: options.apikey || this.apikey || findSavedKey(true),
+        supaHost: options.supaHost || this.supaHost,
+        supaAnon: options.supaAnon || this.supaAnon,
+        path: options.path,
+        lane: options.lane,
+        credentials: options.credentials,
+        userId: options.userId,
+      }
+
+      const result = await requestBuildInternal(options.appId, internalOptions, true)
+
+      if (result.success && result.jobId) {
+        return {
+          success: true,
+          data: {
+            jobId: result.jobId,
+            uploadUrl: result.uploadUrl || '',
+            status: result.status || 'unknown',
+          },
+        }
+      }
+
+      return {
+        success: false,
+        error: result.error || 'Unknown error during build request',
       }
     }
     catch (error) {
@@ -1473,6 +1557,49 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
   return sdk.addChannel(options)
 }
 
+/**
+ * Request a native build for your app (functional API)
+ *
+ * @example
+ * ```typescript
+ * const result = await requestBuild({
+ *   appId: 'com.example.app',
+ *   path: './my-project',
+ *   lane: 'ios', // Must be exactly "ios" or "android"
+ *   credentials: {
+ *     // iOS credentials (use standard environment variable names)
+ *     BUILD_CERTIFICATE_BASE64: 'base64-encoded-cert',
+ *     BUILD_PROVISION_PROFILE_BASE64: 'base64-encoded-profile',
+ *     P12_PASSWORD: 'cert-password',
+ *     APPLE_KEY_ID: 'KEY123',
+ *     APPLE_ISSUER_ID: 'issuer-uuid',
+ *     APPLE_KEY_CONTENT: 'base64-encoded-p8',
+ *     APP_STORE_CONNECT_TEAM_ID: 'team-id',
+ *     // Android credentials (use standard environment variable names)
+ *     ANDROID_KEYSTORE_FILE: 'base64-encoded-keystore',
+ *     KEYSTORE_KEY_ALIAS: 'my-key-alias',
+ *     KEYSTORE_KEY_PASSWORD: 'key-password',
+ *     KEYSTORE_STORE_PASSWORD: 'store-password',
+ *     PLAY_CONFIG_JSON: 'base64-encoded-service-account-json'
+ *   },
+ *   apikey: 'your-api-key'
+ * })
+ *
+ * if (result.success) {
+ *   console.log('Job ID:', result.data.jobId)
+ *   console.log('Status:', result.data.status)
+ * }
+ * ```
+ */
+export async function requestBuild(options: RequestBuildOptions): Promise<SDKResult<{ jobId: string, uploadUrl: string, status: string }>> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.requestBuild(options)
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -1501,6 +1628,7 @@ export async function getCapacitorConfig() {
 // Re-export useful types
 // ============================================================================
 
+export type { BuildCredentials } from './build/request'
 export type { CapacitorConfig } from './config'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
