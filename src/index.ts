@@ -532,6 +532,8 @@ program
   .command('build [appId]')
   .description(`🏗️  Request a native iOS/Android build from Capgo Cloud.
 
+⚠️ This feature is currently in PRIVATE BETA and cannot be used by anyone at this time.
+
 This command will zip your project directory and upload it to Capgo for building.
 The build will be processed in the cloud and artifacts will be available when complete.
 
