@@ -194,9 +194,20 @@ export async function createKeyV2Internal(options: Options, silent = false) {
 
     // Ask user if they want to sync with Capacitor
     // No parameters needed - not part of onboarding flow, so no need to track cancellation
-    await promptAndSyncCapacitor()
-
-    outro('Done ✅')
+    try {
+      await promptAndSyncCapacitor()
+      outro('Done ✅')
+    }
+    catch (error) {
+      // Only handle cancellation gracefully - re-throw any other errors
+      if (error instanceof Error && error.message === 'Capacitor sync cancelled') {
+        // User cancelled the sync - that's okay, key creation was still successful
+        // Just exit without the "Done" message since they cancelled the follow-up step
+        return true
+      }
+      // Re-throw any other errors (e.g., network errors, permission errors, etc.)
+      throw error
+    }
   }
 
   return true
