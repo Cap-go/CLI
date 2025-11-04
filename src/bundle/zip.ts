@@ -142,25 +142,28 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
       throw new Error(warning)
     }
 
-    let isV7 = false
+    let useSha256 = false
     const coerced = coerceVersion(updaterVersion)
 
     if (coerced) {
-      isV7 = semverGte(coerced.version, '7.0.0')
+      // Use sha256 for v6.25.0+ or v7.0.0+
+      const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, '6.25.0')
+      const isV7Compatible = coerced.major >= 7
+      useSha256 = isV6Compatible || isV7Compatible
     }
     else if (updaterVersion === 'link:@capgo/capacitor-updater') {
       if (!silent)
         log.warn('Using local @capgo/capacitor-updater. Assuming v7')
-      isV7 = true
+      useSha256 = true
     }
 
     const checksum = await getChecksum(
       zipped,
-      options.keyV2 || existsSync(baseKeyV2) || isV7 ? 'sha256' : 'crc32',
+      options.keyV2 || existsSync(baseKeyV2) || useSha256 ? 'sha256' : 'crc32',
     )
 
     if (checksumSpinner)
-      checksumSpinner.stop(`Checksum: ${checksum}`)
+      checksumSpinner.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
 
     const mbSize = Math.floor(zipped.byteLength / 1024 / 1024)
     if (mbSize > alertMb && shouldShowPrompts) {

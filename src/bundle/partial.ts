@@ -1,6 +1,6 @@
+import type { Buffer } from 'node:buffer'
 import type { manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
-import { Buffer } from 'node:buffer'
 import { createReadStream, statSync } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
 import { join, posix, win32 } from 'node:path'
@@ -8,12 +8,10 @@ import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
-import * as brotli from 'brotli'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
 import coerceVersion from 'semver/functions/coerce'
 import semverGte from 'semver/functions/gte'
-import semverSatisfies from 'semver/functions/satisfies'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
@@ -31,18 +29,13 @@ async function fileExists(localConfig: any, filename: string): Promise<boolean> 
   }
 }
 
-// Threshold for small files where Node.js might skip compression (in bytes)
-const SMALL_FILE_THRESHOLD = 4096
-
 // Minimum size for Brotli compression according to RFC
 // Files smaller than this won't be compressed with Brotli
 const BROTLI_MIN_SIZE = 8192
 
 // Version required for Brotli support with .br extension
-const BROTLI_MIN_UPDATER_VERSION = '7.0.37'
-
-// Precomputed minimal Brotli stream for an empty file, compatible with iOS and Android
-const EMPTY_BROTLI_STREAM = Buffer.from([0x1B, 0x00, 0x06]) // Header + final empty block
+const BROTLI_MIN_UPDATER_VERSION_V6 = '6.25.0'
+const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
 
 // Check if the updater version supports .br extension
 async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ version: string | null, supportsBrotliV2: boolean }> {
@@ -54,8 +47,11 @@ async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ versio
   if (!updaterVersion || !coerced)
     return { version: null, supportsBrotliV2: false }
 
-  // Brotli is only supported in updater versions >= 7.0.37
-  const supportsBrotliV2 = semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION)
+  // Brotli is supported in updater versions >= 6.25.0 (v6) or >= 7.0.35 (v7)
+  const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V6)
+  const isV7Compatible = coerced.major >= 7 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V7)
+  const supportsBrotliV2 = isV6Compatible || isV7Compatible
+
   return { version: coerced.version, supportsBrotliV2 }
 }
 
@@ -71,55 +67,6 @@ function shouldExcludeFromBrotli(filePath: string, noBrotliPatterns?: string): b
   }
 
   return micromatch.isMatch(filePath, patterns)
-}
-
-// Compress file, ensuring compatibility and no failures
-// Legacy function for backward compatibility (updater < 7.0.37)
-// DO NOT MODIFY THIS FUNCTION to maintain backward compatibility
-async function compressFileLegacy(filePath: string, uploadOptions: OptionsUpload): Promise<Buffer> {
-  const stats = statSync(filePath)
-  const fileSize = stats.size
-
-  if (fileSize === 0) {
-    return EMPTY_BROTLI_STREAM
-  }
-
-  const originalBuffer = await readBuffer(createReadStream(filePath))
-  const compressedBuffer = await readBuffer(createReadStream(filePath).pipe(createBrotliCompress({})))
-
-  // For small files or ineffective compression, use brotli library
-  if (fileSize < SMALL_FILE_THRESHOLD || compressedBuffer.length >= fileSize - 10) {
-    const uncompressedBrotli = brotli.compress(originalBuffer, {
-      mode: 0, // Generic mode
-      quality: 0, // No compression, just wrap
-    })
-    if (uncompressedBrotli) {
-      return Buffer.from(uncompressedBrotli)
-    }
-    // Fallback if brotli.compress fails
-    // will work only with > 6.14.12 or > 7.0.23
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-    const coerced = coerceVersion(updaterVersion)
-    if (!updaterVersion || !coerced) {
-      log.warn(`Cannot find @capgo/capacitor-updater in package.json, please provide the package.json path to the command with --package-json`)
-      throw new Error('Updater version not found')
-    }
-
-    if (!semverSatisfies(coerced, '>=6.14.12 <7.0.0 || >=7.0.23')) {
-      log.warn(`Brotli library failed for ${filePath}, falling back to zlib output or minimal stream, this require updater 6.14.12 for Capacitor 6 or 7.0.23 for Capacitor 7`)
-      throw new Error(`To use partial update, you need to upgrade @capgo/capacitor-updater to version >=6.14.12 <7.0.0 or >=7.0.23`)
-    }
-
-    if (compressedBuffer.length > 0 && compressedBuffer.length < fileSize + 10) {
-      return compressedBuffer // Use zlib if it produced something reasonable
-    }
-    // Last resort: minimal manual stream (shouldn't reach here often)
-    return Buffer.from([0x1B, 0x00, 0x06, ...originalBuffer, 0x03])
-  }
-
-  return compressedBuffer
 }
 
 // Function to determine if a file should use Brotli compression (for version >= 7.0.37)
@@ -246,16 +193,7 @@ export async function uploadPartial(
 
   // Check for incompatible options with older updater versions
   if (!supportsBrotliV2) {
-    // Always warn about options that have no effect with older versions
-    if (options.disableBrotli) {
-      log.warn(`--disable-brotli option has no effect with updater version ${version || 'unknown'} (requires ${BROTLI_MIN_UPDATER_VERSION}+)`)
-    }
-
-    if (options.noBrotliPatterns) {
-      throw new Error(`--no-brotli-patterns option requires updater version ${BROTLI_MIN_UPDATER_VERSION} or higher, but you have ${version || 'unknown'}`)
-    }
-
-    log.info(`Using legacy compression (updater ${version || 'unknown'} < ${BROTLI_MIN_UPDATER_VERSION})`)
+    throw new Error(`Your project is using an older version of @capgo/capacitor-updater (${version || 'unknown'}). To use Delta updates, please upgrade to version ${BROTLI_MIN_UPDATER_VERSION_V6} (v6) or ${BROTLI_MIN_UPDATER_VERSION_V7} (v7) or higher.`)
   }
   else {
     // Only newer versions can use Brotli with .br extension
@@ -263,7 +201,7 @@ export async function uploadPartial(
       log.info('Brotli compression disabled by user request')
     }
     else {
-      spinner.message(`Using .br extension for compatible files (updater ${version} >= ${BROTLI_MIN_UPDATER_VERSION})`)
+      spinner.message(`Using .br extension for compatible files (updater ${version})`)
       if (options.noBrotliPatterns) {
         log.info(`Files matching patterns (${options.noBrotliPatterns}) will be excluded from brotli compression`)
       }
@@ -290,24 +228,17 @@ export async function uploadPartial(
       let fileBuffer: Buffer
       let isBrotli = false
 
-      // Version check is the primary decision point - no option to override legacy for older versions
-      if (!supportsBrotliV2) {
-        // For versions < 7.0.37, ALWAYS use legacy compression
-        fileBuffer = await compressFileLegacy(finalFilePath, options)
+      // For versions >= 7.0.37, allow user options
+      if (options.disableBrotli) {
+        // User explicitly disabled Brotli, don't compress at all
+        fileBuffer = await readBuffer(createReadStream(finalFilePath))
+        isBrotli = false
       }
       else {
-        // For versions >= 7.0.37, allow user options
-        if (options.disableBrotli) {
-          // User explicitly disabled Brotli, don't compress at all
-          fileBuffer = await readBuffer(createReadStream(finalFilePath))
-          isBrotli = false
-        }
-        else {
-          // Normal case: use Brotli when appropriate
-          const result = await shouldUseBrotli(finalFilePath, filePathUnix, options)
-          fileBuffer = result.buffer
-          isBrotli = result.useBrotli
-        }
+        // Normal case: use Brotli when appropriate
+        const result = await shouldUseBrotli(finalFilePath, filePathUnix, options)
+        fileBuffer = result.buffer
+        isBrotli = result.useBrotli
       }
 
       let finalBuffer = fileBuffer

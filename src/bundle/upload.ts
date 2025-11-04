@@ -10,7 +10,7 @@ import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import ky, { HTTPError } from 'ky'
+// Native fetch is available in Node.js >= 18
 import coerceVersion from 'semver/functions/coerce'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import semverGte from 'semver/functions/gte'
@@ -236,25 +236,26 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   // options.packageJson
   const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
   const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-  let isv7 = false
+  let useSha256 = false
   const coerced = coerceVersion(updaterVersion)
   if (!updaterVersion) {
     uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
   }
   else if (coerced) {
-    isv7 = semverGte(coerced.version, '7.0.0')
+    // Use SHA256 for v6.25.0+ and v7.0.0+
+    useSha256 = semverGte(coerced.version, '6.25.0')
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater') {
     log.warn('Using local @capgo/capacitor-updater. Assuming v7')
-    isv7 = true
+    useSha256 = true
   }
-  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
+  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
     checksum = await getChecksum(zipped, 'crc32')
   }
-  s.stop(`Checksum: ${checksum}`)
+  s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
@@ -273,7 +274,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
         'app-id': appid,
       },
       notify: false,
-    })
+    }, options.verbose)
     if (!keyDataV2) {
       const keyFile = readFileSync(privateKey)
       keyDataV2 = keyFile.toString()
@@ -301,6 +302,15 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   else if (zipped?.byteLength > alertUploadSize) {
     log.warn(`WARNING !!\nThe bundle size is ${mbSize} Mb, this may take a while to download for users\n`)
     log.info(`Learn how to optimize your assets https://capgo.app/blog/optimise-your-images-for-updates/\n`)
+
+    if (options.verbose) {
+      log.info(`[Verbose] Bundle size details:`)
+      log.info(`  - Actual size: ${mbSize} MB (${zipped?.byteLength} bytes)`)
+      log.info(`  - Alert threshold: ${Math.floor(alertUploadSize / 1024 / 1024)} MB`)
+      log.info(`  - Maximum allowed: ${mbSizeMax} MB`)
+      log.info(`[Verbose] Sending 'App Too Large' event to analytics...`)
+    }
+
     await sendEvent(apikey, {
       channel: 'app-error',
       event: 'App Too Large',
@@ -310,8 +320,17 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
         'app-id': appid,
       },
       notify: false,
-    })
+    }, options.verbose)
+
+    if (options.verbose)
+      log.info(`[Verbose] Event sent successfully`)
   }
+  else if (options.verbose) {
+    log.info(`[Verbose] Bundle size OK: ${mbSize} MB (under ${Math.floor(alertUploadSize / 1024 / 1024)} MB alert threshold)`)
+  }
+
+  if (options.verbose)
+    log.info(`[Verbose] Bundle preparation complete, returning bundle data`)
 
   return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData }
 }
@@ -321,12 +340,27 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   spinner.start(`Uploading Bundle`)
   const startTime = performance.now()
   let isTus = false
+
+  if (options.verbose) {
+    log.info(`[Verbose] uploadBundleToCapgoCloud called:`)
+    log.info(`  - Bundle size: ${Math.floor(zipped.byteLength / 1024)} KB`)
+    log.info(`  - App ID: ${appid}`)
+    log.info(`  - Bundle version: ${bundle}`)
+    log.info(`  - Chunk size: ${Math.floor(tusChunkSize / 1024 / 1024)} MB`)
+  }
+
   if (options.dryUpload) {
     spinner.stop(`Dry run, bundle not uploaded\nBundle uploaded 💪 in 0 seconds`)
+    if (options.verbose)
+      log.info(`[Verbose] Dry upload mode - skipping actual upload`)
     return
   }
+
   try {
     const localConfig = await getLocalConfig()
+    if (options.verbose)
+      log.info(`[Verbose] Local config retrieved for upload`)
+
     if ((options.multipart !== undefined && options.multipart) || (options.tus !== undefined && options.tus)) {
       if (options.multipart) {
         log.info(`Uploading bundle with multipart is deprecated, we upload with TUS instead`)
@@ -334,58 +368,104 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       else {
         log.info(`Uploading bundle with TUS protocol`)
       }
+
+      if (options.verbose) {
+        log.info(`[Verbose] Starting TUS resumable upload...`)
+        log.info(`  - Host: ${localConfig.hostWeb}`)
+        log.info(`  - Chunk size: ${Math.floor(tusChunkSize / 1024 / 1024)} MB`)
+      }
+
       await uploadTUS(apikey, zipped, orgId, appid, bundle, spinner, localConfig, tusChunkSize)
       isTus = true
+
+      if (options.verbose)
+        log.info(`[Verbose] TUS upload completed, updating database with R2 path...`)
+
       const filePath = `orgs/${orgId}/apps/${appid}/${bundle}.zip`
       const { error: changeError } = await supabase
         .from('app_versions')
         .update({ r2_path: filePath })
         .eq('name', bundle)
         .eq('app_id', appid)
+
       if (changeError) {
         log.error(`Cannot finish TUS upload ${formatError(changeError)}`)
+        if (options.verbose)
+          log.info(`[Verbose] Database update failed: ${formatError(changeError)}`)
         return Promise.reject(new Error('Cannot finish TUS upload'))
       }
+
+      if (options.verbose)
+        log.info(`[Verbose] Database updated with R2 path: ${filePath}`)
     }
     else {
+      if (options.verbose)
+        log.info(`[Verbose] Using standard upload (non-TUS), getting presigned URL...`)
+
       const url = await uploadUrl(supabase, appid, bundle)
       if (!url) {
         log.error(`Cannot get upload url`)
+        if (options.verbose)
+          log.info(`[Verbose] Failed to retrieve presigned upload URL from database`)
         return Promise.reject(new Error('Cannot get upload url'))
       }
-      await ky.put(url, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: zipped,
-        headers: {
-          'Content-Type': 'application/zip',
-        },
-      })
+
+      if (options.verbose) {
+        log.info(`[Verbose] Presigned URL obtained, uploading via HTTP PUT...`)
+        log.info(`  - Timeout: ${options.timeout || UPLOAD_TIMEOUT}ms`)
+        log.info(`  - Retry attempts: 5`)
+        log.info(`  - Content-Type: application/zip`)
+      }
+
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), options.timeout || UPLOAD_TIMEOUT)
+
+      try {
+        const response = await fetch(url, {
+          method: 'PUT',
+          body: zipped,
+          headers: {
+            'Content-Type': 'application/zip',
+          },
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+      }
+      finally {
+        clearTimeout(timeoutId)
+      }
+
+      if (options.verbose)
+        log.info(`[Verbose] HTTP PUT upload completed successfully`)
     }
   }
-  catch (errorUpload) {
+  catch (errorUpload: any) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
-    if (errorUpload instanceof HTTPError) {
+
+    if (options.verbose) {
+      log.info(`[Verbose] Upload failed after ${uploadTime} seconds`)
+      log.info(`[Verbose] Error type: ${errorUpload instanceof Error ? 'Error' : typeof errorUpload}`)
+    }
+
+    if (errorUpload instanceof Error && errorUpload.message.includes('HTTP error')) {
       try {
-        const text = await errorUpload.response.text()
-        if (text.startsWith('<?xml')) {
-          // Parse XML error message
-          const matches = text.match(/<Message>(.*?)<\/Message>/s)
-          const message = matches ? matches[1] : 'Unknown S3 error'
-          log.error(`S3 Upload Error: ${message}`)
-        }
-        else {
-          const body = JSON.parse(text)
-          log.error(`Response Error: ${body.error || body.status || body.message}`)
-        }
+        const statusMatch = errorUpload.message.match(/status: (\d+)/)
+        const status = statusMatch ? statusMatch[1] : 'unknown'
+        log.error(`Upload failed with status ${status}: ${errorUpload.message}`)
       }
       catch {
-        log.error(`Upload failed with status ${errorUpload.response.status}: ${errorUpload.message}`)
+        log.error(`Upload failed: ${errorUpload.message}`)
       }
     }
     else {
+      if (options.verbose)
+        log.info(`[Verbose] Non-HTTP error: ${formatError(errorUpload)}`)
+
       if (!options.tus) {
         log.error(`Cannot upload bundle ( try again with --tus option) ${formatError(errorUpload)}`)
       }
@@ -393,14 +473,31 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
         log.error(`Cannot upload bundle please contact support if the issue persists ${formatError(errorUpload)}`)
       }
     }
+
+    if (options.verbose)
+      log.info(`[Verbose] Cleaning up failed version from database...`)
+
     // call delete version on path /delete_failed_version to delete the version
     await deletedFailedVersion(supabase, appid, bundle)
+
+    if (options.verbose)
+      log.info(`[Verbose] Failed version cleaned up`)
+
     throw errorUpload instanceof Error ? errorUpload : new Error(String(errorUpload))
   }
 
   const endTime = performance.now()
   const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
   spinner.stop(`Bundle uploaded 💪 in (${uploadTime} seconds)`)
+
+  if (options.verbose) {
+    log.info(`[Verbose] Upload successful:`)
+    log.info(`  - Upload time: ${uploadTime} seconds`)
+    log.info(`  - Upload method: ${isTus ? 'TUS (resumable)' : 'Standard HTTP PUT'}`)
+    log.info(`  - Bundle size: ${Math.floor(zipped.byteLength / 1024)} KB`)
+    log.info(`[Verbose] Sending performance event...`)
+  }
+
   await sendEvent(apikey, {
     channel: 'performance',
     event: isTus ? 'TUS upload zip performance' : 'Upload zip performance',
@@ -411,7 +508,10 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
       'time': uploadTime,
     },
     notify: false,
-  })
+  }, options.verbose)
+
+  if (options.verbose)
+    log.info(`[Verbose] Performance event sent successfully`)
 }
 
 // It is really important that his function never terminates the program, it should always return, even if it fails
@@ -502,6 +602,7 @@ async function setVersionInChannel(
 export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
+    .eq('app_id', appId)
     .single()
 
   if (error) {
@@ -522,40 +623,117 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
 
   const { s3Region, s3Apikey, s3Apisecret, s3BucketName, s3Endpoint, s3Port, s3SSL } = options
 
+  if (options.verbose) {
+    log.info(`[Verbose] Starting upload process with options:`)
+    log.info(`  - API key: ${options.apikey ? 'provided' : 'from saved key'}`)
+    log.info(`  - Path: ${options.path || 'from capacitor config'}`)
+    log.info(`  - Channel: ${options.channel || 'from default upload channel'}`)
+    log.info(`  - Bundle: ${options.bundle || 'auto-detected'}`)
+    log.info(`  - External: ${options.external || 'false'}`)
+    log.info(`  - Encryption: ${options.keyV2 || options.keyDataV2 ? 'v2' : options.key === false ? 'disabled' : 'auto'}`)
+    log.info(`  - Upload method: ${options.tus ? 'TUS' : options.zip ? 'ZIP' : 'auto'}`)
+    log.info(`  - Delta updates: ${options.delta || options.partial ? 'enabled' : 'disabled'}`)
+  }
+
   const apikey = getApikey(options)
+  if (options.verbose)
+    log.info(`[Verbose] API key retrieved successfully`)
+
   const extConfig = await getConfig()
+  if (options.verbose)
+    log.info(`[Verbose] Capacitor config loaded successfully`)
+
   const fileConfig = await getRemoteFileConfig()
+  if (options.verbose) {
+    log.info(`[Verbose] Remote file config retrieved:`)
+    log.info(`  - Max upload length: ${Math.floor(fileConfig.maxUploadLength / 1024 / 1024)} MB`)
+    log.info(`  - Alert upload size: ${Math.floor(fileConfig.alertUploadSize / 1024 / 1024)} MB`)
+    log.info(`  - TUS upload: ${fileConfig.TUSUpload ? 'enabled' : 'disabled'}`)
+    log.info(`  - TUS upload forced: ${fileConfig.TUSUploadForced ? 'yes' : 'no'}`)
+    log.info(`  - Partial upload: ${fileConfig.partialUpload ? 'enabled' : 'disabled'}`)
+    log.info(`  - Max chunk size: ${Math.floor(fileConfig.maxChunkSize / 1024 / 1024)} MB`)
+  }
+
   const { appid, path } = getAppIdAndPath(preAppid, options, extConfig.config)
+  if (options.verbose)
+    log.info(`[Verbose] App ID: ${appid}, Build path: ${path}`)
+
   const bundle = await getBundle(extConfig.config, options)
+  if (options.verbose)
+    log.info(`[Verbose] Bundle version: ${bundle}`)
+
   const defaultStorageProvider: Exclude<UploadBundleResult['storageProvider'], undefined> = options.external ? 'external' : 'r2-direct'
   let encryptionMethod: UploadBundleResult['encryptionMethod'] = 'none'
 
   if (options.autoSetBundle) {
     await updateConfigUpdater({ version: bundle })
+    if (options.verbose)
+      log.info(`[Verbose] Auto-set bundle version in capacitor.config.json`)
   }
 
   checkNotifyAppReady(options, path)
+  if (options.verbose)
+    log.info(`[Verbose] Code check passed (notifyAppReady found and index.html present)`)
 
   log.info(`Upload ${appid}@${bundle} started from path "${path}" to Capgo cloud`)
 
   const localConfig = await getLocalConfig()
+  if (options.verbose)
+    log.info(`[Verbose] Local config loaded: host=${localConfig.hostWeb}`)
+
   if (options.supaHost && options.supaAnon) {
     log.info('Using custom supabase instance from provided options')
     localConfig.supaHost = options.supaHost
     localConfig.supaKey = options.supaAnon
+    if (options.verbose)
+      log.info(`[Verbose] Custom Supabase host: ${options.supaHost}`)
   }
+
   const supabase = await createSupabaseClient(apikey, options.supaHost, options.supaAnon)
+  if (options.verbose)
+    log.info(`[Verbose] Supabase client created successfully`)
+
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
+  if (options.verbose)
+    log.info(`[Verbose] User verified successfully, user_id: ${userId}`)
+
   const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
+  if (options.verbose)
+    log.info(`[Verbose] Target channel: ${channel}`)
 
   // Now if it does exist we will fetch the org id
   const orgId = await getOrganizationId(supabase, appid)
+  if (options.verbose)
+    log.info(`[Verbose] Organization ID: ${orgId}`)
+
   await checkRemoteCliMessages(supabase, orgId, pack.version)
+  if (options.verbose)
+    log.info(`[Verbose] Remote CLI messages checked`)
+
   await checkPlanValidUpload(supabase, orgId, apikey, appid, true)
+  if (options.verbose)
+    log.info(`[Verbose] Plan validation passed`)
+
   await checkTrial(supabase, orgId, localConfig)
+  if (options.verbose)
+    log.info(`[Verbose] Trial check completed`)
+
+  if (options.verbose)
+    log.info(`[Verbose] Checking compatibility with channel ${channel}...`)
 
   const { nativePackages, minUpdateVersion } = await verifyCompatibility(supabase, pm, options, channel, appid, bundle)
+  if (options.verbose) {
+    log.info(`[Verbose] Compatibility check completed:`)
+    log.info(`  - Native packages: ${nativePackages ? nativePackages.length : 0}`)
+    log.info(`  - Min update version: ${minUpdateVersion || 'none'}`)
+  }
+
+  if (options.verbose)
+    log.info(`[Verbose] Checking if version ${bundle} already exists...`)
+
   const versionAlreadyExists = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
+  if (options.verbose)
+    log.info(`[Verbose] Version exists check: ${versionAlreadyExists ? 'yes (skipping)' : 'no (continuing)'}`)
   if (versionAlreadyExists) {
     return {
       success: true,
@@ -595,6 +773,9 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   let zipped: Buffer | null = null
   let finalKeyData = ''
   if (!options.external) {
+    if (options.verbose)
+      log.info(`[Verbose] Preparing bundle file from path: ${path}`)
+
     const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd } = await prepareBundleFile(path, options, apikey, orgId, appid, fileConfig.maxUploadLength, fileConfig.alertUploadSize)
     versionData.session_key = ivSessionKey
     versionData.checksum = checksum
@@ -602,11 +783,27 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     zipped = _zipped
     encryptionMethod = em
     finalKeyData = fkd
+
+    if (options.verbose) {
+      log.info(`[Verbose] Bundle prepared:`)
+      log.info(`  - Size: ${Math.floor((_zipped?.byteLength ?? 0) / 1024)} KB`)
+      log.info(`  - Checksum: ${checksum}`)
+      log.info(`  - Encryption: ${em}`)
+      log.info(`  - IV Session Key: ${ivSessionKey ? 'present' : 'none'}`)
+    }
+
     if (!options.ignoreChecksumCheck) {
+      if (options.verbose)
+        log.info(`[Verbose] Checking for duplicate checksum...`)
       await checkChecksum(supabase, appid, channel, checksum)
+      if (options.verbose)
+        log.info(`[Verbose] Checksum is unique`)
     }
   }
   else {
+    if (options.verbose)
+      log.info(`[Verbose] Using external URL: ${options.external}`)
+
     await sendEvent(apikey, {
       channel: 'app',
       event: 'App external',
@@ -616,26 +813,43 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
         'app-id': appid,
       },
       notify: false,
-    })
+    }, options.verbose)
     versionData.session_key = options.ivSessionKey
     versionData.checksum = options.encryptedChecksum
+
+    if (options.verbose) {
+      log.info(`[Verbose] External bundle configured:`)
+      log.info(`  - URL: ${options.external}`)
+      log.info(`  - IV Session Key: ${options.ivSessionKey ? 'provided' : 'none'}`)
+      log.info(`  - Encrypted Checksum: ${options.encryptedChecksum ? 'provided' : 'none'}`)
+    }
   }
 
   if (options.zip) {
     options.tus = false
+    if (options.verbose)
+      log.info(`[Verbose] Upload method: ZIP (explicitly set via --zip)`)
   }
   // ALLOW TO OVERRIDE THE FILE CONFIG WITH THE OPTIONS IF THE FILE CONFIG IS FORCED
   else if (!fileConfig.TUSUpload || options.external) {
     options.tus = false
+    if (options.verbose)
+      log.info(`[Verbose] Upload method: Standard (TUS not available or external URL)`)
   }
   else {
     options.tus = options.tus || fileConfig.TUSUploadForced
+    if (options.verbose)
+      log.info(`[Verbose] Upload method: ${options.tus ? 'TUS (resumable)' : 'Standard'}`)
   }
   if (!fileConfig.partialUpload || options.external) {
     options.delta = false
+    if (options.verbose && options.external)
+      log.info(`[Verbose] Delta updates disabled (not available with external URLs)`)
   }
   else {
     options.delta = options.delta || options.partial || options.deltaOnly || options.partialOnly || fileConfig.partialUploadForced
+    if (options.verbose)
+      log.info(`[Verbose] Delta updates: ${options.delta ? 'enabled' : 'disabled'}`)
   }
 
   if (options.encryptPartial && encryptionMethod === 'v1')
@@ -651,15 +865,29 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
 
     if (updaterVersion && coerced && semverGte(coerced.version, '6.14.4')) {
       log.info(`Auto-enabling partial update encryption for updater version ${coerced.version} (> 6.14.4)`)
+      if (options.verbose)
+        log.info(`[Verbose] Partial encryption auto-enabled for updater >= 6.14.4`)
       options.encryptPartial = true
     }
   }
 
+  if (options.verbose && options.delta)
+    log.info(`[Verbose] Preparing delta/partial update manifest...`)
+
   const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
+
+  if (options.verbose && options.delta)
+    log.info(`[Verbose] Delta manifest prepared with ${manifest.length} files`)
+
+  if (options.verbose)
+    log.info(`[Verbose] Creating version record in database...`)
 
   const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
   if (dbError)
     uploadFail(`Cannot add bundle ${formatError(dbError)}`)
+
+  if (options.verbose)
+    log.info(`[Verbose] Version record created successfully`)
   if (options.tusChunkSize && options.tusChunkSize > fileConfig.maxChunkSize) {
     log.error(`Chunk size ${options.tusChunkSize} is greater than the maximum chunk size ${fileConfig.maxChunkSize}, using the maximum chunk size`)
     options.tusChunkSize = fileConfig.maxChunkSize
@@ -668,11 +896,23 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     options.tusChunkSize = fileConfig.maxChunkSize
   }
 
+  if (options.verbose)
+    log.info(`[Verbose] TUS chunk size: ${Math.floor(options.tusChunkSize / 1024 / 1024)} MB`)
+
   if (zipped && (s3BucketName || s3Endpoint || s3Region || s3Apikey || s3Apisecret || s3Port || s3SSL)) {
     if (!s3BucketName || !s3Endpoint || !s3Region || !s3Apikey || !s3Apisecret || !s3Port)
       uploadFail('Missing argument, for S3 upload you need to provide a bucket name, endpoint, region, port, API key, and API secret')
 
     log.info('Uploading to S3')
+    if (options.verbose) {
+      log.info(`[Verbose] S3 configuration:`)
+      log.info(`  - Endpoint: ${s3Endpoint}`)
+      log.info(`  - Region: ${s3Region}`)
+      log.info(`  - Bucket: ${s3BucketName}`)
+      log.info(`  - Port: ${s3Port}`)
+      log.info(`  - SSL: ${s3SSL ? 'enabled' : 'disabled'}`)
+    }
+
     const endPoint = s3SSL ? `https://${s3Endpoint}` : `http://${s3Endpoint}`
     const s3Client = new S3Client({
       endPoint: s3Endpoint,
@@ -685,19 +925,33 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     })
     const fileName = `${appid}-${bundle}`
     const encodeFileName = encodeURIComponent(fileName)
+
+    if (options.verbose)
+      log.info(`[Verbose] Uploading to S3 as: ${fileName}`)
+
     await s3Client.putObject(fileName, Uint8Array.from(zipped))
     versionData.external_url = `${endPoint}/${encodeFileName}`
     versionData.storage_provider = 'external'
+
+    if (options.verbose)
+      log.info(`[Verbose] S3 upload complete, external URL: ${versionData.external_url}`)
   }
   else if (zipped) {
     if (!options.partialOnly && !options.deltaOnly) {
+      if (options.verbose)
+        log.info(`[Verbose] Starting full bundle upload to Capgo Cloud...`)
       await uploadBundleToCapgoCloud(apikey, supabase, appid, bundle, orgId, zipped, options, options.tusChunkSize)
+    }
+    else if (options.verbose) {
+      log.info(`[Verbose] Skipping full bundle upload (delta-only mode)`)
     }
 
     let finalManifest: Awaited<ReturnType<typeof uploadPartial>> | null = null
     try {
       if (options.dryUpload) {
         options.delta = false
+        if (options.verbose)
+          log.info(`[Verbose] Dry upload mode: skipping delta upload`)
       }
       const encryptionData = versionData.session_key && options.encryptPartial && sessionKey
         ? {
@@ -705,6 +959,12 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
             ivSessionKey: versionData.session_key,
           }
         : undefined
+
+      if (options.verbose && options.delta) {
+        log.info(`[Verbose] Starting delta/partial file upload...`)
+        log.info(`  - Manifest entries: ${manifest.length}`)
+        log.info(`  - Encryption: ${encryptionData ? 'enabled' : 'disabled'}`)
+      }
 
       finalManifest = options.delta
         ? await uploadPartial(
@@ -718,22 +978,46 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
             options,
           )
         : null
+
+      if (options.verbose && finalManifest)
+        log.info(`[Verbose] Delta upload complete with ${finalManifest.length} files`)
     }
     catch (err) {
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)
+      if (options.verbose)
+        log.info(`[Verbose] Delta upload error details: ${formatError(err)}`)
     }
 
     versionData.storage_provider = 'r2'
     versionData.manifest = finalManifest
+
+    if (options.verbose)
+      log.info(`[Verbose] Updating version record with storage provider and manifest...`)
+
     const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2)
       uploadFail(`Cannot update bundle ${formatError(dbError2)}`)
+
+    if (options.verbose)
+      log.info(`[Verbose] Version record updated successfully`)
   }
 
   // Check we have app access to this appId
+  if (options.verbose)
+    log.info(`[Verbose] Checking app permissions...`)
+
   const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
 
+  if (options.verbose) {
+    log.info(`[Verbose] Permissions:`)
+    log.info(`  - Upload: ${hasOrganizationPerm(permissions, OrganizationPerm.upload) ? 'yes' : 'no'}`)
+    log.info(`  - Write: ${hasOrganizationPerm(permissions, OrganizationPerm.write) ? 'yes' : 'no'}`)
+    log.info(`  - Admin: ${hasOrganizationPerm(permissions, OrganizationPerm.admin) ? 'yes' : 'no'}`)
+  }
+
   if (options.deleteLinkedBundleOnUpload && hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+    if (options.verbose)
+      log.info(`[Verbose] Deleting linked bundle in channel ${channel}...`)
     await deleteLinkedBundleOnUpload(supabase, appid, channel)
   }
   else if (options.deleteLinkedBundleOnUpload) {
@@ -741,11 +1025,18 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   }
 
   if (hasOrganizationPerm(permissions, OrganizationPerm.write)) {
+    if (options.verbose)
+      log.info(`[Verbose] Setting bundle ${bundle} to channel ${channel}...`)
     await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, options.selfAssign)
+    if (options.verbose)
+      log.info(`[Verbose] Channel updated successfully`)
   }
   else {
     log.warn('Cannot set channel as a upload organization member')
   }
+
+  if (options.verbose)
+    log.info(`[Verbose] Sending upload event...`)
 
   await sendEvent(apikey, {
     channel: 'app',
@@ -756,7 +1047,8 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
       'app-id': appid,
     },
     notify: false,
-  })
+  }, options.verbose)
+
   const result: UploadBundleResult = {
     success: true,
     bundle,
@@ -765,6 +1057,14 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     sessionKey: sessionKey ? sessionKey.toString('base64') : undefined,
     ivSessionKey: typeof versionData.session_key === 'string' ? versionData.session_key : undefined,
     storageProvider: versionData.storage_provider,
+  }
+
+  if (options.verbose) {
+    log.info(`[Verbose] Upload completed successfully:`)
+    log.info(`  - Bundle: ${result.bundle}`)
+    log.info(`  - Checksum: ${result.checksum}`)
+    log.info(`  - Encryption: ${result.encryptionMethod}`)
+    log.info(`  - Storage: ${result.storageProvider}`)
   }
 
   if (shouldExit && !result.skipped)
@@ -820,7 +1120,7 @@ export async function uploadCommand(appid: string, options: OptionsUpload) {
     await uploadBundle(appid, options, true)
   }
   catch (error) {
-    log.error(formatError(error))
+    log.error(`uploadBundle failded: ${formatError(error)}`)
     throw error instanceof Error ? error : new Error(String(error))
   }
 }

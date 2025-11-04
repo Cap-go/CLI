@@ -2,7 +2,7 @@ import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import ky from 'ky'
+// Native fetch is available in Node.js >= 18
 import { checkAlerts } from '../api/update'
 import { createSupabaseClient, findSavedKey, formatError, getAppId, getConfig, getLocalConfig, getOrganizationId, sendEvent } from '../utils'
 
@@ -68,24 +68,27 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
     const localConfig = await getLocalConfig()
     // If we already have a latest timestamp, query only after that point
     const effectiveQuery: QueryStats = after ? { ...query, rangeStart: after } : { ...query }
-    const dataD = await ky
-      .post(`${localConfig.hostApi}/private/stats`, {
-        headers: {
-          'Content-Type': 'application/json',
-          'capgkey': apikey,
-        },
-        body: JSON.stringify(effectiveQuery),
-      })
-      .then(res => res.json<LogData[]>())
-      .catch((err) => {
-        console.error('Cannot get devices', err)
-        return [] as LogData[]
-      })
+
+    const response = await fetch(`${localConfig.hostApi}/private/stats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'capgkey': apikey,
+      },
+      body: JSON.stringify(effectiveQuery),
+    })
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+
+    const dataD = await response.json() as LogData[]
     // Always return data; deduping and ordering handled upstream
     if (dataD?.length > 0)
       return dataD
   }
   catch (error) {
+    console.error('Cannot get devices', error)
     log.error(`Cannot get stats ${formatError(error)}`)
   }
   return []

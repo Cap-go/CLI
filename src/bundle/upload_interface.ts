@@ -46,4 +46,5 @@ export interface OptionsUpload extends OptionsBase {
   disableBrotli?: boolean
   versionExistsOk?: boolean
   selfAssign?: boolean
+  verbose?: boolean
 }
