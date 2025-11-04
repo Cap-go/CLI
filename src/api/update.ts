@@ -1,10 +1,9 @@
 import { log } from '@clack/prompts'
-import latestVersion from 'latest-version'
 import pack from '../../package.json'
+import { getLatestVersion } from '../utils/latest-version'
 
 export async function checkAlerts() {
-  const latest = await latestVersion('@capgo/cli')
-    .catch(() => '')
+  const latest = await getLatestVersion('@capgo/cli') ?? ''
   const major = latest?.split('.')[0]
   if (latest !== pack.version) {
     log.warning(`🚨 You are using @capgo/cli@${pack.version} it's not the latest version.
