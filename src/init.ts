@@ -255,7 +255,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       exit()
     }
     else if (semverLt(coreVersion, '7.0.0')) {
-      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to get the best features of Capgo`)
+      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to support latest Mobile OS versions`)
       versionToInstall = '^6.0.0'
     }
     if (pm.pm === 'unknown') {
