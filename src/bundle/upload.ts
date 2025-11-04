@@ -255,7 +255,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   else {
     checksum = await getChecksum(zipped, 'crc32')
   }
-  s.stop(`Checksum: ${checksum}`)
+  s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
   // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
