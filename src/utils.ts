@@ -1010,9 +1010,15 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(capgkey: string, payload: TrackOptions): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?: boolean): Promise<void> {
   try {
+    if (verbose) {
+      log.info(`Get remove config: for ${payload.event}`)
+    }
     const config = await getRemoteConfig()
+    if (verbose) {
+      log.info(`Sending LogSnag event: ${JSON.stringify(payload)}`)
+    }
     const response = await ky.post(`${config.hostApi}/private/events`, {
       json: payload,
       headers: {
@@ -1026,7 +1032,11 @@ export async function sendEvent(capgkey: string, payload: TrackOptions): Promise
       log.error(`Failed to send LogSnag event: ${response.error}`)
     }
   }
-  catch {
+  catch (error) {
+    if (verbose) {
+      log.error('Failed to send Stats event details:')
+      log.error(formatError(error))
+    }
   }
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "7.18.10",
+  "version": "7.18.16",
   "description": "A CLI to upload to capgo servers",
   "author": "Martin martin@capgo.app",
   "license": "Apache 2.0",
@@ -56,7 +56,7 @@
     "generate-docs": "node dist/index.js generate-docs README.md"
   },
   "//dependencies": {
-    "ky": "We temporarily fixed ky version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
+    "ky": "We temporarily fixed ky 1.7.5 version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
@@ -84,7 +84,7 @@
     "git-format-staged": "3.1.1",
     "husky": "^9.1.7",
     "is-wsl": "^3.1.0",
-    "ky": "1.13.0",
+    "ky": "1.7.5",
     "latest-version": "^9.0.0",
     "open": "^10.1.2",
     "pkg": "5.8.1",
