@@ -59,6 +59,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
   - [Add](#organisation-add)
   - [Set](#organisation-set)
   - [Delete](#organisation-delete)
+- 🔹 [Build](#build)
 
 ## <a id="init"></a> 🚀 **Init**
 
@@ -879,6 +880,38 @@ npx @capgo/cli@latest organisation delete ORG_ID
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+
+## <a id="build"></a> 🔹 **Build**
+
+```bash
+npx @capgo/cli@latest build
+```
+
+🏗️  Request a native iOS/Android build from Capgo Cloud.
+
+⚠️ **This feature is currently in PRIVATE BETA and cannot be used by anyone at this time.**
+
+This command will zip your project directory and upload it to Capgo for building.
+The build will be processed in the cloud and artifacts will be available when complete.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest build com.example.app --platform ios --path .
+```
+
+## <a id="options"></a> Options
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **--path** | <code>string</code> | Path to the project directory to build (default: current directory) |
+| **--platform** | <code>string</code> | Target platform: ios, android, or both (default: both) |
+| **--build-mode** | <code>string</code> | Build mode: debug or release (default: release) |
+| **--build-config** | <code>string</code> | Additional build configuration as JSON string |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
