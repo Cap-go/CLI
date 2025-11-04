@@ -13,7 +13,7 @@ import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from 
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
-import ky from 'ky'
+// Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
 import cleanVersion from 'semver/functions/clean'
 import validVersion from 'semver/functions/valid'
@@ -257,16 +257,20 @@ interface CapgoConfig {
   hostApi: string
 }
 export async function getRemoteConfig() {
-  // call host + /api/get_config and parse the result as json using ky
+  // call host + /api/get_config and parse the result as json using fetch
   const localConfig = await getLocalConfig()
-  return ky
-    .get(`${localConfig.hostApi}/private/config`)
-    .then(res => res.json<CapgoConfig>())
-    .then(data => ({ ...data, ...localConfig } as CapgoConfig))
-    .catch(() => {
-      log.info(`Local config ${formatError(localConfig)}`)
-      return localConfig
-    })
+  try {
+    const response = await fetch(`${localConfig.hostApi}/private/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json() as CapgoConfig
+    return { ...data, ...localConfig } as CapgoConfig
+  }
+  catch {
+    log.info(`Local config ${formatError(localConfig)}`)
+    return localConfig
+  }
 }
 
 interface CapgoFilesConfig {
@@ -281,21 +285,25 @@ interface CapgoFilesConfig {
 
 export async function getRemoteFileConfig() {
   const localConfig = await getLocalConfig()
-  // call host + /api/get_config and parse the result as json using ky
-  return ky
-    .get(`${localConfig.hostFilesApi}/files/config`)
-    .then(res => res.json<CapgoFilesConfig>())
-    .catch(() => {
-      return {
-        partialUpload: false,
-        TUSUpload: false,
-        partialUploadForced: false,
-        TUSUploadForced: false,
-        maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
-        maxChunkSize: MAX_CHUNK_SIZE_BYTES,
-        alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
-      }
-    })
+  // call host + /api/get_config and parse the result as json using fetch
+  try {
+    const response = await fetch(`${localConfig.hostFilesApi}/files/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.json() as CapgoFilesConfig
+  }
+  catch {
+    return {
+      partialUpload: false,
+      TUSUpload: false,
+      partialUploadForced: false,
+      TUSUploadForced: false,
+      maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
+      maxChunkSize: MAX_CHUNK_SIZE_BYTES,
+      alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
+    }
+  }
 }
 
 export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string) {
@@ -1019,17 +1027,34 @@ export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?
     if (verbose) {
       log.info(`Sending LogSnag event: ${JSON.stringify(payload)}`)
     }
-    const response = await ky.post(`${config.hostApi}/private/events`, {
-      json: payload,
-      headers: {
-        capgkey,
-      },
-      timeout: 10000, // 10 seconds timeout
-      retry: 3,
-    }).json<{ error?: string }>()
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 seconds timeout
 
-    if (response.error) {
-      log.error(`Failed to send LogSnag event: ${response.error}`)
+    try {
+      const fetchResponse = await fetch(`${config.hostApi}/private/events`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': capgkey,
+        },
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error! status: ${fetchResponse.status}`)
+      }
+
+      const response = await fetchResponse.json() as { error?: string }
+
+      if (response.error) {
+        log.error(`Failed to send LogSnag event: ${response.error}`)
+      }
+    }
+    finally {
+      clearTimeout(timeoutId)
     }
   }
   catch (error) {

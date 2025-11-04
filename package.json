@@ -55,9 +55,6 @@
     "check-posix-paths": "node test/check-posix-paths.js",
     "generate-docs": "node dist/index.js generate-docs README.md"
   },
-  "//dependencies": {
-    "ky": "We temporarily fixed ky 1.7.5 version until this issue is resolved: https://github.com/sindresorhus/ky/issues/689 otherwise nodejs upload fails on node 18/20"
-  },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.4",
@@ -84,7 +81,6 @@
     "git-format-staged": "3.1.1",
     "husky": "^9.1.7",
     "is-wsl": "^3.1.0",
-    "ky": "1.7.5",
     "latest-version": "^9.0.0",
     "open": "^10.1.2",
     "pkg": "5.8.1",

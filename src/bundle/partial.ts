@@ -8,6 +8,7 @@ import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
+// TODO: remove deprecated brotli when all user are on latest Node.js
 import * as brotli from 'brotli'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'

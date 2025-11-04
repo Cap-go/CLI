@@ -10,7 +10,7 @@ import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
-import ky, { HTTPError } from 'ky'
+// Native fetch is available in Node.js >= 18
 import coerceVersion from 'semver/functions/coerce'
 // We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
 import semverGte from 'semver/functions/gte'
@@ -236,19 +236,20 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   // options.packageJson
   const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
   const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-  let isv7 = false
+  let useSha256 = false
   const coerced = coerceVersion(updaterVersion)
   if (!updaterVersion) {
     uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
   }
   else if (coerced) {
-    isv7 = semverGte(coerced.version, '7.0.0')
+    // Use SHA256 for v6.25.0+ and v7.0.0+
+    useSha256 = semverGte(coerced.version, '6.25.0')
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater') {
     log.warn('Using local @capgo/capacitor-updater. Assuming v7')
-    isv7 = true
+    useSha256 = true
   }
-  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || isv7) {
+  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
     checksum = await getChecksum(zipped, 'sha256')
   }
   else {
@@ -416,48 +417,49 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
         log.info(`  - Content-Type: application/zip`)
       }
 
-      await ky.put(url, {
-        timeout: options.timeout || UPLOAD_TIMEOUT,
-        retry: 5,
-        body: zipped,
-        headers: {
-          'Content-Type': 'application/zip',
-        },
-      })
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), options.timeout || UPLOAD_TIMEOUT)
+
+      try {
+        const response = await fetch(url, {
+          method: 'PUT',
+          body: zipped,
+          headers: {
+            'Content-Type': 'application/zip',
+          },
+          signal: controller.signal,
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+      }
+      finally {
+        clearTimeout(timeoutId)
+      }
 
       if (options.verbose)
         log.info(`[Verbose] HTTP PUT upload completed successfully`)
     }
   }
-  catch (errorUpload) {
+  catch (errorUpload: any) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
 
     if (options.verbose) {
       log.info(`[Verbose] Upload failed after ${uploadTime} seconds`)
-      log.info(`[Verbose] Error type: ${errorUpload instanceof HTTPError ? 'HTTPError' : typeof errorUpload}`)
+      log.info(`[Verbose] Error type: ${errorUpload instanceof Error ? 'Error' : typeof errorUpload}`)
     }
 
-    if (errorUpload instanceof HTTPError) {
+    if (errorUpload instanceof Error && errorUpload.message.includes('HTTP error')) {
       try {
-        const text = await errorUpload.response.text()
-        if (options.verbose)
-          log.info(`[Verbose] HTTP error response body: ${text.substring(0, 500)}`)
-
-        if (text.startsWith('<?xml')) {
-          // Parse XML error message
-          const matches = text.match(/<Message>(.*?)<\/Message>/s)
-          const message = matches ? matches[1] : 'Unknown S3 error'
-          log.error(`S3 Upload Error: ${message}`)
-        }
-        else {
-          const body = JSON.parse(text)
-          log.error(`Response Error: ${body.error || body.status || body.message}`)
-        }
+        const statusMatch = errorUpload.message.match(/status: (\d+)/)
+        const status = statusMatch ? statusMatch[1] : 'unknown'
+        log.error(`Upload failed with status ${status}: ${errorUpload.message}`)
       }
       catch {
-        log.error(`Upload failed with status ${errorUpload.response.status}: ${errorUpload.message}`)
+        log.error(`Upload failed: ${errorUpload.message}`)
       }
     }
     else {
