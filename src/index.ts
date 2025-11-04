@@ -539,13 +539,27 @@ program
   })
 
 program.exitOverride()
+program.configureOutput({
+  writeErr: (_str) => {
+    // Suppress Commander's default error output since we handle it in catch
+  },
+})
 
 program.parseAsync().catch((error: unknown) => {
-  if (typeof error === 'object' && error !== null && 'exitCode' in error) {
-    console.error(`Error: ${formatError(error)}`)
-    const exitCode = (error as { exitCode?: number }).exitCode
-    if (typeof exitCode === 'number')
-      exit(exitCode)
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const commanderError = error as { code: string, exitCode?: number, message?: string }
+    // These are normal Commander.js exits (help, version, etc.) - exit silently
+    if (commanderError.code === 'commander.version' || commanderError.code === 'commander.helpDisplayed') {
+      exit(0)
+    }
+    // For actual errors, show just the message without the full stack trace
+    if (commanderError.message) {
+      console.error(commanderError.message)
+    }
+    const exitCode = commanderError.exitCode ?? 1
+    exit(exitCode)
   }
+  // For non-Commander errors, show full error details
+  console.error(`Error: ${formatError(error)}`)
   exit(1)
 })
