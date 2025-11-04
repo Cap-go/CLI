@@ -502,6 +502,7 @@ async function setVersionInChannel(
 export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
+    .eq('app_id', appId)
     .single()
 
   if (error) {
