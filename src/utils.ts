@@ -10,7 +10,7 @@ import path, { dirname, join, relative, resolve, sep } from 'node:path'
 import { cwd, env, exit } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
-import { confirm as confirmC, isCancel, log, confirm as pConfirm, select, spinner as spinnerC } from '@clack/prompts'
+import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
@@ -1442,7 +1442,7 @@ export async function promptAndSyncCapacitor(
   apikey?: string,
 ): Promise<void> {
   // Ask user if they want to sync with Capacitor
-  const shouldSync = await pConfirm({
+  const shouldSync = await confirmC({
     message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
   })
 
@@ -1452,8 +1452,8 @@ export async function promptAndSyncCapacitor(
     if (isInit && orgId && apikey) {
       await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
     }
-    // Always exit on cancellation
-    exit()
+    log.error('Canceled Capacitor sync')
+    throw new Error('Capacitor sync cancelled')
   }
 
   if (shouldSync) {

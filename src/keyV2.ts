@@ -193,6 +193,7 @@ export async function createKeyV2Internal(options: Options, silent = false) {
     log.success('Only you can send them an update')
 
     // Ask user if they want to sync with Capacitor
+    // No parameters needed - not part of onboarding flow, so no need to track cancellation
     await promptAndSyncCapacitor()
 
     outro('Done ✅')

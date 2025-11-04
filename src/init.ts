@@ -438,6 +438,8 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     }
 
     // Ask user if they want to sync with Capacitor after key creation
+    // Pass true for isInit flag to track cancellation during onboarding flow
+    // orgId and apikey are needed to mark snag if user cancels
     await promptAndSyncCapacitor(true, orgId, apikey)
 
     markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
