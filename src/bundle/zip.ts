@@ -4,10 +4,10 @@ import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
 import coerceVersion from 'semver/functions/coerce'
 import semverGte from 'semver/functions/gte'
 import { checkAlerts } from '../api/update'
+import { checksum as getChecksum } from '../checksum'
 import {
   baseKeyV2,
   findRoot,
