@@ -4,8 +4,7 @@ import { existsSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
-import coerceVersion from 'semver/functions/coerce'
-import semverGte from 'semver/functions/gte'
+import { greaterOrEqual, parse } from '@std/semver'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
 import {
@@ -143,11 +142,17 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
     }
 
     let useSha256 = false
-    const coerced = coerceVersion(updaterVersion)
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
 
     if (coerced) {
       // Use sha256 for v6.25.0+ or v7.0.0+
-      const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, '6.25.0')
+      const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
       const isV7Compatible = coerced.major >= 7
       useSha256 = isV6Compatible || isV7Compatible
     }

@@ -11,11 +11,10 @@
         "@clack/prompts": "^0.11.0",
         "@sauber/table": "npm:@jsr/sauber__table",
         "@std/semver": "npm:@jsr/std__semver@1.0.6",
-        "@supabase/supabase-js": "^2.76.1",
+        "@supabase/supabase-js": "^2.79.0",
         "@types/adm-zip": "^0.5.7",
         "@types/node": "^24.9.1",
         "@types/prettyjson": "^0.0.33",
-        "@types/semver": "^7.7.1",
         "@types/tmp": "^0.2.6",
         "@vercel/ncc": "^0.38.4",
         "adm-zip": "^0.5.16",
@@ -28,7 +27,6 @@
         "is-wsl": "^3.1.0",
         "open": "^10.1.2",
         "prettyjson": "^1.2.5",
-        "semver": "^7.7.3",
         "tmp": "^0.2.5",
         "tus-js-client": "^4.3.1",
         "typescript": "^5.9.3",
@@ -217,8 +215,6 @@
     "@types/phoenix": ["@types/phoenix@1.6.6", "", {}, "sha512-PIzZZlEppgrpoT2QgbnDU+MMzuR6BbCjllj0bM70lWoejMeNJAxCchxnv7J3XFkI8MpygtRpzXrIlmWUBclP5A=="],
 
     "@types/prettyjson": ["@types/prettyjson@0.0.33", "", {}, "sha512-hHZMkavT9OXFq8p6pTCiaREtPxMRfy9NMp+Qa4PWH0RINQjyh0crOhoqUFA/cvIZncpjBpdvxkoe7nmVbyBJXw=="],
-
-    "@types/semver": ["@types/semver@7.7.1", "", {}, "sha512-FmgJfu+MOcQ370SD0ev7EI8TlCAfKYU+B4m5T3yXc1CiRN94g/SZPtsCkk506aUDtlMnFZvasDwHHUcZUEaYuA=="],
 
     "@types/slice-ansi": ["@types/slice-ansi@4.0.0", "", {}, "sha512-+OpjSaq85gvlZAYINyzKpLeiFkSC4EsC6IIiT6v6TLSU5k5U83fHGj9Lel8oKEXM0HqgrMVCjXPDPVICtxF7EQ=="],
 

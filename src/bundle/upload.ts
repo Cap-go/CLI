@@ -9,10 +9,8 @@ import { join } from 'node:path/posix'
 import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
-import coerceVersion from 'semver/functions/coerce'
-// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
-import semverGte from 'semver/functions/gte'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
@@ -237,13 +235,19 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
   const updaterVersion = dependencies.get('@capgo/capacitor-updater')
   let useSha256 = false
-  const coerced = coerceVersion(updaterVersion)
+  let coerced
+  try {
+    coerced = updaterVersion ? parse(updaterVersion) : undefined
+  }
+  catch {
+    coerced = undefined
+  }
   if (!updaterVersion) {
     uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
   }
   else if (coerced) {
     // Use SHA256 for v6.25.0+ and v7.0.0+
-    useSha256 = semverGte(coerced.version, '6.25.0')
+    useSha256 = greaterOrEqual(coerced, parse('6.25.0'))
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater') {
     log.warn('Using local @capgo/capacitor-updater. Assuming v7')
@@ -861,10 +865,16 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     const root = join(findRoot(cwd()), PACKNAME)
     const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
     const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-    const coerced = coerceVersion(updaterVersion)
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
 
-    if (updaterVersion && coerced && semverGte(coerced.version, '6.14.4')) {
-      log.info(`Auto-enabling partial update encryption for updater version ${coerced.version} (> 6.14.4)`)
+    if (updaterVersion && coerced && greaterOrEqual(coerced, parse('6.14.4'))) {
+      log.info(`Auto-enabling partial update encryption for updater version ${coerced} (> 6.14.4)`)
       if (options.verbose)
         log.info(`[Verbose] Partial encryption auto-enabled for updater >= 6.14.4`)
       options.encryptPartial = true

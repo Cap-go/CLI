@@ -10,13 +10,11 @@ import { cwd, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
+import { canParse, format, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import AdmZip from 'adm-zip'
 // Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
-import cleanVersion from 'semver/functions/clean'
-import validVersion from 'semver/functions/valid'
-import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
 import { checksum as getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
@@ -147,8 +145,14 @@ export function getBundleVersion(f: string = findRoot(cwd()), file: string | und
 
 function returnVersion(version: string) {
   const tmpVersion = version.replace('^', '').replace('~', '')
-  if (validVersion(tmpVersion)) {
-    return cleanVersion(tmpVersion) ?? tmpVersion
+  if (canParse(tmpVersion)) {
+    try {
+      const parsed = parse(tmpVersion)
+      return format(parsed)
+    }
+    catch {
+      return tmpVersion
+    }
   }
   return tmpVersion
 }
@@ -1390,7 +1394,10 @@ export function isCompatible(pkg: Compatibility): boolean {
   if (!pkg.remoteVersion)
     return false // If local version but no remote version, it's incompatible
   try {
-    return subset(pkg.localVersion, pkg.remoteVersion)
+    // Parse both ranges and check if they intersect
+    const localRange = parseRange(pkg.localVersion)
+    const remoteRange = parseRange(pkg.remoteVersion)
+    return rangeIntersects(localRange, remoteRange)
   }
   catch {
     return false // If version comparison fails, consider it incompatible

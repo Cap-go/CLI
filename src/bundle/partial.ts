@@ -7,11 +7,10 @@ import { join, posix, win32 } from 'node:path'
 import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
+import { greaterOrEqual, parse } from '@std/semver'
 import { log, spinner as spinnerC } from '@clack/prompts'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
-import coerceVersion from 'semver/functions/coerce'
-import semverGte from 'semver/functions/gte'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
 import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
@@ -42,17 +41,23 @@ async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ versio
   const root = join(findRoot(cwd()), PACKNAME)
   const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
   const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-  const coerced = coerceVersion(updaterVersion)
+  let coerced
+  try {
+    coerced = updaterVersion ? parse(updaterVersion) : undefined
+  }
+  catch {
+    coerced = undefined
+  }
 
   if (!updaterVersion || !coerced)
     return { version: null, supportsBrotliV2: false }
 
   // Brotli is supported in updater versions >= 6.25.0 (v6) or >= 7.0.35 (v7)
-  const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V6)
-  const isV7Compatible = coerced.major >= 7 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V7)
+  const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V6))
+  const isV7Compatible = coerced.major >= 7 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V7))
   const supportsBrotliV2 = isV6Compatible || isV7Compatible
 
-  return { version: coerced.version, supportsBrotliV2 }
+  return { version: `${coerced.major}.${coerced.minor}.${coerced.patch}`, supportsBrotliV2 }
 }
 
 // Check if a file should be excluded from brotli compression

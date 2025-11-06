@@ -36,19 +36,6 @@ const buildCLI = esbuild.build({
         }))
       },
     },
-    // Generic noop for fetch-related files
-    {
-      name: 'noop-supabase-node-fetch',
-      setup(build) {
-        build.onResolve({ filter: /@supabase\/node-fetch/ }, args => ({
-          path: args.path,
-          namespace: 'noop',
-        }))
-        build.onLoad({ filter: /.*/, namespace: 'noop' }, () => ({
-          contents: 'export default {}',
-        }))
-      },
-    },
     // Noop xml2js as we only use capacitor-cli to read capacitor file nothing native
     {
       name: 'noop-xml2js',
@@ -141,6 +128,44 @@ const buildCLI = esbuild.build({
               constructor() {}
               connect() {}
               disconnect() {}
+            }
+          `,
+        }))
+      },
+    },
+    // Stub prompts package (used by @capacitor/cli but not needed in our use case)
+    {
+      name: 'stub-prompts',
+      setup(build) {
+        build.onResolve({ filter: /^prompts$/ }, args => ({
+          path: args.path,
+          namespace: 'stub-prompts',
+        }))
+        build.onLoad({ filter: /.*/, namespace: 'stub-prompts' }, () => ({
+          contents: `
+            // Stub for prompts package - @capacitor/cli requires it but we don't use it
+            export default function prompts() {
+              throw new Error('Prompts are not supported in this CLI build');
+            }
+          `,
+        }))
+      },
+    },
+    // Noop @supabase/auth-js (we never use it)
+    {
+      name: 'noop-supabase-auth-js',
+      setup(build) {
+        build.onResolve({ filter: /@supabase\/auth-js/ }, args => ({
+          path: args.path,
+          namespace: 'noop-supabase-auth-js',
+        }))
+        build.onLoad({ filter: /.*/, namespace: 'noop-supabase-auth-js' }, () => ({
+          contents: `
+            export class GoTrueClient {
+              constructor() {}
+            }
+            export class GoTrueAdminApi {
+              constructor() {}
             }
           `,
         }))
