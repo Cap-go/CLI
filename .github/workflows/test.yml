@@ -219,6 +219,9 @@ jobs:
       - name: Run
         id: run_cli
         run: node dist/index.js --help
+      - name: Run validation tests
+        id: validation_tests
+        run: bash test/test-all.sh
 
       # New steps for Capgo backend setup
       - name: Cache Deno dependencies
