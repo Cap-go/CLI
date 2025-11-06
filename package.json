@@ -53,7 +53,14 @@
     "types": "npx --yes supabase gen types typescript --project-id=xvwzpoazmxkqosrdewyv > src/types/supabase.types.ts",
     "lint": "eslint \"src/**/*.ts\" --fix",
     "check-posix-paths": "node test/check-posix-paths.js",
-    "generate-docs": "node dist/index.js generate-docs README.md"
+    "generate-docs": "node dist/index.js generate-docs README.md",
+    "test:bundle": "bun test/test-bundle.mjs",
+    "test:functional": "bun test/test-functional.mjs",
+    "test:semver": "bun test/test-semver-validation.mjs",
+    "test:version-edge-cases": "bun test/test-version-validation.mjs",
+    "test:regex": "bun test/test-regex-validation.mjs",
+    "test:upload": "bun test/test-upload-validation.mjs",
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",
