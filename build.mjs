@@ -151,7 +151,7 @@ const buildCLI = esbuild.build({
         }))
       },
     },
-    // Noop @supabase/auth-js (we never use it)
+    // Noop @supabase/auth-js (we don't use auth, just API calls with headers)
     {
       name: 'noop-supabase-auth-js',
       setup(build) {
@@ -161,12 +161,58 @@ const buildCLI = esbuild.build({
         }))
         build.onLoad({ filter: /.*/, namespace: 'noop-supabase-auth-js' }, () => ({
           contents: `
+            // Stub for @supabase/auth-js - we don't use authentication, just API calls
+            const noopAsync = () => Promise.resolve({ data: { session: null, user: null }, error: null });
+            const noopHandler = {
+              get: (target, prop) => {
+                if (prop === 'constructor') return target.constructor;
+                if (prop === 'then' || prop === 'catch' || prop === 'finally') return undefined;
+                if (typeof prop === 'symbol') return undefined;
+                // Return method that returns properly structured promises
+                if (prop === 'getSession') return () => Promise.resolve({ data: { session: null, user: null }, error: null });
+                if (prop === 'onAuthStateChange') return () => ({ data: { subscription: { unsubscribe: () => {} } }, error: null });
+                return noopAsync;
+              }
+            };
+
             export class GoTrueClient {
-              constructor() {}
+              constructor(options) {
+                this.options = options;
+                return new Proxy(this, noopHandler);
+              }
             }
             export class GoTrueAdminApi {
-              constructor() {}
+              constructor(options) {
+                this.options = options;
+                return new Proxy(this, noopHandler);
+              }
             }
+            export class AuthClient extends GoTrueClient {}
+            export class AuthAdminApi extends GoTrueAdminApi {}
+
+            // Export error classes
+            export class AuthError extends Error {}
+            export class AuthApiError extends AuthError {}
+            export class AuthRetryableError extends AuthError {}
+            export class AuthSessionMissingError extends AuthError {}
+            export class AuthInvalidTokenResponseError extends AuthError {}
+            export class AuthInvalidCredentialsError extends AuthError {}
+            export class AuthImplicitGrantRedirectError extends AuthError {}
+            export class AuthPKCEGrantCodeExchangeError extends AuthError {}
+            export class AuthWeakPasswordError extends AuthError {}
+
+            // Export helper functions
+            export const navigatorLock = noopAsync;
+            export const processLock = noopAsync;
+            export class NavigatorLockAcquireTimeoutError extends Error {}
+            export const lockInternals = {};
+
+            // Export type helpers
+            export const isAuthError = () => false;
+            export const isAuthApiError = () => false;
+            export const isAuthRetryableError = () => false;
+            export const isAuthSessionMissingError = () => false;
+            export const isAuthWeakPasswordError = () => false;
           `,
         }))
       },
