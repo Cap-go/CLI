@@ -23,6 +23,49 @@ const buildCLI = esbuild.build({
     '.ts': 'ts',
   },
   plugins: [
+    // Stub semver package (used by @capacitor/cli but checkPlatformVersions is never called)
+    {
+      name: 'stub-semver',
+      setup(build) {
+        build.onResolve({ filter: /^semver$/ }, args => ({
+          path: args.path,
+          namespace: 'stub-semver',
+        }))
+        build.onLoad({ filter: /.*/, namespace: 'stub-semver' }, () => ({
+          contents: `
+            // Stub for semver package - @capacitor/cli requires it but checkPlatformVersions is never called
+            export const diff = () => null;
+            export const parse = () => null;
+            export const valid = () => null;
+            export const clean = () => null;
+            export const inc = () => null;
+            export const major = () => null;
+            export const minor = () => null;
+            export const patch = () => null;
+            export const compare = () => 0;
+            export const rcompare = () => 0;
+            export const gt = () => false;
+            export const lt = () => false;
+            export const eq = () => false;
+            export const neq = () => true;
+            export const gte = () => false;
+            export const lte = () => false;
+            export const satisfies = () => false;
+            export const maxSatisfying = () => null;
+            export const minSatisfying = () => null;
+            export const validRange = () => null;
+            export const outside = () => false;
+            export const gtr = () => false;
+            export const ltr = () => false;
+            export const intersects = () => false;
+            export const coerce = () => null;
+            export const Range = class Range {};
+            export const SemVer = class SemVer {};
+            export const Comparator = class Comparator {};
+          `,
+        }))
+      },
+    },
     // TOSO: remove this when fixed
     {
       name: 'ignore-punycode',
