@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs'
+import { copyFileSync, writeFileSync } from 'node:fs'
 import { env, exit } from 'node:process'
 import * as esbuild from 'esbuild'
 
@@ -312,5 +312,6 @@ const buildSDK = esbuild.build({
 
 Promise.all([buildCLI, buildSDK]).catch(() => exit(1)).then((results) => {
   writeFileSync('meta.json', JSON.stringify(results[0].metafile))
+  copyFileSync('package.json', 'dist/package.json')
   console.error('✅ Built CLI and SDK successfully')
 })
