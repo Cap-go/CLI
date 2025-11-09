@@ -199,10 +199,8 @@ async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: lo
 
 async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
   // check if app already exist
-  // apikey is sooo legacy code, current prod does not use it
-  // TODO: remove apikey and create a new function who not need it
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc('exist_app_versions', { appid, apikey: '', name_version: bundle })
+    .rpc('exist_app_versions', { appid, name_version: bundle })
     .single()
 
   if (appVersion || appVersionError) {
