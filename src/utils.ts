@@ -11,16 +11,14 @@ import { cwd, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
+import { canParse, format, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
-import ky from 'ky'
+// Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
-import cleanVersion from 'semver/functions/clean'
-import validVersion from 'semver/functions/valid'
-import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
 import { markSnag } from './app/debug'
+import { checksum as getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
 
 export const baseKey = '.capgo_key'
@@ -30,7 +28,7 @@ export const baseKeyPubV2 = `${baseKeyV2}.pub`
 export const defaultHost = 'https://capgo.app'
 export const defaultFileHost = 'https://files.capgo.app'
 export const defaultApiHost = 'https://api.capgo.app'
-export const defaultHostWeb = 'https://web.capgo.app'
+export const defaultHostWeb = 'https://console.capgo.app'
 export const UPLOAD_TIMEOUT = 120000
 export const ALERT_UPLOAD_SIZE_BYTES = 1024 * 1024 * 20 // 20MB
 export const MAX_UPLOAD_LENGTH_BYTES = 1024 * 1024 * 1024 // 1GB
@@ -149,8 +147,14 @@ export function getBundleVersion(f: string = findRoot(cwd()), file: string | und
 
 function returnVersion(version: string) {
   const tmpVersion = version.replace('^', '').replace('~', '')
-  if (validVersion(tmpVersion)) {
-    return cleanVersion(tmpVersion) ?? tmpVersion
+  if (canParse(tmpVersion)) {
+    try {
+      const parsed = parse(tmpVersion)
+      return format(parsed)
+    }
+    catch {
+      return tmpVersion
+    }
   }
   return tmpVersion
 }
@@ -259,16 +263,20 @@ interface CapgoConfig {
   hostApi: string
 }
 export async function getRemoteConfig() {
-  // call host + /api/get_config and parse the result as json using ky
+  // call host + /api/get_config and parse the result as json using fetch
   const localConfig = await getLocalConfig()
-  return ky
-    .get(`${localConfig.hostApi}/private/config`)
-    .then(res => res.json<CapgoConfig>())
-    .then(data => ({ ...data, ...localConfig } as CapgoConfig))
-    .catch(() => {
-      log.info(`Local config ${formatError(localConfig)}`)
-      return localConfig
-    })
+  try {
+    const response = await fetch(`${localConfig.hostApi}/private/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json() as CapgoConfig
+    return { ...data, ...localConfig } as CapgoConfig
+  }
+  catch {
+    log.info(`Local config ${formatError(localConfig)}`)
+    return localConfig
+  }
 }
 
 interface CapgoFilesConfig {
@@ -283,21 +291,25 @@ interface CapgoFilesConfig {
 
 export async function getRemoteFileConfig() {
   const localConfig = await getLocalConfig()
-  // call host + /api/get_config and parse the result as json using ky
-  return ky
-    .get(`${localConfig.hostFilesApi}/files/config`)
-    .then(res => res.json<CapgoFilesConfig>())
-    .catch(() => {
-      return {
-        partialUpload: false,
-        TUSUpload: false,
-        partialUploadForced: false,
-        TUSUploadForced: false,
-        maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
-        maxChunkSize: MAX_CHUNK_SIZE_BYTES,
-        alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
-      }
-    })
+  // call host + /api/get_config and parse the result as json using fetch
+  try {
+    const response = await fetch(`${localConfig.hostFilesApi}/files/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.json() as CapgoFilesConfig
+  }
+  catch {
+    return {
+      partialUpload: false,
+      TUSUpload: false,
+      partialUploadForced: false,
+      TUSUploadForced: false,
+      maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
+      maxChunkSize: MAX_CHUNK_SIZE_BYTES,
+      alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
+    }
+  }
 }
 
 export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string) {
@@ -1012,23 +1024,50 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(capgkey: string, payload: TrackOptions): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?: boolean): Promise<void> {
   try {
+    if (verbose) {
+      log.info(`Get remove config: for ${payload.event}`)
+    }
     const config = await getRemoteConfig()
-    const response = await ky.post(`${config.hostApi}/private/events`, {
-      json: payload,
-      headers: {
-        capgkey,
-      },
-      timeout: 10000, // 10 seconds timeout
-      retry: 3,
-    }).json<{ error?: string }>()
+    if (verbose) {
+      log.info(`Sending LogSnag event: ${JSON.stringify(payload)}`)
+    }
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 seconds timeout
 
-    if (response.error) {
-      log.error(`Failed to send LogSnag event: ${response.error}`)
+    try {
+      const fetchResponse = await fetch(`${config.hostApi}/private/events`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': capgkey,
+        },
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error! status: ${fetchResponse.status}`)
+      }
+
+      const response = await fetchResponse.json() as { error?: string }
+
+      if (response.error) {
+        log.error(`Failed to send LogSnag event: ${response.error}`)
+      }
+    }
+    finally {
+      clearTimeout(timeoutId)
     }
   }
-  catch {
+  catch (error) {
+    if (verbose) {
+      log.error('Failed to send Stats event details:')
+      log.error(formatError(error))
+    }
   }
 }
 
@@ -1357,7 +1396,10 @@ export function isCompatible(pkg: Compatibility): boolean {
   if (!pkg.remoteVersion)
     return false // If local version but no remote version, it's incompatible
   try {
-    return subset(pkg.localVersion, pkg.remoteVersion)
+    // Parse both ranges and check if they intersect
+    const localRange = parseRange(pkg.localVersion)
+    const remoteRange = parseRange(pkg.remoteVersion)
+    return rangeIntersects(localRange, remoteRange)
   }
   catch {
     return false // If version comparison fails, consider it incompatible

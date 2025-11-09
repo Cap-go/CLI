@@ -27,6 +27,7 @@ import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './k
 import { loginCommand } from './login'
 import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
+import { formatError } from './utils'
 
 // Common option descriptions used across multiple commands
 const optionDescriptions = {
@@ -35,6 +36,7 @@ const optionDescriptions = {
   supaAnon: `Custom Supabase anon key (for self-hosting)`,
   packageJson: `Paths to package.json files for monorepos (comma-separated)`,
   nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
+  verbose: `Enable verbose output`,
 }
 
 program
@@ -148,6 +150,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--self-assign', `Allow devices to auto-join this channel (updates channel setting)`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+  .option('--verbose', optionDescriptions.verbose)
 
 bundle
   .command('compatibility [appId]')
@@ -536,12 +539,27 @@ program
   })
 
 program.exitOverride()
+program.configureOutput({
+  writeErr: (_str) => {
+    // Suppress Commander's default error output since we handle it in catch
+  },
+})
 
 program.parseAsync().catch((error: unknown) => {
-  if (typeof error === 'object' && error !== null && 'exitCode' in error) {
-    const exitCode = (error as { exitCode?: number }).exitCode
-    if (typeof exitCode === 'number')
-      exit(exitCode)
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const commanderError = error as { code: string, exitCode?: number, message?: string }
+    // These are normal Commander.js exits (help, version, etc.) - exit silently
+    if (commanderError.code === 'commander.version' || commanderError.code === 'commander.helpDisplayed') {
+      exit(0)
+    }
+    // For actual errors, show just the message without the full stack trace
+    if (commanderError.message) {
+      console.error(commanderError.message)
+    }
+    const exitCode = commanderError.exitCode ?? 1
+    exit(exitCode)
   }
+  // For non-Commander errors, show full error details
+  console.error(`Error: ${formatError(error)}`)
   exit(1)
 })

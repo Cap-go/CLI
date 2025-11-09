@@ -6,9 +6,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
-import semverInc from 'semver/functions/inc'
-// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
-import semverLt from 'semver/functions/lt'
+import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
@@ -248,14 +246,14 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '6.0.0')) {
+    else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
       s.stop('Error')
       pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only support 2 last Capacitor versions, please update to Capacitor v6 minimum: ${urlMigrateV6}`)
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '7.0.0')) {
-      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to get the best features of Capgo`)
+    else if (lessThan(parse(coreVersion), parse('7.0.0'))) {
+      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to support latest Mobile OS versions`)
       versionToInstall = '^6.0.0'
     }
     if (pm.pm === 'unknown') {
@@ -419,7 +417,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
       return
     }
-    if (coreVersion && semverLt(coreVersion, '6.0.0')) {
+    if (coreVersion && lessThan(parse(coreVersion), parse('6.0.0'))) {
       pLog.warn(`Encryption is not supported in Capacitor V5.`)
       return
     }
@@ -626,7 +624,14 @@ ${content}`
   }
 
   // Version bump
-  const nextVersion = semverInc(pkgVersion, 'patch') || '1.0.1'
+  let nextVersion = '1.0.1'
+  try {
+    const parsed = parse(pkgVersion)
+    nextVersion = format(increment(parsed, 'patch'))
+  }
+  catch {
+    nextVersion = '1.0.1'
+  }
   const versionChoice = await pSelect({
     message: 'How do you want to handle the version for this update?',
     options: [
@@ -642,12 +647,13 @@ ${content}`
   let newVersion = pkgVersion
   if (versionChoice === 'auto') {
     // Auto bump patch version using semver
-    const incrementedVersion = semverInc(pkgVersion, 'patch')
-    if (incrementedVersion) {
+    try {
+      const parsed = parse(pkgVersion)
+      const incrementedVersion = format(increment(parsed, 'patch'))
       newVersion = incrementedVersion
       pLog.info(`🔢 Auto-bumped version from ${pkgVersion} to ${newVersion}`)
     }
-    else {
+    catch {
       newVersion = '1.0.1' // fallback
       pLog.warn(`Could not parse version ${pkgVersion}, using fallback ${newVersion}`)
     }

@@ -162,29 +162,6 @@ export async function addAppInternal(
     throw new Error(`Could not add app ${formatError(dbError)}`)
   }
 
-  const { error: dbVersionError } = await supabase
-    .from('app_versions')
-    .insert([
-      {
-        owner_org: organizationUid,
-        deleted: true,
-        name: 'unknown',
-        app_id: appId,
-      },
-      {
-        owner_org: organizationUid,
-        deleted: true,
-        name: 'builtin',
-        app_id: appId,
-      },
-    ])
-
-  if (dbVersionError) {
-    if (!silent)
-      log.error(`Could not add app ${formatError(dbVersionError)}`)
-    throw new Error(`Could not add app ${formatError(dbVersionError)}`)
-  }
-
   if (!silent) {
     log.success(`App ${appId} added to Capgo. You can upload a bundle now`)
     outro('Done ✅')
