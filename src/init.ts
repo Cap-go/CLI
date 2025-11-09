@@ -15,7 +15,7 @@ import { uploadBundle } from './bundle/upload'
 import { addChannel } from './channel/add'
 import { createKeyV2 } from './keyV2'
 import { doLoginExists, login } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -434,7 +434,25 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
-    markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+
+    // Ask user if they want to sync with Capacitor after key creation
+    // Pass true for isInit flag to track cancellation during onboarding flow
+    // orgId and apikey are needed to mark snag if user cancels
+    try {
+      await promptAndSyncCapacitor(true, orgId, apikey)
+      markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+    }
+    catch (error) {
+      // Only handle cancellation gracefully - re-throw any other errors
+      if (error instanceof Error && error.message === 'Capacitor sync cancelled') {
+        // User cancelled the sync - cancellation is already tracked in promptAndSyncCapacitor
+        // Just continue without marking the successful completion
+      }
+      else {
+        // Re-throw any other errors (e.g., network errors, permission errors, etc.)
+        throw error
+      }
+    }
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }

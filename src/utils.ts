@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
+import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
@@ -16,6 +17,7 @@ import AdmZip from 'adm-zip'
 // Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
 import * as tus from 'tus-js-client'
+import { markSnag } from './app/debug'
 import { checksum as getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
 
@@ -1473,5 +1475,63 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
   return {
     finalCompatibility: finalDepenencies,
     localDependencies: nativePackages,
+  }
+}
+
+export async function promptAndSyncCapacitor(
+  isInit?: boolean,
+  orgId?: string,
+  apikey?: string,
+): Promise<void> {
+  // Ask user if they want to sync with Capacitor
+  const shouldSync = await confirmC({
+    message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
+  })
+
+  // Handle user cancellation
+  if (isCancel(shouldSync)) {
+    // For init flow, mark the cancellation
+    if (isInit && orgId && apikey) {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    }
+    log.error('Canceled Capacitor sync')
+    throw new Error('Capacitor sync cancelled')
+  }
+
+  if (shouldSync) {
+    const pm = getPMAndCommand()
+    const s = spinnerC()
+    s.start('Running the command...')
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
+
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve()
+          }
+          else {
+            reject(new Error(`Command failed with exit code ${code}`))
+          }
+        })
+
+        child.on('error', (error) => {
+          reject(error)
+        })
+      })
+
+      s.stop('Capacitor sync completed ✅')
+    }
+    catch (error) {
+      s.stop('Error')
+      log.error(`Failed to run Capacitor sync: ${error}`)
+      log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
+    }
+  }
+  else {
+    const pm = getPMAndCommand()
+    log.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
+    log.info(`Remember to run "${pm.runner} cap sync" before uploading encrypted bundles`)
   }
 }
