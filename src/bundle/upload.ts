@@ -247,8 +247,8 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     // Use SHA256 for v6.25.0+ and v7.0.0+
     useSha256 = greaterOrEqual(coerced, parse('6.25.0'))
   }
-  else if (updaterVersion === 'link:@capgo/capacitor-updater') {
-    log.warn('Using local @capgo/capacitor-updater. Assuming v7')
+  else if (updaterVersion === 'link:@capgo/capacitor-updater' || updaterVersion === 'file:..' || updaterVersion === 'file:../') {
+    log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')
     useSha256 = true
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
