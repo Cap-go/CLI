@@ -229,10 +229,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   return Promise.resolve()
 }
 
-export async function debugApp(appId: string, options: OptionsBaseDebug, silent = false) {
-  if (silent)
-    throw new Error('Debug command requires an interactive terminal')
-
+export async function debugApp(appId: string, options: OptionsBaseDebug) {
   intro('Debug Live update in Capgo')
 
   await checkAlerts()
@@ -255,14 +252,11 @@ export async function debugApp(appId: string, options: OptionsBaseDebug, silent 
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, orgId, options.apikey)
   if (doRun) {
-    if (!silent)
-      log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
+    log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
     await waitLog('debug', options.apikey, appId, orgId, deviceId)
-    if (!silent)
-      outro('Done ✅')
+    outro('Done ✅')
   }
   else {
-    if (!silent)
-      outro('Canceled ❌')
+    outro('Canceled ❌')
   }
 }
