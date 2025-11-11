@@ -58,10 +58,6 @@ async function ensureAppDoesNotExist(
   throw new Error(`App ${appId} already exists`)
 }
 
-export async function addApp(appId: string, options: Options) {
-  return addAppInternal(appId, options, undefined)
-}
-
 export async function addAppInternal(
   initialAppId: string,
   options: Options,
@@ -176,6 +172,6 @@ export async function addAppInternal(
   }
 }
 
-export async function addCommand(appId: string, options: Options) {
-  await addApp(appId, options, false)
+export async function addApp(appId: string, options: Options) {
+  await addAppInternal(appId, options, undefined)
 }

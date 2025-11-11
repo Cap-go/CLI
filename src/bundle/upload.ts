@@ -16,7 +16,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -115,7 +115,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
   let localDependencies: Awaited<ReturnType<typeof getLocalDependencies>> | undefined
-  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
+  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibilityCloud>>['finalCompatibility']
 
   // We only check compatibility IF the channel exists
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
@@ -124,7 +124,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     const {
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel,
-    } = await checkCompatibility(supabase, appid, channel, options.packageJson, options.nodeModules)
+    } = await checkCompatibilityCloud(supabase, appid, channel, options.packageJson, options.nodeModules)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
@@ -1122,7 +1122,7 @@ function checkValidOptions(options: OptionsUpload) {
   }
 }
 
-export async function uploadCommand(appid: string, options: OptionsUpload) {
+export async function uploadBundle(appid: string, options: OptionsUpload) {
   try {
     checkValidOptions(options)
     await uploadBundleInternal(appid, options)

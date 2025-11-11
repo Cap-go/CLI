@@ -213,16 +213,12 @@ export async function createKeyV2Internal(options: Options, silent = false) {
   return true
 }
 
-export async function createKeyV2(options: Options, logg = true) {
-  return createKeyV2Internal(options, !logg)
-}
-
-export async function createKeyCommandV2(options: Options) {
+export async function createKeyV2(options: Options) {
   await checkAlerts()
   await createKeyV2Internal(options, false)
 }
 
-export async function deleteOldKeyCommandV2(options: Options) {
+export async function deleteOldKeyV2(options: Options) {
   await checkAlerts()
   await deleteOldPrivateKeyInternal(options, false)
 }

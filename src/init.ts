@@ -11,10 +11,10 @@ import tmp from 'tmp'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
-import { uploadBundle } from './bundle/upload'
-import { addChannel } from './channel/add'
-import { createKeyV2 } from './keyV2'
-import { doLoginExists, login } from './login'
+import { uploadBundleInternal } from './bundle/upload'
+import { addChannelInternal } from './channel/add'
+import { createKeyV2Internal } from './keyV2'
+import { doLoginExists, loginInternal } from './login'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
@@ -130,7 +130,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     // create production channel public
     s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
-    const addChannelRes = await addChannel(defaultChannel, appId, {
+    const addChannelRes = await addChannelInternal(defaultChannel, appId, {
       default: true,
       apikey,
     }, true)
@@ -424,7 +424,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKeyV2({ force: true }, false)
+    const keyRes = await createKeyV2Internal({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
       pLog.warn(`Cannot create key ❌`)
@@ -722,7 +722,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
         exit(1)
       }
     }
-    const uploadRes = await uploadBundle(appId, {
+    const uploadRes = await uploadBundleInternal(appId, {
       channel: defaultChannel,
       apikey,
       packageJson: isMonorepo ? globalPathToPackageJson : undefined,
@@ -812,7 +812,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
-    await login(options.apikey, options, false)
+    await loginInternal(options.apikey, options, false)
     log.stop('Login Done ✅')
   }
 

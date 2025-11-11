@@ -59,6 +59,6 @@ export async function loginInternal(apikey: string, options: Options, silent = f
   }
 }
 
-export async function loginCommand(apikey: string, options: Options) {
+export async function login(apikey: string, options: Options) {
   await loginInternal(apikey, options, false)
 }

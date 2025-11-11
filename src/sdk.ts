@@ -15,7 +15,7 @@ import { listAppInternal } from './app/list'
 import { setAppInternal } from './app/set'
 import { setSettingInternal } from './app/setting'
 import { cleanupBundleInternal } from './bundle/cleanup'
-import { checkCompatibilityCommandInternal } from './bundle/compatibility'
+import { checkCompatibilityInternal } from './bundle/compatibility'
 import { decryptZipV2Internal } from './bundle/decryptV2'
 import { deleteBundleInternal } from './bundle/delete'
 import { encryptZipV2Internal } from './bundle/encryptV2'
@@ -36,7 +36,7 @@ import { getUserIdInternal } from './user/account'
 import { createSupabaseClient, findSavedKey, getConfig, getLocalConfig } from './utils'
 
 export type DoctorInfo = Awaited<ReturnType<typeof getInfoInternal>>
-type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityCommandInternal>>['finalCompatibility']
+type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityInternal>>['finalCompatibility']
 export type BundleCompatibilityEntry = CompatibilityReport[number]
 
 // ============================================================================
@@ -677,7 +677,7 @@ export class CapgoSDK {
         supaAnon: options.supaAnon || this.supaAnon,
       }
 
-      const compatibility = await checkCompatibilityCommandInternal(options.appId, requestOptions, true)
+      const compatibility = await checkCompatibilityInternal(options.appId, requestOptions, true)
 
       return {
         success: true,

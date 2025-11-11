@@ -1406,7 +1406,7 @@ export function isCompatible(pkg: Compatibility): boolean {
   }
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
+export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
   const dependenciesObject = await getLocalDependencies(packageJsonPath, nodeModules)
   const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 

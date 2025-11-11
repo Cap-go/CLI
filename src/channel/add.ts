@@ -93,6 +93,6 @@ export async function addChannelInternal(channelId: string, appId: string, optio
   return res.data ?? true
 }
 
-export async function addChannelCommand(channelId: string, appId: string, options: Options) {
+export async function addChannel(channelId: string, appId: string, options: Options) {
   await addChannelInternal(channelId, appId, options, false)
 }
