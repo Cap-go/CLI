@@ -980,7 +980,6 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
             manifest,
             path,
             appid,
-            bundle,
             orgId,
             encryptionData,
             options,
@@ -991,6 +990,15 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
         log.info(`[Verbose] Delta upload complete with ${finalManifest.length} files`)
     }
     catch (err) {
+      // If user explicitly requested delta, the error was already thrown by uploadPartial
+      // and we should propagate it
+      const userRequestedDelta = !!(options.partial || options.delta || options.partialOnly || options.deltaOnly)
+      if (userRequestedDelta) {
+        // Error already logged in uploadPartial, just re-throw
+        throw err
+      }
+
+      // Auto-enabled delta that failed - not critical
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)
       if (options.verbose)
         log.info(`[Verbose] Delta upload error details: ${formatError(err)}`)

@@ -183,7 +183,6 @@ export async function uploadPartial(
   manifest: manifestType,
   path: string,
   appId: string,
-  bundleName: string,
   orgId: string,
   encryptionOptions: PartialEncryptionOptions | undefined,
   options: OptionsUpload,
@@ -192,6 +191,9 @@ export async function uploadPartial(
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
   const localConfig = await getLocalConfig()
+
+  // Determine if user explicitly requested delta updates
+  const userRequestedDelta = !!(options.partial || options.delta || options.partialOnly || options.deltaOnly)
 
   // Check the updater version and Brotli support
   const { version, supportsBrotliV2 } = await getUpdaterVersion(options)
@@ -273,34 +275,67 @@ export async function uploadPartial(
       }
 
       return new Promise((resolve, reject) => {
-        const upload = new tus.Upload(finalBuffer as any, {
-          endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
-          chunkSize: options.tusChunkSize,
-          metadata: {
-            filename,
-          },
-          headers: {
-            Authorization: apikey,
-          },
-          onError(error) {
-            log.info(`Failed to upload ${filePathUnix}: ${error}`)
-            reject(error)
-          },
-          onProgress() {
-            const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
-            spinner.message(`Uploading partial update: ${percentage}%`)
-          },
-          onSuccess() {
-            uploadedFiles++
-            resolve({
-              file_name: filePathUnixSafe,
-              s3_path: filename,
-              file_hash: file.hash,
-            })
-          },
-        })
+        let retryCount = 0
+        const maxRetries = 3
 
-        upload.start()
+        const attemptUpload = () => {
+          const upload = new tus.Upload(finalBuffer as any, {
+            endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
+            chunkSize: options.tusChunkSize,
+            retryDelays: [0, 1000, 3000, 5000],
+            removeFingerprintOnSuccess: true,
+            metadata: {
+              filename,
+            },
+            headers: {
+              Authorization: apikey,
+            },
+            onError: async (error) => {
+              const errorMessage = error.toString()
+
+              // Check if it's an offset error
+              if (errorMessage.includes('offset') || errorMessage.includes('409') || errorMessage.includes('conflict')) {
+                retryCount++
+
+                if (retryCount <= maxRetries) {
+                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...`)
+
+                  // Wait a bit before retrying
+                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
+
+                  // Retry the upload from scratch
+                  attemptUpload()
+                  return
+                }
+                else {
+                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors`)
+                  log.info(`This may happen if the upload expired or there was a network issue. The file will be skipped.`)
+                }
+              }
+              else {
+                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}`)
+              }
+
+              reject(error)
+            },
+            onProgress() {
+              const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
+              spinner.message(`Uploading partial update: ${percentage}%`)
+            },
+            onSuccess() {
+              uploadedFiles++
+              resolve({
+                file_name: filePathUnixSafe,
+                s3_path: filename,
+                file_hash: file.hash,
+              })
+            },
+          })
+
+          upload.start()
+        }
+
+        attemptUpload()
       })
     })
 
@@ -340,7 +375,17 @@ export async function uploadPartial(
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
-    log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
-    return null
+
+    if (userRequestedDelta) {
+      // User explicitly requested delta/partial updates, so we should fail
+      log.error(`Error uploading partial update: ${error}`)
+      log.error(`Delta/partial upload was explicitly requested but failed. Upload aborted.`)
+      throw error
+    }
+    else {
+      // Delta was auto-enabled, treat as non-critical
+      log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
+      return null
+    }
   }
 }
