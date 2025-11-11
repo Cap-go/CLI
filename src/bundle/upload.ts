@@ -16,7 +16,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -114,7 +114,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
-  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined
+  let localDependencies: Awaited<ReturnType<typeof getLocalDependencies>> | undefined
   let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
 
   // We only check compatibility IF the channel exists
@@ -158,7 +158,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
   else if (!ignoreMetadataCheck) {
     log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
-    localDependencies = await getLocalDepenencies(options.packageJson, options.nodeModules)
+    localDependencies = await getLocalDependencies(options.packageJson, options.nodeModules)
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
@@ -258,7 +258,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     checksum = await getChecksum(zipped, 'crc32')
   }
   s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
-  // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
+  // key should be undefined or a string if false it should ignore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
   }
@@ -601,7 +601,7 @@ async function setVersionInChannel(
   }
 }
 
-export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
+export async function getDefaultUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
     .eq('app_id', appId)
@@ -699,7 +699,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   if (options.verbose)
     log.info(`[Verbose] User verified successfully, user_id: ${userId}`)
 
-  const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
+  const channel = options.channel || await getDefaultUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
   if (options.verbose)
     log.info(`[Verbose] Target channel: ${channel}`)
 
@@ -1128,7 +1128,7 @@ export async function uploadCommand(appid: string, options: OptionsUpload) {
     await uploadBundle(appid, options, true)
   }
   catch (error) {
-    log.error(`uploadBundle failded: ${formatError(error)}`)
+    log.error(`uploadBundle failed: ${formatError(error)}`)
     throw error instanceof Error ? error : new Error(String(error))
   }
 }

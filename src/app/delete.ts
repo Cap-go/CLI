@@ -52,9 +52,9 @@ export async function deleteApp(
 
   if (!skipConfirmation && !appOwnerError && (appOwner?.owner_org.created_by ?? '') !== userId) {
     if (!silent) {
-      log.warn('Deleting the app is not recomended for users that are not the organization owner')
+      log.warn('Deleting the app is not recommended for users that are not the organization owner')
       log.warn('You are invited as a super_admin but your are not the owner')
-      log.warn('It\'s strongly recomended that you do not continue!')
+      log.warn('It\'s strongly recommended that you do not continue!')
 
       const shouldContinue = await select({
         message: 'Do you want to continue?',

@@ -636,8 +636,8 @@ export async function findProjectType() {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
   // for angular check if angular.json exists
-  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
-  // for vue check if vue.config.js exists or vue is in package.json dependancies
+  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependencies
+  // for vue check if vue.config.js exists or vue is in package.json dependencies
   // for react check if package.json exists and react is in dependencies
   const pwd = cwd()
   let isTypeScript = false
@@ -740,7 +740,7 @@ export async function findBuildCommandForProjectType(projectType: string) {
   if (projectType === 'sveltekit') {
     log.info('Sveltekit project detected')
     log.warn('Please make sure you have the adapter-static installed: https://kit.svelte.dev/docs/adapter-static')
-    log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
+    log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adapter')
     const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
       const message = 'Build command selection aborted by user'
@@ -1200,7 +1200,7 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
+export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
   let dependencies
   try {
@@ -1343,7 +1343,7 @@ export function convertNativePackages(nativePackages: { name: string, version: s
   return mappedRemoteNativePackages
 }
 
-export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+export async function getRemoteDependencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data: remoteNativePackages, error } = await supabase
     .from('channels')
     .select(`version ( 
@@ -1371,7 +1371,7 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   }
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
-    log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)
+    log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you build your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)
     throw new Error('Cannot upload the same bundle content')
   }
   s.stop(`Checksum compatible with ${channel} channel`)
@@ -1407,10 +1407,10 @@ export function isCompatible(pkg: Compatibility): boolean {
 }
 
 export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
-  const dependenciesObject = await getLocalDepenencies(packageJsonPath, nodeModules)
-  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+  const dependenciesObject = await getLocalDependencies(packageJsonPath, nodeModules)
+  const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
-  const finalDepenencies: Compatibility[] = dependenciesObject
+  const finalDependencies: Compatibility[] = dependenciesObject
     .filter(a => !!a.native)
     .map((local) => {
       const remotePackage = mappedRemoteNativePackages.get(local.name)
@@ -1435,18 +1435,18 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
 
-  finalDepenencies.push(...removeNotInLocal)
+  finalDependencies.push(...removeNotInLocal)
 
   return {
-    finalCompatibility: finalDepenencies,
+    finalCompatibility: finalDependencies,
     localDependencies: dependenciesObject,
   }
 }
 
 export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: { name: string, version: string }[]) {
-  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+  const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
-  const finalDepenencies: Compatibility[] = nativePackages
+  const finalDependencies: Compatibility[] = nativePackages
     .map((local) => {
       const remotePackage = mappedRemoteNativePackages.get(local.name)
       if (remotePackage) {
@@ -1470,10 +1470,10 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
     .filter(([remoteName]) => nativePackages.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
 
-  finalDepenencies.push(...removeNotInLocal)
+  finalDependencies.push(...removeNotInLocal)
 
   return {
-    finalCompatibility: finalDepenencies,
+    finalCompatibility: finalDependencies,
     localDependencies: nativePackages,
   }
 }

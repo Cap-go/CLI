@@ -13,8 +13,19 @@ on:
 
 env:
   DENO_DIR: my_cache_directory
+  CLICOLOR: 1
 
 jobs:
+  typos:
+    name: Check for typos
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Check spelling with typos
+        uses: crate-ci/typos@v1.28.3
+
   # POSIX path checks
   create-valid-zip-linux:
     runs-on: ubuntu-latest

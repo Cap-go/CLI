@@ -73,7 +73,7 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
     return undefined
   }
   catch (err) {
-    pLog.error(`Cannot read which steps have been compleated, error:\n${err}`)
+    pLog.error(`Cannot read which steps have been completed, error:\n${err}`)
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
     return undefined
   }
@@ -146,7 +146,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
 }
 
 async function getAssistedDependencies(stepsDone: number) {
-  // here we will assume that getAlllPackagesDependencies uses 'findRoot(cwd())' for the first argument
+  // here we will assume that getAllPackagesDependencies uses 'findRoot(cwd())' for the first argument
   const root = join(findRoot(cwd()), PACKNAME)
   const dependencies = !globalPathToPackageJson ? await getAllPackagesDependencies(undefined, root) : await getAllPackagesDependencies(undefined, globalPathToPackageJson)
   if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
@@ -258,7 +258,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
-      pLog.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
+      pLog.warn(`Cannot recognize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
       pOutro(`Bye 👋`)
       exit()
     }
@@ -489,19 +489,19 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string) {
   const doRun = await pConfirm({ message: `Run ${appId} in device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    const plaformType = await pSelect({
+    const platformType = await pSelect({
       message: 'Pick a platform to run your app',
       options: [
         { value: 'ios', label: 'IOS' },
         { value: 'android', label: 'Android' },
       ],
     })
-    if (pIsCancel(plaformType)) {
+    if (pIsCancel(platformType)) {
       pOutro(`Bye 👋`)
       exit()
     }
 
-    const platform = plaformType as 'ios' | 'android'
+    const platform = platformType as 'ios' | 'android'
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
     await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
