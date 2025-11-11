@@ -230,8 +230,10 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
 }
 
 export async function debugApp(appId: string, options: OptionsBaseDebug, silent = false) {
-  if (!silent)
-    intro('Debug Live update in Capgo')
+  if (silent)
+    throw new Error('Debug command requires an interactive terminal')
+
+  intro('Debug Live update in Capgo')
 
   await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
@@ -239,18 +241,13 @@ export async function debugApp(appId: string, options: OptionsBaseDebug, silent 
   appId = getAppId(appId, extConfig?.config)
   const deviceId = options.device
   if (!options.apikey) {
-    if (!silent)
-      log.error('Missing API key, you need to provide an API key to delete your app')
+    log.error('Missing API key, you need to provide an API key to delete your app')
     throw new Error('Missing API key')
   }
   if (!appId) {
-    if (!silent)
-      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     throw new Error('Missing appId')
   }
-
-  if (silent)
-    throw new Error('Debug command requires an interactive terminal')
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const orgId = await getOrganizationId(supabase, appId)
