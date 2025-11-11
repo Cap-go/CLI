@@ -15,7 +15,7 @@ export function doLoginExists() {
   return existsSync(`${userHomeDir}/.capgo`) || existsSync('.capgo')
 }
 
-export async function login(apikey: string, options: Options, silent = false) {
+export async function loginInternal(apikey: string, options: Options, silent = false) {
   if (!silent)
     intro(`Login to Capgo`)
 
@@ -60,5 +60,5 @@ export async function login(apikey: string, options: Options, silent = false) {
 }
 
 export async function loginCommand(apikey: string, options: Options) {
-  await login(apikey, options, false)
+  await loginInternal(apikey, options, false)
 }

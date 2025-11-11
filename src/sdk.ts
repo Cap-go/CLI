@@ -9,25 +9,25 @@ import type { OptionsSetChannel } from './channel/set'
 import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
-import { deleteApp as deleteAppInternal } from './app/delete'
-import { getInfo as doctorInternal } from './app/info'
-import { listApp as listAppInternal } from './app/list'
-import { setApp as setAppInternal } from './app/set'
-import { setSetting as setSettingInternal } from './app/setting'
-import { cleanupBundle as cleanupBundleInternal } from './bundle/cleanup'
+import { deleteAppInternal } from './app/delete'
+import { getInfoInternal } from './app/info'
+import { listAppInternal } from './app/list'
+import { setAppInternal } from './app/set'
+import { setSettingInternal } from './app/setting'
+import { cleanupBundleInternal } from './bundle/cleanup'
 import { checkCompatibilityCommandInternal } from './bundle/compatibility'
 import { decryptZipV2Internal } from './bundle/decryptV2'
-import { deleteBundle as deleteBundleInternal } from './bundle/delete'
+import { deleteBundleInternal } from './bundle/delete'
 import { encryptZipV2Internal } from './bundle/encryptV2'
-import { uploadBundle as uploadBundleInternal } from './bundle/upload'
+import { uploadBundleInternal } from './bundle/upload'
 import { zipBundleInternal } from './bundle/zip'
-import { addChannel as addChannelInternal } from './channel/add'
-import { currentBundle as currentBundleInternal } from './channel/currentBundle'
-import { deleteChannel as deleteChannelInternal } from './channel/delete'
-import { listChannels as listChannelsInternal } from './channel/list'
-import { setChannel as setChannelInternal } from './channel/set'
+import { addChannelInternal } from './channel/add'
+import { currentBundleInternal } from './channel/currentBundle'
+import { deleteChannelInternal } from './channel/delete'
+import { listChannelsInternal } from './channel/list'
+import { setChannelInternal } from './channel/set'
 import { createKeyV2Internal, deleteOldPrivateKeyInternal, saveKeyV2Internal } from './keyV2'
-import { login as loginInternal } from './login'
+import { loginInternal } from './login'
 import { addOrganizationInternal } from './organisation/add'
 import { deleteOrganizationInternal } from './organisation/delete'
 import { listOrganizationsInternal } from './organisation/list'
@@ -35,7 +35,7 @@ import { setOrganizationInternal } from './organisation/set'
 import { getUserIdInternal } from './user/account'
 import { createSupabaseClient, findSavedKey, getConfig, getLocalConfig } from './utils'
 
-export type DoctorInfo = Awaited<ReturnType<typeof doctorInternal>>
+export type DoctorInfo = Awaited<ReturnType<typeof getInfoInternal>>
 type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityCommandInternal>>['finalCompatibility']
 export type BundleCompatibilityEntry = CompatibilityReport[number]
 
@@ -474,7 +474,7 @@ export class CapgoSDK {
    */
   async doctor(options?: DoctorOptions): Promise<SDKResult<DoctorInfo>> {
     try {
-      const info = await doctorInternal({ packageJson: options?.packageJson }, true)
+      const info = await getInfoInternal({ packageJson: options?.packageJson }, true)
 
       return {
         success: true,
@@ -800,7 +800,7 @@ export class CapgoSDK {
       }
 
       // Call internal upload function but suppress CLI behaviors
-      const uploadResponse = await uploadBundleInternal(options.appId, internalOptions, false)
+      const uploadResponse = await uploadBundleInternal(options.appId, internalOptions, true)
 
       return {
         success: uploadResponse.success,

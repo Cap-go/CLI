@@ -60,7 +60,7 @@ function getRemovableVersionsInSemverRange(
   return toRemove
 }
 
-export async function cleanupBundle(appId: string, options: Options, silent = false) {
+export async function cleanupBundleInternal(appId: string, options: Options, silent = false) {
   if (!silent)
     intro('Cleanup versions in Capgo')
 
@@ -166,4 +166,8 @@ export async function cleanupBundle(appId: string, options: Options, silent = fa
     outro('Done ✅')
 
   return { removed: toRemove.length, kept }
+}
+
+export async function cleanupBundle(appId: string, options: Options) {
+  return cleanupBundleInternal(appId, options)
 }

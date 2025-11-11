@@ -4,7 +4,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { displayChannels, getActiveChannels } from '../api/channels'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
-export async function listChannels(appId: string, options: OptionsBase, silent = false) {
+export async function listChannelsInternal(appId: string, options: OptionsBase, silent = false) {
   if (!silent)
     intro('List channels')
 
@@ -54,4 +54,8 @@ export async function listChannels(appId: string, options: OptionsBase, silent =
     outro('Done ✅')
 
   return allChannels
+}
+
+export async function listChannels(appId: string, options: OptionsBase) {
+  return listChannelsInternal(appId, options, false)
 }

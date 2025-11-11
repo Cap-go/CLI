@@ -13,7 +13,7 @@ import {
   verifyUser,
 } from '../utils'
 
-export async function deleteApp(
+export async function deleteAppInternal(
   initialAppId: string,
   options: OptionsBase,
   silent = false,
@@ -121,4 +121,11 @@ export async function deleteApp(
   }
 
   return true
+}
+
+export async function deleteApp(
+  initialAppId: string,
+  options: OptionsBase,
+) {
+  return deleteAppInternal(initialAppId, options, false, false)
 }

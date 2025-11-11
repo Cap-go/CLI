@@ -58,8 +58,8 @@ async function ensureAppDoesNotExist(
   throw new Error(`App ${appId} already exists`)
 }
 
-export async function addApp(appId: string, options: Options, silent = false) {
-  return addAppInternal(appId, options, undefined, silent)
+export async function addApp(appId: string, options: Options) {
+  return addAppInternal(appId, options, undefined)
 }
 
 export async function addAppInternal(

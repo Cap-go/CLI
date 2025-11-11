@@ -8,7 +8,7 @@ interface Options extends OptionsBase {
   bundle: string
 }
 
-export async function deleteBundle(bundleId: string, appId: string, options: Options, silent = false) {
+export async function deleteBundleInternal(bundleId: string, appId: string, options: Options, silent = false) {
   if (!silent)
     intro('Delete bundle')
 
@@ -52,4 +52,8 @@ export async function deleteBundle(bundleId: string, appId: string, options: Opt
   }
 
   return true
+}
+
+export async function deleteBundle(bundleId: string, appId: string, options: Options) {
+  return deleteBundleInternal(bundleId, appId, options)
 }

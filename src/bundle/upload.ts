@@ -616,8 +616,8 @@ export async function getDefaultUploadChannel(appId: string, supabase: SupabaseT
   return data.default_upload_channel
 }
 
-export async function uploadBundle(preAppid: string, options: OptionsUpload, shouldExit = true): Promise<UploadBundleResult> {
-  if (shouldExit)
+export async function uploadBundleInternal(preAppid: string, options: OptionsUpload, silent = false): Promise<UploadBundleResult> {
+  if (!silent)
     intro(`Uploading with CLI version ${pack.version}`)
   let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
@@ -1075,7 +1075,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     log.info(`  - Storage: ${result.storageProvider}`)
   }
 
-  if (shouldExit && !result.skipped)
+  if (silent && !result.skipped)
     outro('Time to share your update to the world 🌍')
 
   return result
@@ -1125,7 +1125,7 @@ function checkValidOptions(options: OptionsUpload) {
 export async function uploadCommand(appid: string, options: OptionsUpload) {
   try {
     checkValidOptions(options)
-    await uploadBundle(appid, options, true)
+    await uploadBundleInternal(appid, options)
   }
   catch (error) {
     log.error(`uploadBundle failed: ${formatError(error)}`)
