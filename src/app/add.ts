@@ -18,6 +18,8 @@ import {
   verifyUser,
 } from '../utils'
 
+export const reverseDomainRegex = /^[a-z0-9]+(\.[\w-]+)+$/i
+
 function ensureOptions(appId: string, options: Options, silent: boolean) {
   if (!options.apikey) {
     if (!silent)
@@ -35,6 +37,16 @@ function ensureOptions(appId: string, options: Options, silent: boolean) {
     if (!silent)
       log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
     throw new Error('App id includes illegal symbols')
+  }
+
+  if (!reverseDomainRegex.test(appId)) {
+    if (!silent) {
+      log.error(`Invalid app ID format: "${appId}"`)
+      log.info('App ID must be in reverse domain notation (e.g., com.example.app)')
+      log.info('Valid format: lowercase letters, numbers, dots, hyphens, and underscores')
+      log.info('Examples: com.mycompany.myapp, io.capgo.app, com.example.my-app')
+    }
+    throw new Error('Invalid app ID format')
   }
 }
 
