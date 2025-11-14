@@ -292,12 +292,28 @@ export async function uploadPartial(
             onError: async (error) => {
               const errorMessage = error.toString()
 
+              // Try to extract requestId from error message
+              let requestId: string | undefined
+              try {
+                // TUS errors often include response text in the format: "response text: {json}"
+                const responseTextMatch = errorMessage.match(/response text: (\{.*?\})/)
+                if (responseTextMatch && responseTextMatch[1]) {
+                  const errorResponse = JSON.parse(responseTextMatch[1])
+                  requestId = errorResponse.moreInfo?.requestId
+                }
+              }
+              catch {
+                // Ignore JSON parse errors
+              }
+
+              const requestIdSuffix = requestId ? ` [requestId: ${requestId}]` : ''
+
               // Check if it's an offset error
               if (errorMessage.includes('offset') || errorMessage.includes('409') || errorMessage.includes('conflict')) {
                 retryCount++
 
                 if (retryCount <= maxRetries) {
-                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...`)
+                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...${requestIdSuffix}`)
 
                   // Wait a bit before retrying
                   await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
@@ -307,12 +323,12 @@ export async function uploadPartial(
                   return
                 }
                 else {
-                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors`)
+                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors${requestIdSuffix}`)
                   log.info(`This may happen if the upload expired or there was a network issue. The file will be skipped.`)
                 }
               }
               else {
-                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}`)
+                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}${requestIdSuffix}`)
               }
 
               reject(error)
