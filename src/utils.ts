@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
 import type { Database } from './types/supabase.types'
+import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
@@ -10,15 +11,14 @@ import { cwd, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
+import { canParse, format, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
 import AdmZip from 'adm-zip'
-import ky from 'ky'
+// Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
-import cleanVersion from 'semver/functions/clean'
-import validVersion from 'semver/functions/valid'
-import subset from 'semver/ranges/subset'
 import * as tus from 'tus-js-client'
+import { markSnag } from './app/debug'
+import { checksum as getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
 
 export const baseKey = '.capgo_key'
@@ -147,8 +147,14 @@ export function getBundleVersion(f: string = findRoot(cwd()), file: string | und
 
 function returnVersion(version: string) {
   const tmpVersion = version.replace('^', '').replace('~', '')
-  if (validVersion(tmpVersion)) {
-    return cleanVersion(tmpVersion) ?? tmpVersion
+  if (canParse(tmpVersion)) {
+    try {
+      const parsed = parse(tmpVersion)
+      return format(parsed)
+    }
+    catch {
+      return tmpVersion
+    }
   }
   return tmpVersion
 }
@@ -257,16 +263,20 @@ interface CapgoConfig {
   hostApi: string
 }
 export async function getRemoteConfig() {
-  // call host + /api/get_config and parse the result as json using ky
+  // call host + /api/get_config and parse the result as json using fetch
   const localConfig = await getLocalConfig()
-  return ky
-    .get(`${localConfig.hostApi}/private/config`)
-    .then(res => res.json<CapgoConfig>())
-    .then(data => ({ ...data, ...localConfig } as CapgoConfig))
-    .catch(() => {
-      log.info(`Local config ${formatError(localConfig)}`)
-      return localConfig
-    })
+  try {
+    const response = await fetch(`${localConfig.hostApi}/private/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    const data = await response.json() as CapgoConfig
+    return { ...data, ...localConfig } as CapgoConfig
+  }
+  catch {
+    log.info(`Local config ${formatError(localConfig)}`)
+    return localConfig
+  }
 }
 
 interface CapgoFilesConfig {
@@ -281,21 +291,25 @@ interface CapgoFilesConfig {
 
 export async function getRemoteFileConfig() {
   const localConfig = await getLocalConfig()
-  // call host + /api/get_config and parse the result as json using ky
-  return ky
-    .get(`${localConfig.hostFilesApi}/files/config`)
-    .then(res => res.json<CapgoFilesConfig>())
-    .catch(() => {
-      return {
-        partialUpload: false,
-        TUSUpload: false,
-        partialUploadForced: false,
-        TUSUploadForced: false,
-        maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
-        maxChunkSize: MAX_CHUNK_SIZE_BYTES,
-        alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
-      }
-    })
+  // call host + /api/get_config and parse the result as json using fetch
+  try {
+    const response = await fetch(`${localConfig.hostFilesApi}/files/config`)
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`)
+    }
+    return await response.json() as CapgoFilesConfig
+  }
+  catch {
+    return {
+      partialUpload: false,
+      TUSUpload: false,
+      partialUploadForced: false,
+      TUSUploadForced: false,
+      maxUploadLength: MAX_UPLOAD_LENGTH_BYTES,
+      maxChunkSize: MAX_CHUNK_SIZE_BYTES,
+      alertUploadSize: ALERT_UPLOAD_SIZE_BYTES,
+    }
+  }
 }
 
 export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string) {
@@ -622,8 +636,8 @@ export async function findProjectType() {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
   // for angular check if angular.json exists
-  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependancies
-  // for vue check if vue.config.js exists or vue is in package.json dependancies
+  // for sveltekit check if svelte.config.js exists or svelte is in package.json dependencies
+  // for vue check if vue.config.js exists or vue is in package.json dependencies
   // for react check if package.json exists and react is in dependencies
   const pwd = cwd()
   let isTypeScript = false
@@ -726,7 +740,7 @@ export async function findBuildCommandForProjectType(projectType: string) {
   if (projectType === 'sveltekit') {
     log.info('Sveltekit project detected')
     log.warn('Please make sure you have the adapter-static installed: https://kit.svelte.dev/docs/adapter-static')
-    log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adaptater')
+    log.warn('Please make sure you have the pages: \'dist\' and assets: \'dest\', in your svelte.config.js adapter')
     const doContinue = await confirmC({ message: 'Do you want to continue?' })
     if (!doContinue) {
       const message = 'Build command selection aborted by user'
@@ -1010,23 +1024,50 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(capgkey: string, payload: TrackOptions): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?: boolean): Promise<void> {
   try {
+    if (verbose) {
+      log.info(`Get remove config: for ${payload.event}`)
+    }
     const config = await getRemoteConfig()
-    const response = await ky.post(`${config.hostApi}/private/events`, {
-      json: payload,
-      headers: {
-        capgkey,
-      },
-      timeout: 10000, // 10 seconds timeout
-      retry: 3,
-    }).json<{ error?: string }>()
+    if (verbose) {
+      log.info(`Sending LogSnag event: ${JSON.stringify(payload)}`)
+    }
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 10000) // 10 seconds timeout
 
-    if (response.error) {
-      log.error(`Failed to send LogSnag event: ${response.error}`)
+    try {
+      const fetchResponse = await fetch(`${config.hostApi}/private/events`, {
+        method: 'POST',
+        body: JSON.stringify(payload),
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': capgkey,
+        },
+        signal: controller.signal,
+      })
+
+      clearTimeout(timeoutId)
+
+      if (!fetchResponse.ok) {
+        throw new Error(`HTTP error! status: ${fetchResponse.status}`)
+      }
+
+      const response = await fetchResponse.json() as { error?: string }
+
+      if (response.error) {
+        log.error(`Failed to send LogSnag event: ${response.error}`)
+      }
+    }
+    finally {
+      clearTimeout(timeoutId)
     }
   }
-  catch {
+  catch (error) {
+    if (verbose) {
+      log.error('Failed to send Stats event details:')
+      log.error(formatError(error))
+    }
   }
 }
 
@@ -1159,7 +1200,7 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
-export async function getLocalDepenencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
+export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
   let dependencies
   try {
@@ -1302,7 +1343,7 @@ export function convertNativePackages(nativePackages: { name: string, version: s
   return mappedRemoteNativePackages
 }
 
-export async function getRemoteDepenencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
+export async function getRemoteDependencies(supabase: SupabaseClient<Database>, appId: string, channel: string) {
   const { data: remoteNativePackages, error } = await supabase
     .from('channels')
     .select(`version ( 
@@ -1330,7 +1371,7 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   }
   if (remoteChecksum && remoteChecksum === currentChecksum) {
     // cannot upload the same bundle
-    log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you builded your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)
+    log.error(`Cannot upload the same bundle content.\nCurrent bundle checksum matches remote bundle for channel ${channel}\nDid you build your app before uploading?\nPS: You can ignore this check with "--ignore-checksum-check"`)
     throw new Error('Cannot upload the same bundle content')
   }
   s.stop(`Checksum compatible with ${channel} channel`)
@@ -1355,18 +1396,21 @@ export function isCompatible(pkg: Compatibility): boolean {
   if (!pkg.remoteVersion)
     return false // If local version but no remote version, it's incompatible
   try {
-    return subset(pkg.localVersion, pkg.remoteVersion)
+    // Parse both ranges and check if they intersect
+    const localRange = parseRange(pkg.localVersion)
+    const remoteRange = parseRange(pkg.remoteVersion)
+    return rangeIntersects(localRange, remoteRange)
   }
   catch {
     return false // If version comparison fails, consider it incompatible
   }
 }
 
-export async function checkCompatibility(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
-  const dependenciesObject = await getLocalDepenencies(packageJsonPath, nodeModules)
-  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
+  const dependenciesObject = await getLocalDependencies(packageJsonPath, nodeModules)
+  const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
-  const finalDepenencies: Compatibility[] = dependenciesObject
+  const finalDependencies: Compatibility[] = dependenciesObject
     .filter(a => !!a.native)
     .map((local) => {
       const remotePackage = mappedRemoteNativePackages.get(local.name)
@@ -1391,18 +1435,18 @@ export async function checkCompatibility(supabase: SupabaseClient<Database>, app
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
 
-  finalDepenencies.push(...removeNotInLocal)
+  finalDependencies.push(...removeNotInLocal)
 
   return {
-    finalCompatibility: finalDepenencies,
+    finalCompatibility: finalDependencies,
     localDependencies: dependenciesObject,
   }
 }
 
 export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: { name: string, version: string }[]) {
-  const mappedRemoteNativePackages = await getRemoteDepenencies(supabase, appId, channel)
+  const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
-  const finalDepenencies: Compatibility[] = nativePackages
+  const finalDependencies: Compatibility[] = nativePackages
     .map((local) => {
       const remotePackage = mappedRemoteNativePackages.get(local.name)
       if (remotePackage) {
@@ -1426,10 +1470,68 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
     .filter(([remoteName]) => nativePackages.find(a => a.name === remoteName) === undefined)
     .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
 
-  finalDepenencies.push(...removeNotInLocal)
+  finalDependencies.push(...removeNotInLocal)
 
   return {
-    finalCompatibility: finalDepenencies,
+    finalCompatibility: finalDependencies,
     localDependencies: nativePackages,
+  }
+}
+
+export async function promptAndSyncCapacitor(
+  isInit?: boolean,
+  orgId?: string,
+  apikey?: string,
+): Promise<void> {
+  // Ask user if they want to sync with Capacitor
+  const shouldSync = await confirmC({
+    message: 'Would you like to sync your project with Capacitor now? This is recommended to ensure encrypted updates work properly.',
+  })
+
+  // Handle user cancellation
+  if (isCancel(shouldSync)) {
+    // For init flow, mark the cancellation
+    if (isInit && orgId && apikey) {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    }
+    log.error('Canceled Capacitor sync')
+    throw new Error('Capacitor sync cancelled')
+  }
+
+  if (shouldSync) {
+    const pm = getPMAndCommand()
+    const s = spinnerC()
+    s.start('Running the command...')
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const child = spawn(pm.runner, ['cap', 'sync'], { stdio: 'pipe' })
+
+        child.on('close', (code) => {
+          if (code === 0) {
+            resolve()
+          }
+          else {
+            reject(new Error(`Command failed with exit code ${code}`))
+          }
+        })
+
+        child.on('error', (error) => {
+          reject(error)
+        })
+      })
+
+      s.stop('Capacitor sync completed ✅')
+    }
+    catch (error) {
+      s.stop('Error')
+      log.error(`Failed to run Capacitor sync: ${error}`)
+      log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
+    }
+  }
+  else {
+    const pm = getPMAndCommand()
+    log.warn('⚠️  Important: If you upload encrypted bundles without syncing, updates will fail!')
+    log.info(`Remember to run "${pm.runner} cap sync" before uploading encrypted bundles`)
   }
 }

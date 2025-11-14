@@ -1,7 +1,7 @@
 import { exit } from 'node:process'
 import { program } from 'commander'
 import pack from '../package.json'
-import { addCommand } from './app/add'
+import { addApp } from './app/add'
 import { debugApp } from './app/debug'
 import { deleteApp } from './app/delete'
 import { getInfo } from './app/info'
@@ -9,24 +9,25 @@ import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
 import { cleanupBundle } from './bundle/cleanup'
-import { checkCompatibilityCommand } from './bundle/compatibility'
+import { checkCompatibility } from './bundle/compatibility'
 import { decryptZipV2 } from './bundle/decryptV2'
 import { deleteBundle } from './bundle/delete'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { listBundle } from './bundle/list'
-import { uploadCommand } from './bundle/upload'
+import { uploadBundle } from './bundle/upload'
 import { zipBundle } from './bundle/zip'
-import { addChannelCommand } from './channel/add'
+import { addChannel } from './channel/add'
 import { currentBundle } from './channel/currentBundle'
 import { deleteChannel } from './channel/delete'
 import { listChannels } from './channel/list'
 import { setChannel } from './channel/set'
 import { generateDocs } from './docs'
 import { initApp } from './init'
-import { createKeyCommandV2, deleteOldKeyCommandV2, saveKeyCommandV2 } from './keyV2'
-import { loginCommand } from './login'
+import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
+import { login } from './login'
 import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
+import { formatError } from './utils'
 
 // Common option descriptions used across multiple commands
 const optionDescriptions = {
@@ -35,6 +36,7 @@ const optionDescriptions = {
   supaAnon: `Custom Supabase anon key (for self-hosting)`,
   packageJson: `Paths to package.json files for monorepos (comma-separated)`,
   nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
+  verbose: `Enable verbose output`,
 }
 
 program
@@ -77,7 +79,7 @@ program
 Use --apikey=******** in any command to override it.
 
 Example: npx @capgo/cli@latest login YOUR_API_KEY`)
-  .action(loginCommand)
+  .action(login)
   .option('--local', `Only save in local folder, git ignored for security.`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -97,7 +99,7 @@ External option: Store only a URL link (useful for apps >200MB or privacy requir
 Capgo never inspects external content. Add encryption for trustless security.
 
 Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel production`)
-  .action(uploadCommand)
+  .action(uploadBundle)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-p, --path <path>', `Path of the folder to upload, if not provided it will use the webDir set in capacitor.config`)
   .option('-c, --channel <channel>', `Channel to link to`)
@@ -148,13 +150,14 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--self-assign', `Allow devices to auto-join this channel (updates channel setting)`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+  .option('--verbose', optionDescriptions.verbose)
 
 bundle
   .command('compatibility [appId]')
   .description(`🧪 Check compatibility of a bundle with a specific channel in Capgo Cloud to ensure updates are safe.
 
 Example: npx @capgo/cli@latest bundle compatibility com.example.app --channel production`)
-  .action(checkCompatibilityCommand)
+  .action(checkCompatibility)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-c, --channel <channel>', `Channel to check the compatibility with`)
   .option('--text', `Output text instead of emojis`)
@@ -260,7 +263,7 @@ app
 All options can be guessed from config if not provided.
 
 Example: npx @capgo/cli@latest app add com.example.app --name "My App" --icon ./icon.png`)
-  .action(addCommand)
+  .action(addApp)
   .option('-n, --name <name>', `App name for display in Capgo Cloud`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
@@ -344,7 +347,7 @@ channel
   .description(`➕ Create a new channel for app distribution in Capgo Cloud to manage update delivery.
 
 Example: npx @capgo/cli@latest channel add production com.example.app --default`)
-  .action(addChannelCommand)
+  .action(addChannel)
   .option('-d, --default', `Set the channel as default`)
   .option('--self-assign', `Allow device to self-assign to this channel`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
@@ -452,7 +455,7 @@ Public key is saved to capacitor.config for mobile app decryption.
 NEVER commit the private key - store it securely!
 
 Example: npx @capgo/cli@latest key create`)
-  .action(createKeyCommandV2)
+  .action(createKeyV2)
   .option('-f, --force', `Force generate a new one`)
 
 keyV2
@@ -460,7 +463,7 @@ keyV2
   .description(`🧹 Delete the old encryption key from the Capacitor config to ensure only the current key is used.
 
 Example: npx @capgo/cli@latest key delete_old`)
-  .action(deleteOldKeyCommandV2)
+  .action(deleteOldKeyV2)
 
 const account = program
   .command('account')
@@ -536,12 +539,27 @@ program
   })
 
 program.exitOverride()
+program.configureOutput({
+  writeErr: (_str) => {
+    // Suppress Commander's default error output since we handle it in catch
+  },
+})
 
 program.parseAsync().catch((error: unknown) => {
-  if (typeof error === 'object' && error !== null && 'exitCode' in error) {
-    const exitCode = (error as { exitCode?: number }).exitCode
-    if (typeof exitCode === 'number')
-      exit(exitCode)
+  if (typeof error === 'object' && error !== null && 'code' in error) {
+    const commanderError = error as { code: string, exitCode?: number, message?: string }
+    // These are normal Commander.js exits (help, version, etc.) - exit silently
+    if (commanderError.code === 'commander.version' || commanderError.code === 'commander.helpDisplayed') {
+      exit(0)
+    }
+    // For actual errors, show just the message without the full stack trace
+    if (commanderError.message) {
+      console.error(commanderError.message)
+    }
+    const exitCode = commanderError.exitCode ?? 1
+    exit(exitCode)
   }
+  // For non-Commander errors, show full error details
+  console.error(`Error: ${formatError(error)}`)
   exit(1)
 })

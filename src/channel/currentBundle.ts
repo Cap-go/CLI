@@ -21,7 +21,7 @@ interface Channel {
   }
 }
 
-export async function currentBundle(channel: string, appId: string, options: Options, silent = false) {
+export async function currentBundleInternal(channel: string, appId: string, options: Options, silent = false) {
   const { quiet } = options
 
   if (!quiet && !silent)
@@ -82,4 +82,8 @@ export async function currentBundle(channel: string, appId: string, options: Opt
   }
 
   return version.name
+}
+
+export async function currentBundle(channel: string, appId: string, options: Options) {
+  return currentBundleInternal(channel, appId, options)
 }

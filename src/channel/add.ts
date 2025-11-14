@@ -19,7 +19,7 @@ interface Options extends OptionsBase {
   selfAssign?: boolean
 }
 
-export async function addChannel(channelId: string, appId: string, options: Options, silent = false) {
+export async function addChannelInternal(channelId: string, appId: string, options: Options, silent = false) {
   if (!silent)
     intro('Create channel')
 
@@ -93,6 +93,6 @@ export async function addChannel(channelId: string, appId: string, options: Opti
   return res.data ?? true
 }
 
-export async function addChannelCommand(channelId: string, appId: string, options: Options) {
-  await addChannel(channelId, appId, options, false)
+export async function addChannel(channelId: string, appId: string, options: Options) {
+  await addChannelInternal(channelId, appId, options, false)
 }

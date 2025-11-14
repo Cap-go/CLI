@@ -16,7 +16,7 @@ import {
   verifyUser,
 } from '../utils'
 
-export async function setApp(appId: string, options: Options, silent = false) {
+export async function setAppInternal(appId: string, options: Options, silent = false) {
   if (!silent)
     intro('Set app')
 
@@ -123,4 +123,8 @@ export async function setApp(appId: string, options: Options, silent = false) {
     outro('Done ✅')
 
   return true
+}
+
+export async function setApp(appId: string, options: Options) {
+  return setAppInternal(appId, options)
 }

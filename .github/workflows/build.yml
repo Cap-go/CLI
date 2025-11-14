@@ -1,7 +1,7 @@
-name: Build source code and send to NPM
+name: Build and publish
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}-build
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 on:
@@ -10,53 +10,56 @@ on:
       - '*'
 
 jobs:
+  # Tests already passed before tag was created, so just build and deploy
   deploy:
     runs-on: ubuntu-latest
-    name: Build code and release
+    name: Build and publish to npm
     permissions:
-      contents: read
+      contents: write
       id-token: write
     steps:
-      - name: Checkout
+      - name: Check out
         uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - name: Setup bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+          fetch-tags: true
+      - uses: oven-sh/setup-bun@v2
       - name: Install dependencies
         id: install_code
-        run: bun install --frozen-lockfile
-      - name: Lint
-        id: lint_code
-        run: bun lint
+        run: bun i
       - name: Build
         id: build_code
         run: bun run build
-      - name: Wait for POSIX path check to succeed
-        uses: lewagon/wait-on-check-action@v1.4.1
+      - name: Generate AI changelog
+        id: changelog
+        uses: mistricky/ccc@v0.2.5
         with:
-          ref: ${{ github.ref }}
-          check-regexp: .*check-posix-paths.*
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          wait-interval: 10
-          verbose: true
-      - name: Wait for tests to succeed
-        uses: lewagon/wait-on-check-action@v1.4.1
-        with:
-          ref: ${{ github.ref }}
-          check-name: Run tests
-          repo-token: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
-          wait-interval: 10
-      - uses: JS-DevTools/npm-publish@v4
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          model: claude-sonnet-4-5-20250929
+      - uses: js-devtools/npm-publish@v4
         if: ${{ !contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
           provenance: true
-      - uses: JS-DevTools/npm-publish@v4
+      - uses: js-devtools/npm-publish@v4
         if: ${{ contains(github.ref, '-alpha.') }}
         with:
           token: ${{ secrets.NPM_TOKEN }}
           tag: next
           provenance: true
+      - name: Create GitHub release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          body: |
+            ## 🆕 Changelog
+
+            ${{ steps.changelog.outputs.result }}
+
+            ---
+
+            🔗 **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.changelog.outputs.from_tag }}...${{ steps.changelog.outputs.to_tag }}
+          make_latest: true
+          token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
+          prerelease: ${{ contains(github.ref, '-alpha.') }}

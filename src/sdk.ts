@@ -9,34 +9,34 @@ import type { OptionsSetChannel } from './channel/set'
 import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
-import { deleteApp as deleteAppInternal } from './app/delete'
-import { getInfo as doctorInternal } from './app/info'
-import { listApp as listAppInternal } from './app/list'
-import { setApp as setAppInternal } from './app/set'
-import { setSetting as setSettingInternal } from './app/setting'
-import { cleanupBundle as cleanupBundleInternal } from './bundle/cleanup'
-import { checkCompatibilityCommandInternal } from './bundle/compatibility'
+import { deleteAppInternal } from './app/delete'
+import { getInfoInternal } from './app/info'
+import { listAppInternal } from './app/list'
+import { setAppInternal } from './app/set'
+import { setSettingInternal } from './app/setting'
+import { cleanupBundleInternal } from './bundle/cleanup'
+import { checkCompatibilityInternal } from './bundle/compatibility'
 import { decryptZipV2Internal } from './bundle/decryptV2'
-import { deleteBundle as deleteBundleInternal } from './bundle/delete'
+import { deleteBundleInternal } from './bundle/delete'
 import { encryptZipV2Internal } from './bundle/encryptV2'
-import { uploadBundle as uploadBundleInternal } from './bundle/upload'
+import { uploadBundleInternal } from './bundle/upload'
 import { zipBundleInternal } from './bundle/zip'
-import { addChannel as addChannelInternal } from './channel/add'
-import { currentBundle as currentBundleInternal } from './channel/currentBundle'
-import { deleteChannel as deleteChannelInternal } from './channel/delete'
-import { listChannels as listChannelsInternal } from './channel/list'
-import { setChannel as setChannelInternal } from './channel/set'
+import { addChannelInternal } from './channel/add'
+import { currentBundleInternal } from './channel/currentBundle'
+import { deleteChannelInternal } from './channel/delete'
+import { listChannelsInternal } from './channel/list'
+import { setChannelInternal } from './channel/set'
 import { createKeyV2Internal, deleteOldPrivateKeyInternal, saveKeyV2Internal } from './keyV2'
-import { login as loginInternal } from './login'
+import { loginInternal } from './login'
 import { addOrganizationInternal } from './organisation/add'
 import { deleteOrganizationInternal } from './organisation/delete'
 import { listOrganizationsInternal } from './organisation/list'
 import { setOrganizationInternal } from './organisation/set'
 import { getUserIdInternal } from './user/account'
-import { createSupabaseClient, findSavedKey, getConfig } from './utils'
+import { createSupabaseClient, findSavedKey, getConfig, getLocalConfig } from './utils'
 
-export type DoctorInfo = Awaited<ReturnType<typeof doctorInternal>>
-type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityCommandInternal>>['finalCompatibility']
+export type DoctorInfo = Awaited<ReturnType<typeof getInfoInternal>>
+type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityInternal>>['finalCompatibility']
 export type BundleCompatibilityEntry = CompatibilityReport[number]
 
 // ============================================================================
@@ -361,6 +361,49 @@ export interface SetSettingOptions {
 }
 
 // ============================================================================
+// Device Stats Types
+// ============================================================================
+
+export interface StatsOrder {
+  key: string
+  sortable?: 'asc' | 'desc'
+}
+
+export interface GetStatsOptions {
+  /** App ID */
+  appId: string
+  /** Filter by specific device IDs */
+  deviceIds?: string[]
+  /** Search query */
+  search?: string
+  /** Sort order */
+  order?: StatsOrder[]
+  /** Start date/time for range filter (ISO string) */
+  rangeStart?: string
+  /** End date/time for range filter (ISO string) */
+  rangeEnd?: string
+  /** Limit number of results */
+  limit?: number
+  /** Get only stats after this timestamp (for polling) */
+  after?: string | null
+  /** API key for authentication */
+  apikey?: string
+  /** Custom Supabase host */
+  supaHost?: string
+  /** Custom Supabase anon key */
+  supaAnon?: string
+}
+
+export interface DeviceStats {
+  appId: string
+  deviceId: string
+  action: string
+  versionId: number
+  version?: number
+  createdAt: string
+}
+
+// ============================================================================
 // SDK Class - Main Entry Point
 // ============================================================================
 
@@ -431,7 +474,7 @@ export class CapgoSDK {
    */
   async doctor(options?: DoctorOptions): Promise<SDKResult<DoctorInfo>> {
     try {
-      const info = await doctorInternal({ packageJson: options?.packageJson }, true)
+      const info = await getInfoInternal({ packageJson: options?.packageJson }, true)
 
       return {
         success: true,
@@ -634,7 +677,7 @@ export class CapgoSDK {
         supaAnon: options.supaAnon || this.supaAnon,
       }
 
-      const compatibility = await checkCompatibilityCommandInternal(options.appId, requestOptions, true)
+      const compatibility = await checkCompatibilityInternal(options.appId, requestOptions, true)
 
       return {
         success: true,
@@ -757,7 +800,7 @@ export class CapgoSDK {
       }
 
       // Call internal upload function but suppress CLI behaviors
-      const uploadResponse = await uploadBundleInternal(options.appId, internalOptions, false)
+      const uploadResponse = await uploadBundleInternal(options.appId, internalOptions, true)
 
       return {
         success: uploadResponse.success,
@@ -1254,6 +1297,112 @@ export class CapgoSDK {
   }
 
   // ==========================================================================
+  // Device Stats & Debugging
+  // ==========================================================================
+
+  /**
+   * Get device statistics/logs from Capgo backend
+   *
+   * This method works similarly to waitLog, allowing you to poll for device activity.
+   * Use the `after` parameter to get only new stats since a previous call.
+   *
+   * @example
+   * ```typescript
+   * // Get recent stats for an app
+   * const result = await sdk.getStats({
+   *   appId: 'com.example.app',
+   *   rangeStart: new Date().toISOString(),
+   *   limit: 100
+   * })
+   *
+   * if (result.success && result.data) {
+   *   result.data.forEach(stat => {
+   *     console.log(`${stat.deviceId}: ${stat.action}`)
+   *   })
+   * }
+   *
+   * // Poll for new stats (similar to waitLog)
+   * let after = new Date().toISOString()
+   * const poll = async () => {
+   *   const result = await sdk.getStats({
+   *     appId: 'com.example.app',
+   *     after
+   *   })
+   *
+   *   if (result.success && result.data && result.data.length > 0) {
+   *     // Update 'after' to newest timestamp
+   *     const newest = result.data.reduce((max, d) => {
+   *       const t = new Date(d.createdAt).getTime()
+   *       return Math.max(max, t)
+   *     }, new Date(after).getTime())
+   *     after = new Date(newest).toISOString()
+   *
+   *     // Process new stats
+   *     result.data.forEach(stat => console.log(stat))
+   *   }
+   * }
+   * ```
+   */
+  async getStats(options: GetStatsOptions): Promise<SDKResult<DeviceStats[]>> {
+    try {
+      const apikey = options.apikey || this.apikey || findSavedKey(true)
+      const localConfig = await getLocalConfig()
+
+      const query = {
+        appId: options.appId,
+        devicesId: options.deviceIds,
+        search: options.search,
+        order: options.order,
+        rangeStart: options.after || options.rangeStart,
+        rangeEnd: options.rangeEnd,
+        limit: options.limit,
+      }
+
+      const response = await fetch(`${localConfig.hostApi}/private/stats`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'capgkey': apikey,
+        },
+        body: JSON.stringify(query),
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+
+      const data = await response.json() as Array<{
+        app_id: string
+        device_id: string
+        action: string
+        version_id: number
+        version?: number
+        created_at: string
+      }>
+
+      const stats: DeviceStats[] = data.map(d => ({
+        appId: d.app_id,
+        deviceId: d.device_id,
+        action: d.action,
+        versionId: d.version_id,
+        version: d.version,
+        createdAt: d.created_at,
+      }))
+
+      return {
+        success: true,
+        data: stats,
+      }
+    }
+    catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      }
+    }
+  }
+
+  // ==========================================================================
   // Miscellaneous Helpers
   // ==========================================================================
 
@@ -1471,6 +1620,37 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
     supaAnon: options.supaAnon,
   })
   return sdk.addChannel(options)
+}
+
+/**
+ * Get device statistics/logs from Capgo backend (functional API)
+ *
+ * This function works similarly to waitLog, allowing you to poll for device activity.
+ *
+ * @example
+ * ```typescript
+ * // Get recent stats for an app
+ * const result = await getStats({
+ *   appId: 'com.example.app',
+ *   apikey: 'your-api-key',
+ *   rangeStart: new Date().toISOString(),
+ *   limit: 100
+ * })
+ *
+ * if (result.success && result.data) {
+ *   result.data.forEach(stat => {
+ *     console.log(`${stat.deviceId}: ${stat.action}`)
+ *   })
+ * }
+ * ```
+ */
+export async function getStats(options: GetStatsOptions): Promise<SDKResult<DeviceStats[]>> {
+  const sdk = new CapgoSDK({
+    apikey: options.apikey,
+    supaHost: options.supaHost,
+    supaAnon: options.supaAnon,
+  })
+  return sdk.getStats(options)
 }
 
 // ============================================================================

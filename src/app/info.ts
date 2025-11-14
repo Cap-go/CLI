@@ -1,14 +1,14 @@
 import { platform, version } from 'node:os'
 import { version as nodeVersion } from 'node:process'
 import { log, spinner } from '@clack/prompts'
-import latestVersion from 'latest-version'
 import pack from '../../package.json'
 import { getAllPackagesDependencies, getAppId, getBundleVersion, getConfig } from '../utils'
+import { getLatestVersion } from '../utils/latest-version'
 
 async function getLatestDependencies(installedDependencies: Record<string, string>) {
   const latestDependencies: Record<string, string> = {}
   const keys = Object.keys(installedDependencies)
-  const versions = await Promise.all(keys.map(dependency => latestVersion(dependency).catch(() => null)))
+  const versions = await Promise.all(keys.map(dependency => getLatestVersion(dependency)))
 
   versions.forEach((v, index) => {
     if (v)
@@ -36,7 +36,7 @@ interface DoctorInfoOptions {
   packageJson?: string
 }
 
-export async function getInfo(options: DoctorInfoOptions, silent = false) {
+export async function getInfoInternal(options: DoctorInfoOptions, silent = false) {
   if (!silent)
     log.warn(' 💊   Capgo Doctor  💊')
 
@@ -102,4 +102,8 @@ export async function getInfo(options: DoctorInfoOptions, silent = false) {
     installedDependencies,
     latestDependencies,
   }
+}
+
+export async function getInfo(options: DoctorInfoOptions) {
+  return getInfoInternal(options)
 }

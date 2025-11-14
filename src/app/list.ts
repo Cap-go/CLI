@@ -36,7 +36,7 @@ async function getActiveApps(
   return data ?? []
 }
 
-export async function listApp(options: OptionsBase, silent = false) {
+export async function listAppInternal(options: OptionsBase, silent = false) {
   if (!silent)
     intro('List apps in Capgo')
 
@@ -66,4 +66,8 @@ export async function listApp(options: OptionsBase, silent = false) {
   }
 
   return allApps
+}
+
+export async function listApp(options: OptionsBase) {
+  return listAppInternal(options, false)
 }

@@ -6,18 +6,16 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import { join } from 'node:path'
 import { cwd, exit } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
-import semverInc from 'semver/functions/inc'
-// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
-import semverLt from 'semver/functions/lt'
+import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
-import { uploadBundle } from './bundle/upload'
-import { addChannel } from './channel/add'
-import { createKeyV2 } from './keyV2'
-import { doLoginExists, login } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { uploadBundleInternal } from './bundle/upload'
+import { addChannelInternal } from './channel/add'
+import { createKeyV2Internal } from './keyV2'
+import { doLoginExists, loginInternal } from './login'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -75,7 +73,7 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
     return undefined
   }
   catch (err) {
-    pLog.error(`Cannot read which steps have been compleated, error:\n${err}`)
+    pLog.error(`Cannot read which steps have been completed, error:\n${err}`)
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
     return undefined
   }
@@ -132,7 +130,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     // create production channel public
     s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
-    const addChannelRes = await addChannel(defaultChannel, appId, {
+    const addChannelRes = await addChannelInternal(defaultChannel, appId, {
       default: true,
       apikey,
     }, true)
@@ -148,7 +146,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
 }
 
 async function getAssistedDependencies(stepsDone: number) {
-  // here we will assume that getAlllPackagesDependencies uses 'findRoot(cwd())' for the first argument
+  // here we will assume that getAllPackagesDependencies uses 'findRoot(cwd())' for the first argument
   const root = join(findRoot(cwd()), PACKNAME)
   const dependencies = !globalPathToPackageJson ? await getAllPackagesDependencies(undefined, root) : await getAllPackagesDependencies(undefined, globalPathToPackageJson)
   if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
@@ -248,19 +246,19 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '6.0.0')) {
+    else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
       s.stop('Error')
       pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only support 2 last Capacitor versions, please update to Capacitor v6 minimum: ${urlMigrateV6}`)
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (semverLt(coreVersion, '7.0.0')) {
-      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to get the best features of Capgo`)
+    else if (lessThan(parse(coreVersion), parse('7.0.0'))) {
+      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to support latest Mobile OS versions`)
       versionToInstall = '^6.0.0'
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
-      pLog.warn(`Cannot reconize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
+      pLog.warn(`Cannot recognize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
       pOutro(`Bye 👋`)
       exit()
     }
@@ -419,14 +417,14 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
       return
     }
-    if (coreVersion && semverLt(coreVersion, '6.0.0')) {
+    if (coreVersion && lessThan(parse(coreVersion), parse('6.0.0'))) {
       pLog.warn(`Encryption is not supported in Capacitor V5.`)
       return
     }
 
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKeyV2({ force: true }, false)
+    const keyRes = await createKeyV2Internal({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
       pLog.warn(`Cannot create key ❌`)
@@ -436,7 +434,25 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
-    markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+
+    // Ask user if they want to sync with Capacitor after key creation
+    // Pass true for isInit flag to track cancellation during onboarding flow
+    // orgId and apikey are needed to mark snag if user cancels
+    try {
+      await promptAndSyncCapacitor(true, orgId, apikey)
+      markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+    }
+    catch (error) {
+      // Only handle cancellation gracefully - re-throw any other errors
+      if (error instanceof Error && error.message === 'Capacitor sync cancelled') {
+        // User cancelled the sync - cancellation is already tracked in promptAndSyncCapacitor
+        // Just continue without marking the successful completion
+      }
+      else {
+        // Re-throw any other errors (e.g., network errors, permission errors, etc.)
+        throw error
+      }
+    }
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
@@ -473,19 +489,19 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string) {
   const doRun = await pConfirm({ message: `Run ${appId} in device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    const plaformType = await pSelect({
+    const platformType = await pSelect({
       message: 'Pick a platform to run your app',
       options: [
         { value: 'ios', label: 'IOS' },
         { value: 'android', label: 'Android' },
       ],
     })
-    if (pIsCancel(plaformType)) {
+    if (pIsCancel(platformType)) {
       pOutro(`Bye 👋`)
       exit()
     }
 
-    const platform = plaformType as 'ios' | 'android'
+    const platform = platformType as 'ios' | 'android'
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
     await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
@@ -608,7 +624,14 @@ ${content}`
   }
 
   // Version bump
-  const nextVersion = semverInc(pkgVersion, 'patch') || '1.0.1'
+  let nextVersion = '1.0.1'
+  try {
+    const parsed = parse(pkgVersion)
+    nextVersion = format(increment(parsed, 'patch'))
+  }
+  catch {
+    nextVersion = '1.0.1'
+  }
   const versionChoice = await pSelect({
     message: 'How do you want to handle the version for this update?',
     options: [
@@ -624,12 +647,13 @@ ${content}`
   let newVersion = pkgVersion
   if (versionChoice === 'auto') {
     // Auto bump patch version using semver
-    const incrementedVersion = semverInc(pkgVersion, 'patch')
-    if (incrementedVersion) {
+    try {
+      const parsed = parse(pkgVersion)
+      const incrementedVersion = format(increment(parsed, 'patch'))
       newVersion = incrementedVersion
       pLog.info(`🔢 Auto-bumped version from ${pkgVersion} to ${newVersion}`)
     }
-    else {
+    catch {
       newVersion = '1.0.1' // fallback
       pLog.warn(`Could not parse version ${pkgVersion}, using fallback ${newVersion}`)
     }
@@ -698,7 +722,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
         exit(1)
       }
     }
-    const uploadRes = await uploadBundle(appId, {
+    const uploadRes = await uploadBundleInternal(appId, {
       channel: defaultChannel,
       apikey,
       packageJson: isMonorepo ? globalPathToPackageJson : undefined,
@@ -788,7 +812,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
-    await login(options.apikey, options, false)
+    await loginInternal(options.apikey, options, false)
     log.stop('Login Done ✅')
   }
 

@@ -8,7 +8,7 @@ interface Options extends OptionsBase {
   string?: string
 }
 
-export async function setSetting(setting: string, options: Options, silent = false) {
+export async function setSettingInternal(setting: string, options: Options, silent = false) {
   if (!silent)
     intro('Set a specific setting in capacitor config')
 
@@ -63,4 +63,8 @@ export async function setSetting(setting: string, options: Options, silent = fal
 
   if (!silent)
     outro('Done ✅')
+}
+
+export async function setSetting(setting: string, options: Options) {
+  return setSettingInternal(setting, options)
 }

@@ -82,21 +82,33 @@ export async function findUnknownVersion(
   options: FindUnknownOptions = {},
 ) {
   const { silent = false } = options
+  const delays = [3000, 7000] // Wait 3 seconds after 1st failure, 7 seconds after 2nd failure
+  let lastError: any
 
-  const { data, error } = await supabase
-    .from('app_versions')
-    .select('id')
-    .eq('app_id', appId)
-    .eq('name', 'unknown')
-    .single()
+  for (let attempt = 0; attempt <= 2; attempt++) {
+    const { data, error } = await supabase
+      .from('app_versions')
+      .select('id')
+      .eq('app_id', appId)
+      .eq('name', 'unknown')
+      .single()
 
-  if (error) {
-    if (!silent)
-      log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(error)}`)
-    throw new Error(`Cannot retrieve unknown version for app ${appId}: ${formatError(error)}`)
+    if (!error) {
+      return data
+    }
+
+    lastError = error
+
+    // If this isn't the last attempt, wait before retrying
+    if (attempt < 2) {
+      await new Promise(resolve => setTimeout(resolve, delays[attempt]))
+    }
   }
 
-  return data
+  // All retries failed
+  if (!silent)
+    log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(lastError)}`)
+  throw new Error(`Cannot retrieve unknown version for app ${appId}: ${formatError(lastError)}`)
 }
 
 export function createChannel(

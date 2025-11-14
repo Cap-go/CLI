@@ -37,7 +37,7 @@ export interface OptionsSetChannel extends OptionsBase {
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 
-export async function setChannel(channel: string, appId: string, options: OptionsSetChannel, silent = false) {
+export async function setChannelInternal(channel: string, appId: string, options: OptionsSetChannel, silent = false) {
   if (!silent)
     intro('Set channel')
 
@@ -324,4 +324,8 @@ export async function setChannel(channel: string, appId: string, options: Option
     outro('Done ✅')
 
   return true
+}
+
+export async function setChannel(channel: string, appId: string, options: OptionsSetChannel) {
+  return setChannelInternal(channel, appId, options, false)
 }
