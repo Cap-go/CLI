@@ -186,17 +186,6 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   return { nativePackages, minUpdateVersion }
 }
 
-async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: localConfigType) {
-  const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial_org', { orgid: orgId })
-    .single()
-  if ((isTrial && isTrial > 0) || isTrialsError) {
-  // TODO: Come back to this to fix for orgs v3
-    log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
-  }
-}
-
 async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
@@ -715,8 +704,6 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   await checkPlanValidUpload(supabase, orgId, apikey, appid, true)
   if (options.verbose)
     log.info(`[Verbose] Plan validation passed`)
-
-  await checkTrial(supabase, orgId, localConfig)
   if (options.verbose)
     log.info(`[Verbose] Trial check completed`)
 
