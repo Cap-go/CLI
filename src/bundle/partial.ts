@@ -207,7 +207,6 @@ export async function uploadPartial(
       log.info('Brotli compression disabled by user request')
     }
     else {
-      spinner.message(`Using .br extension for compatible files (updater ${version})`)
       if (options.noBrotliPatterns) {
         log.info(`Files matching patterns (${options.noBrotliPatterns}) will be excluded from brotli compression`)
       }
@@ -227,6 +226,7 @@ export async function uploadPartial(
   let brFilesCount = 0
 
   try {
+    spinner.message(`Uploading ${totalFiles} files using TUS protocol`)
     const uploadFiles = manifest.map(async (file) => {
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
