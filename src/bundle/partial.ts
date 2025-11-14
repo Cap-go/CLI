@@ -91,7 +91,6 @@ async function shouldUseBrotli(
 
   // Skip brotli if file matches exclusion patterns
   if (shouldExcludeFromBrotli(filePathUnix, options.noBrotliPatterns)) {
-    log.info(`Skipping brotli for excluded file: ${filePathUnix}`)
     // Don't compress excluded files - just return the original content
     return { buffer: originalBuffer, useBrotli: false }
   }
