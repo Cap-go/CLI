@@ -108,7 +108,6 @@ async function shouldUseBrotli(
 
     // If compression isn't effective, don't use Brotli and don't compress
     if (compressedBuffer.length >= fileSize - 10) {
-      log.info(`Brotli not effective for ${filePathUnix} (${fileSize} bytes), using original file`)
       return { buffer: originalBuffer, useBrotli: false }
     }
 
