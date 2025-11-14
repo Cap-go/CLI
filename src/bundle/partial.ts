@@ -212,7 +212,6 @@ export async function uploadPartial(
       if (options.noBrotliPatterns) {
         log.info(`Files matching patterns (${options.noBrotliPatterns}) will be excluded from brotli compression`)
       }
-      log.info(`Files smaller than ${BROTLI_MIN_SIZE} bytes will be excluded from brotli compression (Brotli RFC minimum)`)
     }
   }
 
