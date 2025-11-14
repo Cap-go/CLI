@@ -277,6 +277,7 @@ export async function uploadPartial(
         const maxRetries = 3
 
         const attemptUpload = () => {
+          spinner.message(`Uploading partial file: ${filePathUnix}`)
           const upload = new tus.Upload(finalBuffer as any, {
             endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
             chunkSize: options.tusChunkSize,
