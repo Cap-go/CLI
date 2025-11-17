@@ -1,7 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
 import { greaterOrEqual, parse } from '@std/semver'
@@ -11,11 +10,10 @@ import {
   baseKeyV2,
   findRoot,
   formatError,
-  getAllPackagesDependencies,
   getAppId,
   getBundleVersion,
   getConfig,
-  PACKNAME,
+  getInstalledVersion,
   regexSemver,
   zipFile,
 } from '../utils'
@@ -130,12 +128,11 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
     if (checksumSpinner)
       checksumSpinner.start('Calculating checksum')
 
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
 
     if (!updaterVersion) {
-      const warning = 'Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work'
+      const warning = 'Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager'
       if (!silent)
         log.warn(warning)
       throw new Error(warning)

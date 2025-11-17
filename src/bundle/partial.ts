@@ -13,7 +13,7 @@ import { greaterOrEqual, parse } from '@std/semver'
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
+import { findRoot, generateManifest, getInstalledVersion, getLocalConfig, sendEvent } from '../utils'
 
 // Check if file already exists on server
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
@@ -38,9 +38,8 @@ const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
 
 // Check if the updater version supports .br extension
 async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ version: string | null, supportsBrotliV2: boolean }> {
-  const root = join(findRoot(cwd()), PACKNAME)
-  const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, uploadOptions.packageJson)
   let coerced
   try {
     coerced = updaterVersion ? parse(updaterVersion) : undefined

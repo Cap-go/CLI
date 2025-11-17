@@ -15,7 +15,7 @@ import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
 import { createKeyV2Internal } from './keyV2'
 import { doLoginExists, loginInternal } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -264,8 +264,9 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     }
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
-    //  check if capgo is already installed in package.json
-    if (dependencies.get('@capgo/capacitor-updater')) {
+    //  check if capgo is already installed in node_modules
+    const installedVersion = await getInstalledVersion('@capgo/capacitor-updater', path.replace('/package.json', ''), path)
+    if (installedVersion) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
