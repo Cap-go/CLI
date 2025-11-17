@@ -5,7 +5,6 @@ import type { manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path/posix'
 import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
@@ -16,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
-import { baseKeyV2, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -186,17 +185,6 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   return { nativePackages, minUpdateVersion }
 }
 
-async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: localConfigType) {
-  const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial_org', { orgid: orgId })
-    .single()
-  if ((isTrial && isTrial > 0) || isTrialsError) {
-  // TODO: Come back to this to fix for orgs v3
-    log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
-  }
-}
-
 async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
@@ -228,10 +216,8 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   zipped = await zipFile(path)
   const s = spinnerC()
   s.start(`Calculating checksum`)
-  const root = join(findRoot(cwd()), PACKNAME)
-  // options.packageJson
-  const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
   let useSha256 = false
   let coerced
   try {
@@ -241,7 +227,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     coerced = undefined
   }
   if (!updaterVersion) {
-    uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
+    uploadFail('Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager')
   }
   else if (coerced) {
     // Use SHA256 for v6.25.0+ and v7.0.0+
@@ -715,8 +701,6 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   await checkPlanValidUpload(supabase, orgId, apikey, appid, true)
   if (options.verbose)
     log.info(`[Verbose] Plan validation passed`)
-
-  await checkTrial(supabase, orgId, localConfig)
   if (options.verbose)
     log.info(`[Verbose] Trial check completed`)
 
@@ -860,9 +844,8 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
   if (options.delta && encryptionMethod === 'v2' && !options.encryptPartial) {
     // Check updater version
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
     let coerced
     try {
       coerced = updaterVersion ? parse(updaterVersion) : undefined

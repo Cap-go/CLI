@@ -13,7 +13,7 @@ import { greaterOrEqual, parse } from '@std/semver'
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
+import { findRoot, generateManifest, getInstalledVersion, getLocalConfig, sendEvent } from '../utils'
 
 // Check if file already exists on server
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
@@ -38,9 +38,8 @@ const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
 
 // Check if the updater version supports .br extension
 async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ version: string | null, supportsBrotliV2: boolean }> {
-  const root = join(findRoot(cwd()), PACKNAME)
-  const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, uploadOptions.packageJson)
   let coerced
   try {
     coerced = updaterVersion ? parse(updaterVersion) : undefined
@@ -107,7 +106,6 @@ async function shouldUseBrotli(
 
     // If compression isn't effective, don't use Brotli and don't compress
     if (compressedBuffer.length >= fileSize - 10) {
-      log.info(`Brotli not effective for ${filePathUnix} (${fileSize} bytes), using original file`)
       return { buffer: originalBuffer, useBrotli: false }
     }
 
@@ -207,11 +205,9 @@ export async function uploadPartial(
       log.info('Brotli compression disabled by user request')
     }
     else {
-      spinner.message(`Using .br extension for compatible files (updater ${version})`)
       if (options.noBrotliPatterns) {
         log.info(`Files matching patterns (${options.noBrotliPatterns}) will be excluded from brotli compression`)
       }
-      log.info(`Files smaller than ${BROTLI_MIN_SIZE} bytes will be excluded from brotli compression (Brotli RFC minimum)`)
     }
   }
 
@@ -227,6 +223,7 @@ export async function uploadPartial(
   let brFilesCount = 0
 
   try {
+    spinner.message(`Uploading ${totalFiles} files using TUS protocol`)
     const uploadFiles = manifest.map(async (file) => {
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
@@ -278,6 +275,7 @@ export async function uploadPartial(
         const maxRetries = 3
 
         const attemptUpload = () => {
+          spinner.message(`Prepare upload partial file: ${filePathUnix}`)
           const upload = new tus.Upload(finalBuffer as any, {
             endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
             chunkSize: options.tusChunkSize,
@@ -292,12 +290,28 @@ export async function uploadPartial(
             onError: async (error) => {
               const errorMessage = error.toString()
 
+              // Try to extract requestId from error message
+              let requestId: string | undefined
+              try {
+                // TUS errors often include response text in the format: "response text: {json}"
+                const responseTextMatch = errorMessage.match(/response text: (\{.*?\})/)
+                if (responseTextMatch && responseTextMatch[1]) {
+                  const errorResponse = JSON.parse(responseTextMatch[1])
+                  requestId = errorResponse.moreInfo?.requestId
+                }
+              }
+              catch {
+                // Ignore JSON parse errors
+              }
+
+              const requestIdSuffix = requestId ? ` [requestId: ${requestId}]` : ''
+
               // Check if it's an offset error
               if (errorMessage.includes('offset') || errorMessage.includes('409') || errorMessage.includes('conflict')) {
                 retryCount++
 
                 if (retryCount <= maxRetries) {
-                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...`)
+                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...${requestIdSuffix}`)
 
                   // Wait a bit before retrying
                   await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
@@ -307,12 +321,12 @@ export async function uploadPartial(
                   return
                 }
                 else {
-                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors`)
+                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors${requestIdSuffix}`)
                   log.info(`This may happen if the upload expired or there was a network issue. The file will be skipped.`)
                 }
               }
               else {
-                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}`)
+                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}${requestIdSuffix}`)
               }
 
               reject(error)
