@@ -225,7 +225,9 @@ export async function uploadPartial(
 
   try {
     spinner.message(`Uploading ${totalFiles} files using TUS protocol`)
-    const uploadFiles = manifest.map(async (file) => {
+
+    // Helper function to upload a single file
+    const uploadFile = async (file: manifestType[number]) => {
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
 
@@ -322,9 +324,24 @@ export async function uploadPartial(
 
         upload.start()
       })
-    })
+    }
 
-    const results = await Promise.all(uploadFiles)
+    // Process files in batches of 1000 to avoid overwhelming the server
+    const BATCH_SIZE = 500
+    const results: any[] = []
+
+    for (let i = 0; i < manifest.length; i += BATCH_SIZE) {
+      const batch = manifest.slice(i, i + BATCH_SIZE)
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(manifest.length / BATCH_SIZE)
+
+      if (totalBatches > 1) {
+        spinner.message(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)`)
+      }
+
+      const batchResults = await Promise.all(batch.map(file => uploadFile(file)))
+      results.push(...batchResults)
+    }
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Partial update uploaded successfully 💪 in (${uploadTime} seconds)`)
