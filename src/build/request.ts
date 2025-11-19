@@ -94,15 +94,15 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
         if (line.startsWith('data: ')) {
           const message = line.slice(6) // Remove "data: " prefix
           if (message.trim())
-            console.log(message)
+            log.error(message)
         }
       }
     }
   }
-  catch (error) {
+  catch (err) {
     // Log streaming is best-effort, don't fail the build
     if (!silent)
-      log.warn('Log streaming interrupted')
+      log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
   }
 }
 
