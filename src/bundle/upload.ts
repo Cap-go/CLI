@@ -213,9 +213,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   const keyV2 = options.keyV2
   const noKey = options.key === false
 
-  zipped = await zipFile(path)
   const s = spinnerC()
-  s.start(`Calculating checksum`)
+  s.start(`Zipping bundle from ${path}`)
+  zipped = await zipFile(path)
+  s.message(`Calculating checksum`)
   const root = findRoot(cwd())
   const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
   let useSha256 = false

@@ -224,7 +224,9 @@ export async function uploadPartial(
 
   try {
     spinner.message(`Uploading ${totalFiles} files using TUS protocol`)
-    const uploadFiles = manifest.map(async (file) => {
+
+    // Helper function to upload a single file
+    const uploadFile = async (file: manifestType[number]) => {
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
 
@@ -271,88 +273,74 @@ export async function uploadPartial(
       }
 
       return new Promise((resolve, reject) => {
-        let retryCount = 0
-        const maxRetries = 3
+        spinner.message(`Prepare upload partial file: ${filePathUnix}`)
+        const upload = new tus.Upload(finalBuffer as any, {
+          endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
+          chunkSize: options.tusChunkSize,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          removeFingerprintOnSuccess: true,
+          metadata: {
+            filename,
+          },
+          headers: {
+            Authorization: apikey,
+          },
+          onError: (error) => {
+            const errorMessage = error.toString()
 
-        const attemptUpload = () => {
-          spinner.message(`Prepare upload partial file: ${filePathUnix}`)
-          const upload = new tus.Upload(finalBuffer as any, {
-            endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
-            chunkSize: options.tusChunkSize,
-            retryDelays: [0, 1000, 3000, 5000],
-            removeFingerprintOnSuccess: true,
-            metadata: {
-              filename,
-            },
-            headers: {
-              Authorization: apikey,
-            },
-            onError: async (error) => {
-              const errorMessage = error.toString()
-
-              // Try to extract requestId from error message
-              let requestId: string | undefined
-              try {
-                // TUS errors often include response text in the format: "response text: {json}"
-                const responseTextMatch = errorMessage.match(/response text: (\{.*?\})/)
-                if (responseTextMatch && responseTextMatch[1]) {
-                  const errorResponse = JSON.parse(responseTextMatch[1])
-                  requestId = errorResponse.moreInfo?.requestId
-                }
+            // Try to extract requestId from error message
+            let requestId: string | undefined
+            try {
+              // TUS errors often include response text in the format: "response text: {json}"
+              const responseTextMatch = errorMessage.match(/response text: (\{.*?\})/)
+              if (responseTextMatch && responseTextMatch[1]) {
+                const errorResponse = JSON.parse(responseTextMatch[1])
+                requestId = errorResponse.moreInfo?.requestId
               }
-              catch {
-                // Ignore JSON parse errors
-              }
+            }
+            catch {
+              // Ignore JSON parse errors
+            }
 
-              const requestIdSuffix = requestId ? ` [requestId: ${requestId}]` : ''
+            const requestIdSuffix = requestId ? ` [requestId: ${requestId}]` : ''
+            log.error(`Failed to upload ${filePathUnix}: ${errorMessage}${requestIdSuffix}`)
 
-              // Check if it's an offset error
-              if (errorMessage.includes('offset') || errorMessage.includes('409') || errorMessage.includes('conflict')) {
-                retryCount++
+            reject(error)
+          },
+          onProgress() {
+            const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
+            spinner.message(`Uploading partial update: ${percentage}%`)
+          },
+          onSuccess() {
+            uploadedFiles++
+            resolve({
+              file_name: filePathUnixSafe,
+              s3_path: filename,
+              file_hash: file.hash,
+            })
+          },
+        })
 
-                if (retryCount <= maxRetries) {
-                  log.warn(`Offset mismatch for ${filePathUnix}, retrying (attempt ${retryCount}/${maxRetries})...${requestIdSuffix}`)
-
-                  // Wait a bit before retrying
-                  await new Promise(resolve => setTimeout(resolve, 1000 * retryCount))
-
-                  // Retry the upload from scratch
-                  attemptUpload()
-                  return
-                }
-                else {
-                  log.error(`Failed to upload ${filePathUnix} after ${maxRetries} retries due to offset errors${requestIdSuffix}`)
-                  log.info(`This may happen if the upload expired or there was a network issue. The file will be skipped.`)
-                }
-              }
-              else {
-                log.error(`Failed to upload ${filePathUnix}: ${errorMessage}${requestIdSuffix}`)
-              }
-
-              reject(error)
-            },
-            onProgress() {
-              const percentage = ((uploadedFiles / totalFiles) * 100).toFixed(2)
-              spinner.message(`Uploading partial update: ${percentage}%`)
-            },
-            onSuccess() {
-              uploadedFiles++
-              resolve({
-                file_name: filePathUnixSafe,
-                s3_path: filename,
-                file_hash: file.hash,
-              })
-            },
-          })
-
-          upload.start()
-        }
-
-        attemptUpload()
+        upload.start()
       })
-    })
+    }
 
-    const results = await Promise.all(uploadFiles)
+    // Process files in batches of 1000 to avoid overwhelming the server
+    const BATCH_SIZE = 500
+    const results: any[] = []
+
+    for (let i = 0; i < manifest.length; i += BATCH_SIZE) {
+      const batch = manifest.slice(i, i + BATCH_SIZE)
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(manifest.length / BATCH_SIZE)
+
+      if (totalBatches > 1) {
+        spinner.message(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)`)
+      }
+
+      const batchResults = await Promise.all(batch.map(file => uploadFile(file)))
+      results.push(...batchResults)
+    }
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Partial update uploaded successfully 💪 in (${uploadTime} seconds)`)

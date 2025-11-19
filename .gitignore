@@ -7,3 +7,7 @@ output/
 *.map
 .DS_Store
 meta.json
+
+# Swift Package Manager build artifacts
+.build/
+.swiftpm/
