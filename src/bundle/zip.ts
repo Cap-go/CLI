@@ -1,22 +1,19 @@
 import type { OptionsBase } from '../utils'
 import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
 import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
-import coerceVersion from 'semver/functions/coerce'
-import semverGte from 'semver/functions/gte'
+import { greaterOrEqual, parse } from '@std/semver'
 import { checkAlerts } from '../api/update'
+import { checksum as getChecksum } from '../checksum'
 import {
   baseKeyV2,
   findRoot,
   formatError,
-  getAllPackagesDependencies,
   getAppId,
   getBundleVersion,
   getConfig,
-  PACKNAME,
+  getInstalledVersion,
   regexSemver,
   zipFile,
 } from '../utils'
@@ -131,23 +128,28 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
     if (checksumSpinner)
       checksumSpinner.start('Calculating checksum')
 
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
 
     if (!updaterVersion) {
-      const warning = 'Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work'
+      const warning = 'Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager'
       if (!silent)
         log.warn(warning)
       throw new Error(warning)
     }
 
     let useSha256 = false
-    const coerced = coerceVersion(updaterVersion)
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
 
     if (coerced) {
       // Use sha256 for v6.25.0+ or v7.0.0+
-      const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, '6.25.0')
+      const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
       const isV7Compatible = coerced.major >= 7
       useSha256 = isV6Compatible || isV7Compatible
     }

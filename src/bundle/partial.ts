@@ -8,13 +8,12 @@ import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
+import { greaterOrEqual, parse } from '@std/semver'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
-import coerceVersion from 'semver/functions/coerce'
-import semverGte from 'semver/functions/gte'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { findRoot, generateManifest, getAllPackagesDependencies, getLocalConfig, PACKNAME, sendEvent } from '../utils'
+import { findRoot, generateManifest, getInstalledVersion, getLocalConfig, sendEvent } from '../utils'
 
 // Check if file already exists on server
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
@@ -39,20 +38,25 @@ const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
 
 // Check if the updater version supports .br extension
 async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ version: string | null, supportsBrotliV2: boolean }> {
-  const root = join(findRoot(cwd()), PACKNAME)
-  const dependencies = await getAllPackagesDependencies(undefined, uploadOptions.packageJson || root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-  const coerced = coerceVersion(updaterVersion)
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, uploadOptions.packageJson)
+  let coerced
+  try {
+    coerced = updaterVersion ? parse(updaterVersion) : undefined
+  }
+  catch {
+    coerced = undefined
+  }
 
   if (!updaterVersion || !coerced)
     return { version: null, supportsBrotliV2: false }
 
   // Brotli is supported in updater versions >= 6.25.0 (v6) or >= 7.0.35 (v7)
-  const isV6Compatible = coerced.major === 6 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V6)
-  const isV7Compatible = coerced.major >= 7 && semverGte(coerced.version, BROTLI_MIN_UPDATER_VERSION_V7)
+  const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V6))
+  const isV7Compatible = coerced.major >= 7 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V7))
   const supportsBrotliV2 = isV6Compatible || isV7Compatible
 
-  return { version: coerced.version, supportsBrotliV2 }
+  return { version: `${coerced.major}.${coerced.minor}.${coerced.patch}`, supportsBrotliV2 }
 }
 
 // Check if a file should be excluded from brotli compression
@@ -103,7 +107,6 @@ async function shouldUseBrotli(
 
     // If compression isn't effective, don't use Brotli and don't compress
     if (compressedBuffer.length >= fileSize - 10) {
-      log.info(`Brotli not effective for ${filePathUnix} (${fileSize} bytes), using original file`)
       return { buffer: originalBuffer, useBrotli: false }
     }
 
@@ -178,7 +181,6 @@ export async function uploadPartial(
   manifest: manifestType,
   path: string,
   appId: string,
-  bundleName: string,
   orgId: string,
   encryptionOptions: PartialEncryptionOptions | undefined,
   options: OptionsUpload,
@@ -187,6 +189,9 @@ export async function uploadPartial(
   spinner.start('Preparing partial update with TUS protocol')
   const startTime = performance.now()
   const localConfig = await getLocalConfig()
+
+  // Determine if user explicitly requested delta updates
+  const userRequestedDelta = !!(options.partial || options.delta || options.partialOnly || options.deltaOnly)
 
   // Check the updater version and Brotli support
   const { version, supportsBrotliV2 } = await getUpdaterVersion(options)
@@ -201,11 +206,9 @@ export async function uploadPartial(
       log.info('Brotli compression disabled by user request')
     }
     else {
-      spinner.message(`Using .br extension for compatible files (updater ${version})`)
       if (options.noBrotliPatterns) {
         log.info(`Files matching patterns (${options.noBrotliPatterns}) will be excluded from brotli compression`)
       }
-      log.info(`Files smaller than ${BROTLI_MIN_SIZE} bytes will be excluded from brotli compression (Brotli RFC minimum)`)
     }
   }
 
@@ -221,7 +224,10 @@ export async function uploadPartial(
   let brFilesCount = 0
 
   try {
-    const uploadFiles = manifest.map(async (file) => {
+    spinner.message(`Uploading ${totalFiles} files using TUS protocol`)
+
+    // Helper function to upload a single file
+    const uploadFile = async (file: manifestType[number]) => {
       const finalFilePath = join(path, file.file)
       const filePathUnix = convertToUnixPath(file.file)
 
@@ -268,17 +274,38 @@ export async function uploadPartial(
       }
 
       return new Promise((resolve, reject) => {
+        spinner.message(`Prepare upload partial file: ${filePathUnix}`)
         const upload = new tus.Upload(finalBuffer as any, {
           endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
           chunkSize: options.tusChunkSize,
+          retryDelays: [0, 1000, 3000, 5000, 10000],
+          removeFingerprintOnSuccess: true,
           metadata: {
             filename,
           },
           headers: {
             Authorization: apikey,
           },
-          onError(error) {
-            log.info(`Failed to upload ${filePathUnix}: ${error}`)
+          onError: (error) => {
+            const errorMessage = error.toString()
+
+            // Try to extract requestId from error message
+            let requestId: string | undefined
+            try {
+              // TUS errors often include response text in the format: "response text: {json}"
+              const responseTextMatch = errorMessage.match(/response text: (\{.*?\})/)
+              if (responseTextMatch && responseTextMatch[1]) {
+                const errorResponse = JSON.parse(responseTextMatch[1])
+                requestId = errorResponse.moreInfo?.requestId
+              }
+            }
+            catch {
+              // Ignore JSON parse errors
+            }
+
+            const requestIdSuffix = requestId ? ` [requestId: ${requestId}]` : ''
+            log.error(`Failed to upload ${filePathUnix}: ${errorMessage}${requestIdSuffix}`)
+
             reject(error)
           },
           onProgress() {
@@ -297,9 +324,24 @@ export async function uploadPartial(
 
         upload.start()
       })
-    })
+    }
 
-    const results = await Promise.all(uploadFiles)
+    // Process files in batches of 1000 to avoid overwhelming the server
+    const BATCH_SIZE = 500
+    const results: any[] = []
+
+    for (let i = 0; i < manifest.length; i += BATCH_SIZE) {
+      const batch = manifest.slice(i, i + BATCH_SIZE)
+      const batchNumber = Math.floor(i / BATCH_SIZE) + 1
+      const totalBatches = Math.ceil(manifest.length / BATCH_SIZE)
+
+      if (totalBatches > 1) {
+        spinner.message(`Processing batch ${batchNumber}/${totalBatches} (${batch.length} files)`)
+      }
+
+      const batchResults = await Promise.all(batch.map(file => uploadFile(file)))
+      results.push(...batchResults)
+    }
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Partial update uploaded successfully 💪 in (${uploadTime} seconds)`)
@@ -335,7 +377,17 @@ export async function uploadPartial(
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
     spinner.stop(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
-    log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
-    return null
+
+    if (userRequestedDelta) {
+      // User explicitly requested delta/partial updates, so we should fail
+      log.error(`Error uploading partial update: ${error}`)
+      log.error(`Delta/partial upload was explicitly requested but failed. Upload aborted.`)
+      throw error
+    }
+    else {
+      // Delta was auto-enabled, treat as non-critical
+      log.info(`Error uploading partial update: ${error}, This is not a critical error, the bundle has been uploaded without the partial files`)
+      return null
+    }
   }
 }

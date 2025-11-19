@@ -20,7 +20,7 @@ interface DeleteChannelOptions extends OptionsBase {
   successIfNotFound: boolean
 }
 
-export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions, silent = false) {
+export async function deleteChannelInternal(channelId: string, appId: string, options: DeleteChannelOptions, silent = false) {
   if (!silent)
     intro('Delete channel')
 
@@ -107,4 +107,8 @@ export async function deleteChannel(channelId: string, appId: string, options: D
   }
 
   return true
+}
+
+export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
+  return deleteChannelInternal(channelId, appId, options, false)
 }

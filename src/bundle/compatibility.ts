@@ -3,7 +3,7 @@ import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
-  checkCompatibility,
+  checkCompatibilityCloud,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -22,10 +22,10 @@ interface Options extends OptionsBase {
 }
 
 interface CompatibilityResult {
-  finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
+  finalCompatibility: Awaited<ReturnType<typeof checkCompatibilityCloud>>['finalCompatibility']
 }
 
-export async function checkCompatibilityCommandInternal(
+export async function checkCompatibilityInternal(
   appId: string,
   options: Options,
   silent = false,
@@ -75,7 +75,7 @@ export async function checkCompatibilityCommandInternal(
     silent,
   )
 
-  const compatibility = await checkCompatibility(
+  const compatibility = await checkCompatibilityCloud(
     supabase,
     resolvedAppId,
     channel,
@@ -107,9 +107,9 @@ export async function checkCompatibilityCommandInternal(
   }
 }
 
-export async function checkCompatibilityCommand(appId: string, options: Options) {
+export async function checkCompatibility(appId: string, options: Options) {
   try {
-    await checkCompatibilityCommandInternal(appId, options, false)
+    await checkCompatibilityInternal(appId, options, false)
   }
   catch (error) {
     log.error(`Error checking compatibility ${formatError(error)}`)

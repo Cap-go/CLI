@@ -18,6 +18,8 @@ import {
   verifyUser,
 } from '../utils'
 
+export const reverseDomainRegex = /^[a-z0-9]+(\.[\w-]+)+$/i
+
 function ensureOptions(appId: string, options: Options, silent: boolean) {
   if (!options.apikey) {
     if (!silent)
@@ -35,6 +37,16 @@ function ensureOptions(appId: string, options: Options, silent: boolean) {
     if (!silent)
       log.error('The app id includes illegal symbols. You cannot use "--" in the app id')
     throw new Error('App id includes illegal symbols')
+  }
+
+  if (!reverseDomainRegex.test(appId)) {
+    if (!silent) {
+      log.error(`Invalid app ID format: "${appId}"`)
+      log.info('App ID must be in reverse domain notation (e.g., com.example.app)')
+      log.info('Valid format: lowercase letters, numbers, dots, hyphens, and underscores')
+      log.info('Examples: com.mycompany.myapp, io.capgo.app, com.example.my-app')
+    }
+    throw new Error('Invalid app ID format')
   }
 }
 
@@ -56,10 +68,6 @@ async function ensureAppDoesNotExist(
   if (!silent)
     log.error(`App ${appId} already exist`)
   throw new Error(`App ${appId} already exists`)
-}
-
-export async function addApp(appId: string, options: Options, silent = false) {
-  return addAppInternal(appId, options, undefined, silent)
 }
 
 export async function addAppInternal(
@@ -162,29 +170,6 @@ export async function addAppInternal(
     throw new Error(`Could not add app ${formatError(dbError)}`)
   }
 
-  const { error: dbVersionError } = await supabase
-    .from('app_versions')
-    .insert([
-      {
-        owner_org: organizationUid,
-        deleted: true,
-        name: 'unknown',
-        app_id: appId,
-      },
-      {
-        owner_org: organizationUid,
-        deleted: true,
-        name: 'builtin',
-        app_id: appId,
-      },
-    ])
-
-  if (dbVersionError) {
-    if (!silent)
-      log.error(`Could not add app ${formatError(dbVersionError)}`)
-    throw new Error(`Could not add app ${formatError(dbVersionError)}`)
-  }
-
   if (!silent) {
     log.success(`App ${appId} added to Capgo. You can upload a bundle now`)
     outro('Done ✅')
@@ -199,6 +184,6 @@ export async function addAppInternal(
   }
 }
 
-export async function addCommand(appId: string, options: Options) {
-  await addApp(appId, options, false)
+export async function addApp(appId: string, options: Options) {
+  await addAppInternal(appId, options, undefined)
 }

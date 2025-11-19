@@ -36,7 +36,7 @@ interface DoctorInfoOptions {
   packageJson?: string
 }
 
-export async function getInfo(options: DoctorInfoOptions, silent = false) {
+export async function getInfoInternal(options: DoctorInfoOptions, silent = false) {
   if (!silent)
     log.warn(' 💊   Capgo Doctor  💊')
 
@@ -102,4 +102,8 @@ export async function getInfo(options: DoctorInfoOptions, silent = false) {
     installedDependencies,
     latestDependencies,
   }
+}
+
+export async function getInfo(options: DoctorInfoOptions) {
+  return getInfoInternal(options)
 }

@@ -229,9 +229,8 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   return Promise.resolve()
 }
 
-export async function debugApp(appId: string, options: OptionsBaseDebug, silent = false) {
-  if (!silent)
-    intro('Debug Live update in Capgo')
+export async function debugApp(appId: string, options: OptionsBaseDebug) {
+  intro('Debug Live update in Capgo')
 
   await checkAlerts()
   options.apikey = options.apikey || findSavedKey()
@@ -239,18 +238,13 @@ export async function debugApp(appId: string, options: OptionsBaseDebug, silent 
   appId = getAppId(appId, extConfig?.config)
   const deviceId = options.device
   if (!options.apikey) {
-    if (!silent)
-      log.error('Missing API key, you need to provide an API key to delete your app')
+    log.error('Missing API key, you need to provide an API key to delete your app')
     throw new Error('Missing API key')
   }
   if (!appId) {
-    if (!silent)
-      log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
+    log.error('Missing argument, you need to provide a appId, or be in a capacitor project')
     throw new Error('Missing appId')
   }
-
-  if (silent)
-    throw new Error('Debug command requires an interactive terminal')
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   const orgId = await getOrganizationId(supabase, appId)
@@ -258,14 +252,11 @@ export async function debugApp(appId: string, options: OptionsBaseDebug, silent 
   const doRun = await confirmC({ message: `Automatic check if update working in device ?` })
   await cancelCommand('debug', doRun, orgId, options.apikey)
   if (doRun) {
-    if (!silent)
-      log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
+    log.info(`Wait logs sent to Capgo from ${appId} device, Please background your app and open it again 💪`)
     await waitLog('debug', options.apikey, appId, orgId, deviceId)
-    if (!silent)
-      outro('Done ✅')
+    outro('Done ✅')
   }
   else {
-    if (!silent)
-      outro('Canceled ❌')
+    outro('Canceled ❌')
   }
 }

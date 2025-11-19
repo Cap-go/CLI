@@ -5,20 +5,17 @@ import type { manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path/posix'
 import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
-import { checksum as getChecksum } from '@tomasklaen/checksum'
+import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
-import coerceVersion from 'semver/functions/coerce'
-// We only use semver from std for Capgo semver, others connected to package.json need npm one as it's not following the semver spec
-import semverGte from 'semver/functions/gte'
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, checkChecksum, checkCompatibility, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getLocalDepenencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, PACKNAME, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { checksum as getChecksum } from '../checksum'
+import { baseKeyV2, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -116,8 +113,8 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const updateMetadataRequired = !!channelData && channelData.disable_auto_update === 'version_number'
 
-  let localDependencies: Awaited<ReturnType<typeof getLocalDepenencies>> | undefined
-  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibility>>['finalCompatibility']
+  let localDependencies: Awaited<ReturnType<typeof getLocalDependencies>> | undefined
+  let finalCompatibility: Awaited<ReturnType<typeof checkCompatibilityCloud>>['finalCompatibility']
 
   // We only check compatibility IF the channel exists
   if (!channelError && channelData && channelData.version && (channelData.version as any).native_packages && !ignoreMetadataCheck) {
@@ -126,7 +123,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     const {
       finalCompatibility: finalCompatibilityWithChannel,
       localDependencies: localDependenciesWithChannel,
-    } = await checkCompatibility(supabase, appid, channel, options.packageJson, options.nodeModules)
+    } = await checkCompatibilityCloud(supabase, appid, channel, options.packageJson, options.nodeModules)
 
     finalCompatibility = finalCompatibilityWithChannel
     localDependencies = localDependenciesWithChannel
@@ -160,7 +157,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   }
   else if (!ignoreMetadataCheck) {
     log.warn(`Channel ${channel} is new or it's your first upload with compatibility check, it will be ignored this time`)
-    localDependencies = await getLocalDepenencies(options.packageJson, options.nodeModules)
+    localDependencies = await getLocalDependencies(options.packageJson, options.nodeModules)
 
     if (autoMinUpdateVersion) {
       minUpdateVersion = bundle
@@ -188,23 +185,10 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   return { nativePackages, minUpdateVersion }
 }
 
-async function checkTrial(supabase: SupabaseType, orgId: string, localConfig: localConfigType) {
-  const { data: isTrial, error: isTrialsError } = await supabase
-    .rpc('is_trial_org', { orgid: orgId })
-    .single()
-  if ((isTrial && isTrial > 0) || isTrialsError) {
-  // TODO: Come back to this to fix for orgs v3
-    log.warn(`WARNING !!\nTrial expires in ${isTrial} days`)
-    log.warn(`Upgrade here: ${localConfig.hostWeb}/dashboard/settings/plans?oid=${orgId}`)
-  }
-}
-
 async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
   // check if app already exist
-  // apikey is sooo legacy code, current prod does not use it
-  // TODO: remove apikey and create a new function who not need it
   const { data: appVersion, error: appVersionError } = await supabase
-    .rpc('exist_app_versions', { appid, apikey: '', name_version: bundle })
+    .rpc('exist_app_versions', { appid, name_version: bundle })
     .single()
 
   if (appVersion || appVersionError) {
@@ -229,24 +213,29 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   const keyV2 = options.keyV2
   const noKey = options.key === false
 
-  zipped = await zipFile(path)
   const s = spinnerC()
-  s.start(`Calculating checksum`)
-  const root = join(findRoot(cwd()), PACKNAME)
-  // options.packageJson
-  const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-  const updaterVersion = dependencies.get('@capgo/capacitor-updater')
+  s.start(`Zipping bundle from ${path}`)
+  zipped = await zipFile(path)
+  s.message(`Calculating checksum`)
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
   let useSha256 = false
-  const coerced = coerceVersion(updaterVersion)
+  let coerced
+  try {
+    coerced = updaterVersion ? parse(updaterVersion) : undefined
+  }
+  catch {
+    coerced = undefined
+  }
   if (!updaterVersion) {
-    uploadFail('Cannot find @capgo/capacitor-updater in ./package.json, provide the package.json path with --package-json it\'s required for v7 CLI to work')
+    uploadFail('Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager')
   }
   else if (coerced) {
     // Use SHA256 for v6.25.0+ and v7.0.0+
-    useSha256 = semverGte(coerced.version, '6.25.0')
+    useSha256 = greaterOrEqual(coerced, parse('6.25.0'))
   }
-  else if (updaterVersion === 'link:@capgo/capacitor-updater') {
-    log.warn('Using local @capgo/capacitor-updater. Assuming v7')
+  else if (updaterVersion === 'link:@capgo/capacitor-updater' || updaterVersion === 'file:..' || updaterVersion === 'file:../') {
+    log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')
     useSha256 = true
   }
   if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
@@ -256,7 +245,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     checksum = await getChecksum(zipped, 'crc32')
   }
   s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
-  // key should be undefined or a string if false it should ingore encryption DO NOT REPLACE key === false With !key it will not work
+  // key should be undefined or a string if false it should ignore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
   }
@@ -599,7 +588,7 @@ async function setVersionInChannel(
   }
 }
 
-export async function getDefaulUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
+export async function getDefaultUploadChannel(appId: string, supabase: SupabaseType, hostWeb: string) {
   const { error, data } = await supabase.from('apps')
     .select('default_upload_channel')
     .eq('app_id', appId)
@@ -614,8 +603,8 @@ export async function getDefaulUploadChannel(appId: string, supabase: SupabaseTy
   return data.default_upload_channel
 }
 
-export async function uploadBundle(preAppid: string, options: OptionsUpload, shouldExit = true): Promise<UploadBundleResult> {
-  if (shouldExit)
+export async function uploadBundleInternal(preAppid: string, options: OptionsUpload, silent = false): Promise<UploadBundleResult> {
+  if (!silent)
     intro(`Uploading with CLI version ${pack.version}`)
   let sessionKey: Buffer | undefined
   const pm = getPMAndCommand()
@@ -697,7 +686,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   if (options.verbose)
     log.info(`[Verbose] User verified successfully, user_id: ${userId}`)
 
-  const channel = options.channel || await getDefaulUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
+  const channel = options.channel || await getDefaultUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
   if (options.verbose)
     log.info(`[Verbose] Target channel: ${channel}`)
 
@@ -713,8 +702,6 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   await checkPlanValidUpload(supabase, orgId, apikey, appid, true)
   if (options.verbose)
     log.info(`[Verbose] Plan validation passed`)
-
-  await checkTrial(supabase, orgId, localConfig)
   if (options.verbose)
     log.info(`[Verbose] Trial check completed`)
 
@@ -858,13 +845,18 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
   // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
   if (options.delta && encryptionMethod === 'v2' && !options.encryptPartial) {
     // Check updater version
-    const root = join(findRoot(cwd()), PACKNAME)
-    const dependencies = await getAllPackagesDependencies(undefined, options.packageJson || root)
-    const updaterVersion = dependencies.get('@capgo/capacitor-updater')
-    const coerced = coerceVersion(updaterVersion)
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
 
-    if (updaterVersion && coerced && semverGte(coerced.version, '6.14.4')) {
-      log.info(`Auto-enabling partial update encryption for updater version ${coerced.version} (> 6.14.4)`)
+    if (updaterVersion && coerced && greaterOrEqual(coerced, parse('6.14.4'))) {
+      log.info(`Auto-enabling partial update encryption for updater version ${coerced} (> 6.14.4)`)
       if (options.verbose)
         log.info(`[Verbose] Partial encryption auto-enabled for updater >= 6.14.4`)
       options.encryptPartial = true
@@ -972,7 +964,6 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
             manifest,
             path,
             appid,
-            bundle,
             orgId,
             encryptionData,
             options,
@@ -983,6 +974,15 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
         log.info(`[Verbose] Delta upload complete with ${finalManifest.length} files`)
     }
     catch (err) {
+      // If user explicitly requested delta, the error was already thrown by uploadPartial
+      // and we should propagate it
+      const userRequestedDelta = !!(options.partial || options.delta || options.partialOnly || options.deltaOnly)
+      if (userRequestedDelta) {
+        // Error already logged in uploadPartial, just re-throw
+        throw err
+      }
+
+      // Auto-enabled delta that failed - not critical
       log.info(`Failed to upload partial files to capgo cloud. Error: ${formatError(err)}. This is not a critical error, the bundle has been uploaded without the partial files`)
       if (options.verbose)
         log.info(`[Verbose] Delta upload error details: ${formatError(err)}`)
@@ -1067,7 +1067,7 @@ export async function uploadBundle(preAppid: string, options: OptionsUpload, sho
     log.info(`  - Storage: ${result.storageProvider}`)
   }
 
-  if (shouldExit && !result.skipped)
+  if (silent && !result.skipped)
     outro('Time to share your update to the world 🌍')
 
   return result
@@ -1114,13 +1114,13 @@ function checkValidOptions(options: OptionsUpload) {
   }
 }
 
-export async function uploadCommand(appid: string, options: OptionsUpload) {
+export async function uploadBundle(appid: string, options: OptionsUpload) {
   try {
     checkValidOptions(options)
-    await uploadBundle(appid, options, true)
+    await uploadBundleInternal(appid, options)
   }
   catch (error) {
-    log.error(`uploadBundle failded: ${formatError(error)}`)
+    log.error(`uploadBundle failed: ${formatError(error)}`)
     throw error instanceof Error ? error : new Error(String(error))
   }
 }
