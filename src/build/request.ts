@@ -67,7 +67,7 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
   try {
     const response = await fetch(`${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`, {
       headers: {
-        'authorization': apikey,
+        authorization: apikey,
       },
     })
 
@@ -121,7 +121,7 @@ async function pollBuildStatus(
     try {
       const response = await fetch(`${host}/build/status?job_id=${encodeURIComponent(jobId)}&app_id=${encodeURIComponent(appId)}&platform=${platform}`, {
         headers: {
-          'authorization': apikey,
+          authorization: apikey,
         },
       })
 

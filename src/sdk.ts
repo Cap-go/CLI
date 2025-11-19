@@ -1,6 +1,6 @@
 import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
-import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from './build/request'
+import type { BuildCredentials, BuildRequestOptions } from './build/request'
 import type { DecryptResult } from './bundle/decryptV2'
 import type { EncryptResult } from './bundle/encryptV2'
 import type { UploadBundleResult } from './bundle/upload'
