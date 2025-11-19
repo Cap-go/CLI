@@ -34,6 +34,7 @@ import { basename, join, resolve } from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { mergeCredentials } from './credentials'
 
 /**
  * Build credentials for iOS and Android native builds
