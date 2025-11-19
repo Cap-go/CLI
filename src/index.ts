@@ -8,6 +8,7 @@ import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
+import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand } from './build/credentials-command'
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
@@ -531,24 +532,114 @@ Example: npx @capgo/cli@latest organisation delete ORG_ID`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
-program
-  .command('build [appId]')
-  .description(`🏗️  Request a native iOS/Android build from Capgo Cloud.
+const build = program
+  .command('build')
+  .description(`🏗️  Manage native iOS/Android builds through Capgo Cloud.
 
 ⚠️ This feature is currently in PRIVATE BETA and cannot be used by anyone at this time.
+
+🔒 SECURITY GUARANTEE:
+   Build credentials are NEVER stored on Capgo servers.
+   They are used only during the build and auto-deleted after (max 24 hours).
+   Only build artifacts (IPA/APK) are retained, never your credentials.`)
+
+build
+  .command('request [appId]')
+  .description(`Request a native build from Capgo Cloud.
 
 This command will zip your project directory and upload it to Capgo for building.
 The build will be processed in the cloud and artifacts will be available when complete.
 
-Example: npx @capgo/cli@latest build com.example.app --platform ios --path .`)
+🔒 Credentials are never stored on Capgo servers. They are auto-deleted after build completion.
+
+Example: npx @capgo/cli@latest build request com.example.app --platform ios --path .`)
   .action(requestBuildCommand)
   .option('--path <path>', `Path to the project directory to build (default: current directory)`)
-  .option('--platform <platform>', `Target platform: ios, android, or both (default: both)`)
+  .option('--platform <platform>', `Target platform: ios or android (required)`)
   .option('--build-mode <buildMode>', `Build mode: debug or release (default: release)`)
   .option('--build-config <buildConfig>', `Additional build configuration as JSON string`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+const buildCredentials = build
+  .command('credentials')
+  .description(`Manage build credentials stored locally on your machine.
+
+🔒 SECURITY:
+   - Credentials saved to ~/.capgo/credentials.json (local machine only)
+   - When building, sent to Capgo but NEVER stored permanently
+   - Auto-deleted from Capgo after build (max 24 hours)`)
+
+buildCredentials
+  .command('save')
+  .description(`Save build credentials locally for iOS or Android.
+
+Credentials are stored in ~/.capgo/credentials.json and automatically used when building.
+
+🔒 These credentials are NEVER stored on Capgo servers permanently.
+   They are only used during the build and deleted after (max 24 hours).
+
+iOS Example:
+  npx @capgo/cli build credentials save \\
+    --platform ios \\
+    --certificate ./cert.p12 \\
+    --p12-password "password" \\
+    --provisioning-profile ./profile.mobileprovision \\
+    --apple-key ./AuthKey.p8 \\
+    --apple-key-id "KEY123" \\
+    --apple-issuer-id "issuer-uuid" \\
+    --apple-team-id "team-id"
+
+Android Example:
+  npx @capgo/cli build credentials save \\
+    --platform android \\
+    --keystore ./release.keystore \\
+    --keystore-alias "my-key" \\
+    --keystore-key-password "key-pass" \\
+    --keystore-store-password "store-pass" \\
+    --play-config ./service-account.json`)
+  .action(saveCredentialsCommand)
+  .option('--platform <platform>', 'Platform: ios or android (required)')
+  // iOS options
+  .option('--certificate <path>', 'iOS: Path to .p12 certificate file')
+  .option('--provisioning-profile <path>', 'iOS: Path to provisioning profile (.mobileprovision)')
+  .option('--provisioning-profile-prod <path>', 'iOS: Path to production provisioning profile')
+  .option('--p12-password <password>', 'iOS: Certificate password')
+  .option('--apple-key <path>', 'iOS: Path to .p8 App Store Connect API key')
+  .option('--apple-key-id <id>', 'iOS: App Store Connect API Key ID')
+  .option('--apple-issuer-id <id>', 'iOS: App Store Connect Issuer ID')
+  .option('--apple-team-id <id>', 'iOS: App Store Connect Team ID')
+  .option('--apple-id <email>', 'iOS: Apple ID email (optional)')
+  .option('--apple-app-password <password>', 'iOS: App-specific password (optional)')
+  // Android options
+  .option('--keystore <path>', 'Android: Path to keystore file')
+  .option('--keystore-alias <alias>', 'Android: Keystore key alias')
+  .option('--keystore-key-password <password>', 'Android: Keystore key password')
+  .option('--keystore-store-password <password>', 'Android: Keystore store password')
+  .option('--play-config <path>', 'Android: Path to Play Store service account JSON')
+
+buildCredentials
+  .command('list')
+  .description(`List saved build credentials (passwords masked).
+
+Shows what credentials are currently saved in ~/.capgo/credentials.json
+
+Example: npx @capgo/cli build credentials list`)
+  .action(listCredentialsCommand)
+
+buildCredentials
+  .command('clear')
+  .description(`Clear saved build credentials.
+
+Remove credentials from ~/.capgo/credentials.json
+Use --platform to clear only iOS or Android credentials.
+
+Examples:
+  npx @capgo/cli build credentials clear --platform ios
+  npx @capgo/cli build credentials clear  # Clear all`)
+  .action(clearCredentialsCommand)
+  .option('--platform <platform>', 'Platform to clear: ios or android (optional, clears all if omitted)')
 
 program
   .command('generate-docs [filePath]')

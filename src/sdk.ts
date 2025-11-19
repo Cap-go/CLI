@@ -361,7 +361,17 @@ export interface RequestBuildOptions {
   path?: string
   /** Fastlane lane - must be exactly "ios" or "android" */
   lane: 'ios' | 'android'
-  /** Credentials for signing and publishing to stores (all credentials go here as environment variables) */
+  /**
+   * Credentials for signing and publishing to stores
+   *
+   * SECURITY GUARANTEE:
+   * These credentials are NEVER stored on Capgo servers.
+   * They are:
+   * - Transmitted securely over HTTPS
+   * - Used ONLY during the active build process
+   * - Automatically deleted after build completion (max 24 hours)
+   * - Only build artifacts (IPA/APK) are retained, NEVER credentials
+   */
   credentials?: BuildCredentials
   /** User ID for the build job (optional, will be auto-detected if not provided) */
   userId?: string
@@ -957,6 +967,12 @@ export class CapgoSDK {
 
   /**
    * Request a native build for your app with store publishing
+   *
+   * SECURITY GUARANTEE:
+   * Credentials provided to this method are NEVER stored on Capgo servers.
+   * They are used only during the build process and automatically deleted
+   * after completion (maximum 24 hours retention). Only build artifacts
+   * (IPA/APK files) are stored, never your credentials.
    *
    * @example
    * ```typescript
@@ -1708,6 +1724,11 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
 
 /**
  * Request a native build for your app (functional API)
+ *
+ * SECURITY GUARANTEE:
+ * Credentials are NEVER stored on Capgo servers. They are used only during
+ * the build process and automatically deleted after completion (max 24 hours).
+ * Only build artifacts (IPA/APK) are stored, never your credentials.
  *
  * @example
  * ```typescript

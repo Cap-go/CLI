@@ -1,3 +1,28 @@
+/**
+ * Native Build Request Module
+ *
+ * This module handles native iOS and Android build requests through Capgo's cloud build service.
+ *
+ * CREDENTIAL SECURITY GUARANTEE:
+ * ═══════════════════════════════════════════════════════════════════════════
+ * Your build credentials (certificates, keystores, passwords, API keys) are:
+ *
+ * ✓ NEVER stored permanently on Capgo servers
+ * ✓ Used ONLY during the active build process
+ * ✓ Automatically deleted from Capgo servers after build completion
+ * ✓ Retained for a MAXIMUM of 24 hours (even if build fails)
+ * ✓ Only the final build artifacts (IPA/APK) are stored, NEVER credentials
+ *
+ * Credentials are transmitted securely over HTTPS and used only in ephemeral
+ * build environments that are destroyed after each build completes.
+ * ═══════════════════════════════════════════════════════════════════════════
+ *
+ * For convenience, you can save credentials locally using:
+ * - `npx @capgo/cli build credentials save` command
+ * - Credentials stored in ~/.capgo/credentials.json (local machine only)
+ * - Use `build credentials clear` to remove saved credentials
+ */
+
 import type { OptionsBase } from '../utils'
 import { spawn } from 'node:child_process'
 import { mkdir, readFile, rm, stat } from 'node:fs/promises'
@@ -7,6 +32,13 @@ import process from 'node:process'
 import { log } from '@clack/prompts'
 import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
 
+/**
+ * Build credentials for iOS and Android native builds
+ *
+ * SECURITY: These credentials are NEVER stored on Capgo servers.
+ * They are used only during the build process and are automatically
+ * deleted after the build completes (maximum 24 hours retention).
+ */
 export interface BuildCredentials {
   // iOS credentials (standard environment variable names from API)
   BUILD_CERTIFICATE_BASE64?: string
@@ -186,6 +218,22 @@ async function zipDirectory(projectDir: string, outputPath: string): Promise<voi
   })
 }
 
+/**
+ * Request a native build from Capgo's cloud build service
+ *
+ * @param appId - The app ID (e.g., com.example.app)
+ * @param options - Build request options including platform and credentials
+ * @param silent - Suppress console output
+ *
+ * @returns Build request result with job ID and status
+ *
+ * SECURITY NOTE:
+ * Credentials provided to this function are:
+ * - Transmitted securely over HTTPS to Capgo's build servers
+ * - Used ONLY during the active build process
+ * - Automatically deleted after build completion (max 24 hours)
+ * - NEVER stored permanently on Capgo servers
+ */
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
   try {
     options.apikey = options.apikey || findSavedKey(silent)
@@ -205,7 +253,13 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Requesting native build for ${appId}`)
       log.info(`Platform: ${options.lane}`)
       log.info(`Project: ${projectDir}`)
+      log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
+      log.info(`   They are used only during build and deleted after (max 24h)\n`)
     }
+
+    // Merge saved credentials with provided credentials
+    // Provided credentials take precedence over saved ones
+    const mergedCredentials = await mergeCredentials(options.lane, options.credentials)
 
     // Prepare request payload for Capgo backend
     const requestPayload: {
@@ -217,9 +271,15 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       platform: options.lane,
     }
 
-    // Add credentials if provided
-    if (options.credentials) {
-      requestPayload.credentials = options.credentials
+    // Add credentials if available (either saved or provided)
+    if (mergedCredentials) {
+      requestPayload.credentials = mergedCredentials
+      if (!silent) {
+        log.info('✓ Using credentials (saved + provided)')
+      }
+    }
+    else if (!silent) {
+      log.warn('⚠️  No credentials provided. Build may fail if credentials are required.')
     }
 
     // Request build from Capgo backend (POST /build/request)
