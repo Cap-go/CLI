@@ -323,7 +323,7 @@ export type Database = {
         Row: {
           billable_seconds: number
           build_id: string
-          build_time_seconds: number
+          build_time_unit: number
           created_at: string
           id: string
           org_id: string
@@ -333,7 +333,7 @@ export type Database = {
         Insert: {
           billable_seconds: number
           build_id: string
-          build_time_seconds: number
+          build_time_unit: number
           created_at?: string
           id?: string
           org_id: string
@@ -343,7 +343,7 @@ export type Database = {
         Update: {
           billable_seconds?: number
           build_id?: string
-          build_time_seconds?: number
+          build_time_unit?: number
           created_at?: string
           id?: string
           org_id?: string
@@ -632,19 +632,19 @@ export type Database = {
         Row: {
           app_id: string
           build_count: number
-          build_time_seconds: number
+          build_time_unit: number
           date: string
         }
         Insert: {
           app_id: string
           build_count?: number
-          build_time_seconds?: number
+          build_time_unit?: number
           date: string
         }
         Update: {
           app_id?: string
           build_count?: number
-          build_time_seconds?: number
+          build_time_unit?: number
           date?: string
         }
         Relationships: [
@@ -1869,7 +1869,7 @@ export type Database = {
       find_best_plan_v3: {
         Args: {
           bandwidth: number
-          build_time_seconds?: number
+          build_time_unit?: number
           mau: number
           storage: number
         }
@@ -1878,7 +1878,7 @@ export type Database = {
       find_fit_plan_v3: {
         Args: {
           bandwidth: number
-          build_time_seconds?: number
+          build_time_unit?: number
           mau: number
           storage: number
         }
@@ -1895,7 +1895,7 @@ export type Database = {
             Returns: {
               app_id: string
               bandwidth: number
-              build_time_seconds: number
+              build_time_unit: number
               date: string
               fail: number
               get: number
@@ -1910,7 +1910,7 @@ export type Database = {
             Returns: {
               app_id: string
               bandwidth: number
-              build_time_seconds: number
+              build_time_unit: number
               date: string
               fail: number
               get: number
@@ -1928,7 +1928,7 @@ export type Database = {
         Args: { orgid: string }
         Returns: {
           bandwidth: number
-          build_time_seconds: number
+          build_time_unit: number
           mau: number
           storage: number
         }[]
@@ -2042,10 +2042,10 @@ export type Database = {
         Returns: number
       }
       get_next_stats_update_date: { Args: { org: string }; Returns: string }
-      get_org_build_time_seconds: {
+      get_org_build_time_unit: {
         Args: { p_end_date: string; p_org_id: string; p_start_date: string }
         Returns: {
-          total_build_time_seconds: number
+          total_build_time_unit: number
           total_builds: number
         }[]
       }
@@ -2170,7 +2170,7 @@ export type Database = {
             Args: { org_id: string }
             Returns: {
               bandwidth: number
-              build_time_seconds: number
+              build_time_unit: number
               fail: number
               get: number
               install: number
@@ -2183,7 +2183,7 @@ export type Database = {
             Args: { end_date: string; org_id: string; start_date: string }
             Returns: {
               bandwidth: number
-              build_time_seconds: number
+              build_time_unit: number
               fail: number
               get: number
               install: number
