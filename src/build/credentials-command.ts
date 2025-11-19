@@ -57,7 +57,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     log.info('  - Credentials saved to ~/.capgo/credentials.json (local only)')
     log.info('  - When building, credentials are sent to Capgo servers')
     log.info('  - Credentials are NEVER stored on Capgo servers')
-    log.info('  - Auto-deleted after build (max 24 hours)\n')
+    log.info('  - Auto-deleted after build (max 24 hours)')
+    log.info('  - Builds sent directly to app stores - Capgo keeps nothing\n')
 
     const credentials: Partial<BuildCredentials> = {}
     const files: any = {}
@@ -225,7 +226,8 @@ export async function listCredentialsCommand(): Promise<void> {
     log.info('Location: ~/.capgo/credentials.json')
     log.info('\n🔒 These credentials are stored locally on your machine only.')
     log.info('   When building, they are sent to Capgo but NEVER stored there.')
-    log.info('   They are auto-deleted after build completion (max 24 hours).\n')
+    log.info('   They are auto-deleted after build completion (max 24 hours).')
+    log.info('   Builds sent directly to app stores - Capgo keeps nothing.\n')
   }
   catch (error) {
     log.error(`Failed to list credentials: ${error instanceof Error ? error.message : String(error)}`)

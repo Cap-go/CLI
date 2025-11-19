@@ -9,7 +9,8 @@
  * - Credentials are NEVER stored permanently on Capgo servers
  * - Credentials are used only during the build process and are automatically deleted
  *   from Capgo servers after the build completes (maximum 24 hours)
- * - Only build artifacts (IPA/APK files) are retained, never your credentials
+ * - Builds are sent DIRECTLY to app stores (Apple App Store / Google Play Store)
+ * - Capgo does NOT keep any build artifacts - everything goes directly to the stores
  *
  * Security best practices:
  * - Ensure ~/.capgo/ directory has restricted file permissions

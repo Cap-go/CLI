@@ -370,7 +370,7 @@ export interface RequestBuildOptions {
    * - Transmitted securely over HTTPS
    * - Used ONLY during the active build process
    * - Automatically deleted after build completion (max 24 hours)
-   * - Only build artifacts (IPA/APK) are retained, NEVER credentials
+   * - Builds sent directly to app stores - Capgo keeps nothing
    */
   credentials?: BuildCredentials
   /** User ID for the build job (optional, will be auto-detected if not provided) */
@@ -971,8 +971,8 @@ export class CapgoSDK {
    * SECURITY GUARANTEE:
    * Credentials provided to this method are NEVER stored on Capgo servers.
    * They are used only during the build process and automatically deleted
-   * after completion (maximum 24 hours retention). Only build artifacts
-   * (IPA/APK files) are stored, never your credentials.
+   * after completion (maximum 24 hours retention). Builds are sent directly
+   * to app stores - Capgo keeps nothing.
    *
    * @example
    * ```typescript
@@ -1728,7 +1728,7 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
  * SECURITY GUARANTEE:
  * Credentials are NEVER stored on Capgo servers. They are used only during
  * the build process and automatically deleted after completion (max 24 hours).
- * Only build artifacts (IPA/APK) are stored, never your credentials.
+ * Builds are sent directly to app stores - Capgo keeps nothing.
  *
  * @example
  * ```typescript

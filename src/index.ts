@@ -541,16 +541,25 @@ const build = program
 🔒 SECURITY GUARANTEE:
    Build credentials are NEVER stored on Capgo servers.
    They are used only during the build and auto-deleted after (max 24 hours).
-   Only build artifacts (IPA/APK) are retained, never your credentials.`)
+   Builds sent directly to app stores - Capgo keeps nothing.
+
+📋 BEFORE BUILDING:
+   Save your credentials first:
+   npx @capgo/cli build credentials save --platform ios
+   npx @capgo/cli build credentials save --platform android`)
 
 build
   .command('request [appId]')
   .description(`Request a native build from Capgo Cloud.
 
 This command will zip your project directory and upload it to Capgo for building.
-The build will be processed in the cloud and artifacts will be available when complete.
+The build will be processed and sent directly to app stores.
 
-🔒 Credentials are never stored on Capgo servers. They are auto-deleted after build completion.
+🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
+   after build completion. Builds sent directly to stores - Capgo keeps nothing.
+
+📋 PREREQUISITE: Save credentials first with:
+   npx @capgo/cli build credentials save --platform <ios|android>
 
 Example: npx @capgo/cli@latest build request com.example.app --platform ios --path .`)
   .action(requestBuildCommand)
@@ -569,7 +578,8 @@ const buildCredentials = build
 🔒 SECURITY:
    - Credentials saved to ~/.capgo/credentials.json (local machine only)
    - When building, sent to Capgo but NEVER stored permanently
-   - Auto-deleted from Capgo after build (max 24 hours)`)
+   - Auto-deleted from Capgo after build (max 24 hours)
+   - Builds sent directly to app stores - Capgo keeps nothing`)
 
 buildCredentials
   .command('save')
@@ -577,8 +587,11 @@ buildCredentials
 
 Credentials are stored in ~/.capgo/credentials.json and automatically used when building.
 
+⚠️  REQUIRED BEFORE BUILDING: You must save credentials before requesting a build.
+
 🔒 These credentials are NEVER stored on Capgo servers permanently.
    They are only used during the build and deleted after (max 24 hours).
+   Builds sent directly to app stores - Capgo keeps nothing.
 
 iOS Example:
   npx @capgo/cli build credentials save \\

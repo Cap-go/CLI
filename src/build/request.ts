@@ -11,14 +11,17 @@
  * ✓ Used ONLY during the active build process
  * ✓ Automatically deleted from Capgo servers after build completion
  * ✓ Retained for a MAXIMUM of 24 hours (even if build fails)
- * ✓ Only the final build artifacts (IPA/APK) are stored, NEVER credentials
+ * ✓ Builds sent DIRECTLY to app stores (Apple/Google)
+ * ✓ Capgo does NOT keep any build artifacts or credentials
  *
  * Credentials are transmitted securely over HTTPS and used only in ephemeral
  * build environments that are destroyed after each build completes.
  * ═══════════════════════════════════════════════════════════════════════════
  *
- * For convenience, you can save credentials locally using:
- * - `npx @capgo/cli build credentials save` command
+ * BEFORE BUILDING:
+ * You must save your credentials first using:
+ * - `npx @capgo/cli build credentials save --platform ios` (for iOS)
+ * - `npx @capgo/cli build credentials save --platform android` (for Android)
  * - Credentials stored in ~/.capgo/credentials.json (local machine only)
  * - Use `build credentials clear` to remove saved credentials
  */
@@ -38,6 +41,7 @@ import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../ut
  * SECURITY: These credentials are NEVER stored on Capgo servers.
  * They are used only during the build process and are automatically
  * deleted after the build completes (maximum 24 hours retention).
+ * Builds are sent directly to app stores - Capgo keeps nothing.
  */
 export interface BuildCredentials {
   // iOS credentials (standard environment variable names from API)
@@ -233,6 +237,7 @@ async function zipDirectory(projectDir: string, outputPath: string): Promise<voi
  * - Used ONLY during the active build process
  * - Automatically deleted after build completion (max 24 hours)
  * - NEVER stored permanently on Capgo servers
+ * - Builds sent directly to app stores - Capgo keeps nothing
  */
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
   try {
@@ -254,7 +259,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Platform: ${options.lane}`)
       log.info(`Project: ${projectDir}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
-      log.info(`   They are used only during build and deleted after (max 24h)\n`)
+      log.info(`   They are used only during build and deleted after (max 24h)`)
+      log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
     }
 
     // Merge saved credentials with provided credentials
