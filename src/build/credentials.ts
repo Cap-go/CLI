@@ -4,7 +4,7 @@
  * This module provides utilities for managing build credentials locally on your machine.
  *
  * IMPORTANT SECURITY NOTICE:
- * - Credentials are stored LOCALLY in ~/.capgo/credentials.json on YOUR machine only
+ * - Credentials are stored LOCALLY in ~/.capgo-credentials/credentials.json on YOUR machine only
  * - When you request a build, credentials are sent to Capgo's build servers
  * - Credentials are NEVER stored permanently on Capgo servers
  * - Credentials are used only during the build process and are automatically deleted
@@ -13,7 +13,7 @@
  * - Capgo does NOT keep any build artifacts - everything goes directly to the stores
  *
  * Security best practices:
- * - Ensure ~/.capgo/ directory has restricted file permissions
+ * - Ensure ~/.capgo-credentials/ directory has restricted file permissions
  * - Never commit credentials.json to version control
  * - Use separate credentials for CI/CD vs local development
  * - Rotate credentials regularly
@@ -24,7 +24,7 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
-const CREDENTIALS_DIR = join(homedir(), '.capgo')
+const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
 
 export interface CredentialFile {
@@ -39,9 +39,21 @@ export interface CredentialFile {
   PLAY_CONFIG_JSON_PATH?: string
 }
 
+/**
+ * Per-app credentials structure
+ * Each app can have its own iOS and Android credentials
+ */
 export interface SavedCredentials {
   ios?: Partial<BuildCredentials>
   android?: Partial<BuildCredentials>
+}
+
+/**
+ * All credentials file structure
+ * Maps appId -> credentials for that app
+ */
+export interface AllCredentials {
+  [appId: string]: SavedCredentials
 }
 
 /**
@@ -53,22 +65,40 @@ async function fileToBase64(filePath: string): Promise<string> {
 }
 
 /**
- * Load saved credentials from ~/.capgo/credentials.json
+ * Load all credentials from ~/.capgo/credentials.json
  */
-export async function loadSavedCredentials(): Promise<SavedCredentials | null> {
+async function loadAllCredentials(): Promise<AllCredentials> {
   try {
     const content = await readFile(CREDENTIALS_FILE, 'utf-8')
-    return JSON.parse(content) as SavedCredentials
+    return JSON.parse(content) as AllCredentials
   }
   catch {
-    return null
+    return {}
   }
 }
 
 /**
- * Save credentials to ~/.capgo/credentials.json
+ * Load saved credentials for a specific app from ~/.capgo/credentials.json
  */
-export async function saveCredentials(credentials: SavedCredentials): Promise<void> {
+export async function loadSavedCredentials(appId?: string): Promise<SavedCredentials | null> {
+  const all = await loadAllCredentials()
+
+  // If no appId provided, try to get default (backward compatibility)
+  if (!appId) {
+    // Return the first app's credentials or null
+    const appIds = Object.keys(all)
+    if (appIds.length === 0)
+      return null
+    return all[appIds[0]] || null
+  }
+
+  return all[appId] || null
+}
+
+/**
+ * Save all credentials to ~/.capgo/credentials.json
+ */
+async function saveAllCredentials(credentials: AllCredentials): Promise<void> {
   await mkdir(CREDENTIALS_DIR, { recursive: true })
   await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), 'utf-8')
 }
@@ -78,10 +108,11 @@ export async function saveCredentials(credentials: SavedCredentials): Promise<vo
  * Provided credentials take precedence
  */
 export async function mergeCredentials(
+  appId: string,
   platform: 'ios' | 'android',
   provided?: BuildCredentials,
 ): Promise<BuildCredentials | undefined> {
-  const saved = await loadSavedCredentials()
+  const saved = await loadSavedCredentials(appId)
 
   if (!saved || !saved[platform]) {
     return provided
@@ -133,41 +164,70 @@ export async function convertFilesToCredentials(
 }
 
 /**
- * Update saved credentials for a specific platform
+ * Update saved credentials for a specific app and platform
  */
 export async function updateSavedCredentials(
+  appId: string,
   platform: 'ios' | 'android',
   credentials: Partial<BuildCredentials>,
 ): Promise<void> {
-  const saved = await loadSavedCredentials() || {}
+  const all = await loadAllCredentials()
+  const saved = all[appId] || {}
 
   saved[platform] = {
     ...saved[platform],
     ...credentials,
   }
 
-  await saveCredentials(saved)
+  all[appId] = saved
+  await saveAllCredentials(all)
 }
 
 /**
- * Clear saved credentials for a specific platform
+ * Clear saved credentials for a specific app and/or platform
  */
-export async function clearSavedCredentials(platform?: 'ios' | 'android'): Promise<void> {
-  if (!platform) {
-    // Clear all
-    await saveCredentials({})
+export async function clearSavedCredentials(appId?: string, platform?: 'ios' | 'android'): Promise<void> {
+  const all = await loadAllCredentials()
+
+  if (!appId) {
+    // Clear all apps
+    await saveAllCredentials({})
     return
   }
 
-  const saved = await loadSavedCredentials() || {}
+  if (!platform) {
+    // Clear all platforms for this app
+    delete all[appId]
+    await saveAllCredentials(all)
+    return
+  }
+
+  // Clear specific platform for this app
+  const saved = all[appId] || {}
   delete saved[platform]
-  await saveCredentials(saved)
+
+  if (Object.keys(saved).length === 0) {
+    // If no platforms left, remove the app entry
+    delete all[appId]
+  } else {
+    all[appId] = saved
+  }
+
+  await saveAllCredentials(all)
 }
 
 /**
- * Get saved credentials for a specific platform
+ * Get saved credentials for a specific app and platform
  */
-export async function getSavedCredentials(platform: 'ios' | 'android'): Promise<Partial<BuildCredentials> | null> {
-  const saved = await loadSavedCredentials()
+export async function getSavedCredentials(appId: string, platform: 'ios' | 'android'): Promise<Partial<BuildCredentials> | null> {
+  const saved = await loadSavedCredentials(appId)
   return saved?.[platform] || null
+}
+
+/**
+ * List all apps that have saved credentials
+ */
+export async function listAllApps(): Promise<string[]> {
+  const all = await loadAllCredentials()
+  return Object.keys(all)
 }

@@ -7,12 +7,14 @@ import {
   clearSavedCredentials,
   convertFilesToCredentials,
   getSavedCredentials,
+  listAllApps,
   loadSavedCredentials,
   updateSavedCredentials,
 } from './credentials'
 
 interface SaveCredentialsOptions {
   platform?: 'ios' | 'android'
+  appId?: string
 
   // iOS options
   certificate?: string
@@ -38,7 +40,7 @@ interface SaveCredentialsOptions {
  * Save build credentials locally
  *
  * SECURITY NOTE:
- * - Credentials are saved to ~/.capgo/credentials.json on YOUR local machine only
+ * - Credentials are saved to ~/.capgo-credentials/credentials.json on YOUR local machine only
  * - When you run a build, credentials are sent to Capgo's build servers
  * - Credentials are NEVER stored permanently on Capgo servers
  * - They are automatically deleted after build completion (max 24 hours)
@@ -50,11 +52,17 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       process.exit(1)
     }
 
+    if (!options.appId) {
+      log.error('App ID is required. Use --appId com.example.app')
+      process.exit(1)
+    }
+
     const platform = options.platform
+    const appId = options.appId
 
     // Display security notice
     log.info('\n🔒 SECURITY NOTICE:')
-    log.info('  - Credentials saved to ~/.capgo/credentials.json (local only)')
+    log.info('  - Credentials saved to ~/.capgo-credentials/credentials.json (local only)')
     log.info('  - When building, credentials are sent to Capgo servers')
     log.info('  - Credentials are NEVER stored on Capgo servers')
     log.info('  - Auto-deleted after build (max 24 hours)')
@@ -153,12 +161,12 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     // Convert files to base64 and merge with other credentials
     const fileCredentials = await convertFilesToCredentials(platform, files, credentials)
 
-    // Save credentials
-    await updateSavedCredentials(platform, fileCredentials)
+    // Save credentials for this specific app
+    await updateSavedCredentials(appId, platform, fileCredentials)
 
-    log.success(`\n✅ ${platform.toUpperCase()} credentials saved successfully!`)
-    log.info(`   Location: ~/.capgo/credentials.json`)
-    log.info(`   Use: npx @capgo/cli build <appId> --platform ${platform}\n`)
+    log.success(`\n✅ ${platform.toUpperCase()} credentials saved successfully for ${appId}!`)
+    log.info(`   Location: ~/.capgo-credentials/credentials.json`)
+    log.info(`   Use: npx @capgo/cli build ${appId} --platform ${platform}\n`)
   }
   catch (error) {
     log.error(`Failed to save credentials: ${error instanceof Error ? error.message : String(error)}`)
@@ -169,61 +177,70 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
 /**
  * List saved credentials (masked for security)
  */
-export async function listCredentialsCommand(): Promise<void> {
+export async function listCredentialsCommand(options?: { appId?: string }): Promise<void> {
   try {
-    const saved = await loadSavedCredentials()
+    const appIds = await listAllApps()
 
-    if (!saved || (!saved.ios && !saved.android)) {
+    if (appIds.length === 0) {
       log.info('No saved credentials found.')
-      log.info('Use: npx @capgo/cli build credentials save --platform <ios|android>')
+      log.info('Use: npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>')
       return
     }
 
     log.info('\n📋 Saved Build Credentials:\n')
 
-    if (saved.ios) {
-      log.info('iOS Credentials:')
-      const ios = saved.ios
-      if (ios.BUILD_CERTIFICATE_BASE64)
-        log.info('  ✓ Certificate (base64)')
-      if (ios.BUILD_PROVISION_PROFILE_BASE64)
-        log.info('  ✓ Provisioning Profile (base64)')
-      if (ios.BUILD_PROVISION_PROFILE_BASE64_PROD)
-        log.info('  ✓ Production Provisioning Profile (base64)')
-      if (ios.APPLE_KEY_CONTENT)
-        log.info('  ✓ Apple Key Content (base64)')
-      if (ios.P12_PASSWORD)
-        log.info('  ✓ P12 Password: ********')
-      if (ios.APPLE_KEY_ID)
-        log.info(`  ✓ Apple Key ID: ${ios.APPLE_KEY_ID}`)
-      if (ios.APPLE_ISSUER_ID)
-        log.info(`  ✓ Apple Issuer ID: ${ios.APPLE_ISSUER_ID}`)
-      if (ios.APP_STORE_CONNECT_TEAM_ID)
-        log.info(`  ✓ Team ID: ${ios.APP_STORE_CONNECT_TEAM_ID}`)
-      if (ios.APPLE_ID)
-        log.info(`  ✓ Apple ID: ${ios.APPLE_ID}`)
-      if (ios.APPLE_APP_SPECIFIC_PASSWORD)
-        log.info('  ✓ Apple App Password: ********')
-      log.info('')
+    // If specific appId is provided, only show that one
+    const appsToShow = options?.appId ? [options.appId] : appIds
+
+    for (const appId of appsToShow) {
+      const saved = await loadSavedCredentials(appId)
+      if (!saved)
+        continue
+
+      log.info(`\n🔹 App: ${appId}`)
+
+      if (saved.ios) {
+        log.info('  iOS Credentials:')
+        const ios = saved.ios
+        if (ios.BUILD_CERTIFICATE_BASE64)
+          log.info('    ✓ Certificate (base64)')
+        if (ios.BUILD_PROVISION_PROFILE_BASE64)
+          log.info('    ✓ Provisioning Profile (base64)')
+        if (ios.BUILD_PROVISION_PROFILE_BASE64_PROD)
+          log.info('    ✓ Production Provisioning Profile (base64)')
+        if (ios.APPLE_KEY_CONTENT)
+          log.info('    ✓ Apple Key Content (base64)')
+        if (ios.P12_PASSWORD)
+          log.info('    ✓ P12 Password: ********')
+        if (ios.APPLE_KEY_ID)
+          log.info(`    ✓ Apple Key ID: ${ios.APPLE_KEY_ID}`)
+        if (ios.APPLE_ISSUER_ID)
+          log.info(`    ✓ Apple Issuer ID: ${ios.APPLE_ISSUER_ID}`)
+        if (ios.APP_STORE_CONNECT_TEAM_ID)
+          log.info(`    ✓ Team ID: ${ios.APP_STORE_CONNECT_TEAM_ID}`)
+        if (ios.APPLE_ID)
+          log.info(`    ✓ Apple ID: ${ios.APPLE_ID}`)
+        if (ios.APPLE_APP_SPECIFIC_PASSWORD)
+          log.info('    ✓ Apple App Password: ********')
+      }
+
+      if (saved.android) {
+        log.info('  Android Credentials:')
+        const android = saved.android
+        if (android.ANDROID_KEYSTORE_FILE)
+          log.info('    ✓ Keystore (base64)')
+        if (android.PLAY_CONFIG_JSON)
+          log.info('    ✓ Play Store Config (base64)')
+        if (android.KEYSTORE_KEY_ALIAS)
+          log.info(`    ✓ Keystore Alias: ${android.KEYSTORE_KEY_ALIAS}`)
+        if (android.KEYSTORE_KEY_PASSWORD)
+          log.info('    ✓ Key Password: ********')
+        if (android.KEYSTORE_STORE_PASSWORD)
+          log.info('    ✓ Store Password: ********')
+      }
     }
 
-    if (saved.android) {
-      log.info('Android Credentials:')
-      const android = saved.android
-      if (android.ANDROID_KEYSTORE_FILE)
-        log.info('  ✓ Keystore (base64)')
-      if (android.PLAY_CONFIG_JSON)
-        log.info('  ✓ Play Store Config (base64)')
-      if (android.KEYSTORE_KEY_ALIAS)
-        log.info(`  ✓ Keystore Alias: ${android.KEYSTORE_KEY_ALIAS}`)
-      if (android.KEYSTORE_KEY_PASSWORD)
-        log.info('  ✓ Key Password: ********')
-      if (android.KEYSTORE_STORE_PASSWORD)
-        log.info('  ✓ Store Password: ********')
-      log.info('')
-    }
-
-    log.info('Location: ~/.capgo/credentials.json')
+    log.info('\nLocation: ~/.capgo-credentials/credentials.json')
     log.info('\n🔒 These credentials are stored locally on your machine only.')
     log.info('   When building, they are sent to Capgo but NEVER stored there.')
     log.info('   They are auto-deleted after build completion (max 24 hours).')
@@ -238,30 +255,43 @@ export async function listCredentialsCommand(): Promise<void> {
 /**
  * Clear saved credentials
  */
-export async function clearCredentialsCommand(options: { platform?: 'ios' | 'android' }): Promise<void> {
+export async function clearCredentialsCommand(options: { appId?: string, platform?: 'ios' | 'android' }): Promise<void> {
   try {
-    if (options.platform) {
-      const current = await getSavedCredentials(options.platform)
+    if (options.appId && options.platform) {
+      // Clear specific platform for specific app
+      const current = await getSavedCredentials(options.appId, options.platform)
       if (!current) {
-        log.info(`No ${options.platform.toUpperCase()} credentials found.`)
+        log.info(`No ${options.platform.toUpperCase()} credentials found for ${options.appId}.`)
         return
       }
 
-      await clearSavedCredentials(options.platform)
-      log.success(`✅ ${options.platform.toUpperCase()} credentials cleared successfully!`)
+      await clearSavedCredentials(options.appId, options.platform)
+      log.success(`✅ ${options.platform.toUpperCase()} credentials cleared for ${options.appId}!`)
+    }
+    else if (options.appId) {
+      // Clear all platforms for specific app
+      const saved = await loadSavedCredentials(options.appId)
+      if (!saved || (!saved.ios && !saved.android)) {
+        log.info(`No credentials found for ${options.appId}.`)
+        return
+      }
+
+      await clearSavedCredentials(options.appId)
+      log.success(`✅ All credentials cleared for ${options.appId}!`)
     }
     else {
-      const saved = await loadSavedCredentials()
-      if (!saved || (!saved.ios && !saved.android)) {
+      // Clear everything
+      const appIds = await listAllApps()
+      if (appIds.length === 0) {
         log.info('No saved credentials found.')
         return
       }
 
       await clearSavedCredentials()
-      log.success('✅ All credentials cleared successfully!')
+      log.success('✅ All credentials cleared for all apps!')
     }
 
-    log.info('   Location: ~/.capgo/credentials.json\n')
+    log.info('   Location: ~/.capgo-credentials/credentials.json\n')
   }
   catch (error) {
     log.error(`Failed to clear credentials: ${error instanceof Error ? error.message : String(error)}`)

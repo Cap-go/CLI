@@ -266,7 +266,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Merge saved credentials with provided credentials
     // Provided credentials take precedence over saved ones
-    const mergedCredentials = await mergeCredentials(options.lane, options.credentials)
+    const mergedCredentials = await mergeCredentials(appId, options.lane, options.credentials)
 
     // Prepare request payload for Capgo backend
     const requestPayload: {

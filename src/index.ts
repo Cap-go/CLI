@@ -545,8 +545,8 @@ const build = program
 
 📋 BEFORE BUILDING:
    Save your credentials first:
-   npx @capgo/cli build credentials save --platform ios
-   npx @capgo/cli build credentials save --platform android`)
+   npx @capgo/cli build credentials save --appId <your-app-id> --platform ios
+   npx @capgo/cli build credentials save --appId <your-app-id> --platform android`)
 
 build
   .command('request [appId]')
@@ -559,7 +559,7 @@ The build will be processed and sent directly to app stores.
    after build completion. Builds sent directly to stores - Capgo keeps nothing.
 
 📋 PREREQUISITE: Save credentials first with:
-   npx @capgo/cli build credentials save --platform <ios|android>
+   npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
 
 Example: npx @capgo/cli@latest build request com.example.app --platform ios --path .`)
   .action(requestBuildCommand)
@@ -576,7 +576,7 @@ const buildCredentials = build
   .description(`Manage build credentials stored locally on your machine.
 
 🔒 SECURITY:
-   - Credentials saved to ~/.capgo/credentials.json (local machine only)
+   - Credentials saved to ~/.capgo-credentials/credentials.json (local machine only)
    - When building, sent to Capgo but NEVER stored permanently
    - Auto-deleted from Capgo after build (max 24 hours)
    - Builds sent directly to app stores - Capgo keeps nothing`)
@@ -585,7 +585,7 @@ buildCredentials
   .command('save')
   .description(`Save build credentials locally for iOS or Android.
 
-Credentials are stored in ~/.capgo/credentials.json and automatically used when building.
+Credentials are stored in ~/.capgo-credentials/credentials.json per app ID and automatically used when building.
 
 ⚠️  REQUIRED BEFORE BUILDING: You must save credentials before requesting a build.
 
@@ -595,6 +595,7 @@ Credentials are stored in ~/.capgo/credentials.json and automatically used when 
 
 iOS Example:
   npx @capgo/cli build credentials save \\
+    --appId com.example.app \\
     --platform ios \\
     --certificate ./cert.p12 \\
     --p12-password "password" \\
@@ -606,6 +607,7 @@ iOS Example:
 
 Android Example:
   npx @capgo/cli build credentials save \\
+    --appId com.example.app \\
     --platform android \\
     --keystore ./release.keystore \\
     --keystore-alias "my-key" \\
@@ -613,6 +615,7 @@ Android Example:
     --keystore-store-password "store-pass" \\
     --play-config ./service-account.json`)
   .action(saveCredentialsCommand)
+  .option('--appId <appId>', 'App ID (e.g., com.example.app) (required)')
   .option('--platform <platform>', 'Platform: ios or android (required)')
   // iOS options
   .option('--certificate <path>', 'iOS: Path to .p12 certificate file')
@@ -636,23 +639,28 @@ buildCredentials
   .command('list')
   .description(`List saved build credentials (passwords masked).
 
-Shows what credentials are currently saved in ~/.capgo/credentials.json
+Shows what credentials are currently saved in ~/.capgo-credentials/credentials.json
 
-Example: npx @capgo/cli build credentials list`)
+Examples:
+  npx @capgo/cli build credentials list  # List all apps
+  npx @capgo/cli build credentials list --appId com.example.app  # List specific app`)
   .action(listCredentialsCommand)
+  .option('--appId <appId>', 'App ID to list (optional, lists all if omitted)')
 
 buildCredentials
   .command('clear')
   .description(`Clear saved build credentials.
 
-Remove credentials from ~/.capgo/credentials.json
-Use --platform to clear only iOS or Android credentials.
+Remove credentials from ~/.capgo-credentials/credentials.json
+Use --appId and --platform to target specific credentials.
 
 Examples:
-  npx @capgo/cli build credentials clear --platform ios
-  npx @capgo/cli build credentials clear  # Clear all`)
+  npx @capgo/cli build credentials clear  # Clear all apps
+  npx @capgo/cli build credentials clear --appId com.example.app  # Clear specific app
+  npx @capgo/cli build credentials clear --appId com.example.app --platform ios  # Clear iOS only`)
   .action(clearCredentialsCommand)
-  .option('--platform <platform>', 'Platform to clear: ios or android (optional, clears all if omitted)')
+  .option('--appId <appId>', 'App ID to clear (optional, clears all apps if omitted)')
+  .option('--platform <platform>', 'Platform to clear: ios or android (optional, clears all platforms if omitted)')
 
 program
   .command('generate-docs [filePath]')
