@@ -898,8 +898,8 @@ npx @capgo/cli@latest organisation delete ORG_ID
    Builds sent directly to app stores - Capgo keeps nothing.
 📋 BEFORE BUILDING:
    Save your credentials first:
-   npx @capgo/cli build credentials save --platform ios
-   npx @capgo/cli build credentials save --platform android
+   npx @capgo/cli build credentials save --appId <your-app-id> --platform ios
+   npx @capgo/cli build credentials save --appId <your-app-id> --platform android
 
 ### <a id="build-request"></a> 🔹 **Request**
 
@@ -913,7 +913,7 @@ The build will be processed and sent directly to app stores.
 🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
    after build completion. Builds sent directly to stores - Capgo keeps nothing.
 📋 PREREQUISITE: Save credentials first with:
-   npx @capgo/cli build credentials save --platform <ios|android>
+   npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
 
 **Example:**
 
@@ -941,7 +941,7 @@ npx @capgo/cli@latest build credentials
 
 Manage build credentials stored locally on your machine.
 🔒 SECURITY:
-   - Credentials saved to ~/.capgo/credentials.json (local machine only)
+   - Credentials saved to ~/.capgo-credentials/credentials.json (local machine only)
    - When building, sent to Capgo but NEVER stored permanently
    - Auto-deleted from Capgo after build (max 24 hours)
    - Builds sent directly to app stores - Capgo keeps nothing
