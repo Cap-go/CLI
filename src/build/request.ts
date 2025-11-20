@@ -285,8 +285,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.info('✓ Using credentials (saved + provided)')
       }
     }
-    else if (!silent) {
-      log.warn('⚠️  No credentials provided. Build may fail if credentials are required.')
+    else {
+      // No credentials found - fail early with helpful message
+      if (!silent) {
+        log.error('❌ No credentials found for this app and platform')
+        log.error('')
+        log.error('You must save credentials before building:')
+        log.error(`  npx @capgo/cli build credentials save --appId ${appId} --platform ${options.lane}`)
+        log.error('')
+        log.error('Documentation:')
+        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/#saving-ios-credentials')
+        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/#saving-android-credentials')
+      }
+      throw new Error('No credentials found. Please save credentials before building.')
     }
 
     // Request build from Capgo backend (POST /build/request)
