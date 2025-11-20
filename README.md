@@ -891,7 +891,7 @@ npx @capgo/cli@latest organisation delete ORG_ID
 ## <a id="build"></a> 🔹 **Build**
 
 🏗️  Manage native iOS/Android builds through Capgo Cloud.
-⚠️ This feature is currently in PRIVATE BETA and cannot be used by anyone at this time.
+⚠️ This feature is currently in PUBLIC BETA and cannot be used by anyone at this time.
 🔒 SECURITY GUARANTEE:
    Build credentials are NEVER stored on Capgo servers.
    They are used only during the build and auto-deleted after (max 24 hours).

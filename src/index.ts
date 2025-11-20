@@ -536,7 +536,7 @@ const build = program
   .command('build')
   .description(`🏗️  Manage native iOS/Android builds through Capgo Cloud.
 
-⚠️ This feature is currently in PRIVATE BETA and cannot be used by anyone at this time.
+⚠️ This feature is currently in PUBLIC BETA and cannot be used by anyone at this time.
 
 🔒 SECURITY GUARANTEE:
    Build credentials are NEVER stored on Capgo servers.
