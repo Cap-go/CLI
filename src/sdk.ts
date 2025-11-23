@@ -1012,8 +1012,6 @@ export class CapgoSDK {
         buildProvisionProfileBase64: creds?.BUILD_PROVISION_PROFILE_BASE64,
         buildProvisionProfileBase64Prod: creds?.BUILD_PROVISION_PROFILE_BASE64_PROD,
         p12Password: creds?.P12_PASSWORD,
-        appleId: creds?.APPLE_ID,
-        appleAppSpecificPassword: creds?.APPLE_APP_SPECIFIC_PASSWORD,
         appleKeyId: creds?.APPLE_KEY_ID,
         appleIssuerId: creds?.APPLE_ISSUER_ID,
         appleKeyContent: creds?.APPLE_KEY_CONTENT,

@@ -35,8 +35,6 @@ function clearCredentialEnvVars() {
     'BUILD_CERTIFICATE_BASE64',
     'BUILD_PROVISION_PROFILE_BASE64',
     'P12_PASSWORD',
-    'APPLE_ID',
-    'APPLE_APP_SPECIFIC_PASSWORD',
     'APPLE_KEY_ID',
     'APPLE_ISSUER_ID',
     'APPLE_KEY_CONTENT',
@@ -101,17 +99,17 @@ await test('Load credentials from environment variables', async () => {
   clearCredentialEnvVars()
 
   // Set some env vars
-  process.env.APPLE_ID = 'test@example.com'
+  process.env.APPLE_KEY_ID = 'ABC1234567'
   process.env.P12_PASSWORD = 'testpass123'
   process.env.ANDROID_KEYSTORE_FILE = 'base64keystore'
 
   const { loadCredentialsFromEnv } = await importCredentials()
   const creds = loadCredentialsFromEnv()
 
-  assertEquals(creds.APPLE_ID, 'test@example.com', 'APPLE_ID should be loaded from env')
+  assertEquals(creds.APPLE_KEY_ID, 'ABC1234567', 'APPLE_KEY_ID should be loaded from env')
   assertEquals(creds.P12_PASSWORD, 'testpass123', 'P12_PASSWORD should be loaded from env')
   assertEquals(creds.ANDROID_KEYSTORE_FILE, 'base64keystore', 'ANDROID_KEYSTORE_FILE should be loaded from env')
-  assert(!creds.APPLE_KEY_ID, 'Unset env vars should not be in result')
+  assert(!creds.APPLE_ISSUER_ID, 'Unset env vars should not be in result')
 
   clearCredentialEnvVars()
   await cleanupTestEnv()
@@ -126,24 +124,24 @@ await test('Merge credentials with proper precedence', async () => {
 
   // 1. Save credentials to file (lowest priority)
   await updateSavedCredentials('com.test.app', 'ios', {
-    APPLE_ID: 'saved@example.com',
+    APPLE_KEY_ID: 'SAVED123456',
     P12_PASSWORD: 'savedpass',
     BUILD_CERTIFICATE_BASE64: 'savedcert',
   })
 
   // 2. Set env vars (middle priority)
-  process.env.APPLE_ID = 'env@example.com'
+  process.env.APPLE_KEY_ID = 'ENV12345678'
   process.env.BUILD_CERTIFICATE_BASE64 = 'envcert'
 
   // 3. Provide CLI args (highest priority)
   const cliArgs = {
-    APPLE_ID: 'cli@example.com',
+    APPLE_KEY_ID: 'CLI12345678',
   }
 
   const merged = await mergeCredentials('com.test.app', 'ios', cliArgs)
 
   // CLI should win
-  assertEquals(merged.APPLE_ID, 'cli@example.com', 'CLI args should take precedence')
+  assertEquals(merged.APPLE_KEY_ID, 'CLI12345678', 'CLI args should take precedence')
 
   // Env should win over saved
   assertEquals(merged.BUILD_CERTIFICATE_BASE64, 'envcert', 'Env vars should override saved')
@@ -177,7 +175,7 @@ await test('Platform-specific credentials are isolated', async () => {
 
   // Save iOS credentials
   await updateSavedCredentials('com.test.app', 'ios', {
-    APPLE_ID: 'ios@example.com',
+    APPLE_KEY_ID: 'IOSKEY12345',
     P12_PASSWORD: 'iospass',
   })
 
@@ -189,13 +187,13 @@ await test('Platform-specific credentials are isolated', async () => {
 
   // Get iOS credentials
   const iosCreds = await mergeCredentials('com.test.app', 'ios')
-  assertEquals(iosCreds.APPLE_ID, 'ios@example.com', 'Should get iOS credentials')
+  assertEquals(iosCreds.APPLE_KEY_ID, 'IOSKEY12345', 'Should get iOS credentials')
   assert(!iosCreds.KEYSTORE_KEY_ALIAS, 'Should not get Android credentials in iOS')
 
   // Get Android credentials
   const androidCreds = await mergeCredentials('com.test.app', 'android')
   assertEquals(androidCreds.KEYSTORE_KEY_ALIAS, 'androidalias', 'Should get Android credentials')
-  assert(!androidCreds.APPLE_ID, 'Should not get iOS credentials in Android')
+  assert(!androidCreds.APPLE_KEY_ID, 'Should not get iOS credentials in Android')
 
   await cleanupTestEnv()
 })
@@ -210,8 +208,6 @@ await test('All credential types can be loaded from environment', async () => {
   process.env.BUILD_PROVISION_PROFILE_BASE64 = 'profile'
   process.env.BUILD_PROVISION_PROFILE_BASE64_PROD = 'prodprofile'
   process.env.P12_PASSWORD = 'pass'
-  process.env.APPLE_ID = 'test@example.com'
-  process.env.APPLE_APP_SPECIFIC_PASSWORD = 'apppass'
   process.env.APPLE_KEY_ID = 'keyid'
   process.env.APPLE_ISSUER_ID = 'issuerid'
   process.env.APPLE_KEY_CONTENT = 'keycontent'
@@ -231,8 +227,8 @@ await test('All credential types can be loaded from environment', async () => {
   assertEquals(creds.BUILD_CERTIFICATE_BASE64, 'cert')
   assertEquals(creds.BUILD_PROVISION_PROFILE_BASE64, 'profile')
   assertEquals(creds.P12_PASSWORD, 'pass')
-  assertEquals(creds.APPLE_ID, 'test@example.com')
   assertEquals(creds.APPLE_KEY_ID, 'keyid')
+  assertEquals(creds.APPLE_ISSUER_ID, 'issuerid')
 
   // Check Android
   assertEquals(creds.ANDROID_KEYSTORE_FILE, 'keystore')
@@ -253,20 +249,20 @@ await test('CLI args override both env vars and saved credentials', async () => 
 
   // Saved: value1
   await updateSavedCredentials('com.test.app', 'ios', {
-    APPLE_ID: 'saved@example.com',
+    APPLE_KEY_ID: 'SAVED123456',
   })
 
   // Env: value2
-  process.env.APPLE_ID = 'env@example.com'
+  process.env.APPLE_KEY_ID = 'ENV12345678'
 
   // CLI: value3
   const cliArgs = {
-    APPLE_ID: 'cli@example.com',
+    APPLE_KEY_ID: 'CLI12345678',
   }
 
   const merged = await mergeCredentials('com.test.app', 'ios', cliArgs)
 
-  assertEquals(merged.APPLE_ID, 'cli@example.com', 'CLI args must override everything')
+  assertEquals(merged.APPLE_KEY_ID, 'CLI12345678', 'CLI args must override everything')
 
   clearCredentialEnvVars()
   await cleanupTestEnv()

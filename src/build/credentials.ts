@@ -120,10 +120,6 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = env.BUILD_PROVISION_PROFILE_BASE64_PROD
   if (env.P12_PASSWORD)
     credentials.P12_PASSWORD = env.P12_PASSWORD
-  if (env.APPLE_ID)
-    credentials.APPLE_ID = env.APPLE_ID
-  if (env.APPLE_APP_SPECIFIC_PASSWORD)
-    credentials.APPLE_APP_SPECIFIC_PASSWORD = env.APPLE_APP_SPECIFIC_PASSWORD
   if (env.APPLE_KEY_ID)
     credentials.APPLE_KEY_ID = env.APPLE_KEY_ID
   if (env.APPLE_ISSUER_ID)

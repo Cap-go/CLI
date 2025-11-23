@@ -26,8 +26,6 @@ interface SaveCredentialsOptions {
   appleKeyId?: string
   appleIssuerId?: string
   appleTeamId?: string
-  appleId?: string
-  appleAppPassword?: string
 
   // Android options
   keystore?: string
@@ -131,10 +129,6 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.APPLE_ISSUER_ID = options.appleIssuerId
       if (options.appleTeamId)
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
-      if (options.appleId)
-        credentials.APPLE_ID = options.appleId
-      if (options.appleAppPassword)
-        credentials.APPLE_APP_SPECIFIC_PASSWORD = options.appleAppPassword
     }
     else if (platform === 'android') {
       // Handle Android credentials
@@ -218,6 +212,10 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // For Android, we need at least one password (will be used for both if only one provided)
       if (!fileCredentials.KEYSTORE_KEY_PASSWORD && !fileCredentials.KEYSTORE_STORE_PASSWORD)
         missingCreds.push('--keystore-key-password <password> OR --keystore-store-password <password> (At least one password required, will be used for both)')
+
+      // Google Play Store credentials (required for upload)
+      if (!fileCredentials.PLAY_CONFIG_JSON)
+        missingCreds.push('--play-config <path> (Google Play service account JSON - required for uploading to Play Store)')
     }
 
     if (missingCreds.length > 0) {
@@ -242,10 +240,12 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('  npx @capgo/cli build credentials save --platform android \\')
         log.error('    --keystore ./release.keystore \\')
         log.error('    --keystore-alias "my-key-alias" \\')
-        log.error('    --keystore-key-password "password"')
+        log.error('    --keystore-key-password "password" \\')
+        log.error('    --play-config ./play-store-service-account.json')
         log.error('')
         log.error('  Note: If both key and store passwords are the same, you only need to provide one.')
         log.error('        If they differ, provide both --keystore-key-password and --keystore-store-password.')
+        log.error('        The --play-config is required for uploading to Google Play Store.')
       }
       log.error('')
       process.exit(1)
@@ -312,10 +312,6 @@ export async function listCredentialsCommand(options?: { appId?: string }): Prom
           log.info(`    ✓ Apple Issuer ID: ${ios.APPLE_ISSUER_ID}`)
         if (ios.APP_STORE_CONNECT_TEAM_ID)
           log.info(`    ✓ Team ID: ${ios.APP_STORE_CONNECT_TEAM_ID}`)
-        if (ios.APPLE_ID)
-          log.info(`    ✓ Apple ID: ${ios.APPLE_ID}`)
-        if (ios.APPLE_APP_SPECIFIC_PASSWORD)
-          log.info('    ✓ Apple App Password: ********')
       }
 
       if (saved.android) {

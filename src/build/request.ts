@@ -50,11 +50,10 @@ export interface BuildCredentials {
   BUILD_PROVISION_PROFILE_BASE64?: string
   BUILD_PROVISION_PROFILE_BASE64_PROD?: string
   P12_PASSWORD?: string
-  APPLE_ID?: string
-  APPLE_APP_SPECIFIC_PASSWORD?: string
   APPLE_KEY_ID?: string
   APPLE_ISSUER_ID?: string
   APPLE_KEY_CONTENT?: string
+  APPLE_PROFILE_NAME?: string
   APP_STORE_CONNECT_TEAM_ID?: string
 
   // Android credentials (standard environment variable names from API)
@@ -83,11 +82,10 @@ export interface BuildRequestOptions extends OptionsBase {
   buildProvisionProfileBase64?: string
   buildProvisionProfileBase64Prod?: string
   p12Password?: string
-  appleId?: string
-  appleAppSpecificPassword?: string
   appleKeyId?: string
   appleIssuerId?: string
   appleKeyContent?: string
+  appleProfileName?: string
   appStoreConnectTeamId?: string
 
   // Android credential options (flattened from BuildCredentials)
@@ -296,16 +294,14 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.BUILD_PROVISION_PROFILE_BASE64_PROD = options.buildProvisionProfileBase64Prod
     if (options.p12Password)
       cliCredentials.P12_PASSWORD = options.p12Password
-    if (options.appleId)
-      cliCredentials.APPLE_ID = options.appleId
-    if (options.appleAppSpecificPassword)
-      cliCredentials.APPLE_APP_SPECIFIC_PASSWORD = options.appleAppSpecificPassword
     if (options.appleKeyId)
       cliCredentials.APPLE_KEY_ID = options.appleKeyId
     if (options.appleIssuerId)
       cliCredentials.APPLE_ISSUER_ID = options.appleIssuerId
     if (options.appleKeyContent)
       cliCredentials.APPLE_KEY_CONTENT = options.appleKeyContent
+    if (options.appleProfileName)
+      cliCredentials.APPLE_PROFILE_NAME = options.appleProfileName
     if (options.appStoreConnectTeamId)
       cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId
     if (options.androidKeystoreFile)
