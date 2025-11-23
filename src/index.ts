@@ -627,7 +627,7 @@ Android Example:
   npx @capgo/cli build credentials save \\
     --appId com.example.app \\
     --platform android \\
-    --keystore ./release.keystore \\
+    --keystore ./release.keystore \\  # or ./release.jks
     --keystore-alias "my-key" \\
     --keystore-key-password "key-pass" \\
     --keystore-store-password "store-pass" \\
@@ -648,7 +648,7 @@ Android Example:
   .option('--apple-id <email>', 'iOS: Apple ID email (optional)')
   .option('--apple-app-password <password>', 'iOS: App-specific password (optional)')
   // Android options
-  .option('--keystore <path>', 'Android: Path to keystore file')
+  .option('--keystore <path>', 'Android: Path to keystore file (.keystore or .jks)')
   .option('--keystore-alias <alias>', 'Android: Keystore key alias')
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')

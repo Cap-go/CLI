@@ -273,6 +273,14 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       throw new Error('Missing argument, you need to provide a appId, or be in a capacitor project')
     }
 
+    if (!options.platform) {
+      throw new Error('Missing required argument: --platform <ios|android>')
+    }
+
+    if (options.platform !== 'ios' && options.platform !== 'android') {
+      throw new Error(`Invalid platform "${options.platform}". Must be "ios" or "android"`)
+    }
+
     const projectDir = resolve(options.path || process.cwd())
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
