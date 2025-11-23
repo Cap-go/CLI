@@ -70,7 +70,7 @@ export interface BuildCredentials {
 
 export interface BuildRequestOptions extends OptionsBase {
   path?: string
-  lane: 'ios' | 'android' // Required: must be exactly "ios" or "android"
+  platform: 'ios' | 'android' // Required: must be exactly "ios" or "android"
   buildMode?: 'debug' | 'release' // Build mode (default: release)
   credentials?: BuildCredentials
   userId?: string // User ID for the build job
@@ -257,7 +257,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     if (!silent) {
       log.info(`Requesting native build for ${appId}`)
-      log.info(`Platform: ${options.lane}`)
+      log.info(`Platform: ${options.platform}`)
       log.info(`Project: ${projectDir}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
       log.info(`   They are used only during build and deleted after (max 24h)`)
@@ -266,7 +266,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Merge saved credentials with provided credentials
     // Provided credentials take precedence over saved ones
-    const mergedCredentials = await mergeCredentials(appId, options.lane, options.credentials)
+    const mergedCredentials = await mergeCredentials(appId, options.platform, options.credentials)
 
     // Prepare request payload for Capgo backend
     const requestPayload: {
@@ -275,7 +275,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       credentials?: BuildCredentials
     } = {
       app_id: appId,
-      platform: options.lane,
+      platform: options.platform,
     }
 
     // Add credentials if available (either saved or provided)
@@ -291,7 +291,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.error('❌ No credentials found for this app and platform')
         log.error('')
         log.error('You must save credentials before building:')
-        log.error(`  npx @capgo/cli build credentials save --appId ${appId} --platform ${options.lane}`)
+        log.error(`  npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
         log.error('')
         log.error('Documentation:')
         log.error('  https://capgo.app/docs/cli/cloud-build/credentials/#saving-ios-credentials')
@@ -401,7 +401,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
 
       // Poll for final status
-      const finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.lane, options.apikey, silent)
+      const finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
 
       if (!silent) {
         if (finalStatus === 'succeeded') {

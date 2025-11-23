@@ -360,7 +360,7 @@ export interface RequestBuildOptions {
   /** Path to project directory */
   path?: string
   /** Fastlane lane - must be exactly "ios" or "android" */
-  lane: 'ios' | 'android'
+  platform: 'ios' | 'android'
   /**
    * Credentials for signing and publishing to stores
    *
@@ -1003,7 +1003,7 @@ export class CapgoSDK {
         supaHost: options.supaHost || this.supaHost,
         supaAnon: options.supaAnon || this.supaAnon,
         path: options.path,
-        lane: options.lane,
+        platform: options.platform,
         credentials: options.credentials,
         userId: options.userId,
       }
