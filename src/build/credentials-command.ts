@@ -25,6 +25,7 @@ interface SaveCredentialsOptions {
   appleKey?: string
   appleKeyId?: string
   appleIssuerId?: string
+  appleProfileName?: string
   appleTeamId?: string
 
   // Android options
@@ -127,6 +128,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.APPLE_KEY_ID = options.appleKeyId
       if (options.appleIssuerId)
         credentials.APPLE_ISSUER_ID = options.appleIssuerId
+      if (options.appleProfileName)
+        credentials.APPLE_PROFILE_NAME = options.appleProfileName
       if (options.appleTeamId)
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
     }
