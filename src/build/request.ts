@@ -33,7 +33,7 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
-import { createSupabaseClient, findSavedKey, getConfig, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
 
 /**
@@ -261,6 +261,9 @@ async function zipDirectory(projectDir: string, outputPath: string): Promise<voi
  * - Builds sent directly to app stores - Capgo keeps nothing
  */
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
+  // Track build time
+  const buildStartTime = Date.now()
+
   try {
     options.apikey = options.apikey || findSavedKey(silent)
     const config = await getConfig()
@@ -274,6 +277,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
     await verifyUser(supabase, options.apikey, ['write', 'all'])
+
+    // Get organization ID for analytics
+    const orgId = await getOrganizationId(supabase, appId)
 
     if (!silent) {
       log.info(`Requesting native build for ${appId}`)
@@ -462,6 +468,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Status: ${buildRequest.status}`)
     }
 
+    // Send analytics event for build request
+    await sendEvent(options.apikey, {
+      channel: 'native-builder',
+      event: 'Build requested',
+      icon: '🏗️',
+      user_id: orgId,
+      tags: {
+        'app-id': appId,
+        'platform': options.platform,
+      },
+      notify: false,
+    }).catch()
+
     // Create temporary directory for zip
     const tempDir = join(tmpdir(), `capgo-build-${Date.now()}`)
     await mkdir(tempDir, { recursive: true })
@@ -545,6 +564,24 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           log.warn(`Build finished with status: ${finalStatus}`)
         }
       }
+
+      // Calculate build time (in seconds with 2 decimal places, matching upload behavior)
+      const buildTime = ((Date.now() - buildStartTime) / 1000).toFixed(2)
+
+      // Send analytics event for build result (includes build time)
+      await sendEvent(options.apikey, {
+        channel: 'native-builder',
+        event: finalStatus === 'succeeded' ? 'Build succeeded' : 'Build failed',
+        icon: finalStatus === 'succeeded' ? '✅' : '❌',
+        user_id: orgId,
+        tags: {
+          'app-id': appId,
+          'platform': options.platform,
+          'status': finalStatus || 'unknown',
+          'time': buildTime,
+        },
+        notify: false,
+      }).catch()
 
       return {
         success: finalStatus === 'succeeded',

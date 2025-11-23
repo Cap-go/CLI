@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
-import { getAppId, getConfig } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, getOrganizationId, sendEvent } from '../utils'
 import {
   clearSavedCredentials,
   convertFilesToCredentials,
@@ -256,6 +256,29 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
 
     // Save credentials for this specific app
     await updateSavedCredentials(appId, platform, fileCredentials)
+
+    // Send analytics event
+    try {
+      const apikey = findSavedKey(true)
+      if (apikey) {
+        const supabase = await createSupabaseClient(apikey)
+        const orgId = await getOrganizationId(supabase, appId)
+        await sendEvent(apikey, {
+          channel: 'credentials',
+          event: 'Credentials saved',
+          icon: '🔐',
+          user_id: orgId,
+          tags: {
+            'app-id': appId,
+            'platform': platform,
+          },
+          notify: false,
+        }).catch()
+      }
+    }
+    catch {
+      // Silently ignore analytics errors
+    }
 
     log.success(`\n✅ ${platform.toUpperCase()} credentials saved successfully for ${appId}!`)
     log.info(`   Location: ~/.capgo-credentials/credentials.json`)
