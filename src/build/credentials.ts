@@ -126,6 +126,8 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.APPLE_ISSUER_ID = env.APPLE_ISSUER_ID
   if (env.APPLE_KEY_CONTENT)
     credentials.APPLE_KEY_CONTENT = env.APPLE_KEY_CONTENT
+  if (env.APPLE_PROFILE_NAME)
+    credentials.APPLE_PROFILE_NAME = env.APPLE_PROFILE_NAME
   if (env.APP_STORE_CONNECT_TEAM_ID)
     credentials.APP_STORE_CONNECT_TEAM_ID = env.APP_STORE_CONNECT_TEAM_ID
 
