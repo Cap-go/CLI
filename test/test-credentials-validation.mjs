@@ -47,21 +47,21 @@ await test('iOS validation requires certificate, password, and provisioning prof
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
-  // Either App Store Connect API key OR Apple ID credentials required
-  const hasApiKey = credentials.APPLE_KEY_ID
-    && credentials.APPLE_ISSUER_ID
-    && credentials.APPLE_KEY_CONTENT
-    && credentials.APP_STORE_CONNECT_TEAM_ID
+  // App Store Connect API key credentials required
+  if (!credentials.APPLE_KEY_ID)
+    missingCreds.push('APPLE_KEY_ID')
+  if (!credentials.APPLE_ISSUER_ID)
+    missingCreds.push('APPLE_ISSUER_ID')
+  if (!credentials.APPLE_KEY_CONTENT)
+    missingCreds.push('APPLE_KEY_CONTENT')
+  if (!credentials.APP_STORE_CONNECT_TEAM_ID)
+    missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
 
-  const hasAppleId = credentials.APPLE_ID
-    && credentials.APPLE_APP_SPECIFIC_PASSWORD
-
-  if (!hasApiKey && !hasAppleId) {
-    missingCreds.push('Auth credentials')
-  }
-
-  assert(missingCreds.length === 1, 'Should have exactly 1 missing item (auth)')
-  assert(missingCreds[0] === 'Auth credentials', 'Should require auth credentials')
+  assert(missingCreds.length === 4, 'Should have 4 missing API key credentials')
+  assert(missingCreds.includes('APPLE_KEY_ID'), 'Should require APPLE_KEY_ID')
+  assert(missingCreds.includes('APPLE_ISSUER_ID'), 'Should require APPLE_ISSUER_ID')
+  assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
+  assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
 })
 
 // Test 2: iOS accepts App Store Connect API key
@@ -85,54 +85,18 @@ await test('iOS validation accepts App Store Connect API key', () => {
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
-  const hasApiKey = credentials.APPLE_KEY_ID
-    && credentials.APPLE_ISSUER_ID
-    && credentials.APPLE_KEY_CONTENT
-    && credentials.APP_STORE_CONNECT_TEAM_ID
-
-  const hasAppleId = credentials.APPLE_ID
-    && credentials.APPLE_APP_SPECIFIC_PASSWORD
-
-  if (!hasApiKey && !hasAppleId) {
-    missingCreds.push('Auth credentials')
-  }
+  if (!credentials.APPLE_KEY_ID)
+    missingCreds.push('APPLE_KEY_ID')
+  if (!credentials.APPLE_ISSUER_ID)
+    missingCreds.push('APPLE_ISSUER_ID')
+  if (!credentials.APPLE_KEY_CONTENT)
+    missingCreds.push('APPLE_KEY_CONTENT')
+  if (!credentials.APP_STORE_CONNECT_TEAM_ID)
+    missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
 
   assert(missingCreds.length === 0, 'Should have no missing credentials with API key')
 })
 
-// Test 3: iOS accepts Apple ID credentials
-await test('iOS validation accepts Apple ID credentials', () => {
-  const credentials = {
-    BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
-    APPLE_ID: 'test@example.com',
-    APPLE_APP_SPECIFIC_PASSWORD: 'apppass',
-  }
-
-  const missingCreds = []
-
-  if (!credentials.BUILD_CERTIFICATE_BASE64)
-    missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
-  if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
-    missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
-
-  const hasApiKey = credentials.APPLE_KEY_ID
-    && credentials.APPLE_ISSUER_ID
-    && credentials.APPLE_KEY_CONTENT
-    && credentials.APP_STORE_CONNECT_TEAM_ID
-
-  const hasAppleId = credentials.APPLE_ID
-    && credentials.APPLE_APP_SPECIFIC_PASSWORD
-
-  if (!hasApiKey && !hasAppleId) {
-    missingCreds.push('Auth credentials')
-  }
-
-  assert(missingCreds.length === 0, 'Should have no missing credentials with Apple ID')
-})
 
 // Test 4: Android requires minimum credentials
 await test('Android validation requires keystore and passwords', () => {
@@ -228,56 +192,20 @@ await test('iOS validation fails with incomplete API key credentials', () => {
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
-  const hasApiKey = credentials.APPLE_KEY_ID
-    && credentials.APPLE_ISSUER_ID
-    && credentials.APPLE_KEY_CONTENT
-    && credentials.APP_STORE_CONNECT_TEAM_ID
+  if (!credentials.APPLE_KEY_ID)
+    missingCreds.push('APPLE_KEY_ID')
+  if (!credentials.APPLE_ISSUER_ID)
+    missingCreds.push('APPLE_ISSUER_ID')
+  if (!credentials.APPLE_KEY_CONTENT)
+    missingCreds.push('APPLE_KEY_CONTENT')
+  if (!credentials.APP_STORE_CONNECT_TEAM_ID)
+    missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
 
-  const hasAppleId = credentials.APPLE_ID
-    && credentials.APPLE_APP_SPECIFIC_PASSWORD
-
-  if (!hasApiKey && !hasAppleId) {
-    missingCreds.push('Auth credentials')
-  }
-
-  assert(missingCreds.length === 1, 'Should have missing auth credentials')
-  assert(!hasApiKey, 'Should not accept partial API key')
+  assert(missingCreds.length === 2, 'Should have 2 missing credentials (APPLE_KEY_CONTENT and APP_STORE_CONNECT_TEAM_ID)')
+  assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
+  assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
 })
 
-// Test 8: iOS fails with partial Apple ID
-await test('iOS validation fails with incomplete Apple ID credentials', () => {
-  const credentials = {
-    BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
-    APPLE_ID: 'test@example.com',
-    // Missing APPLE_APP_SPECIFIC_PASSWORD
-  }
-
-  const missingCreds = []
-
-  if (!credentials.BUILD_CERTIFICATE_BASE64)
-    missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
-  if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
-    missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
-
-  const hasApiKey = credentials.APPLE_KEY_ID
-    && credentials.APPLE_ISSUER_ID
-    && credentials.APPLE_KEY_CONTENT
-    && credentials.APP_STORE_CONNECT_TEAM_ID
-
-  const hasAppleId = credentials.APPLE_ID
-    && credentials.APPLE_APP_SPECIFIC_PASSWORD
-
-  if (!hasApiKey && !hasAppleId) {
-    missingCreds.push('Auth credentials')
-  }
-
-  assert(missingCreds.length === 1, 'Should have missing auth credentials')
-  assert(!hasAppleId, 'Should not accept partial Apple ID')
-})
 
 // Print summary
 console.log('\n' + '='.repeat(50))

@@ -358,8 +358,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.error('❌ No credentials found for this app and platform')
         log.error('')
         log.error('You must provide credentials via:')
-        log.error('  1. CLI arguments (--apple-id, --p12-password, etc.)')
-        log.error('  2. Environment variables (APPLE_ID, P12_PASSWORD, etc.)')
+        log.error('  1. CLI arguments (--apple-key-id, --p12-password, etc.)')
+        log.error('  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)')
         log.error('  3. Saved credentials file:')
         log.error(`     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
         log.error('')
@@ -381,18 +381,15 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
 
-      // Either App Store Connect API key OR Apple ID credentials required
-      const hasApiKey = mergedCredentials.APPLE_KEY_ID
-        && mergedCredentials.APPLE_ISSUER_ID
-        && mergedCredentials.APPLE_KEY_CONTENT
-        && mergedCredentials.APP_STORE_CONNECT_TEAM_ID
-
-      const hasAppleId = mergedCredentials.APPLE_ID
-        && mergedCredentials.APPLE_APP_SPECIFIC_PASSWORD
-
-      if (!hasApiKey && !hasAppleId) {
-        missingCreds.push('Either (APPLE_KEY_ID + APPLE_ISSUER_ID + APPLE_KEY_CONTENT + APP_STORE_CONNECT_TEAM_ID) OR (APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD)')
-      }
+      // App Store Connect API key credentials required
+      if (!mergedCredentials.APPLE_KEY_ID)
+        missingCreds.push('APPLE_KEY_ID (or --apple-key-id)')
+      if (!mergedCredentials.APPLE_ISSUER_ID)
+        missingCreds.push('APPLE_ISSUER_ID (or --apple-issuer-id)')
+      if (!mergedCredentials.APPLE_KEY_CONTENT)
+        missingCreds.push('APPLE_KEY_CONTENT (or --apple-key-content)')
+      if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
+        missingCreds.push('APP_STORE_CONNECT_TEAM_ID (or --apple-team-id)')
     }
     else if (options.platform === 'android') {
       // Android minimum requirements

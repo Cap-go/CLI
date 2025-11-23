@@ -198,18 +198,15 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
 
-      // Either App Store Connect API key OR Apple ID credentials required
-      const hasApiKey = fileCredentials.APPLE_KEY_ID
-        && fileCredentials.APPLE_ISSUER_ID
-        && fileCredentials.APPLE_KEY_CONTENT
-        && fileCredentials.APP_STORE_CONNECT_TEAM_ID
-
-      const hasAppleId = fileCredentials.APPLE_ID
-        && fileCredentials.APPLE_APP_SPECIFIC_PASSWORD
-
-      if (!hasApiKey && !hasAppleId) {
-        missingCreds.push('Either:\n    App Store Connect API: --apple-key, --apple-key-id, --apple-issuer-id, --apple-team-id\n    OR Apple ID: --apple-id, --apple-app-password')
-      }
+      // App Store Connect API key credentials required
+      if (!fileCredentials.APPLE_KEY_ID)
+        missingCreds.push('--apple-key-id <id> (App Store Connect API Key ID)')
+      if (!fileCredentials.APPLE_ISSUER_ID)
+        missingCreds.push('--apple-issuer-id <id> (App Store Connect Issuer ID)')
+      if (!fileCredentials.APPLE_KEY_CONTENT)
+        missingCreds.push('--apple-key <path> (App Store Connect API Key file)')
+      if (!fileCredentials.APP_STORE_CONNECT_TEAM_ID)
+        missingCreds.push('--apple-team-id <id> (App Store Connect Team ID)')
     }
     else if (platform === 'android') {
       // Android minimum requirements
@@ -236,8 +233,10 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('    --certificate ./cert.p12 \\')
         log.error('    --p12-password "your-password" \\')
         log.error('    --provisioning-profile ./profile.mobileprovision \\')
-        log.error('    --apple-id "your@email.com" \\')
-        log.error('    --apple-app-password "xxxx-xxxx-xxxx-xxxx"')
+        log.error('    --apple-key ./AuthKey_XXXXXXXXXX.p8 \\')
+        log.error('    --apple-key-id "XXXXXXXXXX" \\')
+        log.error('    --apple-issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \\')
+        log.error('    --apple-team-id "XXXXXXXXXX"')
       }
       else {
         log.error('  npx @capgo/cli build credentials save --platform android \\')
