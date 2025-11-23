@@ -61,7 +61,9 @@
     "test:version-edge-cases": "bun test/test-version-validation.mjs",
     "test:regex": "bun test/test-regex-validation.mjs",
     "test:upload": "bun test/test-upload-validation.mjs",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload"
+    "test:credentials": "bun test/test-credentials.mjs",
+    "test:credentials-validation": "bun test/test-credentials-validation.mjs",
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^6.1.0",

@@ -998,14 +998,31 @@ export class CapgoSDK {
    */
   async requestBuild(options: RequestBuildOptions): Promise<SDKResult<{ jobId: string, uploadUrl: string, status: string }>> {
     try {
+      // Convert BuildCredentials object to flattened CLI-compatible format
+      const creds = options.credentials
       const internalOptions: BuildRequestOptions = {
         apikey: options.apikey || this.apikey || findSavedKey(true),
         supaHost: options.supaHost || this.supaHost,
         supaAnon: options.supaAnon || this.supaAnon,
         path: options.path,
         platform: options.platform,
-        credentials: options.credentials,
         userId: options.userId,
+        // Flatten BuildCredentials to individual fields
+        buildCertificateBase64: creds?.BUILD_CERTIFICATE_BASE64,
+        buildProvisionProfileBase64: creds?.BUILD_PROVISION_PROFILE_BASE64,
+        buildProvisionProfileBase64Prod: creds?.BUILD_PROVISION_PROFILE_BASE64_PROD,
+        p12Password: creds?.P12_PASSWORD,
+        appleId: creds?.APPLE_ID,
+        appleAppSpecificPassword: creds?.APPLE_APP_SPECIFIC_PASSWORD,
+        appleKeyId: creds?.APPLE_KEY_ID,
+        appleIssuerId: creds?.APPLE_ISSUER_ID,
+        appleKeyContent: creds?.APPLE_KEY_CONTENT,
+        appStoreConnectTeamId: creds?.APP_STORE_CONNECT_TEAM_ID,
+        androidKeystoreFile: creds?.ANDROID_KEYSTORE_FILE,
+        keystoreKeyAlias: creds?.KEYSTORE_KEY_ALIAS,
+        keystoreKeyPassword: creds?.KEYSTORE_KEY_PASSWORD,
+        keystoreStorePassword: creds?.KEYSTORE_STORE_PASSWORD,
+        playConfigJson: creds?.PLAY_CONFIG_JSON,
       }
 
       const result = await requestBuildInternal(options.appId, internalOptions, true)

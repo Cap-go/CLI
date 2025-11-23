@@ -68,12 +68,34 @@ export interface BuildCredentials {
   [key: string]: string | undefined
 }
 
+/**
+ * CLI options for build request command
+ * All BuildCredentials fields are flattened as individual CLI options
+ */
 export interface BuildRequestOptions extends OptionsBase {
   path?: string
   platform: 'ios' | 'android' // Required: must be exactly "ios" or "android"
   buildMode?: 'debug' | 'release' // Build mode (default: release)
-  credentials?: BuildCredentials
   userId?: string // User ID for the build job
+
+  // iOS credential options (flattened from BuildCredentials)
+  buildCertificateBase64?: string
+  buildProvisionProfileBase64?: string
+  buildProvisionProfileBase64Prod?: string
+  p12Password?: string
+  appleId?: string
+  appleAppSpecificPassword?: string
+  appleKeyId?: string
+  appleIssuerId?: string
+  appleKeyContent?: string
+  appStoreConnectTeamId?: string
+
+  // Android credential options (flattened from BuildCredentials)
+  androidKeystoreFile?: string
+  keystoreKeyAlias?: string
+  keystoreKeyPassword?: string
+  keystoreStorePassword?: string
+  playConfigJson?: string
 }
 
 export interface BuildRequestResponse {
@@ -264,9 +286,48 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
     }
 
-    // Merge saved credentials with provided credentials
-    // Provided credentials take precedence over saved ones
-    const mergedCredentials = await mergeCredentials(appId, options.platform, options.credentials)
+    // Collect credentials from CLI args (if provided)
+    const cliCredentials: Partial<BuildCredentials> = {}
+    if (options.buildCertificateBase64)
+      cliCredentials.BUILD_CERTIFICATE_BASE64 = options.buildCertificateBase64
+    if (options.buildProvisionProfileBase64)
+      cliCredentials.BUILD_PROVISION_PROFILE_BASE64 = options.buildProvisionProfileBase64
+    if (options.buildProvisionProfileBase64Prod)
+      cliCredentials.BUILD_PROVISION_PROFILE_BASE64_PROD = options.buildProvisionProfileBase64Prod
+    if (options.p12Password)
+      cliCredentials.P12_PASSWORD = options.p12Password
+    if (options.appleId)
+      cliCredentials.APPLE_ID = options.appleId
+    if (options.appleAppSpecificPassword)
+      cliCredentials.APPLE_APP_SPECIFIC_PASSWORD = options.appleAppSpecificPassword
+    if (options.appleKeyId)
+      cliCredentials.APPLE_KEY_ID = options.appleKeyId
+    if (options.appleIssuerId)
+      cliCredentials.APPLE_ISSUER_ID = options.appleIssuerId
+    if (options.appleKeyContent)
+      cliCredentials.APPLE_KEY_CONTENT = options.appleKeyContent
+    if (options.appStoreConnectTeamId)
+      cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId
+    if (options.androidKeystoreFile)
+      cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
+    if (options.keystoreKeyAlias)
+      cliCredentials.KEYSTORE_KEY_ALIAS = options.keystoreKeyAlias
+    if (options.keystoreKeyPassword)
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+    if (options.keystoreStorePassword)
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+    if (options.playConfigJson)
+      cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
+
+    // Merge credentials from all three sources:
+    // 1. CLI args (highest priority)
+    // 2. Environment variables (middle priority)
+    // 3. Saved credentials file (lowest priority)
+    const mergedCredentials = await mergeCredentials(
+      appId,
+      options.platform,
+      Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
+    )
 
     // Prepare request payload for Capgo backend
     const requestPayload: {
@@ -278,26 +339,89 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       platform: options.platform,
     }
 
-    // Add credentials if available (either saved or provided)
-    if (mergedCredentials) {
-      requestPayload.credentials = mergedCredentials
-      if (!silent) {
-        log.info('✓ Using credentials (saved + provided)')
-      }
-    }
-    else {
-      // No credentials found - fail early with helpful message
+    // Validate required credentials for the platform
+    if (!mergedCredentials) {
       if (!silent) {
         log.error('❌ No credentials found for this app and platform')
         log.error('')
-        log.error('You must save credentials before building:')
-        log.error(`  npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
+        log.error('You must provide credentials via:')
+        log.error('  1. CLI arguments (--apple-id, --p12-password, etc.)')
+        log.error('  2. Environment variables (APPLE_ID, P12_PASSWORD, etc.)')
+        log.error('  3. Saved credentials file:')
+        log.error(`     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
         log.error('')
         log.error('Documentation:')
-        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/#saving-ios-credentials')
-        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/#saving-android-credentials')
+        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/')
       }
-      throw new Error('No credentials found. Please save credentials before building.')
+      throw new Error('No credentials found. Please provide credentials before building.')
+    }
+
+    // Validate platform-specific required credentials
+    const missingCreds: string[] = []
+
+    if (options.platform === 'ios') {
+      // iOS minimum requirements
+      if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
+        missingCreds.push('BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)')
+      if (!mergedCredentials.P12_PASSWORD)
+        missingCreds.push('P12_PASSWORD (or --p12-password)')
+      if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
+        missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
+
+      // Either App Store Connect API key OR Apple ID credentials required
+      const hasApiKey = mergedCredentials.APPLE_KEY_ID
+        && mergedCredentials.APPLE_ISSUER_ID
+        && mergedCredentials.APPLE_KEY_CONTENT
+        && mergedCredentials.APP_STORE_CONNECT_TEAM_ID
+
+      const hasAppleId = mergedCredentials.APPLE_ID
+        && mergedCredentials.APPLE_APP_SPECIFIC_PASSWORD
+
+      if (!hasApiKey && !hasAppleId) {
+        missingCreds.push('Either (APPLE_KEY_ID + APPLE_ISSUER_ID + APPLE_KEY_CONTENT + APP_STORE_CONNECT_TEAM_ID) OR (APPLE_ID + APPLE_APP_SPECIFIC_PASSWORD)')
+      }
+    }
+    else if (options.platform === 'android') {
+      // Android minimum requirements
+      if (!mergedCredentials.ANDROID_KEYSTORE_FILE)
+        missingCreds.push('ANDROID_KEYSTORE_FILE (or --android-keystore-file)')
+      if (!mergedCredentials.KEYSTORE_KEY_ALIAS)
+        missingCreds.push('KEYSTORE_KEY_ALIAS (or --keystore-key-alias)')
+      if (!mergedCredentials.KEYSTORE_KEY_PASSWORD)
+        missingCreds.push('KEYSTORE_KEY_PASSWORD (or --keystore-key-password)')
+      if (!mergedCredentials.KEYSTORE_STORE_PASSWORD)
+        missingCreds.push('KEYSTORE_STORE_PASSWORD (or --keystore-store-password)')
+
+      // PLAY_CONFIG_JSON is optional for build, but required for upload to Play Store
+      // So we warn but don't fail
+      if (!mergedCredentials.PLAY_CONFIG_JSON && !silent) {
+        log.warn('⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store')
+      }
+    }
+
+    if (missingCreds.length > 0) {
+      if (!silent) {
+        log.error(`❌ Missing required credentials for ${options.platform}:`)
+        log.error('')
+        for (const cred of missingCreds) {
+          log.error(`  • ${cred}`)
+        }
+        log.error('')
+        log.error('Provide credentials via:')
+        log.error('  1. CLI arguments: npx @capgo/cli build request --platform ios --apple-id "..." --p12-password "..."')
+        log.error('  2. Environment variables: export APPLE_ID="..." P12_PASSWORD="..."')
+        log.error('  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...')
+        log.error('')
+        log.error('Documentation:')
+        log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
+      }
+      throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
+    }
+
+    // Add credentials to request payload
+    requestPayload.credentials = mergedCredentials
+    if (!silent) {
+      log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
     }
 
     // Request build from Capgo backend (POST /build/request)

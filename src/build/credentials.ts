@@ -104,25 +104,77 @@ async function saveAllCredentials(credentials: AllCredentials): Promise<void> {
 }
 
 /**
- * Merge saved credentials with provided credentials
- * Provided credentials take precedence
+ * Load credentials from environment variables
+ * Only returns credentials that are actually set in env
+ */
+export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
+  const credentials: Partial<BuildCredentials> = {}
+
+  // iOS credentials
+  if (process.env.BUILD_CERTIFICATE_BASE64)
+    credentials.BUILD_CERTIFICATE_BASE64 = process.env.BUILD_CERTIFICATE_BASE64
+  if (process.env.BUILD_PROVISION_PROFILE_BASE64)
+    credentials.BUILD_PROVISION_PROFILE_BASE64 = process.env.BUILD_PROVISION_PROFILE_BASE64
+  if (process.env.BUILD_PROVISION_PROFILE_BASE64_PROD)
+    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = process.env.BUILD_PROVISION_PROFILE_BASE64_PROD
+  if (process.env.P12_PASSWORD)
+    credentials.P12_PASSWORD = process.env.P12_PASSWORD
+  if (process.env.APPLE_ID)
+    credentials.APPLE_ID = process.env.APPLE_ID
+  if (process.env.APPLE_APP_SPECIFIC_PASSWORD)
+    credentials.APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD
+  if (process.env.APPLE_KEY_ID)
+    credentials.APPLE_KEY_ID = process.env.APPLE_KEY_ID
+  if (process.env.APPLE_ISSUER_ID)
+    credentials.APPLE_ISSUER_ID = process.env.APPLE_ISSUER_ID
+  if (process.env.APPLE_KEY_CONTENT)
+    credentials.APPLE_KEY_CONTENT = process.env.APPLE_KEY_CONTENT
+  if (process.env.APP_STORE_CONNECT_TEAM_ID)
+    credentials.APP_STORE_CONNECT_TEAM_ID = process.env.APP_STORE_CONNECT_TEAM_ID
+
+  // Android credentials
+  if (process.env.ANDROID_KEYSTORE_FILE)
+    credentials.ANDROID_KEYSTORE_FILE = process.env.ANDROID_KEYSTORE_FILE
+  if (process.env.KEYSTORE_KEY_ALIAS)
+    credentials.KEYSTORE_KEY_ALIAS = process.env.KEYSTORE_KEY_ALIAS
+  if (process.env.KEYSTORE_KEY_PASSWORD)
+    credentials.KEYSTORE_KEY_PASSWORD = process.env.KEYSTORE_KEY_PASSWORD
+  if (process.env.KEYSTORE_STORE_PASSWORD)
+    credentials.KEYSTORE_STORE_PASSWORD = process.env.KEYSTORE_STORE_PASSWORD
+  if (process.env.PLAY_CONFIG_JSON)
+    credentials.PLAY_CONFIG_JSON = process.env.PLAY_CONFIG_JSON
+
+  return credentials
+}
+
+/**
+ * Merge credentials from all three sources with proper precedence:
+ * 1. CLI arguments (highest priority)
+ * 2. Environment variables (middle priority)
+ * 3. Saved credentials file (lowest priority)
  */
 export async function mergeCredentials(
   appId: string,
   platform: 'ios' | 'android',
-  provided?: BuildCredentials,
+  cliArgs?: Partial<BuildCredentials>,
 ): Promise<BuildCredentials | undefined> {
+  // Load from all three sources
   const saved = await loadSavedCredentials(appId)
+  const envCreds = loadCredentialsFromEnv()
 
-  if (!saved || !saved[platform]) {
-    return provided
+  // Start with saved credentials (lowest priority)
+  const merged: Partial<BuildCredentials> = { ...(saved?.[platform] || {}) }
+
+  // Merge env vars (middle priority)
+  Object.assign(merged, envCreds)
+
+  // Merge CLI args (highest priority)
+  if (cliArgs) {
+    Object.assign(merged, cliArgs)
   }
 
-  // Merge saved with provided, provided takes precedence
-  return {
-    ...saved[platform],
-    ...provided,
-  }
+  // Return undefined if no credentials found at all
+  return Object.keys(merged).length > 0 ? (merged as BuildCredentials) : undefined
 }
 
 /**
