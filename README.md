@@ -938,6 +938,7 @@ npx @capgo/cli@latest build request com.example.app --platform ios --path .
 | **--apple-key-id** | <code>string</code> | iOS: App Store Connect API Key ID |
 | **--apple-issuer-id** | <code>string</code> | iOS: App Store Connect Issuer ID |
 | **--apple-key-content** | <code>string</code> | iOS: Base64-encoded App Store Connect API key (.p8) |
+| **--apple-profile-name** | <code>string</code> | iOS: Provisioning profile name |
 | **--app-store-connect-team-id** | <code>string</code> | iOS: App Store Connect Team ID |
 | **--android-keystore-file** | <code>string</code> | Android: Base64-encoded keystore file |
 | **--keystore-key-alias** | <code>string</code> | Android: Keystore key alias |
