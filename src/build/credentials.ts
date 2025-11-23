@@ -23,6 +23,7 @@ import type { BuildCredentials } from './request'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
+import { env } from 'node:process'
 
 const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
@@ -111,38 +112,38 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const credentials: Partial<BuildCredentials> = {}
 
   // iOS credentials
-  if (process.env.BUILD_CERTIFICATE_BASE64)
-    credentials.BUILD_CERTIFICATE_BASE64 = process.env.BUILD_CERTIFICATE_BASE64
-  if (process.env.BUILD_PROVISION_PROFILE_BASE64)
-    credentials.BUILD_PROVISION_PROFILE_BASE64 = process.env.BUILD_PROVISION_PROFILE_BASE64
-  if (process.env.BUILD_PROVISION_PROFILE_BASE64_PROD)
-    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = process.env.BUILD_PROVISION_PROFILE_BASE64_PROD
-  if (process.env.P12_PASSWORD)
-    credentials.P12_PASSWORD = process.env.P12_PASSWORD
-  if (process.env.APPLE_ID)
-    credentials.APPLE_ID = process.env.APPLE_ID
-  if (process.env.APPLE_APP_SPECIFIC_PASSWORD)
-    credentials.APPLE_APP_SPECIFIC_PASSWORD = process.env.APPLE_APP_SPECIFIC_PASSWORD
-  if (process.env.APPLE_KEY_ID)
-    credentials.APPLE_KEY_ID = process.env.APPLE_KEY_ID
-  if (process.env.APPLE_ISSUER_ID)
-    credentials.APPLE_ISSUER_ID = process.env.APPLE_ISSUER_ID
-  if (process.env.APPLE_KEY_CONTENT)
-    credentials.APPLE_KEY_CONTENT = process.env.APPLE_KEY_CONTENT
-  if (process.env.APP_STORE_CONNECT_TEAM_ID)
-    credentials.APP_STORE_CONNECT_TEAM_ID = process.env.APP_STORE_CONNECT_TEAM_ID
+  if (env.BUILD_CERTIFICATE_BASE64)
+    credentials.BUILD_CERTIFICATE_BASE64 = env.BUILD_CERTIFICATE_BASE64
+  if (env.BUILD_PROVISION_PROFILE_BASE64)
+    credentials.BUILD_PROVISION_PROFILE_BASE64 = env.BUILD_PROVISION_PROFILE_BASE64
+  if (env.BUILD_PROVISION_PROFILE_BASE64_PROD)
+    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = env.BUILD_PROVISION_PROFILE_BASE64_PROD
+  if (env.P12_PASSWORD)
+    credentials.P12_PASSWORD = env.P12_PASSWORD
+  if (env.APPLE_ID)
+    credentials.APPLE_ID = env.APPLE_ID
+  if (env.APPLE_APP_SPECIFIC_PASSWORD)
+    credentials.APPLE_APP_SPECIFIC_PASSWORD = env.APPLE_APP_SPECIFIC_PASSWORD
+  if (env.APPLE_KEY_ID)
+    credentials.APPLE_KEY_ID = env.APPLE_KEY_ID
+  if (env.APPLE_ISSUER_ID)
+    credentials.APPLE_ISSUER_ID = env.APPLE_ISSUER_ID
+  if (env.APPLE_KEY_CONTENT)
+    credentials.APPLE_KEY_CONTENT = env.APPLE_KEY_CONTENT
+  if (env.APP_STORE_CONNECT_TEAM_ID)
+    credentials.APP_STORE_CONNECT_TEAM_ID = env.APP_STORE_CONNECT_TEAM_ID
 
   // Android credentials
-  if (process.env.ANDROID_KEYSTORE_FILE)
-    credentials.ANDROID_KEYSTORE_FILE = process.env.ANDROID_KEYSTORE_FILE
-  if (process.env.KEYSTORE_KEY_ALIAS)
-    credentials.KEYSTORE_KEY_ALIAS = process.env.KEYSTORE_KEY_ALIAS
-  if (process.env.KEYSTORE_KEY_PASSWORD)
-    credentials.KEYSTORE_KEY_PASSWORD = process.env.KEYSTORE_KEY_PASSWORD
-  if (process.env.KEYSTORE_STORE_PASSWORD)
-    credentials.KEYSTORE_STORE_PASSWORD = process.env.KEYSTORE_STORE_PASSWORD
-  if (process.env.PLAY_CONFIG_JSON)
-    credentials.PLAY_CONFIG_JSON = process.env.PLAY_CONFIG_JSON
+  if (env.ANDROID_KEYSTORE_FILE)
+    credentials.ANDROID_KEYSTORE_FILE = env.ANDROID_KEYSTORE_FILE
+  if (env.KEYSTORE_KEY_ALIAS)
+    credentials.KEYSTORE_KEY_ALIAS = env.KEYSTORE_KEY_ALIAS
+  if (env.KEYSTORE_KEY_PASSWORD)
+    credentials.KEYSTORE_KEY_PASSWORD = env.KEYSTORE_KEY_PASSWORD
+  if (env.KEYSTORE_STORE_PASSWORD)
+    credentials.KEYSTORE_STORE_PASSWORD = env.KEYSTORE_STORE_PASSWORD
+  if (env.PLAY_CONFIG_JSON)
+    credentials.PLAY_CONFIG_JSON = env.PLAY_CONFIG_JSON
 
   return credentials
 }
@@ -261,7 +262,8 @@ export async function clearSavedCredentials(appId?: string, platform?: 'ios' | '
   if (Object.keys(saved).length === 0) {
     // If no platforms left, remove the app entry
     delete all[appId]
-  } else {
+  }
+  else {
     all[appId] = saved
   }
 
