@@ -27,8 +27,9 @@
  */
 
 import type { OptionsBase } from '../utils'
-import { spawn } from 'node:child_process'
-import { mkdir, readFile, rm, stat } from 'node:fs/promises'
+import AdmZip from 'adm-zip'
+import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs'
+import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process from 'node:process'
@@ -218,29 +219,156 @@ async function pollBuildStatus(
   return 'timeout'
 }
 
-async function zipDirectory(projectDir: string, outputPath: string): Promise<void> {
-  return new Promise((resolvePromise, reject) => {
-    const args = ['-rq', outputPath, '.']
-    const child = spawn('zip', args, { cwd: projectDir, stdio: 'inherit' })
+/**
+ * Extract native node_modules dependencies from iOS Podfile or Android settings.gradle
+ * Returns paths to ONLY the platform-specific subfolder (e.g., node_modules/@capacitor/app/ios)
+ */
+async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<Set<string>> {
+  const dependencies = new Set<string>()
 
-    child.on('error', (error: NodeJS.ErrnoException) => {
-      if (error.code === 'ENOENT') {
-        reject(new Error('zip command not found. Please install zip utility.'))
+  if (platform === 'ios') {
+    // Parse iOS Podfile
+    const podfilePath = join(projectDir, 'ios/App/Podfile')
+    if (existsSync(podfilePath)) {
+      const podfileContent = await readFileAsync(podfilePath, 'utf-8')
+      // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
+      const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
+      for (const match of podMatches) {
+        const packagePath = match[1]
+        // For iOS, we need:
+        // - Package.swift (for Swift Package Manager)
+        // - *.podspec (for CocoaPods)
+        // - ios/ subfolder (native code)
+        dependencies.add(`node_modules/${packagePath}/Package.swift`)
+        dependencies.add(`node_modules/${packagePath}/*.podspec`)
+        dependencies.add(`node_modules/${packagePath}/ios/`)
       }
-      else {
-        reject(error)
+    }
+  }
+  else if (platform === 'android') {
+    // Parse Android capacitor.settings.gradle
+    const settingsGradlePath = join(projectDir, 'android/capacitor.settings.gradle')
+    if (existsSync(settingsGradlePath)) {
+      const settingsContent = await readFileAsync(settingsGradlePath, 'utf-8')
+      // Match lines like: project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
+      const gradleMatches = settingsContent.matchAll(/new\s+File\s*\(\s*['"]\.\.\/node_modules\/([^'"]+)['"]\s*\)/g)
+      for (const match of gradleMatches) {
+        // Extract the full path which already includes /android
+        const fullPath = match[1]
+        const packagePath = fullPath.replace(/\/android$/, '')
+        // For Android, we only need the android/ subfolder (contains build.gradle, etc.)
+        dependencies.add(`node_modules/${packagePath}/android/`)
       }
-    })
+    }
+  }
 
-    child.on('close', (code) => {
-      if (code === 0) {
-        resolvePromise()
+  return dependencies
+}
+
+/**
+ * Check if a file path should be included in the zip
+ */
+function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: Set<string>): boolean {
+  // Normalize path separators
+  const normalizedPath = filePath.replace(/\\/g, '/')
+
+  // Always include platform folder
+  if (normalizedPath.startsWith(`${platform}/`))
+    return true
+
+  // Always include config files at root
+  if (normalizedPath === 'package.json' || normalizedPath === 'package-lock.json' || normalizedPath.startsWith('capacitor.config.'))
+    return true
+
+  // Include resources folder
+  if (normalizedPath.startsWith('resources/'))
+    return true
+
+  // Include @capacitor core for the platform
+  if (platform === 'ios' && normalizedPath.startsWith('node_modules/@capacitor/ios/'))
+    return true
+  if (platform === 'android' && normalizedPath.startsWith('node_modules/@capacitor/android/'))
+    return true
+
+  // Check if file is in one of the native dependencies
+  for (const dep of nativeDeps) {
+    if (normalizedPath.startsWith(dep))
+      return true
+  }
+
+  return false
+}
+
+/**
+ * Recursively add directory to zip with filtering
+ */
+function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platform: 'ios' | 'android', nativeDeps: Set<string>) {
+  const items = readdirSync(dirPath)
+
+  for (const item of items) {
+    const itemPath = join(dirPath, item)
+    const itemZipPath = zipPath ? `${zipPath}/${item}` : item
+    const stats = statSync(itemPath)
+
+    if (stats.isDirectory()) {
+      // Skip excluded directories
+      if (item === '.git' || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite')
+        continue
+
+      // Always recurse into the platform folder (ios/ or android/)
+      if (item === platform) {
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        continue
       }
-      else {
-        reject(new Error(`zip process exited with code ${code}`))
+
+      // Always recurse into node_modules (we filter inside)
+      if (item === 'node_modules') {
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        continue
       }
-    })
-  })
+
+      // For resources folder, always recurse
+      if (item === 'resources') {
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        continue
+      }
+
+      // For other directories, check if any file inside might be included
+      // This handles nested node_modules dependencies
+      if (shouldIncludeFile(itemZipPath, platform, nativeDeps)) {
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+      }
+    }
+    else if (stats.isFile()) {
+      // Skip excluded files
+      if (item === '.DS_Store' || item.endsWith('.log'))
+        continue
+
+      // Check if we should include this file
+      if (shouldIncludeFile(itemZipPath, platform, nativeDeps)) {
+        zip.addLocalFile(itemPath, zipPath || undefined)
+      }
+    }
+  }
+}
+
+/**
+ * Zip directory for native build, including only necessary files:
+ * - ios/ OR android/ folder (based on platform)
+ * - node_modules with native code (from Podfile/settings.gradle)
+ * - capacitor.config.*, package.json, package-lock.json
+ */
+async function zipDirectory(projectDir: string, outputPath: string, platform: 'ios' | 'android'): Promise<void> {
+  // Extract which node_modules have native code for this platform
+  const nativeDeps = await extractNativeDependencies(projectDir, platform)
+
+  const zip = new AdmZip()
+
+  // Add files with filtering
+  addDirectoryToZip(zip, projectDir, '', platform, nativeDeps)
+
+  // Write zip to file
+  await writeFile(outputPath, zip.toBuffer())
 }
 
 /**
@@ -386,8 +514,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       // iOS minimum requirements
       if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
         missingCreds.push('BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)')
-      if (!mergedCredentials.P12_PASSWORD)
-        missingCreds.push('P12_PASSWORD (or --p12-password)')
+      // Note: P12_PASSWORD is optional - certificates can have no password
+      // But we warn if it's missing in case the user forgot
+      if (!mergedCredentials.P12_PASSWORD && !silent) {
+        log.warn('⚠️  P12_PASSWORD not provided - assuming certificate has no password')
+        log.warn('   If your certificate requires a password, provide it with --p12-password')
+      }
       if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
 
@@ -497,9 +629,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     try {
       // Zip the project directory
       if (!silent)
-        log.info(`Zipping project from ${projectDir}...`)
+        log.info(`Zipping ${options.platform} project from ${projectDir}...`)
 
-      await zipDirectory(projectDir, zipPath)
+      await zipDirectory(projectDir, zipPath, options.platform)
 
       const zipStats = await stat(zipPath)
       const sizeMB = (zipStats.size / 1024 / 1024).toFixed(2)
@@ -507,27 +639,51 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       if (!silent)
         log.success(`Created zip: ${zipPath} (${sizeMB} MB)`)
 
-      // Upload to presigned R2 URL
+      // Upload to presigned R2 URL using streaming for large files
       if (!silent)
         log.info('Uploading to builder...')
 
-      const fileBuffer = await readFile(zipPath)
-      const uploadResponse = await fetch(buildRequest.upload_url, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/zip',
-          'Content-Length': String(zipStats.size),
-        },
-        body: fileBuffer,
-      })
+      // Create abort controller with 10 minute timeout for large files
+      const abortController = new AbortController()
+      const timeoutId = setTimeout(() => abortController.abort(), 10 * 60 * 1000)
 
-      if (!uploadResponse.ok) {
-        const errorText = await uploadResponse.text()
-        throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+      try {
+        // Use streaming for better memory efficiency with large files
+        const fileStream = createReadStream(zipPath)
+
+        const uploadResponse = await fetch(buildRequest.upload_url, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/zip',
+            'Content-Length': String(zipStats.size),
+          },
+          body: fileStream as any,
+          signal: abortController.signal,
+          duplex: 'half',
+        } as RequestInit)
+
+        clearTimeout(timeoutId)
+
+        if (!uploadResponse.ok) {
+          const errorText = await uploadResponse.text()
+          throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
+        }
+
+        if (!silent)
+          log.success('Upload complete!')
       }
-
-      if (!silent)
-        log.success('Upload complete!')
+      catch (error) {
+        clearTimeout(timeoutId)
+        if (error instanceof Error) {
+          if (error.name === 'AbortError') {
+            throw new Error('Upload timed out after 10 minutes. Please check your network connection.')
+          }
+          if (error.message === 'fetch failed') {
+            throw new Error(`Failed to upload to build server. This could be due to:\n  - Network connectivity issues\n  - Invalid or expired upload URL\n  - Firewall or proxy blocking the connection\n  - Server unavailable\n\nOriginal error: ${error.message}\nUpload URL: ${buildRequest.upload_url}`)
+          }
+        }
+        throw error
+      }
 
       // Start the build job via Capgo backend
       if (!silent)

@@ -571,7 +571,7 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--build-certificate-base64 <cert>', 'iOS: Base64-encoded .p12 certificate')
   .option('--build-provision-profile-base64 <profile>', 'iOS: Base64-encoded provisioning profile')
   .option('--build-provision-profile-base64-prod <profile>', 'iOS: Base64-encoded production provisioning profile')
-  .option('--p12-password <password>', 'iOS: Certificate password')
+  .option('--p12-password <password>', 'iOS: Certificate password (optional if cert has no password)')
   .option('--apple-id <email>', 'iOS: Apple ID email')
   .option('--apple-app-specific-password <password>', 'iOS: App-specific password')
   .option('--apple-key-id <id>', 'iOS: App Store Connect API Key ID')
@@ -616,11 +616,12 @@ iOS Example:
     --appId com.example.app \\
     --platform ios \\
     --certificate ./cert.p12 \\
-    --p12-password "password" \\
+    --p12-password "password" \\  # Optional if cert has no password
     --provisioning-profile ./profile.mobileprovision \\
     --apple-key ./AuthKey.p8 \\
     --apple-key-id "KEY123" \\
     --apple-issuer-id "issuer-uuid" \\
+    --apple-profile-name "My App Profile" \\
     --apple-team-id "team-id"
 
 Android Example:
@@ -639,7 +640,7 @@ Android Example:
   .option('--certificate <path>', 'iOS: Path to .p12 certificate file')
   .option('--provisioning-profile <path>', 'iOS: Path to provisioning profile (.mobileprovision)')
   .option('--provisioning-profile-prod <path>', 'iOS: Path to production provisioning profile')
-  .option('--p12-password <password>', 'iOS: Certificate password')
+  .option('--p12-password <password>', 'iOS: Certificate password (optional if cert has no password)')
   .option('--apple-key <path>', 'iOS: Path to .p8 App Store Connect API key')
   .option('--apple-key-id <id>', 'iOS: App Store Connect API Key ID')
   .option('--apple-issuer-id <id>', 'iOS: App Store Connect Issuer ID')

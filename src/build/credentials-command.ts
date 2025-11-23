@@ -124,6 +124,11 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // Passwords and IDs (not files)
       if (options.p12Password)
         credentials.P12_PASSWORD = options.p12Password
+      else if (files.BUILD_CERTIFICATE_FILE) {
+        // Warn if certificate is provided but no password
+        log.warn('⚠️  No P12 password provided - assuming certificate has no password')
+        log.warn('   If your certificate requires a password, add --p12-password "your-password"')
+      }
       if (options.appleKeyId)
         credentials.APPLE_KEY_ID = options.appleKeyId
       if (options.appleIssuerId)
@@ -190,8 +195,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // iOS minimum requirements
       if (!fileCredentials.BUILD_CERTIFICATE_BASE64)
         missingCreds.push('--certificate <path> (P12 certificate file)')
-      if (!fileCredentials.P12_PASSWORD)
-        missingCreds.push('--p12-password <password> (Certificate password)')
+      // Note: P12_PASSWORD is optional - certificates can have no password
       if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
 
@@ -204,6 +208,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         missingCreds.push('--apple-key <path> (App Store Connect API Key file)')
       if (!fileCredentials.APP_STORE_CONNECT_TEAM_ID)
         missingCreds.push('--apple-team-id <id> (App Store Connect Team ID)')
+      if (!fileCredentials.APPLE_PROFILE_NAME)
+        missingCreds.push('--apple-profile-name <name> (Provisioning profile name)')
     }
     else if (platform === 'android') {
       // Android minimum requirements
@@ -232,12 +238,13 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       if (platform === 'ios') {
         log.error('  npx @capgo/cli build credentials save --platform ios \\')
         log.error('    --certificate ./cert.p12 \\')
-        log.error('    --p12-password "your-password" \\')
+        log.error('    --p12-password "your-password" \\  # Optional if cert has no password')
         log.error('    --provisioning-profile ./profile.mobileprovision \\')
         log.error('    --apple-key ./AuthKey_XXXXXXXXXX.p8 \\')
         log.error('    --apple-key-id "XXXXXXXXXX" \\')
         log.error('    --apple-issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \\')
-        log.error('    --apple-team-id "XXXXXXXXXX"')
+        log.error('    --apple-team-id "XXXXXXXXXX" \\')
+        log.error('    --apple-profile-name "match AppStore com.example.app"')
       }
       else {
         log.error('  npx @capgo/cli build credentials save --platform android \\')
