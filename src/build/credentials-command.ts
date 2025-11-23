@@ -161,14 +161,96 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // Passwords and aliases (not files)
       if (options.keystoreAlias)
         credentials.KEYSTORE_KEY_ALIAS = options.keystoreAlias
-      if (options.keystoreKeyPassword)
+
+      // If only one password is provided, use it for both key and store
+      const hasKeyPassword = !!options.keystoreKeyPassword
+      const hasStorePassword = !!options.keystoreStorePassword
+
+      if (hasKeyPassword && !hasStorePassword) {
+        // Use key password for both
         credentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
-      if (options.keystoreStorePassword)
+        credentials.KEYSTORE_STORE_PASSWORD = options.keystoreKeyPassword
+      }
+      else if (!hasKeyPassword && hasStorePassword) {
+        // Use store password for both
+        credentials.KEYSTORE_KEY_PASSWORD = options.keystoreStorePassword
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+      }
+      else if (hasKeyPassword && hasStorePassword) {
+        // Both provided, use separately
+        credentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+        credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+      }
     }
 
     // Convert files to base64 and merge with other credentials
     const fileCredentials = await convertFilesToCredentials(platform, files, credentials)
+
+    // Validate minimum required credentials for each platform
+    const missingCreds: string[] = []
+
+    if (platform === 'ios') {
+      // iOS minimum requirements
+      if (!fileCredentials.BUILD_CERTIFICATE_BASE64)
+        missingCreds.push('--certificate <path> (P12 certificate file)')
+      if (!fileCredentials.P12_PASSWORD)
+        missingCreds.push('--p12-password <password> (Certificate password)')
+      if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
+        missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
+
+      // Either App Store Connect API key OR Apple ID credentials required
+      const hasApiKey = fileCredentials.APPLE_KEY_ID
+        && fileCredentials.APPLE_ISSUER_ID
+        && fileCredentials.APPLE_KEY_CONTENT
+        && fileCredentials.APP_STORE_CONNECT_TEAM_ID
+
+      const hasAppleId = fileCredentials.APPLE_ID
+        && fileCredentials.APPLE_APP_SPECIFIC_PASSWORD
+
+      if (!hasApiKey && !hasAppleId) {
+        missingCreds.push('Either:\n    App Store Connect API: --apple-key, --apple-key-id, --apple-issuer-id, --apple-team-id\n    OR Apple ID: --apple-id, --apple-app-password')
+      }
+    }
+    else if (platform === 'android') {
+      // Android minimum requirements
+      if (!fileCredentials.ANDROID_KEYSTORE_FILE)
+        missingCreds.push('--keystore <path> (Keystore file)')
+      if (!fileCredentials.KEYSTORE_KEY_ALIAS)
+        missingCreds.push('--keystore-alias <alias> (Keystore alias)')
+
+      // For Android, we need at least one password (will be used for both if only one provided)
+      if (!fileCredentials.KEYSTORE_KEY_PASSWORD && !fileCredentials.KEYSTORE_STORE_PASSWORD)
+        missingCreds.push('--keystore-key-password <password> OR --keystore-store-password <password> (At least one password required, will be used for both)')
+    }
+
+    if (missingCreds.length > 0) {
+      log.error(`❌ Missing required credentials for ${platform.toUpperCase()}:`)
+      log.error('')
+      for (const cred of missingCreds) {
+        log.error(`  • ${cred}`)
+      }
+      log.error('')
+      log.error('Example:')
+      if (platform === 'ios') {
+        log.error('  npx @capgo/cli build credentials save --platform ios \\')
+        log.error('    --certificate ./cert.p12 \\')
+        log.error('    --p12-password "your-password" \\')
+        log.error('    --provisioning-profile ./profile.mobileprovision \\')
+        log.error('    --apple-id "your@email.com" \\')
+        log.error('    --apple-app-password "xxxx-xxxx-xxxx-xxxx"')
+      }
+      else {
+        log.error('  npx @capgo/cli build credentials save --platform android \\')
+        log.error('    --keystore ./release.keystore \\')
+        log.error('    --keystore-alias "my-key-alias" \\')
+        log.error('    --keystore-key-password "password"')
+        log.error('')
+        log.error('  Note: If both key and store passwords are the same, you only need to provide one.')
+        log.error('        If they differ, provide both --keystore-key-password and --keystore-store-password.')
+      }
+      log.error('')
+      process.exit(1)
+    }
 
     // Save credentials for this specific app
     await updateSavedCredentials(appId, platform, fileCredentials)

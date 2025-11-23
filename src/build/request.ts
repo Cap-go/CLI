@@ -312,10 +312,23 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
     if (options.keystoreKeyAlias)
       cliCredentials.KEYSTORE_KEY_ALIAS = options.keystoreKeyAlias
-    if (options.keystoreKeyPassword)
+
+    // For Android: if only one password is provided, use it for both key and store
+    const hasKeyPassword = !!options.keystoreKeyPassword
+    const hasStorePassword = !!options.keystoreStorePassword
+    if (hasKeyPassword && !hasStorePassword) {
       cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
-    if (options.keystoreStorePassword)
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreKeyPassword
+    }
+    else if (!hasKeyPassword && hasStorePassword) {
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreStorePassword
       cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+    }
+    else if (hasKeyPassword && hasStorePassword) {
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+    }
+
     if (options.playConfigJson)
       cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
 
@@ -387,10 +400,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         missingCreds.push('ANDROID_KEYSTORE_FILE (or --android-keystore-file)')
       if (!mergedCredentials.KEYSTORE_KEY_ALIAS)
         missingCreds.push('KEYSTORE_KEY_ALIAS (or --keystore-key-alias)')
-      if (!mergedCredentials.KEYSTORE_KEY_PASSWORD)
-        missingCreds.push('KEYSTORE_KEY_PASSWORD (or --keystore-key-password)')
-      if (!mergedCredentials.KEYSTORE_STORE_PASSWORD)
-        missingCreds.push('KEYSTORE_STORE_PASSWORD (or --keystore-store-password)')
+
+      // For Android, we need at least one password (will be used for both if only one provided)
+      // The merging logic above handles using one password for both
+      if (!mergedCredentials.KEYSTORE_KEY_PASSWORD && !mergedCredentials.KEYSTORE_STORE_PASSWORD)
+        missingCreds.push('KEYSTORE_KEY_PASSWORD or KEYSTORE_STORE_PASSWORD (at least one password required)')
 
       // PLAY_CONFIG_JSON is optional for build, but required for upload to Play Store
       // So we warn but don't fail

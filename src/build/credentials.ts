@@ -174,6 +174,19 @@ export async function mergeCredentials(
     Object.assign(merged, cliArgs)
   }
 
+  // For Android: if only one password is provided, use it for both
+  if (platform === 'android') {
+    const hasKeyPassword = !!merged.KEYSTORE_KEY_PASSWORD
+    const hasStorePassword = !!merged.KEYSTORE_STORE_PASSWORD
+
+    if (hasKeyPassword && !hasStorePassword) {
+      merged.KEYSTORE_STORE_PASSWORD = merged.KEYSTORE_KEY_PASSWORD
+    }
+    else if (!hasKeyPassword && hasStorePassword) {
+      merged.KEYSTORE_KEY_PASSWORD = merged.KEYSTORE_STORE_PASSWORD
+    }
+  }
+
   // Return undefined if no credentials found at all
   return Object.keys(merged).length > 0 ? (merged as BuildCredentials) : undefined
 }
