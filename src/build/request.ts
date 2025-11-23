@@ -410,6 +410,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     }
 
     const projectDir = resolve(options.path || process.cwd())
+    const host = options.supaHost || 'https://api.capgo.app'
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
     await verifyUser(supabase, options.apikey, ['write', 'all'])
@@ -421,6 +422,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Requesting native build for ${appId}`)
       log.info(`Platform: ${options.platform}`)
       log.info(`Project: ${projectDir}`)
+      log.info(`API host: ${host}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
       log.info(`   They are used only during build and deleted after (max 24h)`)
       log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
@@ -581,7 +583,6 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (!silent)
       log.info('Requesting build from Capgo...')
 
-    const host = options.supaHost || 'https://api.capgo.app'
     const response = await fetch(`${host}/build/request`, {
       method: 'POST',
       headers: {
@@ -606,6 +607,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (!silent) {
       log.success(`Build job created: ${buildRequest.job_id}`)
       log.info(`Status: ${buildRequest.status}`)
+      log.info(`Upload URL: ${buildRequest.upload_url}`)
+      log.info(`Upload expires: ${buildRequest.upload_expires_at}`)
     }
 
     // Send analytics event for build request
@@ -666,6 +669,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
         if (!uploadResponse.ok) {
           const errorText = await uploadResponse.text()
+          if (!silent) {
+            log.error(`Upload failed to: ${buildRequest.upload_url}`)
+            log.error(`HTTP Status: ${uploadResponse.status} ${uploadResponse.statusText}`)
+            log.error(`Response: ${errorText}`)
+            log.error(`Job ID: ${buildRequest.job_id}`)
+          }
           throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
         }
 
