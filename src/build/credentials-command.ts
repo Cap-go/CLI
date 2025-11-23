@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { log } from '@clack/prompts'
+import { getAppId, getConfig } from '../utils'
 import {
   clearSavedCredentials,
   convertFilesToCredentials,
@@ -52,13 +53,21 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       process.exit(1)
     }
 
-    if (!options.appId) {
-      log.error('App ID is required. Use --appId com.example.app')
+    // Try to infer appId from capacitor.config if not provided
+    const extConfig = await getConfig()
+    const appId = getAppId(options.appId, extConfig?.config)
+
+    if (!appId) {
+      log.error('❌ App ID is required.')
+      log.error('')
+      log.error('Either:')
+      log.error('  1. Run this command from a Capacitor project directory, OR')
+      log.error('  2. Provide --appId explicitly: --appId com.example.app')
+      log.error('')
       process.exit(1)
     }
 
     const platform = options.platform
-    const appId = options.appId
 
     // Display security notice
     log.info('\n🔒 SECURITY NOTICE:')
@@ -183,14 +192,18 @@ export async function listCredentialsCommand(options?: { appId?: string }): Prom
 
     if (appIds.length === 0) {
       log.info('No saved credentials found.')
-      log.info('Use: npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>')
+      log.info('Use: npx @capgo/cli build credentials save --platform <ios|android>')
       return
     }
 
     log.info('\n📋 Saved Build Credentials:\n')
 
-    // If specific appId is provided, only show that one
-    const appsToShow = options?.appId ? [options.appId] : appIds
+    // Try to infer appId from capacitor.config if not provided
+    const extConfig = await getConfig()
+    const inferredAppId = options?.appId || getAppId(undefined, extConfig?.config)
+
+    // If specific appId is provided or inferred, only show that one
+    const appsToShow = inferredAppId ? [inferredAppId] : appIds
 
     for (const appId of appsToShow) {
       const saved = await loadSavedCredentials(appId)
@@ -257,30 +270,34 @@ export async function listCredentialsCommand(options?: { appId?: string }): Prom
  */
 export async function clearCredentialsCommand(options: { appId?: string, platform?: 'ios' | 'android' }): Promise<void> {
   try {
-    if (options.appId && options.platform) {
+    // Try to infer appId from capacitor.config if not explicitly provided
+    const extConfig = await getConfig()
+    const appId = options.appId || getAppId(undefined, extConfig?.config)
+
+    if (appId && options.platform) {
       // Clear specific platform for specific app
-      const current = await getSavedCredentials(options.appId, options.platform)
+      const current = await getSavedCredentials(appId, options.platform)
       if (!current) {
-        log.info(`No ${options.platform.toUpperCase()} credentials found for ${options.appId}.`)
+        log.info(`No ${options.platform.toUpperCase()} credentials found for ${appId}.`)
         return
       }
 
-      await clearSavedCredentials(options.appId, options.platform)
-      log.success(`✅ ${options.platform.toUpperCase()} credentials cleared for ${options.appId}!`)
+      await clearSavedCredentials(appId, options.platform)
+      log.success(`✅ ${options.platform.toUpperCase()} credentials cleared for ${appId}!`)
     }
-    else if (options.appId) {
+    else if (appId) {
       // Clear all platforms for specific app
-      const saved = await loadSavedCredentials(options.appId)
+      const saved = await loadSavedCredentials(appId)
       if (!saved || (!saved.ios && !saved.android)) {
-        log.info(`No credentials found for ${options.appId}.`)
+        log.info(`No credentials found for ${appId}.`)
         return
       }
 
-      await clearSavedCredentials(options.appId)
-      log.success(`✅ All credentials cleared for ${options.appId}!`)
+      await clearSavedCredentials(appId)
+      log.success(`✅ All credentials cleared for ${appId}!`)
     }
     else {
-      // Clear everything
+      // Clear everything (no appId provided or inferred)
       const appIds = await listAllApps()
       if (appIds.length === 0) {
         log.info('No saved credentials found.')
