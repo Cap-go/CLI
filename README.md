@@ -929,6 +929,21 @@ npx @capgo/cli@latest build request com.example.app --platform ios --path .
 | **--platform** | <code>string</code> | Target platform: ios or android (required) |
 | **--build-mode** | <code>string</code> | Build mode: debug or release (default: release) |
 | **--build-config** | <code>string</code> | Additional build configuration as JSON string |
+| **--build-certificate-base64** | <code>string</code> | iOS: Base64-encoded .p12 certificate |
+| **--build-provision-profile-base64** | <code>string</code> | iOS: Base64-encoded provisioning profile |
+| **--build-provision-profile-base64-prod** | <code>string</code> | iOS: Base64-encoded production provisioning profile |
+| **--p12-password** | <code>string</code> | iOS: Certificate password |
+| **--apple-id** | <code>string</code> | iOS: Apple ID email |
+| **--apple-app-specific-password** | <code>string</code> | iOS: App-specific password |
+| **--apple-key-id** | <code>string</code> | iOS: App Store Connect API Key ID |
+| **--apple-issuer-id** | <code>string</code> | iOS: App Store Connect Issuer ID |
+| **--apple-key-content** | <code>string</code> | iOS: Base64-encoded App Store Connect API key (.p8) |
+| **--app-store-connect-team-id** | <code>string</code> | iOS: App Store Connect Team ID |
+| **--android-keystore-file** | <code>string</code> | Android: Base64-encoded keystore file |
+| **--keystore-key-alias** | <code>string</code> | Android: Keystore key alias |
+| **--keystore-key-password** | <code>string</code> | Android: Keystore key password |
+| **--keystore-store-password** | <code>string</code> | Android: Keystore store password |
+| **--play-config-json** | <code>string</code> | Android: Base64-encoded Google Play service account JSON |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
