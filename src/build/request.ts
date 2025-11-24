@@ -674,7 +674,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
             filetype: 'application/zip',
           },
           headers: {
-            'authorization': options.apikey,
+            authorization: options.apikey,
           },
           // Callback before request is sent
           onBeforeRequest(req) {

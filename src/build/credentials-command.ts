@@ -122,8 +122,9 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       }
 
       // Passwords and IDs (not files)
-      if (options.p12Password)
+      if (options.p12Password) {
         credentials.P12_PASSWORD = options.p12Password
+      }
       else if (files.BUILD_CERTIFICATE_FILE) {
         // Warn if certificate is provided but no password
         log.warn('⚠️  No P12 password provided - assuming certificate has no password')
