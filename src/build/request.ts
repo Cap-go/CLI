@@ -27,13 +27,14 @@
  */
 
 import type { OptionsBase } from '../utils'
-import AdmZip from 'adm-zip'
-import { createReadStream, existsSync, readdirSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process from 'node:process'
-import { log } from '@clack/prompts'
+import { log, spinner as spinnerC } from '@clack/prompts'
+import AdmZip from 'adm-zip'
+import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
 
@@ -642,57 +643,102 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       if (!silent)
         log.success(`Created zip: ${zipPath} (${sizeMB} MB)`)
 
-      // Upload to presigned R2 URL using streaming for large files
+      // Upload to builder using TUS protocol
+      if (!silent) {
+        log.info('Uploading to builder with TUS protocol...')
+        log.info(`Upload endpoint: ${buildRequest.upload_url}`)
+        log.info(`File size: ${sizeMB} MB`)
+        log.info(`Job ID: ${buildRequest.job_id}`)
+      }
+
+      // Read zip file into buffer for TUS upload
+      const zipBuffer = readFileSync(zipPath)
+
+      // Upload using TUS protocol
+      const spinner = spinnerC()
       if (!silent)
-        log.info('Uploading to builder...')
+        spinner.start('Uploading bundle')
 
-      // Create abort controller with 10 minute timeout for large files
-      const abortController = new AbortController()
-      const timeoutId = setTimeout(() => abortController.abort(), 10 * 60 * 1000)
-
-      try {
-        // Use streaming for better memory efficiency with large files
-        const fileStream = createReadStream(zipPath)
-
-        const uploadResponse = await fetch(buildRequest.upload_url, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/zip',
-            'Content-Length': String(zipStats.size),
+      await new Promise<void>((resolve, reject) => {
+        const upload = new tus.Upload(zipBuffer as any, {
+          endpoint: buildRequest.upload_url,
+          chunkSize: 5 * 1024 * 1024, // 5MB chunks
+          metadata: {
+            filename: basename(zipPath),
+            filetype: 'application/zip',
           },
-          body: fileStream as any,
-          signal: abortController.signal,
-          duplex: 'half',
-        } as RequestInit)
+          headers: {
+            'authorization': options.apikey,
+          },
+          // Callback before request is sent
+          onBeforeRequest(req) {
+            if (!silent) {
+              log.info(`[TUS] ${req.getMethod()} ${req.getURL()}`)
+              const authHeader = req.getHeader('authorization')
+              log.info(`[TUS] Authorization header present: ${!!authHeader}`)
+            }
+          },
+          // Callback after response is received
+          onAfterResponse(_req, res) {
+            if (!silent) {
+              log.info(`[TUS] Response status: ${res.getStatus()}`)
+              const uploadOffset = res.getHeader('upload-offset')
+              const tusResumable = res.getHeader('tus-resumable')
+              log.info(`[TUS] Upload-Offset: ${uploadOffset}, Tus-Resumable: ${tusResumable}`)
+            }
+          },
+          // Callback for errors which cannot be fixed using retries
+          onError(error) {
+            if (!silent) {
+              spinner.stop('Upload failed')
+              log.error(`[TUS] Upload error: ${error.message}`)
+            }
+            if (error instanceof tus.DetailedError) {
+              const body = error.originalResponse?.getBody()
+              const status = error.originalResponse?.getStatus()
+              const url = error.originalRequest?.getURL()
 
-        clearTimeout(timeoutId)
+              if (!silent) {
+                log.error(`[TUS] Request URL: ${url}`)
+                log.error(`[TUS] Response status: ${status}`)
+                log.error(`[TUS] Response body: ${body}`)
+              }
 
-        if (!uploadResponse.ok) {
-          const errorText = await uploadResponse.text()
-          if (!silent) {
-            log.error(`Upload failed to: ${buildRequest.upload_url}`)
-            log.error(`HTTP Status: ${uploadResponse.status} ${uploadResponse.statusText}`)
-            log.error(`Response: ${errorText}`)
-            log.error(`Job ID: ${buildRequest.job_id}`)
-          }
-          throw new Error(`Upload failed: ${uploadResponse.status} - ${errorText}`)
-        }
+              let errorMsg = 'Unknown error'
+              try {
+                const jsonBody = JSON.parse(body || '{"error": "unknown error"}')
+                errorMsg = jsonBody.status || jsonBody.error || jsonBody.message || 'unknown error'
+              }
+              catch {
+                errorMsg = body || error.message
+              }
+              reject(new Error(`TUS upload failed: ${errorMsg}`))
+            }
+            else {
+              reject(new Error(`TUS upload failed: ${error.message || error.toString()}`))
+            }
+          },
+          // Callback for reporting upload progress
+          onProgress(bytesUploaded, bytesTotal) {
+            const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
+            if (!silent)
+              spinner.message(`Uploading ${percentage}%`)
+          },
+          // Callback for once the upload is completed
+          onSuccess() {
+            if (!silent) {
+              spinner.stop('Upload complete!')
+              log.success('TUS upload completed successfully')
+            }
+            resolve()
+          },
+        })
 
+        // Start the upload
         if (!silent)
-          log.success('Upload complete!')
-      }
-      catch (error) {
-        clearTimeout(timeoutId)
-        if (error instanceof Error) {
-          if (error.name === 'AbortError') {
-            throw new Error('Upload timed out after 10 minutes. Please check your network connection.')
-          }
-          if (error.message === 'fetch failed') {
-            throw new Error(`Failed to upload to build server. This could be due to:\n  - Network connectivity issues\n  - Invalid or expired upload URL\n  - Firewall or proxy blocking the connection\n  - Server unavailable\n\nOriginal error: ${error.message}\nUpload URL: ${buildRequest.upload_url}`)
-          }
-        }
-        throw error
-      }
+          log.info('[TUS] Starting upload...')
+        upload.start()
+      })
 
       // Start the build job via Capgo backend
       if (!silent)
