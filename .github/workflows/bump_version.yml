@@ -20,7 +20,7 @@ jobs:
     name: Bump version and create tag
     steps:
       - name: Checkout
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           token: '${{ secrets.PERSONAL_ACCESS_TOKEN }}'
@@ -76,7 +76,7 @@ jobs:
     name: Create global cache on main branch
     steps:
       - name: Checkoutpsuh
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
       - name: Setup bun
         uses: oven-sh/setup-bun@v2
         with:
