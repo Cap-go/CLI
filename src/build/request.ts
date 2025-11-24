@@ -334,9 +334,15 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
         continue
       }
 
-      // For other directories, check if any file inside might be included
-      // This handles nested node_modules dependencies
-      if (shouldIncludeFile(itemZipPath, platform, nativeDeps)) {
+      // For other directories, check if we need to recurse into them
+      // We should recurse if:
+      // 1. This directory itself should be included (matches a pattern)
+      // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
+      const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
+      const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps)
+        || Array.from(nativeDeps).some(dep => dep.startsWith(`${normalizedItemPath}/`))
+
+      if (shouldRecurse) {
         addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
       }
     }
