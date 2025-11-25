@@ -33,6 +33,7 @@ async function fileExists(localConfig: any, filename: string): Promise<boolean> 
 const BROTLI_MIN_SIZE = 8192
 
 // Version required for Brotli support with .br extension
+const BROTLI_MIN_UPDATER_VERSION_V5 = '5.10.0'
 const BROTLI_MIN_UPDATER_VERSION_V6 = '6.25.0'
 const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
 
@@ -51,10 +52,11 @@ async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ versio
   if (!updaterVersion || !coerced)
     return { version: null, supportsBrotliV2: false }
 
-  // Brotli is supported in updater versions >= 6.25.0 (v6) or >= 7.0.35 (v7)
+  // Brotli is supported in updater versions >= 5.10.0 (v5), >= 6.25.0 (v6) or >= 7.0.35 (v7)
+  const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V5))
   const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V6))
   const isV7Compatible = coerced.major >= 7 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V7))
-  const supportsBrotliV2 = isV6Compatible || isV7Compatible
+  const supportsBrotliV2 = isV5Compatible || isV6Compatible || isV7Compatible
 
   return { version: `${coerced.major}.${coerced.minor}.${coerced.patch}`, supportsBrotliV2 }
 }
@@ -197,7 +199,7 @@ export async function uploadPartial(
 
   // Check for incompatible options with older updater versions
   if (!supportsBrotliV2) {
-    throw new Error(`Your project is using an older version of @capgo/capacitor-updater (${version || 'unknown'}). To use Delta updates, please upgrade to version ${BROTLI_MIN_UPDATER_VERSION_V6} (v6) or ${BROTLI_MIN_UPDATER_VERSION_V7} (v7) or higher.`)
+    throw new Error(`Your project is using an older version of @capgo/capacitor-updater (${version || 'unknown'}). To use Delta updates, please upgrade to version ${BROTLI_MIN_UPDATER_VERSION_V5} (v5), ${BROTLI_MIN_UPDATER_VERSION_V6} (v6) or ${BROTLI_MIN_UPDATER_VERSION_V7} (v7) or higher.`)
   }
   else {
     // Only newer versions can use Brotli with .br extension

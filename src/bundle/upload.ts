@@ -231,8 +231,11 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     uploadFail('Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager')
   }
   else if (coerced) {
-    // Use SHA256 for v6.25.0+ and v7.0.0+
-    useSha256 = greaterOrEqual(coerced, parse('6.25.0'))
+    // Use SHA256 for v5.10.0+, v6.25.0+ and v7.0.0+
+    const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse('5.10.0'))
+    const isV6Plus = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
+    const isV7Plus = coerced.major >= 7
+    useSha256 = isV5Compatible || isV6Plus || isV7Plus
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater' || updaterVersion === 'file:..' || updaterVersion === 'file:../') {
     log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')

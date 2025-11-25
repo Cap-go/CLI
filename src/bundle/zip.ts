@@ -148,10 +148,11 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
     }
 
     if (coerced) {
-      // Use sha256 for v6.25.0+ or v7.0.0+
+      // Use sha256 for v5.10.0+, v6.25.0+ or v7.0.0+
+      const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse('5.10.0'))
       const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
       const isV7Compatible = coerced.major >= 7
-      useSha256 = isV6Compatible || isV7Compatible
+      useSha256 = isV5Compatible || isV6Compatible || isV7Compatible
     }
     else if (updaterVersion === 'link:@capgo/capacitor-updater') {
       if (!silent)
