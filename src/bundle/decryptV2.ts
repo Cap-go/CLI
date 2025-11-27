@@ -51,8 +51,8 @@ export async function decryptZipV2Internal(
 
     const extConfig = await getConfig()
 
-    if (!options.key && !existsSync(baseKeyPubV2) && !extConfig.config.plugins?.CapacitorUpdater?.privateKey) {
-      const message = `Private Key not found at the path ${baseKeyPubV2} or in ${extConfig.path}`
+    if (!options.key && !existsSync(baseKeyPubV2) && !extConfig.config.plugins?.CapacitorUpdater?.publicKey) {
+      const message = `Public Key not found at the path ${baseKeyPubV2} or in ${extConfig.path}`
       if (!silent)
         log.error(message)
       throw new Error(message)
