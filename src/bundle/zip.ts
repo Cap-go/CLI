@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
-import { greaterOrEqual, parse } from '@std/semver'
+import { parse } from '@std/semver'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
 import {
@@ -14,6 +14,7 @@ import {
   getBundleVersion,
   getConfig,
   getInstalledVersion,
+  isDeprecatedPluginVersion,
   regexSemver,
   zipFile,
 } from '../utils'
@@ -149,10 +150,7 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
 
     if (coerced) {
       // Use sha256 for v5.10.0+, v6.25.0+ or v7.0.0+
-      const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse('5.10.0'))
-      const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
-      const isV7Compatible = coerced.major >= 7
-      useSha256 = isV5Compatible || isV6Compatible || isV7Compatible
+      useSha256 = !isDeprecatedPluginVersion(coerced, '7.0.0')
     }
     else if (updaterVersion === 'link:@capgo/capacitor-updater') {
       if (!silent)

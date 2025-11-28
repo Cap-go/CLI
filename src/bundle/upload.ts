@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
-import { baseKeyV2, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -231,11 +231,8 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     uploadFail('Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager')
   }
   else if (coerced) {
-    // Use SHA256 for v5.10.0+, v6.25.0+ and v7.0.0+
-    const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse('5.10.0'))
-    const isV6Plus = coerced.major === 6 && greaterOrEqual(coerced, parse('6.25.0'))
-    const isV7Plus = coerced.major >= 7
-    useSha256 = isV5Compatible || isV6Plus || isV7Plus
+    // Use SHA256 for v5.10.0+, v6.25.0+ and v7.0.35+
+    useSha256 = !isDeprecatedPluginVersion(coerced, BROTLI_MIN_UPDATER_VERSION_V7)
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater' || updaterVersion === 'file:..' || updaterVersion === 'file:../') {
     log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')

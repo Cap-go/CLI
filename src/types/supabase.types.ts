@@ -106,6 +106,7 @@ export type Database = {
           manifest:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
             | null
+          manifest_count: number
           min_update_version: string | null
           name: string
           native_packages: Json[] | null
@@ -128,6 +129,7 @@ export type Database = {
           manifest?:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
             | null
+          manifest_count?: number
           min_update_version?: string | null
           name: string
           native_packages?: Json[] | null
@@ -150,6 +152,7 @@ export type Database = {
           manifest?:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
             | null
+          manifest_count?: number
           min_update_version?: string | null
           name?: string
           native_packages?: Json[] | null
@@ -2226,6 +2229,7 @@ export type Database = {
           manifest:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
             | null
+          manifest_count: number
           min_update_version: string | null
           name: string
           native_packages: Json[] | null
@@ -2395,10 +2399,6 @@ export type Database = {
             Args: { batch_size?: number; queue_name: string }
             Returns: undefined
           }
-      process_manifest_bundle_counts_queue: {
-        Args: { batch_size?: number }
-        Returns: number
-      }
       process_stats_email_monthly: { Args: never; Returns: undefined }
       process_stats_email_weekly: { Args: never; Returns: undefined }
       process_subscribed_orgs: { Args: never; Returns: undefined }

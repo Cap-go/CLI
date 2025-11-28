@@ -1,4 +1,7 @@
 import type { InstallCommand, PackageManagerRunner, PackageManagerType } from '@capgo/find-package-manager'
+import type {
+  SemVer,
+} from '@std/semver'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
@@ -11,7 +14,7 @@ import { cwd, env } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
-import { canParse, format, parse, parseRange, rangeIntersects } from '@std/semver'
+import { canParse, format, lessThan, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import AdmZip from 'adm-zip'
 // Native fetch is available in Node.js >= 18
@@ -914,6 +917,25 @@ async function* walkDirectory(dir: string): AsyncGenerator<string> {
       yield fullPath
     }
   }
+}
+
+// Version required for Brotli support with .br extension
+export const BROTLI_MIN_UPDATER_VERSION_V5 = '5.10.0'
+export const BROTLI_MIN_UPDATER_VERSION_V6 = '6.25.0'
+export const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
+
+export function isDeprecatedPluginVersion(parsedPluginVersion: SemVer, minSeven = '7.25.0'): boolean {
+  // v5 is deprecated if < 5.10.0, v6 is deprecated if < 6.25.0, v7 is deprecated if < 7.25.0
+  if (parsedPluginVersion.major === 5 && lessThan(parsedPluginVersion, parse('5.10.0'))) {
+    return true
+  }
+  if (parsedPluginVersion.major === 6 && lessThan(parsedPluginVersion, parse('6.25.0'))) {
+    return true
+  }
+  if (parsedPluginVersion.major === 7 && lessThan(parsedPluginVersion, parse(minSeven))) {
+    return true
+  }
+  return false
 }
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {

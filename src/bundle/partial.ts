@@ -8,12 +8,12 @@ import { cwd } from 'node:process'
 import { buffer as readBuffer } from 'node:stream/consumers'
 import { createBrotliCompress } from 'node:zlib'
 import { log, spinner as spinnerC } from '@clack/prompts'
-import { greaterOrEqual, parse } from '@std/semver'
+import { parse } from '@std/semver'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
-import { findRoot, generateManifest, getInstalledVersion, getLocalConfig, sendEvent } from '../utils'
+import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
 // Check if file already exists on server
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
@@ -32,11 +32,6 @@ async function fileExists(localConfig: any, filename: string): Promise<boolean> 
 // Files smaller than this won't be compressed with Brotli
 const BROTLI_MIN_SIZE = 8192
 
-// Version required for Brotli support with .br extension
-const BROTLI_MIN_UPDATER_VERSION_V5 = '5.10.0'
-const BROTLI_MIN_UPDATER_VERSION_V6 = '6.25.0'
-const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.35'
-
 // Check if the updater version supports .br extension
 async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ version: string | null, supportsBrotliV2: boolean }> {
   const root = findRoot(cwd())
@@ -53,10 +48,7 @@ async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ versio
     return { version: null, supportsBrotliV2: false }
 
   // Brotli is supported in updater versions >= 5.10.0 (v5), >= 6.25.0 (v6) or >= 7.0.35 (v7)
-  const isV5Compatible = coerced.major === 5 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V5))
-  const isV6Compatible = coerced.major === 6 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V6))
-  const isV7Compatible = coerced.major >= 7 && greaterOrEqual(coerced, parse(BROTLI_MIN_UPDATER_VERSION_V7))
-  const supportsBrotliV2 = isV5Compatible || isV6Compatible || isV7Compatible
+  const supportsBrotliV2 = !isDeprecatedPluginVersion(coerced, BROTLI_MIN_UPDATER_VERSION_V7)
 
   return { version: `${coerced.major}.${coerced.minor}.${coerced.patch}`, supportsBrotliV2 }
 }
