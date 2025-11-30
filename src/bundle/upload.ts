@@ -842,6 +842,14 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.encryptPartial && encryptionMethod === 'v1')
     uploadFail('You cannot encrypt the partial update if you are not using the v2 encryption method')
 
+  // Minimum versions that support hex checksum format
+  const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
+  const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
+  const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
+
+  // Check if updater supports hex checksum format
+  let supportsHexChecksum = false
+
   // Auto-encrypt partial updates for updater versions > 6.14.5 if encryption method is v2
   if (options.delta && encryptionMethod === 'v2' && !options.encryptPartial) {
     // Check updater version
@@ -863,10 +871,31 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     }
   }
 
+  // Check if updater supports hex checksum format (for delta updates with encryption)
+  if (options.delta && (options.encryptPartial || encryptionMethod === 'v2')) {
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
+
+    if (updaterVersion && coerced) {
+      // Hex checksum is supported in versions >= 5.30.0, 6.30.0, 7.30.0
+      supportsHexChecksum = !isDeprecatedPluginVersion(coerced, HEX_CHECKSUM_MIN_VERSION_V5, HEX_CHECKSUM_MIN_VERSION_V6, HEX_CHECKSUM_MIN_VERSION_V7)
+
+      if (options.verbose && supportsHexChecksum)
+        log.info(`[Verbose] Using hex checksum format for updater version ${coerced}`)
+    }
+  }
+
   if (options.verbose && options.delta)
     log.info(`[Verbose] Preparing delta/partial update manifest...`)
 
-  const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData) : []
+  const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData, supportsHexChecksum) : []
 
   if (options.verbose && options.delta)
     log.info(`[Verbose] Delta manifest prepared with ${manifest.length} files`)

@@ -150,7 +150,7 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
 
     if (coerced) {
       // Use sha256 for v5.10.0+, v6.25.0+ or v7.0.0+
-      useSha256 = !isDeprecatedPluginVersion(coerced, '7.0.0')
+      useSha256 = !isDeprecatedPluginVersion(coerced, undefined, undefined, '7.0.0')
     }
     else if (updaterVersion === 'link:@capgo/capacitor-updater') {
       if (!silent)

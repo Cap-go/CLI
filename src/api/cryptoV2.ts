@@ -11,6 +11,7 @@ import {
 
 const algorithm = 'aes-128-cbc'
 const formatB64 = 'base64'
+const formatHex = 'hex'
 const padding = constants.RSA_PKCS1_PADDING
 
 export function generateSessionKey(key: string): { sessionKey: Buffer, ivSessionKey: string } {
@@ -62,6 +63,8 @@ export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: strin
 }
 
 export function encryptChecksumV2(checksum: string, key: string): string {
+  // Note: This function incorrectly treats hex checksum as base64, but is kept for backwards compatibility
+  // with older plugin versions. Use encryptChecksumV2Hex for new plugin versions.
   const checksumEncrypted = privateEncrypt(
     {
       key,
@@ -69,6 +72,19 @@ export function encryptChecksumV2(checksum: string, key: string): string {
     },
     Buffer.from(checksum, formatB64),
   ).toString(formatB64)
+
+  return checksumEncrypted
+}
+
+export function encryptChecksumV2Hex(checksum: string, key: string): string {
+  // Correctly treats checksum as hex string and outputs hex for new plugin versions
+  const checksumEncrypted = privateEncrypt(
+    {
+      key,
+      padding,
+    },
+    Buffer.from(checksum, formatHex),
+  ).toString(formatHex)
 
   return checksumEncrypted
 }

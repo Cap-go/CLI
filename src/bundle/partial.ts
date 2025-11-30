@@ -12,7 +12,7 @@ import { parse } from '@std/semver'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
-import { encryptChecksumV2, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptChecksumV2Hex, encryptSourceV2 } from '../api/cryptoV2'
 import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
 // Check if file already exists on server
@@ -48,7 +48,7 @@ async function getUpdaterVersion(uploadOptions: OptionsUpload): Promise<{ versio
     return { version: null, supportsBrotliV2: false }
 
   // Brotli is supported in updater versions >= 5.10.0 (v5), >= 6.25.0 (v6) or >= 7.0.35 (v7)
-  const supportsBrotliV2 = !isDeprecatedPluginVersion(coerced, BROTLI_MIN_UPDATER_VERSION_V7)
+  const supportsBrotliV2 = !isDeprecatedPluginVersion(coerced, undefined, undefined, BROTLI_MIN_UPDATER_VERSION_V7)
 
   return { version: `${coerced.major}.${coerced.minor}.${coerced.patch}`, supportsBrotliV2 }
 }
@@ -119,6 +119,7 @@ export async function prepareBundlePartialFiles(
   appid: string,
   encryptionMethod: 'none' | 'v2' | 'v1',
   finalKeyData: string,
+  supportsHexChecksum: boolean = false,
 ) {
   const spinner = spinnerC()
   spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : 'Generating the update manifest with v2 encryption')
@@ -126,7 +127,10 @@ export async function prepareBundlePartialFiles(
 
   if (encryptionMethod === 'v2') {
     for (const file of manifest) {
-      file.hash = encryptChecksumV2(file.hash, finalKeyData)
+      // Use hex format for new plugin versions, base64 for old versions
+      file.hash = supportsHexChecksum
+        ? encryptChecksumV2Hex(file.hash, finalKeyData)
+        : encryptChecksumV2(file.hash, finalKeyData)
     }
   }
 
@@ -256,8 +260,10 @@ export async function uploadPartial(
       const filePathUnixSafe = encodePathSegments(uploadPathUnix)
       const filename = `orgs/${orgId}/apps/${appId}/delta/${file.hash}_${filePathUnixSafe}`
 
-      // Check if file already exists
-      if (await fileExists(localConfig, filename)) {
+      // Check if file already exists on server
+      // Skip reuse when encryption is enabled because the session key changes per upload
+      // and reusing a file encrypted with a different session key would cause decryption to fail
+      if (!encryptionOptions && await fileExists(localConfig, filename)) {
         uploadedFiles++
         return Promise.resolve({
           file_name: filePathUnixSafe,
