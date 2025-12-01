@@ -76,8 +76,8 @@ export function encryptChecksumV2(checksum: string, key: string): string {
   return checksumEncrypted
 }
 
-export function encryptChecksumV2Hex(checksum: string, key: string): string {
-  // Correctly treats checksum as hex string and outputs hex for new plugin versions
+export function encryptChecksumV3(checksum: string, key: string): string {
+  // V3: Correctly treats checksum as hex string and outputs hex
   const checksumEncrypted = privateEncrypt(
     {
       key,

@@ -12,7 +12,7 @@ import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { checksum as getChecksum } from '../checksum'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
@@ -268,10 +268,14 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
       const keyFile = readFileSync(privateKey)
       keyDataV2 = keyFile.toString()
     }
-    log.info('Encrypting your bundle with V2')
+    // Use V3 encryption for new plugin versions (5.30.0+, 6.30.0+, 7.30.0+)
+    const supportsV3Checksum = coerced && !isDeprecatedPluginVersion(coerced, '5.30.0', '6.30.0', '7.30.0')
+    log.info(`Encrypting your bundle with ${supportsV3Checksum ? 'V3' : 'V2'}`)
     const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
     const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
-    checksum = encryptChecksumV2(checksum, keyDataV2)
+    checksum = supportsV3Checksum
+      ? encryptChecksumV3(checksum, keyDataV2)
+      : encryptChecksumV2(checksum, keyDataV2)
     ivSessionKey = ivKey
     sessionKey = sKey
     encryptionMethod = 'v2'

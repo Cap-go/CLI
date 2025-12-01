@@ -12,7 +12,7 @@ import { parse } from '@std/semver'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
-import { encryptChecksumV2, encryptChecksumV2Hex, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2 } from '../api/cryptoV2'
 import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
 // Check if file already exists on server
@@ -122,14 +122,14 @@ export async function prepareBundlePartialFiles(
   supportsHexChecksum: boolean = false,
 ) {
   const spinner = spinnerC()
-  spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : 'Generating the update manifest with v2 encryption')
+  spinner.start(encryptionMethod !== 'v2' ? 'Generating the update manifest' : `Generating the update manifest with ${supportsHexChecksum ? 'V3' : 'V2'} encryption`)
   const manifest = await generateManifest(path)
 
   if (encryptionMethod === 'v2') {
     for (const file of manifest) {
-      // Use hex format for new plugin versions, base64 for old versions
+      // Use V3 for new plugin versions, V2 for old versions
       file.hash = supportsHexChecksum
-        ? encryptChecksumV2Hex(file.hash, finalKeyData)
+        ? encryptChecksumV3(file.hash, finalKeyData)
         : encryptChecksumV2(file.hash, finalKeyData)
     }
   }
