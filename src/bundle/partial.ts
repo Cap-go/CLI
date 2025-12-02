@@ -1,6 +1,7 @@
 import type { Buffer } from 'node:buffer'
 import type { manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
+import { createHash } from 'node:crypto'
 import { createReadStream, statSync } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
 import { join, posix, win32 } from 'node:path'
@@ -258,7 +259,10 @@ export async function uploadPartial(
       }
 
       const filePathUnixSafe = encodePathSegments(uploadPathUnix)
-      const filename = `orgs/${orgId}/apps/${appId}/delta/${file.hash}_${filePathUnixSafe}`
+      // Use SHA256 of file.hash for filename to keep it short (64 chars)
+      // The full hash (encrypted or not) is preserved in the manifest's file_hash field for plugin verification
+      const filenameHash = createHash('sha256').update(file.hash).digest('hex')
+      const filename = `orgs/${orgId}/apps/${appId}/delta/${filenameHash}_${filePathUnixSafe}`
 
       // Check if file already exists on server
       // Skip reuse when encryption is enabled because the session key changes per upload
