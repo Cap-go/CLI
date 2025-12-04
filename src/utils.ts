@@ -21,7 +21,7 @@ import AdmZip from 'adm-zip'
 import prettyjson from 'prettyjson'
 import * as tus from 'tus-js-client'
 import { markSnag } from './app/debug'
-import { checksum as getChecksum } from './checksum'
+import { getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
 
 export const baseKey = '.capgo_key'

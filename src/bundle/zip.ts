@@ -5,7 +5,7 @@ import { cwd } from 'node:process'
 import { intro, log, outro, spinner } from '@clack/prompts'
 import { parse } from '@std/semver'
 import { checkAlerts } from '../api/update'
-import { checksum as getChecksum } from '../checksum'
+import { getChecksum } from '../checksum'
 import {
   baseKeyV2,
   findRoot,

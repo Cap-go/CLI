@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
 import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { checksum as getChecksum } from '../checksum'
+import { getChecksum } from '../checksum'
 import { baseKeyPubV2, formatError, getConfig } from '../utils'
 
 interface Options {
