@@ -39,7 +39,7 @@ function crc32(buffer: Buffer): string {
  * @param algorithm - Hash algorithm to use ('sha256' or 'crc32')
  * @returns Hexadecimal checksum string
  */
-export async function checksum(
+export async function getChecksum(
   data: Buffer | string,
   algorithm: 'sha256' | 'crc32' = 'sha256',
 ): Promise<string> {

@@ -2157,13 +2157,6 @@ export type Database = {
               total_percent: number
             }[]
           }
-      get_process_cron_stats_job_info: {
-        Args: never
-        Returns: {
-          last_run: string
-          next_run: string
-        }[]
-      }
       get_total_app_storage_size_orgs: {
         Args: { app_id: string; org_id: string }
         Returns: number
