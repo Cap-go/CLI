@@ -1386,11 +1386,26 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
     .map(async ([key, value]) => {
       let dependencyFound = false
       let hasNativeFiles = false
+      let actualVersion = value
 
       for (const modulePath of nodeModulesPaths) {
         const dependencyFolderPath = join(modulePath, key)
         if (existsSync(dependencyFolderPath)) {
           dependencyFound = true
+          // Read actual version from node_modules package.json
+          // This handles catalog:, workspace:, link:, and other special specifiers
+          try {
+            const pkgJsonPath = join(dependencyFolderPath, PACKNAME)
+            if (existsSync(pkgJsonPath)) {
+              const pkgJson = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+              if (pkgJson.version) {
+                actualVersion = pkgJson.version
+              }
+            }
+          }
+          catch {
+            // If we can't read the package.json, fall back to declared version
+          }
           try {
             const files = readDirRecursively(dependencyFolderPath)
             if (files.some(fileName => nativeFileRegex.test(fileName))) {
@@ -1416,7 +1431,7 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
 
       return {
         name: key,
-        version: value,
+        version: actualVersion,
         native: hasNativeFiles,
       }
     })).catch(() => [])

@@ -183,6 +183,20 @@ await runTest(
 )
 
 await runTest(
+  'pnpm catalog: from app dir',
+  join(FIXTURES_DIR, 'pnpm-catalog'),
+  EXPECTED_VERSION,
+  { subdir: 'apps/mobile' }
+)
+
+await runTest(
+  'pnpm catalog: with packageJsonPath',
+  join(FIXTURES_DIR, 'pnpm-catalog'),
+  EXPECTED_VERSION,
+  { packageJsonPath: 'apps/mobile/package.json' }
+)
+
+await runTest(
   'npm workspaces: from app dir',
   join(FIXTURES_DIR, 'npm-workspaces'),
   EXPECTED_VERSION,
@@ -332,6 +346,7 @@ if (failed === 0 && passed > 0) {
   console.log('\n📋 Verified monorepo tools:')
   if (existsSync(join(FIXTURES_DIR, 'yarn-workspaces'))) console.log('   ✓ yarn workspaces')
   if (existsSync(join(FIXTURES_DIR, 'pnpm-workspaces'))) console.log('   ✓ pnpm workspaces')
+  if (existsSync(join(FIXTURES_DIR, 'pnpm-catalog'))) console.log('   ✓ pnpm catalog')
   if (existsSync(join(FIXTURES_DIR, 'npm-workspaces'))) console.log('   ✓ npm workspaces')
   if (existsSync(join(FIXTURES_DIR, 'turborepo'))) console.log('   ✓ Turborepo')
   if (existsSync(join(FIXTURES_DIR, 'nx-monorepo'))) console.log('   ✓ Nx')

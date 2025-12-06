@@ -19,6 +19,7 @@ test/fixtures/pnpm-project/
 test/fixtures/bun-project/
 test/fixtures/yarn-workspaces/
 test/fixtures/pnpm-workspaces/
+test/fixtures/pnpm-catalog/
 test/fixtures/npm-workspaces/
 test/fixtures/turborepo/
 test/fixtures/nx-monorepo/

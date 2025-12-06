@@ -16,6 +16,7 @@ rm -rf "$FIXTURES_DIR/pnpm-project"
 rm -rf "$FIXTURES_DIR/bun-project"
 rm -rf "$FIXTURES_DIR/yarn-workspaces"
 rm -rf "$FIXTURES_DIR/pnpm-workspaces"
+rm -rf "$FIXTURES_DIR/pnpm-catalog"
 rm -rf "$FIXTURES_DIR/npm-workspaces"
 rm -rf "$FIXTURES_DIR/turborepo"
 rm -rf "$FIXTURES_DIR/nx-monorepo"
@@ -159,6 +160,40 @@ cat > apps/mobile/package.json << EOF
 EOF
 pnpm install --silent 2>/dev/null || pnpm install
 echo "   ✓ pnpm workspaces monorepo created"
+
+# ============================================================================
+# 6b. pnpm Workspaces with Catalog (catalog: specifier)
+# ============================================================================
+echo ""
+echo "📀 Creating pnpm workspaces with catalog..."
+mkdir -p "$FIXTURES_DIR/pnpm-catalog/apps/mobile"
+cd "$FIXTURES_DIR/pnpm-catalog"
+cat > package.json << EOF
+{
+  "name": "pnpm-catalog-monorepo",
+  "version": "1.0.0",
+  "private": true
+}
+EOF
+cat > pnpm-workspace.yaml << EOF
+packages:
+  - 'apps/*'
+
+catalog:
+  '@capgo/capacitor-updater': ^$PACKAGE_VERSION
+EOF
+cat > apps/mobile/package.json << EOF
+{
+  "name": "@myorg/mobile",
+  "version": "1.0.0",
+  "private": true,
+  "dependencies": {
+    "$PACKAGE_NAME": "catalog:"
+  }
+}
+EOF
+pnpm install --silent 2>/dev/null || pnpm install
+echo "   ✓ pnpm catalog monorepo created"
 
 # ============================================================================
 # 7. npm Workspaces Monorepo
@@ -416,6 +451,7 @@ echo ""
 echo "  Monorepos:"
 echo "    - $FIXTURES_DIR/yarn-workspaces"
 echo "    - $FIXTURES_DIR/pnpm-workspaces"
+echo "    - $FIXTURES_DIR/pnpm-catalog"
 echo "    - $FIXTURES_DIR/npm-workspaces"
 echo "    - $FIXTURES_DIR/turborepo"
 echo "    - $FIXTURES_DIR/nx-monorepo"
