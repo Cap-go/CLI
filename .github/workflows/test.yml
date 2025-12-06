@@ -195,7 +195,7 @@ jobs:
       - name: Check file size of Linux build
         run: ls -lh build-linux.zip
       - name: Setup Swift
-        uses: swift-actions/setup-swift@v2
+        uses: swift-actions/setup-swift@v3
       - name: Get swift version
         run: swift --version # Swift 5.10
       - name: Compile test executable
