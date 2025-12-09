@@ -774,7 +774,7 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
     await waitLog('onboarding-v2', apikey, appId, apikey, orgId)
   }
   else {
-    pLog.info(`📊 Check logs manually at ${hostWeb}/app/p/${appId}/logs to verify the update`)
+    pLog.info(`📊 Check logs manually at ${hostWeb}/app/${appId}/logs to verify the update`)
   }
   await markStep(orgId, apikey, 'test-update', appId)
 }

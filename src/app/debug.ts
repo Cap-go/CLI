@@ -103,7 +103,7 @@ function summarizeAction(data: LogData): LogSpec | null {
     delete: { summary: () => 'Bundle deleted on device', level: 'info' },
     set: { summary: () => 'Bundle set on device ❤️', level: 'info', snag: 'set', stop: true },
     NoChannelOrOverride: { summary: () => 'No default channel/override; create it in channel settings', level: 'error' },
-    needPlanUpgrade: { summary: ({ baseUrl }) => `Out of quota. Upgrade plan: ${baseUrl}/dashboard/settings/plans`, level: 'error' },
+    needPlanUpgrade: { summary: ({ baseUrl }) => `Out of quota. Upgrade plan: ${baseUrl}/settings/organization/plans`, level: 'error' },
     missingBundle: { summary: () => 'Requested bundle not found on server', level: 'error' },
     noNew: { summary: () => 'Device already has latest available version', level: 'info' },
     disablePlatformIos: { summary: () => 'iOS platform disabled in channel', level: 'error' },
@@ -164,7 +164,7 @@ async function toTableRow(data: LogData, channel: string, orgId: string, apikey:
 export async function waitLog(channel: string, apikey: string, appId: string, orgId: string, deviceId?: string) {
   let loop = true
   const config = await getLocalConfig()
-  const baseAppUrl = `${config.hostWeb}/app/p/${appId}`
+  const baseAppUrl = `${config.hostWeb}/app/${appId}`
   await markSnag(channel, orgId, apikey, 'Use waitlog', appId)
   const query: QueryStats = {
     appId,

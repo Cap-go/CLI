@@ -578,7 +578,7 @@ async function setVersionInChannel(
     })
     if (dbError3)
       uploadFail(`Cannot set channel, the upload key is not allowed to do that, use the "all" for this. ${formatError(dbError3)}`)
-    const bundleUrl = `${localConfig.hostWeb}/app/p/${appid}/channel/${data.id}`
+    const bundleUrl = `${localConfig.hostWeb}/app/${appid}/channel/${data.id}`
     if (data?.public)
       log.info('Your update is now available in your public channel 🎉')
     else if (data?.id)
@@ -600,7 +600,7 @@ export async function getDefaultUploadChannel(appId: string, supabase: SupabaseT
 
   if (error) {
     log.warn('Cannot find default upload channel')
-    log.info(`You can set it here:  ${hostWeb}/app/p/${appId}/settings`)
+    log.info(`You can set it here:  ${hostWeb}/app/${appId}/settings`)
     return null
   }
 
