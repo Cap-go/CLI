@@ -714,7 +714,7 @@ export function findSavedKey(quiet = false) {
     key = readFileSync(keyPath, 'utf8').trim()
   }
   if (!key) {
-    const message = `Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capacitor/cli login`
+    const message = `Cannot find API key in local folder or global, please login first with ${getPMAndCommand().runner} @capgo/cli login`
     log.error(message)
     throw new Error(message)
   }
