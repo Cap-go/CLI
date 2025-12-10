@@ -1,6 +1,6 @@
-import type { Buffer } from 'node:buffer'
 import type { manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
+import { Buffer } from 'node:buffer'
 import { createHash } from 'node:crypto'
 import { createReadStream, statSync } from 'node:fs'
 import { platform as osPlatform } from 'node:os'
@@ -262,7 +262,19 @@ export async function uploadPartial(
       // Use SHA256 of file.hash for filename to keep it short (64 chars)
       // The full hash (encrypted or not) is preserved in the manifest's file_hash field for plugin verification
       const filenameHash = createHash('sha256').update(file.hash).digest('hex')
-      const filename = `orgs/${orgId}/apps/${appId}/delta/${filenameHash}_${filePathUnixSafe}`
+
+      // Include hex-encoded ivSessionKey in the path for encrypted files
+      // This ensures files encrypted with different session keys/IVs have different paths
+      // and allows caching of files encrypted with the same session key/IV
+      let filename: string
+      if (encryptionOptions) {
+        // Convert ivSessionKey to hex for use in path (URL-safe)
+        const ivSessionKeyHex = Buffer.from(encryptionOptions.ivSessionKey).toString('hex')
+        filename = `orgs/${orgId}/apps/${appId}/delta/${ivSessionKeyHex}/${filenameHash}_${filePathUnixSafe}`
+      }
+      else {
+        filename = `orgs/${orgId}/apps/${appId}/delta/${filenameHash}_${filePathUnixSafe}`
+      }
 
       // Check if file already exists on server
       // Skip reuse when encryption is enabled because the session key changes per upload
