@@ -600,7 +600,7 @@ export async function getDefaultUploadChannel(appId: string, supabase: SupabaseT
 
   if (error) {
     log.warn('Cannot find default upload channel')
-    log.info(`You can set it here:  ${hostWeb}/app/${appId}/settings`)
+    log.info(`You can set it here:  ${hostWeb}/app/${appId}/info`)
     return null
   }
 
