@@ -132,7 +132,7 @@ await runTest(
 )
 
 await runTest(
-  'yarn install',
+  'yarn add',
   join(FIXTURES_DIR, 'yarn-project'),
   EXPECTED_VERSION
 )

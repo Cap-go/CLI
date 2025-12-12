@@ -59,7 +59,7 @@ cat > package.json << EOF
   }
 }
 EOF
-yarn install --silent 2>/dev/null || yarn install
+yarn add --silent 2>/dev/null || yarn add
 echo "   ✓ yarn project created"
 
 # ============================================================================
@@ -127,7 +127,7 @@ cat > apps/mobile/package.json << EOF
   }
 }
 EOF
-yarn install --silent 2>/dev/null || yarn install
+yarn add --silent 2>/dev/null || yarn add
 echo "   ✓ yarn workspaces monorepo created"
 
 # ============================================================================
