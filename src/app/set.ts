@@ -44,7 +44,7 @@ export async function setAppInternal(appId: string, options: Options, silent = f
 
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
 
-  const { name, icon, retention } = options
+  const { name, icon, retention, exposeMetadata } = options
 
   if (retention && Number.isNaN(Number(retention))) {
     if (!silent)
@@ -109,6 +109,7 @@ export async function setAppInternal(appId: string, options: Options, silent = f
       icon_url: signedURL,
       name,
       retention: !retention ? undefined : retention * 24 * 60 * 60,
+      expose_metadata: exposeMetadata,
     })
     .eq('app_id', appId)
     .eq('user_id', userId)

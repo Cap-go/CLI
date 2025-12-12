@@ -60,6 +60,7 @@ export interface Options extends OptionsBase {
   name?: string
   icon?: string
   retention?: number
+  exposeMetadata?: boolean
 }
 
 export const newIconPath = 'assets/icon.png'
