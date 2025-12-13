@@ -256,14 +256,17 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     }
     else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
       pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v5`)
+      pLog.warn(`Consider upgrading to Capacitor v6 or higher to support the latest mobile OS features: ${urlMigrateV6}`)
       versionToInstall = '^5.0.0'
     }
     else if (lessThan(parse(coreVersion), parse('7.0.0'))) {
       pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v6`)
+      pLog.warn(`Consider upgrading to Capacitor v7 or higher to support the latest mobile OS features: ${urlMigrateV7}`)
       versionToInstall = '^6.0.0'
     }
     else if (lessThan(parse(coreVersion), parse('8.0.0'))) {
       pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v7`)
+      pLog.warn(`Consider upgrading to Capacitor v8 to support the latest mobile OS features: ${urlMigrateV8}`)
       versionToInstall = '^7.0.0'
     }
     else {
