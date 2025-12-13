@@ -238,6 +238,7 @@ export type Database = {
           channel_device_count: number
           created_at: string | null
           default_upload_channel: string
+          expose_metadata: boolean
           icon_url: string
           id: string | null
           last_version: string | null
@@ -254,6 +255,7 @@ export type Database = {
           channel_device_count?: number
           created_at?: string | null
           default_upload_channel?: string
+          expose_metadata?: boolean
           icon_url: string
           id?: string | null
           last_version?: string | null
@@ -270,6 +272,7 @@ export type Database = {
           channel_device_count?: number
           created_at?: string | null
           default_upload_channel?: string
+          expose_metadata?: boolean
           icon_url?: string
           id?: string | null
           last_version?: string | null
@@ -919,22 +922,40 @@ export type Database = {
           apps: number
           apps_active: number | null
           bundle_storage_gb: number
+          canceled_orgs: number
           created_at: string | null
+          credits_bought: number
+          credits_consumed: number
           date_id: string
           devices_last_month: number | null
+          mrrr: number
           need_upgrade: number | null
+          new_paying_orgs: number
           not_paying: number | null
           onboarded: number | null
           paying: number | null
           paying_monthly: number | null
           paying_yearly: number | null
+          plan_enterprise: number | null
+          plan_enterprise_monthly: number
+          plan_enterprise_yearly: number
           plan_maker: number | null
-          plan_payg: number | null
+          plan_maker_monthly: number
+          plan_maker_yearly: number
           plan_solo: number | null
+          plan_solo_monthly: number
+          plan_solo_yearly: number
           plan_team: number | null
+          plan_team_monthly: number
+          plan_team_yearly: number
           registers_today: number
+          revenue_enterprise: number
+          revenue_maker: number
+          revenue_solo: number
+          revenue_team: number
           stars: number
           success_rate: number | null
+          total_revenue: number
           trial: number | null
           updates: number
           updates_external: number | null
@@ -946,22 +967,40 @@ export type Database = {
           apps: number
           apps_active?: number | null
           bundle_storage_gb?: number
+          canceled_orgs?: number
           created_at?: string | null
+          credits_bought?: number
+          credits_consumed?: number
           date_id: string
           devices_last_month?: number | null
+          mrrr?: number
           need_upgrade?: number | null
+          new_paying_orgs?: number
           not_paying?: number | null
           onboarded?: number | null
           paying?: number | null
           paying_monthly?: number | null
           paying_yearly?: number | null
+          plan_enterprise?: number | null
+          plan_enterprise_monthly?: number
+          plan_enterprise_yearly?: number
           plan_maker?: number | null
-          plan_payg?: number | null
+          plan_maker_monthly?: number
+          plan_maker_yearly?: number
           plan_solo?: number | null
+          plan_solo_monthly?: number
+          plan_solo_yearly?: number
           plan_team?: number | null
+          plan_team_monthly?: number
+          plan_team_yearly?: number
           registers_today?: number
+          revenue_enterprise?: number
+          revenue_maker?: number
+          revenue_solo?: number
+          revenue_team?: number
           stars: number
           success_rate?: number | null
+          total_revenue?: number
           trial?: number | null
           updates: number
           updates_external?: number | null
@@ -973,22 +1012,40 @@ export type Database = {
           apps?: number
           apps_active?: number | null
           bundle_storage_gb?: number
+          canceled_orgs?: number
           created_at?: string | null
+          credits_bought?: number
+          credits_consumed?: number
           date_id?: string
           devices_last_month?: number | null
+          mrrr?: number
           need_upgrade?: number | null
+          new_paying_orgs?: number
           not_paying?: number | null
           onboarded?: number | null
           paying?: number | null
           paying_monthly?: number | null
           paying_yearly?: number | null
+          plan_enterprise?: number | null
+          plan_enterprise_monthly?: number
+          plan_enterprise_yearly?: number
           plan_maker?: number | null
-          plan_payg?: number | null
+          plan_maker_monthly?: number
+          plan_maker_yearly?: number
           plan_solo?: number | null
+          plan_solo_monthly?: number
+          plan_solo_yearly?: number
           plan_team?: number | null
+          plan_team_monthly?: number
+          plan_team_yearly?: number
           registers_today?: number
+          revenue_enterprise?: number
+          revenue_maker?: number
+          revenue_solo?: number
+          revenue_team?: number
           stars?: number
           success_rate?: number | null
+          total_revenue?: number
           trial?: number | null
           updates?: number
           updates_external?: number | null
@@ -1139,6 +1196,7 @@ export type Database = {
           created_by: string
           customer_id: string | null
           id: string
+          last_stats_updated_at: string | null
           logo: string | null
           management_email: string
           name: string
@@ -1150,6 +1208,7 @@ export type Database = {
           created_by: string
           customer_id?: string | null
           id?: string
+          last_stats_updated_at?: string | null
           logo?: string | null
           management_email: string
           name: string
@@ -1161,6 +1220,7 @@ export type Database = {
           created_by?: string
           customer_id?: string | null
           id?: string
+          last_stats_updated_at?: string | null
           logo?: string | null
           management_email?: string
           name?: string
@@ -1187,70 +1247,55 @@ export type Database = {
       plans: {
         Row: {
           bandwidth: number
-          bandwidth_unit: number | null
           build_time_unit: number
           created_at: string
+          credit_id: string
           description: string
           id: string
           market_desc: string | null
           mau: number
-          mau_unit: number | null
           name: string
           price_m: number
-          price_m_bandwidth_id: string | null
           price_m_id: string
-          price_m_mau_id: string | null
-          price_m_storage_id: string | null
           price_y: number
           price_y_id: string
           storage: number
-          storage_unit: number | null
           stripe_id: string
           updated_at: string
         }
         Insert: {
           bandwidth: number
-          bandwidth_unit?: number | null
           build_time_unit?: number
           created_at?: string
+          credit_id: string
           description?: string
           id?: string
           market_desc?: string | null
           mau?: number
-          mau_unit?: number | null
           name?: string
           price_m?: number
-          price_m_bandwidth_id?: string | null
           price_m_id: string
-          price_m_mau_id?: string | null
-          price_m_storage_id?: string | null
           price_y?: number
           price_y_id: string
           storage: number
-          storage_unit?: number | null
           stripe_id?: string
           updated_at?: string
         }
         Update: {
           bandwidth?: number
-          bandwidth_unit?: number | null
           build_time_unit?: number
           created_at?: string
+          credit_id?: string
           description?: string
           id?: string
           market_desc?: string | null
           mau?: number
-          mau_unit?: number | null
           name?: string
           price_m?: number
-          price_m_bandwidth_id?: string | null
           price_m_id?: string
-          price_m_mau_id?: string | null
-          price_m_storage_id?: string | null
           price_y?: number
           price_y_id?: string
           storage?: number
-          storage_unit?: number | null
           stripe_id?: string
           updated_at?: string
         }
@@ -1773,6 +1818,28 @@ export type Database = {
           },
         ]
       }
+      usage_credit_ledger: {
+        Row: {
+          amount: number | null
+          balance_after: number | null
+          billing_cycle_end: string | null
+          billing_cycle_start: string | null
+          description: string | null
+          details: Json | null
+          grant_allocations: Json | null
+          id: number | null
+          metric: Database["public"]["Enums"]["credit_metric_type"] | null
+          occurred_at: string | null
+          org_id: string | null
+          overage_amount: number | null
+          overage_event_id: string | null
+          source_ref: Json | null
+          transaction_type:
+            | Database["public"]["Enums"]["credit_transaction_type"]
+            | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       accept_invitation_to_org: { Args: { org_id: string }; Returns: string }
@@ -2017,7 +2084,7 @@ export type Database = {
       }
       get_metered_usage:
         | {
-            Args: { orgid: string }
+            Args: never
             Returns: Database["public"]["CompositeTypes"]["stats_table"]
             SetofOptions: {
               from: "*"
@@ -2027,7 +2094,7 @@ export type Database = {
             }
           }
         | {
-            Args: never
+            Args: { orgid: string }
             Returns: Database["public"]["CompositeTypes"]["stats_table"]
             SetofOptions: {
               from: "*"
@@ -2054,7 +2121,7 @@ export type Database = {
       }
       get_org_members:
         | {
-            Args: { guild_id: string; user_id: string }
+            Args: { guild_id: string }
             Returns: {
               aid: number
               email: string
@@ -2065,7 +2132,7 @@ export type Database = {
             }[]
           }
         | {
-            Args: { guild_id: string }
+            Args: { guild_id: string; user_id: string }
             Returns: {
               aid: number
               email: string
@@ -2201,8 +2268,8 @@ export type Database = {
         }[]
       }
       get_user_id:
-        | { Args: { apikey: string; app_id: string }; Returns: string }
         | { Args: { apikey: string }; Returns: string }
+        | { Args: { apikey: string; app_id: string }; Returns: string }
       get_user_main_org_id: { Args: { user_id: string }; Returns: string }
       get_user_main_org_id_by_app_id: {
         Args: { app_id: string }
@@ -2282,8 +2349,8 @@ export type Database = {
       }
       is_account_disabled: { Args: { user_id: string }; Returns: boolean }
       is_admin:
-        | { Args: { userid: string }; Returns: boolean }
         | { Args: never; Returns: boolean }
+        | { Args: { userid: string }; Returns: boolean }
       is_allowed_action: {
         Args: { apikey: string; appid: string }
         Returns: boolean
@@ -2314,8 +2381,8 @@ export type Database = {
           }
       is_app_owner:
         | { Args: { apikey: string; appid: string }; Returns: boolean }
-        | { Args: { appid: string; userid: string }; Returns: boolean }
         | { Args: { appid: string }; Returns: boolean }
+        | { Args: { appid: string; userid: string }; Returns: boolean }
       is_bandwidth_exceeded_by_org: {
         Args: { org_id: string }
         Returns: boolean
@@ -2336,10 +2403,6 @@ export type Database = {
       is_onboarded_org: { Args: { orgid: string }; Returns: boolean }
       is_onboarding_needed_org: { Args: { orgid: string }; Returns: boolean }
       is_org_yearly: { Args: { orgid: string }; Returns: boolean }
-      is_owner_of_org: {
-        Args: { org_id: string; user_id: string }
-        Returns: boolean
-      }
       is_paying_and_good_plan_org: { Args: { orgid: string }; Returns: boolean }
       is_paying_and_good_plan_org_action: {
         Args: {
@@ -2385,11 +2448,11 @@ export type Database = {
       process_free_trial_expired: { Args: never; Returns: undefined }
       process_function_queue:
         | {
-            Args: { batch_size?: number; queue_names: string[] }
+            Args: { batch_size?: number; queue_name: string }
             Returns: undefined
           }
         | {
-            Args: { batch_size?: number; queue_name: string }
+            Args: { batch_size?: number; queue_names: string[] }
             Returns: undefined
           }
       process_stats_email_monthly: { Args: never; Returns: undefined }
@@ -2483,6 +2546,23 @@ export type Database = {
         Args: { disabled: boolean; org_id: string }
         Returns: undefined
       }
+      top_up_usage_credits: {
+        Args: {
+          p_amount: number
+          p_expires_at?: string
+          p_notes?: string
+          p_org_id: string
+          p_source?: string
+          p_source_ref?: Json
+        }
+        Returns: {
+          available_credits: number
+          grant_id: string
+          next_expiration: string
+          total_credits: number
+          transaction_id: number
+        }[]
+      }
       total_bundle_storage_bytes: { Args: never; Returns: number }
       transfer_app: {
         Args: { p_app_id: string; p_new_org_id: string }
@@ -2505,7 +2585,6 @@ export type Database = {
     }
     Enums: {
       action_type: "mau" | "storage" | "bandwidth" | "build_time"
-      app_mode: "prod" | "dev" | "livereload"
       credit_metric_type: "mau" | "bandwidth" | "storage" | "build_time"
       credit_transaction_type:
         | "grant"
@@ -2516,7 +2595,6 @@ export type Database = {
         | "refund"
       disable_update: "major" | "minor" | "patch" | "version_number" | "none"
       key_mode: "read" | "write" | "all" | "upload"
-      pay_as_you_go_type: "base" | "units"
       platform_os: "ios" | "android"
       stats_action:
         | "delete"
@@ -2584,7 +2662,6 @@ export type Database = {
         | "failed"
         | "deleted"
         | "canceled"
-      usage_mode: "5min" | "day" | "month" | "cycle" | "last_saved"
       user_min_right:
         | "invite_read"
         | "invite_upload"
@@ -2604,9 +2681,6 @@ export type Database = {
         file_name: string | null
         s3_path: string | null
         file_hash: string | null
-      }
-      match_plan: {
-        name: string | null
       }
       message_update: {
         msg_id: number | null
@@ -2758,7 +2832,6 @@ export const Constants = {
   public: {
     Enums: {
       action_type: ["mau", "storage", "bandwidth", "build_time"],
-      app_mode: ["prod", "dev", "livereload"],
       credit_metric_type: ["mau", "bandwidth", "storage", "build_time"],
       credit_transaction_type: [
         "grant",
@@ -2770,7 +2843,6 @@ export const Constants = {
       ],
       disable_update: ["major", "minor", "patch", "version_number", "none"],
       key_mode: ["read", "write", "all", "upload"],
-      pay_as_you_go_type: ["base", "units"],
       platform_os: ["ios", "android"],
       stats_action: [
         "delete",
@@ -2840,7 +2912,6 @@ export const Constants = {
         "deleted",
         "canceled",
       ],
-      usage_mode: ["5min", "day", "month", "cycle", "last_saved"],
       user_min_right: [
         "invite_read",
         "invite_upload",
