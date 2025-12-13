@@ -212,8 +212,10 @@ async function getAssistedDependencies(stepsDone: number) {
   return { dependencies: await getAllPackagesDependencies(undefined, root), path: root }
 }
 
+const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
 const urlMigrateV6 = 'https://capacitorjs.com/docs/updating/6-0'
 const urlMigrateV7 = 'https://capacitorjs.com/docs/updating/7-0'
+const urlMigrateV8 = 'https://capacitorjs.com/docs/updating/8-0'
 async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   let pkgVersion = '1.0.0'
@@ -246,15 +248,27 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       pOutro(`Bye 👋`)
       exit()
     }
-    else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
+    else if (lessThan(parse(coreVersion), parse('5.0.0'))) {
       s.stop('Error')
-      pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only support 2 last Capacitor versions, please update to Capacitor v6 minimum: ${urlMigrateV6}`)
+      pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only supports Capacitor v5 and above, please update to Capacitor v5 minimum: ${urlMigrateV5}`)
       pOutro(`Bye 👋`)
       exit()
     }
+    else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v5`)
+      versionToInstall = '^5.0.0'
+    }
     else if (lessThan(parse(coreVersion), parse('7.0.0'))) {
-      s.stop(`@capacitor/core version is ${coreVersion}, update to Capacitor v7 minimum: ${urlMigrateV7} to support latest Mobile OS versions`)
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v6`)
       versionToInstall = '^6.0.0'
+    }
+    else if (lessThan(parse(coreVersion), parse('8.0.0'))) {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v7`)
+      versionToInstall = '^7.0.0'
+    }
+    else {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing latest capacitor-updater v8+`)
+      versionToInstall = '^8.0.0'
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
