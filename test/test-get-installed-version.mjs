@@ -17,7 +17,22 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const FIXTURES_DIR = join(__dirname, 'fixtures')
 const TEST_PACKAGE = '@capgo/capacitor-updater'
-const EXPECTED_VERSION = '6.30.0' // Latest version that gets installed with ^6.25.5
+
+// Dynamically get the expected version from the first installed fixture
+// This way the test never breaks when new versions are published
+function getExpectedVersion() {
+  // Try to read from npm-project's node_modules
+  const npmProjectPkgPath = join(FIXTURES_DIR, 'npm-project', 'node_modules', '@capgo', 'capacitor-updater', 'package.json')
+  if (existsSync(npmProjectPkgPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(npmProjectPkgPath, 'utf-8'))
+      return pkg.version
+    } catch {}
+  }
+
+  // Fallback: if fixtures aren't set up, we'll check later
+  return null
+}
 
 // Re-implement getInstalledVersion logic to test
 const PACKNAME = 'package.json'
@@ -119,6 +134,17 @@ if (!existsSync(FIXTURES_DIR)) {
   console.error('   Run: ./test/fixtures/setup-test-projects.sh')
   process.exit(1)
 }
+
+// Get the expected version dynamically from installed fixtures
+const EXPECTED_VERSION = getExpectedVersion()
+if (!EXPECTED_VERSION) {
+  console.error('❌ Could not determine expected version from fixtures!')
+  console.error('   Make sure fixtures are properly installed')
+  console.error('   Run: ./test/fixtures/setup-test-projects.sh')
+  process.exit(1)
+}
+
+console.log(`📋 Testing against installed version: ${EXPECTED_VERSION}\n`)
 
 // ============================================================================
 // 1. Standard Package Managers
