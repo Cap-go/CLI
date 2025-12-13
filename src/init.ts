@@ -95,6 +95,7 @@ function cleanupStepsDone() {
 async function cancelCommand(command: boolean | symbol, orgId: string, apikey: string) {
   if (pIsCancel(command)) {
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
 }
@@ -103,23 +104,119 @@ async function markStep(orgId: string, apikey: string, step: string, appId: stri
   return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
 }
 
-async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions) {
+async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions): Promise<string> {
   const pm = getPMAndCommand()
-  const doAdd = await pConfirm({ message: `Add ${appId} in Capgo?` })
-  await cancelCommand(doAdd, organization.gid, apikey)
-  if (doAdd) {
-    const s = pSpinner()
-    s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${appId}`)
-    const addRes = await addAppInternal(appId, options, organization, true)
-    if (!addRes)
-      s.stop(`App already add ✅`)
-    else
-      s.stop(`App add Done ✅`)
+  let currentAppId = appId
+  let retryCount = 0
+  const maxRetries = 5
+
+  while (retryCount < maxRetries) {
+    const doAdd = await pConfirm({ message: `Add ${currentAppId} in Capgo?` })
+    await cancelCommand(doAdd, organization.gid, apikey)
+
+    if (!doAdd) {
+      pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${currentAppId}"`)
+      await markStep(organization.gid, apikey, 'add-app', currentAppId)
+      return currentAppId
+    }
+
+    try {
+      const s = pSpinner()
+      s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
+      const addRes = await addAppInternal(currentAppId, options, organization, true)
+      if (!addRes)
+        s.stop(`App already add ✅`)
+      else
+        s.stop(`App add Done ✅`)
+
+      await markStep(organization.gid, apikey, 'add-app', currentAppId)
+      return currentAppId
+    }
+    catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Check if the error is about app already existing
+      if (errorMessage.includes('already exist')) {
+        retryCount++
+        pLog.error(`❌ App ID "${currentAppId}" is already taken`)
+
+        // Generate alternative suggestions
+        const suggestions = [
+          `${appId}2`,
+          `${appId}3`,
+          `${appId}.new`,
+          `${appId}.app`,
+        ]
+
+        pLog.info(`💡 Here are some suggestions:`)
+        suggestions.forEach((suggestion, idx) => {
+          pLog.info(`   ${idx + 1}. ${suggestion}`)
+        })
+
+        const choice = await pSelect({
+          message: 'What would you like to do?',
+          options: [
+            { value: 'suggest1', label: `Use ${suggestions[0]}` },
+            { value: 'suggest2', label: `Use ${suggestions[1]}` },
+            { value: 'suggest3', label: `Use ${suggestions[2]}` },
+            { value: 'suggest4', label: `Use ${suggestions[3]}` },
+            { value: 'custom', label: 'Enter a custom app ID' },
+            { value: 'cancel', label: 'Cancel onboarding' },
+          ],
+        })
+
+        if (pIsCancel(choice)) {
+          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+          exit()
+        }
+
+        if (choice === 'cancel') {
+          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
+          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+          exit()
+        }
+
+        if (choice === 'custom') {
+          const customAppId = await pText({
+            message: 'Enter your custom app ID (e.g., com.example.myapp):',
+            validate: (value) => {
+              if (!value)
+                return 'App ID is required'
+              if (value.includes('--'))
+                return 'App ID cannot contain "--"'
+              if (!/^[a-z0-9]+(?:\.[\w-]+)+$/i.test(value))
+                return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
+            },
+          })
+
+          if (pIsCancel(customAppId)) {
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+            exit()
+          }
+
+          currentAppId = customAppId as string
+        }
+        else {
+          // Use one of the suggestions
+          const suggestionIndex = Number.parseInt(choice.replace('suggest', '')) - 1
+          currentAppId = suggestions[suggestionIndex]
+        }
+
+        pLog.info(`🔄 Trying with new app ID: ${currentAppId}`)
+        continue
+      }
+
+      // For other errors, re-throw
+      throw error
+    }
   }
-  else {
-    pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${appId}"`)
-  }
-  await markStep(organization.gid, apikey, 'add-app', appId)
+
+  // If we've exhausted retries
+  pLog.error(`❌ Maximum retry attempts (${maxRetries}) reached`)
+  pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+  exit(1)
 }
 
 async function addChannelStep(orgId: string, apikey: string, appId: string) {
@@ -231,7 +328,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     if (!dependencies.has('@capacitor/core')) {
       s.stop('Error')
       pLog.warn(`Cannot find @capacitor/core in package.json`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
 
@@ -239,19 +336,19 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     if (!coreVersion) {
       s.stop('Error')
       pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
 
     if (coreVersion === 'latest') {
       s.stop(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
     else if (lessThan(parse(coreVersion), parse('5.0.0'))) {
       s.stop('Error')
       pLog.warn(`@capacitor/core version is ${coreVersion}, Capgo only supports Capacitor v5 and above, please update to Capacitor v5 minimum: ${urlMigrateV5}`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
     else if (lessThan(parse(coreVersion), parse('6.0.0'))) {
@@ -276,7 +373,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     if (pm.pm === 'unknown') {
       s.stop('Error')
       pLog.warn(`Cannot recognize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
     // // use pm to install capgo
@@ -397,13 +494,28 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       const last = matches?.pop()
 
       if (!last) {
-        s.stop('Error')
-        pLog.warn(`Cannot find import line in main file, use manual installation: https://capgo.app/docs/getting-started/add-an-app/`)
-        pOutro(`Bye 👋`)
-        exit()
-      }
+        s.stop('Cannot auto-inject code')
+        pLog.warn(`❌ Cannot find import statements in ${mainFilePath}`)
+        pLog.info(`💡 You'll need to add the code manually`)
+        pLog.info(`📝 Add this to your main file:`)
+        pLog.info(`   ${importInject}`)
+        pLog.info(`   ${codeInject}`)
+        pLog.info(`📚 Or follow: https://capgo.app/docs/getting-started/add-an-app/`)
 
-      if (mainFileContent.includes(codeInject)) {
+        const continueAnyway = await pConfirm({
+          message: `Continue without auto-injecting the code? (You'll add it manually)`,
+        })
+        await cancelCommand(continueAnyway, orgId, apikey)
+
+        if (!continueAnyway) {
+          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+          exit()
+        }
+
+        pLog.info(`⏭️  Skipping auto-injection - remember to add the code manually!`)
+        await markStep(orgId, apikey, 'add-code-manual', appId)
+      }
+      else if (mainFileContent.includes(codeInject)) {
         s.stop(`Code already added to ${mainFilePath} ✅`)
       }
       else {
@@ -428,7 +540,15 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   }
 
   const pm = getPMAndCommand()
-  const doEncrypt = await pConfirm({ message: `Automatic configure end-to-end encryption in ${appId} updates?` })
+
+  pLog.info(`🔐 End-to-end encryption`)
+  pLog.info(`   ✅ Use this for: Banking, healthcare, or apps with legal encryption requirements`)
+  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if you don't need it`)
+
+  const doEncrypt = await pConfirm({
+    message: `Enable end-to-end encryption for ${appId} updates?`,
+    initialValue: false,
+  })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
     if (coreVersion === 'latest') {
@@ -475,7 +595,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
 
-async function buildProjectStep(orgId: string, apikey: string, appId: string) {
+async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
   const pm = getPMAndCommand()
   const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, apikey)
@@ -484,42 +604,67 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string) {
     s.start(`Checking project type`)
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
+    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
     const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
-      s.stop('Error')
-      pLog.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
-      pOutro(`Bye 👋`)
+      s.stop('Missing build script')
+      pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
+      pLog.info(`💡 Your package.json needs a "${buildCommand}" script to build the app`)
+
+      const skipBuild = await pConfirm({
+        message: `Would you like to skip the build for now and continue? You can build manually later.`,
+      })
+      await cancelCommand(skipBuild, orgId, apikey)
+
+      if (skipBuild) {
+        pLog.info(`⏭️  Skipping build step - you can build manually with: ${pm.pm} run ${buildCommand}`)
+        pLog.info(`📝 After building, run: ${pm.runner} cap sync ${platform}`)
+        await markStep(orgId, apikey, 'build-project-skipped', appId)
+        return
+      }
+
+      pOutro(`Bye 👋\n💡 Add a "${buildCommand}" script to package.json and run the command again`)
       exit()
     }
-    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
+    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`, execOption as ExecSyncOptions)
     s.stop(`Build & Sync Done ✅`)
   }
   else {
-    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
+    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
   }
   await markStep(orgId, apikey, 'build-project', appId)
 }
 
-async function runDeviceStep(orgId: string, apikey: string, appId: string) {
+async function selectPlatformStep(orgId: string, apikey: string): Promise<'ios' | 'android'> {
+  pLog.info(`📱 Platform selection for onboarding`)
+  pLog.info(`   This is just for testing during onboarding - your app will work on all platforms`)
+
+  const platformType = await pSelect({
+    message: 'Which platform do you want to test with during this onboarding?',
+    options: [
+      { value: 'ios', label: 'IOS' },
+      { value: 'android', label: 'Android' },
+    ],
+  })
+  if (pIsCancel(platformType)) {
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+    exit()
+  }
+
+  const platform = platformType as 'ios' | 'android'
+  pLog.info(`🎯 Testing with: ${platform.toUpperCase()}`)
+  pLog.info(`💡 Note: Onboarding builds will use ${platform} only`)
+  await markStep(orgId, apikey, 'select-platform', platform)
+  return platform
+}
+
+async function runDeviceStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
   const pm = getPMAndCommand()
-  const doRun = await pConfirm({ message: `Run ${appId} in device now to test the initial version?` })
+  const doRun = await pConfirm({ message: `Run ${appId} on ${platform.toUpperCase()} device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    const platformType = await pSelect({
-      message: 'Pick a platform to run your app',
-      options: [
-        { value: 'ios', label: 'IOS' },
-        { value: 'android', label: 'Android' },
-      ],
-    })
-    if (pIsCancel(platformType)) {
-      pOutro(`Bye 👋`)
-      exit()
-    }
-
-    const platform = platformType as 'ios' | 'android'
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
     await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
@@ -528,12 +673,12 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string) {
     pLog.info(`🔄 This is your baseline version - we'll create an update next`)
   }
   else {
-    pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run <ios|android>`)
+    pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run ${platform}`)
   }
   await markStep(orgId, apikey, 'run-device', appId)
 }
 
-async function addCodeChangeStep(orgId: string, apikey: string, appId: string, pkgVersion: string) {
+async function addCodeChangeStep(orgId: string, apikey: string, appId: string, pkgVersion: string, platform: 'ios' | 'android') {
   pLog.info(`🎯 Now let's test Capgo by making a visible change and deploying an update!`)
 
   const modificationType = await pSelect({
@@ -545,6 +690,7 @@ async function addCodeChangeStep(orgId: string, apikey: string, appId: string, p
   })
   if (pIsCancel(modificationType)) {
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
 
@@ -659,6 +805,7 @@ ${content}`
   })
   if (pIsCancel(versionChoice)) {
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
 
@@ -686,6 +833,7 @@ ${content}`
     })
     if (pIsCancel(userVersion)) {
       await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
     newVersion = userVersion as string
@@ -699,21 +847,35 @@ ${content}`
     s.start(`Checking project type`)
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`)
+    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
     const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
-      s.stop('Error')
-      pLog.warn(`Cannot find ${buildCommand} script in package.json, please add it and run \`capgo init\` again`)
-      pOutro(`Bye 👋`)
-      exit()
+      s.stop('Missing build script')
+      pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
+      pLog.info(`💡 Build manually in another terminal, then come back and continue`)
+
+      const builtManually = await pConfirm({
+        message: `Have you built the app manually? (If not, we'll skip the build)`,
+      })
+      await cancelCommand(builtManually, orgId, apikey)
+
+      if (!builtManually) {
+        pLog.warn(`⚠️  Continuing without build - upload may fail if app isn't built`)
+        pLog.info(`💡 Build with: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
+      }
+      else {
+        pLog.info(`✅ Great! Continuing with your manual build`)
+      }
     }
-    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync`, execOption as ExecSyncOptions)
-    s.stop(`✅ Build with changes completed`)
-    pLog.info(`📦 Your modifications have been built and synced`)
+    else {
+      execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`, execOption as ExecSyncOptions)
+      s.stop(`✅ Build with changes completed`)
+      pLog.info(`📦 Your modifications have been built and synced`)
+    }
   }
   else {
-    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync`)
+    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
   }
 
   await markStep(orgId, apikey, 'add-code-change', appId)
@@ -736,7 +898,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
       pLog.warn(`Guessed node modules path at: ${nodeModulesPath}`)
       if (!existsSync(nodeModulesPath)) {
         pLog.error(`Node modules path does not exist, upload skipped`)
-        pOutro(`Bye 👋`)
+        pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
         exit(1)
       }
     }
@@ -751,7 +913,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
     if (!uploadRes?.success) {
       s.stop('Error')
       pLog.warn(`Upload failed ❌`)
-      pOutro(`Bye 👋`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
     else {
@@ -844,13 +1006,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
   let delta = false
   let currentVersion = pkgVersion
+  let platform: 'ios' | 'android' = 'ios' // default
 
   try {
     if (stepToSkip < 1)
       await markStep(orgId, options.apikey, 'add-app', appId)
 
     if (stepToSkip < 2) {
-      await addAppStep(organization, options.apikey, appId, options)
+      appId = await addAppStep(organization, options.apikey, appId, options)
       markStepDone(2)
     }
 
@@ -878,28 +1041,33 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 7) {
-      await buildProjectStep(orgId, options.apikey, appId)
+      platform = await selectPlatformStep(orgId, options.apikey)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
-      await runDeviceStep(orgId, options.apikey, appId)
+      await buildProjectStep(orgId, options.apikey, appId, platform)
       markStepDone(8)
     }
 
     if (stepToSkip < 9) {
-      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion)
+      await runDeviceStep(orgId, options.apikey, appId, platform)
       markStepDone(9)
     }
 
     if (stepToSkip < 10) {
-      await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
+      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
       markStepDone(10)
     }
 
     if (stepToSkip < 11) {
-      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
+      await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
       markStepDone(11)
+    }
+
+    if (stepToSkip < 12) {
+      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
+      markStepDone(12)
     }
 
     await markStep(orgId, options.apikey, 'done', appId)

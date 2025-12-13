@@ -7,7 +7,7 @@ import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
-import { intro, log, outro, spinner as spinnerC } from '@clack/prompts'
+import { intro, log, outro, confirm as pConfirm, isCancel as pIsCancel, select as pSelect, spinner as spinnerC } from '@clack/prompts'
 import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
@@ -16,6 +16,7 @@ import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionK
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { autoBumpVersion, getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
@@ -176,8 +177,8 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
 
   const hashedLocalDependencies = localDependencies
     ? new Map(localDependencies
-      .filter(a => !!a.native && a.native !== undefined)
-      .map(a => [a.name, a]))
+        .filter(a => !!a.native && a.native !== undefined)
+        .map(a => [a.name, a]))
     : new Map()
 
   const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
@@ -185,7 +186,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
   return { nativePackages, minUpdateVersion }
 }
 
-async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false): Promise<boolean> {
+async function checkVersionExists(supabase: SupabaseType, appid: string, bundle: string, versionExistsOk = false, interactive = false): Promise<boolean | string> {
   // check if app already exist
   const { data: appVersion, error: appVersionError } = await supabase
     .rpc('exist_app_versions', { appid, name_version: bundle })
@@ -197,6 +198,50 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
       outro('Bundle version already exists - exiting gracefully 🎉')
       return true
     }
+
+    // Interactive mode - offer to bump version
+    if (interactive) {
+      log.error(`❌ Version ${bundle} already exists`)
+
+      const suggestions = getVersionSuggestions(bundle)
+      log.info(`💡 Here are some suggestions:`)
+      suggestions.forEach((suggestion, idx) => {
+        log.info(`   ${idx + 1}. ${suggestion}`)
+      })
+
+      const choice = await pSelect({
+        message: 'What would you like to do?',
+        options: [
+          { value: 'suggest1', label: `Use ${suggestions[0]}` },
+          { value: 'suggest2', label: `Use ${suggestions[1]}` },
+          { value: 'suggest3', label: `Use ${suggestions[2]}` },
+          { value: 'suggest4', label: `Use ${suggestions[3]}` },
+          { value: 'custom', label: 'Enter a custom version' },
+          { value: 'cancel', label: 'Cancel upload' },
+        ],
+      })
+
+      if (pIsCancel(choice) || choice === 'cancel') {
+        uploadFail('Upload cancelled by user')
+      }
+
+      let newVersion: string
+      if (choice === 'custom') {
+        const customVersion = await interactiveVersionBump(bundle, 'upload')
+        if (!customVersion) {
+          uploadFail('Upload cancelled by user')
+        }
+        newVersion = customVersion
+      }
+      else {
+        const suggestionIndex = Number.parseInt(choice.replace('suggest', '')) - 1
+        newVersion = suggestions[suggestionIndex]
+      }
+
+      log.info(`🔄 Retrying with new version: ${newVersion}`)
+      return newVersion // Return the new version to retry with
+    }
+
     uploadFail(`Version ${bundle} already exists ${formatError(appVersionError)}`)
   }
 
@@ -690,7 +735,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] User verified successfully, user_id: ${userId}`)
 
-  const channel = options.channel || await getDefaultUploadChannel(appid, supabase, localConfig.hostWeb) || 'dev'
+  const channel = options.channel || await getDefaultUploadChannel(appid, supabase, localConfig.hostWeb) || 'production'
   if (options.verbose)
     log.info(`[Verbose] Target channel: ${channel}`)
 
@@ -722,10 +767,15 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Checking if version ${bundle} already exists...`)
 
-  const versionAlreadyExists = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk)
+  // Enable interactive mode if not in silent mode (prompts will handle TTY detection)
+  const interactive = !silent
+  const versionExistsResult = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk, interactive)
+
   if (options.verbose)
-    log.info(`[Verbose] Version exists check: ${versionAlreadyExists ? 'yes (skipping)' : 'no (continuing)'}`)
-  if (versionAlreadyExists) {
+    log.info(`[Verbose] Version exists check: ${versionExistsResult ? (typeof versionExistsResult === 'string' ? `retry with ${versionExistsResult}` : 'yes (skipping)') : 'no (continuing)'}`)
+
+  // If version exists and we got a boolean true, skip
+  if (versionExistsResult === true) {
     return {
       success: true,
       skipped: true,
@@ -735,6 +785,12 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
       encryptionMethod,
       storageProvider: defaultStorageProvider,
     }
+  }
+
+  // If we got a new version string, retry with that version
+  if (typeof versionExistsResult === 'string') {
+    log.info(`Retrying upload with new version: ${versionExistsResult}`)
+    return uploadBundleInternal(preAppid, { ...options, bundle: versionExistsResult }, silent)
   }
 
   if (options.external && !options.external.startsWith('https://')) {
@@ -1153,7 +1209,32 @@ export async function uploadBundle(appid: string, options: OptionsUpload) {
     await uploadBundleInternal(appid, options)
   }
   catch (error) {
-    log.error(`uploadBundle failed: ${formatError(error)}`)
+    const errorMessage = formatError(error)
+    log.error(`uploadBundle failed: ${errorMessage}`)
+
+    // Interactive retry for errors (prompts will handle TTY detection)
+    if (!options.versionExistsOk) {
+      log.warn(`⚠️  Upload failed with error:`)
+      log.warn(`   ${errorMessage}`)
+
+      try {
+        const retry = await pConfirm({ message: 'Would you like to retry the upload?' })
+
+        if (pIsCancel(retry)) {
+          throw error instanceof Error ? error : new Error(String(error))
+        }
+
+        if (retry) {
+          log.info(`🔄 Retrying upload...`)
+          return uploadBundle(appid, options) // Recursive retry
+        }
+      }
+      catch {
+        // If prompts fail (e.g., not a TTY), just throw the original error
+        throw error instanceof Error ? error : new Error(String(error))
+      }
+    }
+
     throw error instanceof Error ? error : new Error(String(error))
   }
 }
