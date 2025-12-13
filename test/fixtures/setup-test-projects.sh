@@ -59,7 +59,7 @@ cat > package.json << EOF
   }
 }
 EOF
-yarn add --silent 2>/dev/null || yarn add
+yarn install --silent 2>/dev/null || yarn add
 echo "   ✓ yarn project created"
 
 # ============================================================================
