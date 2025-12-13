@@ -4,7 +4,7 @@ import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { cwd, exit } from 'node:process'
+import { cwd, env, exit, platform } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
@@ -102,6 +102,108 @@ async function cancelCommand(command: boolean | symbol, orgId: string, apikey: s
 
 async function markStep(orgId: string, apikey: string, step: string, appId: string) {
   return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
+}
+
+async function checkPrerequisitesStep(orgId: string, apikey: string) {
+  pLog.info(`📋 Checking development environment prerequisites`)
+  pLog.info(`   For mobile development, you need at least one platform setup`)
+
+  const hasXcode = platform === 'darwin' && existsSync('/Applications/Xcode.app')
+
+  // Check for Android SDK in common locations
+  const homeDir = env.HOME || env.USERPROFILE || '~'
+  const androidPaths = [
+    env.ANDROID_HOME,
+    env.ANDROID_SDK_ROOT,
+    join(homeDir, 'Library', 'Android', 'sdk'), // macOS
+    join(homeDir, 'Android', 'Sdk'), // Windows/Linux
+    join(homeDir, 'AppData', 'Local', 'Android', 'Sdk'), // Windows alternative
+  ].filter(Boolean)
+
+  const hasAndroidStudio = androidPaths.some(path => path && existsSync(path))
+
+  if (hasXcode) {
+    pLog.success(`✅ Xcode detected - iOS development ready`)
+  }
+  else if (platform === 'darwin') {
+    pLog.warn(`⚠️  Xcode not found`)
+  }
+
+  if (hasAndroidStudio) {
+    pLog.success(`✅ Android SDK detected - Android development ready`)
+  }
+  else {
+    pLog.warn(`⚠️  Android SDK not found`)
+  }
+
+  if (!hasXcode && !hasAndroidStudio) {
+    pLog.error(`❌ No development environment detected`)
+    pLog.info(``)
+    pLog.info(`📱 To develop mobile apps with Capacitor, you need:`)
+    pLog.info(`   • For iOS: Xcode (macOS only) - https://developer.apple.com/xcode/`)
+    pLog.info(`   • For Android: Android Studio - https://developer.android.com/studio`)
+    pLog.info(``)
+
+    const continueAnyway = await pConfirm({
+      message: `Continue onboarding without a development environment? (You won't be able to build or test)`,
+      initialValue: false,
+    })
+    await cancelCommand(continueAnyway, orgId, apikey)
+
+    if (!continueAnyway) {
+      pLog.info(`📝 Please install a development environment and run the onboarding again`)
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+      exit()
+    }
+
+    pLog.warn(`⚠️  Continuing without development environment - you'll need to set it up later`)
+  }
+  else if (!hasXcode && platform === 'darwin') {
+    const wantsIos = await pConfirm({
+      message: `Xcode is not installed. Do you plan to develop for iOS?`,
+      initialValue: false,
+    })
+    await cancelCommand(wantsIos, orgId, apikey)
+
+    if (wantsIos) {
+      pLog.info(`📥 Please install Xcode from: https://developer.apple.com/xcode/`)
+      pLog.info(`💡 After installing Xcode, you can continue the onboarding`)
+
+      const installedNow = await pConfirm({
+        message: `Have you installed Xcode? (Choose No to continue with Android only)`,
+        initialValue: false,
+      })
+      await cancelCommand(installedNow, orgId, apikey)
+
+      if (!installedNow) {
+        pLog.info(`📱 Continuing with Android development only`)
+      }
+    }
+  }
+  else if (!hasAndroidStudio) {
+    const wantsAndroid = await pConfirm({
+      message: `Android SDK is not installed. Do you plan to develop for Android?`,
+      initialValue: false,
+    })
+    await cancelCommand(wantsAndroid, orgId, apikey)
+
+    if (wantsAndroid) {
+      pLog.info(`📥 Please install Android Studio from: https://developer.android.com/studio`)
+      pLog.info(`💡 After installing Android Studio, set up the Android SDK`)
+
+      const installedNow = await pConfirm({
+        message: `Have you installed Android Studio? (Choose No to continue with iOS only)`,
+        initialValue: false,
+      })
+      await cancelCommand(installedNow, orgId, apikey)
+
+      if (!installedNow) {
+        pLog.info(`📱 Continuing with iOS development only`)
+      }
+    }
+  }
+
+  await markStep(orgId, apikey, 'check-prerequisites', 'checked')
 }
 
 async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions): Promise<string> {
@@ -1009,8 +1111,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let platform: 'ios' | 'android' = 'ios' // default
 
   try {
-    if (stepToSkip < 1)
-      await markStep(orgId, options.apikey, 'add-app', appId)
+    if (stepToSkip < 1) {
+      await checkPrerequisitesStep(orgId, options.apikey)
+      markStepDone(1)
+    }
 
     if (stepToSkip < 2) {
       appId = await addAppStep(organization, options.apikey, appId, options)
@@ -1068,6 +1172,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (stepToSkip < 12) {
       await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(12)
+    }
+
+    if (stepToSkip < 13) {
+      markStepDone(13)
     }
 
     await markStep(orgId, options.apikey, 'done', appId)
