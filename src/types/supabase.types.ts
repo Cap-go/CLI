@@ -878,6 +878,7 @@ export type Database = {
           id: number
           is_emulator: boolean | null
           is_prod: boolean | null
+          key_id: string | null
           os_version: string | null
           platform: Database["public"]["Enums"]["platform_os"]
           plugin_version: string
@@ -894,6 +895,7 @@ export type Database = {
           id?: never
           is_emulator?: boolean | null
           is_prod?: boolean | null
+          key_id?: string | null
           os_version?: string | null
           platform: Database["public"]["Enums"]["platform_os"]
           plugin_version?: string
@@ -910,6 +912,7 @@ export type Database = {
           id?: never
           is_emulator?: boolean | null
           is_prod?: boolean | null
+          key_id?: string | null
           os_version?: string | null
           platform?: Database["public"]["Enums"]["platform_os"]
           plugin_version?: string
@@ -2288,6 +2291,7 @@ export type Database = {
           deleted: boolean
           external_url: string | null
           id: number
+          key_id: string | null
           link: string | null
           manifest:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
@@ -2658,6 +2662,7 @@ export type Database = {
         | "download_manifest_checksum_fail"
         | "download_manifest_brotli_fail"
         | "backend_refusal"
+        | "download_0"
       stripe_status:
         | "created"
         | "succeeded"
@@ -2906,6 +2911,7 @@ export const Constants = {
         "download_manifest_checksum_fail",
         "download_manifest_brotli_fail",
         "backend_refusal",
+        "download_0",
       ],
       stripe_status: [
         "created",
