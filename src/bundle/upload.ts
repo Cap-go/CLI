@@ -1222,24 +1222,53 @@ export async function uploadBundle(appid: string, options: OptionsUpload) {
     await uploadBundleInternal(appid, options)
   }
   catch (error) {
-    const errorMessage = formatError(error)
-    log.error(`uploadBundle failed: ${errorMessage}`)
+    // Show simple message by default, full error details only with --verbose
+    const simpleMessage = error instanceof Error ? error.message : String(error)
+    const verboseMessage = formatError(error)
+
+    if (options.verbose) {
+      log.error(`uploadBundle failed:${verboseMessage}`)
+    }
+    else {
+      log.error(`uploadBundle failed: ${simpleMessage}`)
+    }
+
+    // Check if this is a checksum error - offer specific retry option
+    const isChecksumError = simpleMessage.includes('Cannot upload the same bundle content')
 
     // Interactive retry for errors (prompts will handle TTY detection)
     if (!options.versionExistsOk) {
-      log.warn(`⚠️  Upload failed with error:`)
-      log.warn(`   ${errorMessage}`)
-
       try {
-        const retry = await pConfirm({ message: 'Would you like to retry the upload?' })
+        if (isChecksumError) {
+          // For checksum errors, offer to retry with --ignore-checksum-check
+          const retryChoice = await pSelect({
+            message: 'Would you like to retry the upload?',
+            options: [
+              { value: 'ignore', label: 'Retry with --ignore-checksum-check (force upload same content)' },
+              { value: 'cancel', label: 'Cancel upload' },
+            ],
+          })
 
-        if (pIsCancel(retry)) {
-          throw error instanceof Error ? error : new Error(String(error))
+          if (pIsCancel(retryChoice) || retryChoice === 'cancel') {
+            throw error instanceof Error ? error : new Error(String(error))
+          }
+
+          if (retryChoice === 'ignore') {
+            log.info(`🔄 Retrying upload with --ignore-checksum-check...`)
+            return uploadBundle(appid, { ...options, ignoreChecksumCheck: true })
+          }
         }
+        else {
+          const retry = await pConfirm({ message: 'Would you like to retry the upload?' })
 
-        if (retry) {
-          log.info(`🔄 Retrying upload...`)
-          return uploadBundle(appid, options) // Recursive retry
+          if (pIsCancel(retry)) {
+            throw error instanceof Error ? error : new Error(String(error))
+          }
+
+          if (retry) {
+            log.info(`🔄 Retrying upload...`)
+            return uploadBundle(appid, options)
+          }
         }
       }
       catch {
