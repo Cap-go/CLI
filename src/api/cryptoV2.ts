@@ -154,3 +154,27 @@ export function createRSAV2(): RSAKeys {
     }) as string,
   }
 }
+
+/**
+ * Calculate the key ID from a public key (first 4 characters of base64-encoded key)
+ * This matches the implementation in the iOS/Android updater plugins
+ * @param publicKey - RSA public key in PEM format
+ * @returns 4-character key ID or empty string if key is invalid
+ */
+export function calcKeyId(publicKey: string): string {
+  if (!publicKey) {
+    return ''
+  }
+
+  // Remove PEM headers and whitespace to get the raw key data
+  // This matches the iOS/Android implementation exactly
+  const cleanedKey = publicKey
+    .replace(/-----BEGIN RSA PUBLIC KEY-----/g, '')
+    .replace(/-----END RSA PUBLIC KEY-----/g, '')
+    .replace(/\n/g, '')
+    .replace(/\r/g, '')
+    .replace(/ /g, '')
+
+  // Return first 4 characters of the base64-encoded key
+  return cleanedKey.substring(0, 4)
+}

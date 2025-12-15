@@ -102,6 +102,7 @@ export type Database = {
           deleted: boolean
           external_url: string | null
           id: number
+          key_id: string | null
           link: string | null
           manifest:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
@@ -125,6 +126,7 @@ export type Database = {
           deleted?: boolean
           external_url?: string | null
           id?: number
+          key_id?: string | null
           link?: string | null
           manifest?:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]
@@ -148,6 +150,7 @@ export type Database = {
           deleted?: boolean
           external_url?: string | null
           id?: number
+          key_id?: string | null
           link?: string | null
           manifest?:
             | Database["public"]["CompositeTypes"]["manifest_entry"][]

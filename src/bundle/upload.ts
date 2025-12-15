@@ -12,7 +12,7 @@ import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
@@ -248,13 +248,14 @@ async function checkVersionExists(supabase: SupabaseType, appid: string, bundle:
   return false
 }
 
-async function prepareBundleFile(path: string, options: OptionsUpload, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number) {
+async function prepareBundleFile(path: string, options: OptionsUpload, apikey: string, orgId: string, appid: string, maxUploadLength: number, alertUploadSize: number, publicKeyFromConfig?: string) {
   let ivSessionKey
   let sessionKey
   let checksum = ''
   let zipped: Buffer | null = null
   let encryptionMethod = 'none' as 'none' | 'v2' | 'v1'
   let finalKeyData = ''
+  let keyId = ''
   const keyV2 = options.keyV2
   const noKey = options.key === false
 
@@ -325,6 +326,14 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     sessionKey = sKey
     encryptionMethod = 'v2'
     finalKeyData = keyDataV2
+    // Calculate key_id from the public key in capacitor config
+    // This matches the key_id sent by devices for verification
+    if (publicKeyFromConfig) {
+      keyId = calcKeyId(publicKeyFromConfig)
+      if (options.verbose) {
+        log.info(`[Verbose] Encryption key_id: ${keyId}`)
+      }
+    }
     if (options.displayIvSession) {
       log.info(`Your Iv Session key is ${ivSessionKey},
     keep it safe, you will need it to decrypt your bundle.
@@ -370,7 +379,7 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
   if (options.verbose)
     log.info(`[Verbose] Bundle preparation complete, returning bundle data`)
 
-  return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData }
+  return { zipped, ivSessionKey, sessionKey, checksum, encryptionMethod, finalKeyData, keyId }
 }
 
 async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, appid: string, bundle: string, orgId: string, zipped: Buffer, options: OptionsUpload, tusChunkSize: number) {
@@ -815,6 +824,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     checksum: undefined as undefined | string,
     link: options.link || null,
     comment: options.comment || null,
+    key_id: undefined as undefined | string,
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null
@@ -823,9 +833,11 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     if (options.verbose)
       log.info(`[Verbose] Preparing bundle file from path: ${path}`)
 
-    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd } = await prepareBundleFile(path, options, apikey, orgId, appid, fileConfig.maxUploadLength, fileConfig.alertUploadSize)
+    const publicKeyFromConfig = extConfig.config?.plugins?.CapacitorUpdater?.publicKey
+    const { zipped: _zipped, ivSessionKey, checksum, sessionKey: sk, encryptionMethod: em, finalKeyData: fkd, keyId } = await prepareBundleFile(path, options, apikey, orgId, appid, fileConfig.maxUploadLength, fileConfig.alertUploadSize, publicKeyFromConfig)
     versionData.session_key = ivSessionKey
     versionData.checksum = checksum
+    versionData.key_id = keyId || undefined
     sessionKey = sk
     zipped = _zipped
     encryptionMethod = em
@@ -837,6 +849,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
       log.info(`  - Checksum: ${checksum}`)
       log.info(`  - Encryption: ${em}`)
       log.info(`  - IV Session Key: ${ivSessionKey ? 'present' : 'none'}`)
+      log.info(`  - Key ID: ${keyId || 'none'}`)
     }
 
     if (!options.ignoreChecksumCheck) {
