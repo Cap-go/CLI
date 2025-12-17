@@ -426,3 +426,180 @@ export async function clearCredentialsCommand(options: { appId?: string, platfor
     process.exit(1)
   }
 }
+
+/**
+ * Update existing credentials (partial update, no full validation)
+ * Use this to update specific credentials without providing all of them again
+ */
+export async function updateCredentialsCommand(options: SaveCredentialsOptions): Promise<void> {
+  try {
+    // Detect platform from provided options if not explicitly set
+    const hasIosOptions = !!(options.certificate || options.provisioningProfile || options.provisioningProfileProd
+      || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
+      || options.appleProfileName || options.appleTeamId)
+    const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
+      || options.keystoreStorePassword || options.playConfig)
+
+    let platform = options.platform
+    if (!platform) {
+      if (hasIosOptions && !hasAndroidOptions) {
+        platform = 'ios'
+      }
+      else if (hasAndroidOptions && !hasIosOptions) {
+        platform = 'android'
+      }
+      else if (hasIosOptions && hasAndroidOptions) {
+        log.error('Cannot mix iOS and Android options. Please use --platform to specify which platform.')
+        process.exit(1)
+      }
+      else {
+        log.error('No credentials provided to update.')
+        log.error('')
+        log.error('Usage: npx @capgo/cli build credentials update [options]')
+        log.error('')
+        log.error('iOS options: --certificate, --provisioning-profile, --apple-key, etc.')
+        log.error('Android options: --keystore, --keystore-alias, --play-config, etc.')
+        process.exit(1)
+      }
+    }
+
+    // Try to infer appId from capacitor.config if not provided
+    const extConfig = await getConfig()
+    const appId = getAppId(options.appId, extConfig?.config)
+
+    if (!appId) {
+      log.error('❌ App ID is required.')
+      log.error('')
+      log.error('Either:')
+      log.error('  1. Run this command from a Capacitor project directory, OR')
+      log.error('  2. Provide --appId explicitly: --appId com.example.app')
+      process.exit(1)
+    }
+
+    // Check if credentials exist for this app/platform
+    const existing = await getSavedCredentials(appId, platform)
+    if (!existing) {
+      log.error(`❌ No existing ${platform.toUpperCase()} credentials found for ${appId}.`)
+      log.error('')
+      log.error('Use "build credentials save" to create credentials first.')
+      process.exit(1)
+    }
+
+    const credentials: Partial<BuildCredentials> = {}
+    const files: any = {}
+
+    if (platform === 'ios') {
+      // Handle iOS credentials
+      if (options.certificate) {
+        const certPath = resolve(options.certificate)
+        if (!existsSync(certPath)) {
+          log.error(`Certificate file not found: ${certPath}`)
+          process.exit(1)
+        }
+        files.BUILD_CERTIFICATE_FILE = certPath
+        log.info(`✓ Updating certificate: ${certPath}`)
+      }
+
+      if (options.provisioningProfile) {
+        const profilePath = resolve(options.provisioningProfile)
+        if (!existsSync(profilePath)) {
+          log.error(`Provisioning profile not found: ${profilePath}`)
+          process.exit(1)
+        }
+        files.BUILD_PROVISION_PROFILE_FILE = profilePath
+        log.info(`✓ Updating provisioning profile: ${profilePath}`)
+      }
+
+      if (options.provisioningProfileProd) {
+        const profilePath = resolve(options.provisioningProfileProd)
+        if (!existsSync(profilePath)) {
+          log.error(`Production provisioning profile not found: ${profilePath}`)
+          process.exit(1)
+        }
+        files.BUILD_PROVISION_PROFILE_FILE_PROD = profilePath
+        log.info(`✓ Updating production provisioning profile: ${profilePath}`)
+      }
+
+      if (options.appleKey) {
+        const keyPath = resolve(options.appleKey)
+        if (!existsSync(keyPath)) {
+          log.error(`Apple key file not found: ${keyPath}`)
+          process.exit(1)
+        }
+        files.APPLE_KEY_FILE = keyPath
+        log.info(`✓ Updating Apple key file: ${keyPath}`)
+      }
+
+      // Passwords and IDs (not files)
+      if (options.p12Password) {
+        credentials.P12_PASSWORD = options.p12Password
+        log.info('✓ Updating P12 password')
+      }
+      if (options.appleKeyId) {
+        credentials.APPLE_KEY_ID = options.appleKeyId
+        log.info(`✓ Updating Apple Key ID: ${options.appleKeyId}`)
+      }
+      if (options.appleIssuerId) {
+        credentials.APPLE_ISSUER_ID = options.appleIssuerId
+        log.info(`✓ Updating Apple Issuer ID: ${options.appleIssuerId}`)
+      }
+      if (options.appleProfileName) {
+        credentials.APPLE_PROFILE_NAME = options.appleProfileName
+        log.info(`✓ Updating Apple Profile Name: ${options.appleProfileName}`)
+      }
+      if (options.appleTeamId) {
+        credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
+        log.info(`✓ Updating Apple Team ID: ${options.appleTeamId}`)
+      }
+    }
+    else if (platform === 'android') {
+      // Handle Android credentials
+      if (options.keystore) {
+        const keystorePath = resolve(options.keystore)
+        if (!existsSync(keystorePath)) {
+          log.error(`Keystore file not found: ${keystorePath}`)
+          process.exit(1)
+        }
+        files.ANDROID_KEYSTORE_PATH = keystorePath
+        log.info(`✓ Updating keystore: ${keystorePath}`)
+      }
+
+      if (options.playConfig) {
+        const configPath = resolve(options.playConfig)
+        if (!existsSync(configPath)) {
+          log.error(`Play config file not found: ${configPath}`)
+          process.exit(1)
+        }
+        files.PLAY_CONFIG_JSON_PATH = configPath
+        log.info(`✓ Updating Play Store config: ${configPath}`)
+      }
+
+      // Passwords and aliases (not files)
+      if (options.keystoreAlias) {
+        credentials.KEYSTORE_KEY_ALIAS = options.keystoreAlias
+        log.info(`✓ Updating keystore alias: ${options.keystoreAlias}`)
+      }
+      if (options.keystoreKeyPassword) {
+        credentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+        log.info('✓ Updating keystore key password')
+      }
+      if (options.keystoreStorePassword) {
+        credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+        log.info('✓ Updating keystore store password')
+      }
+    }
+
+    // Convert files to base64 and merge with other credentials
+    const fileCredentials = await convertFilesToCredentials(platform, files, credentials)
+
+    // Update credentials (merge with existing)
+    await updateSavedCredentials(appId, platform, fileCredentials)
+
+    log.success(`\n✅ ${platform.toUpperCase()} credentials updated for ${appId}!`)
+    log.info('   Location: ~/.capgo-credentials/credentials.json\n')
+  }
+  catch (error) {
+    log.error(`Failed to update credentials: ${error instanceof Error ? error.message : String(error)}`)
+    process.exit(1)
+  }
+}

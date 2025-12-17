@@ -8,7 +8,7 @@ import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
-import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand } from './build/credentials-command'
+import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
@@ -683,6 +683,36 @@ Examples:
   .action(clearCredentialsCommand)
   .option('--appId <appId>', 'App ID to clear (optional, clears all apps if omitted)')
   .option('--platform <platform>', 'Platform to clear: ios or android (optional, clears all platforms if omitted)')
+
+buildCredentials
+  .command('update')
+  .description(`Update specific credentials without providing all of them again
+
+Update existing credentials by providing only the fields you want to change.
+Platform is auto-detected from the options you provide.
+
+Examples:
+  npx @capgo/cli build credentials update --provisioning-profile ./new-profile.mobileprovision
+  npx @capgo/cli build credentials update --keystore ./new-keystore.jks --keystore-key-password "newpass"`)
+  .action(updateCredentialsCommand)
+  .option('--appId <appId>', 'App ID (auto-detected from capacitor.config if omitted)')
+  .option('--platform <platform>', 'Platform: ios or android (auto-detected from options)')
+  // iOS options
+  .option('--certificate <path>', 'Path to P12 certificate file')
+  .option('--provisioning-profile <path>', 'Path to provisioning profile (.mobileprovision)')
+  .option('--provisioning-profile-prod <path>', 'Path to production provisioning profile')
+  .option('--p12-password <password>', 'P12 certificate password')
+  .option('--apple-key <path>', 'Path to App Store Connect API key (.p8 file)')
+  .option('--apple-key-id <id>', 'App Store Connect API Key ID')
+  .option('--apple-issuer-id <id>', 'App Store Connect Issuer ID')
+  .option('--apple-profile-name <name>', 'Provisioning profile name')
+  .option('--apple-team-id <id>', 'App Store Connect Team ID')
+  // Android options
+  .option('--keystore <path>', 'Path to keystore file (.keystore or .jks)')
+  .option('--keystore-alias <alias>', 'Keystore key alias')
+  .option('--keystore-key-password <password>', 'Keystore key password')
+  .option('--keystore-store-password <password>', 'Keystore store password')
+  .option('--play-config <path>', 'Path to Google Play service account JSON')
 
 program
   .command('generate-docs [filePath]')
