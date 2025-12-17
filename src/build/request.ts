@@ -185,6 +185,30 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
     const decoder = new TextDecoder()
     let buffer = '' // Buffer for incomplete lines
 
+    // Helper to process and display a log message
+    const processLogMessage = (message: string) => {
+      if (!message.trim())
+        return
+
+      // Check for final status messages from the server
+      // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
+      const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
+      if (statusMatch) {
+        finalStatus = statusMatch[1].toLowerCase()
+        // Don't display status messages as log lines - they'll be displayed as final status
+        return
+      }
+
+      // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
+      if (finalStatus)
+        return
+
+      // Stop spinner, print the log line, restart spinner
+      // This preserves the log history while keeping the spinner active
+      spinner.stop(message, 0) // 0 = no symbol, just print the message
+      spinner.start('Building...')
+    }
+
     while (true) {
       const { done, value } = await reader.read()
       if (done)
@@ -200,16 +224,7 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const message = line.slice(6) // Remove "data: " prefix
-          if (message.trim()) {
-            spinner.message(message)
-
-            // Check for final status messages from the server
-            // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
-            const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
-            if (statusMatch) {
-              finalStatus = statusMatch[1].toLowerCase()
-            }
-          }
+          processLogMessage(message)
         }
       }
     }
@@ -217,21 +232,11 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
     // Process any remaining data in buffer
     if (buffer.startsWith('data: ')) {
       const message = buffer.slice(6)
-      if (message.trim()) {
-        spinner.message(message)
-        const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
-        if (statusMatch) {
-          finalStatus = statusMatch[1].toLowerCase()
-        }
-      }
+      processLogMessage(message)
     }
 
-    if (finalStatus) {
-      spinner.stop(`Build ${finalStatus}`)
-    }
-    else {
-      spinner.stop('Build logs received')
-    }
+    // Just stop the spinner - the main function will display the final status
+    spinner.stop()
 
     return finalStatus
   }
