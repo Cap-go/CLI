@@ -122,6 +122,37 @@ export interface BuildRequestResult {
   error?: string
 }
 
+async function cancelBuild(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<void> {
+  try {
+    if (!silent)
+      log.warn('\n⚠️  Cancelling build...')
+
+    const response = await fetch(`${host}/build/cancel/${jobId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'authorization': apikey,
+      },
+      body: JSON.stringify({ app_id: appId }),
+    })
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      if (!silent)
+        log.warn(`Could not cancel build: ${errorText}`)
+      return
+    }
+
+    const result = await response.json() as { status: string, message?: string }
+    if (!silent)
+      log.info(`Build cancelled (status: ${result.status})`)
+  }
+  catch (err) {
+    if (!silent)
+      log.warn(`Failed to cancel build: ${err instanceof Error ? err.message : String(err)}`)
+  }
+}
+
 async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<void> {
   if (silent)
     return
@@ -798,13 +829,35 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.success('Build started successfully!')
         log.info(`Job ID: ${buildRequest.job_id}`)
         log.info('Streaming build logs...\n')
+        log.info('Press Ctrl+C to cancel the build\n')
       }
 
-      // Stream logs from the build
-      await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
+      // Set up signal handlers to cancel build on exit
+      let cancelled = false
+      const handleSignal = async () => {
+        if (cancelled)
+          return
+        cancelled = true
+        await cancelBuild(host, buildRequest.job_id, appId, options.apikey, silent)
+        process.exit(130) // 128 + SIGINT(2)
+      }
 
-      // Poll for final status
-      const finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
+      process.on('SIGINT', handleSignal)
+      process.on('SIGTERM', handleSignal)
+
+      let finalStatus: string
+      try {
+        // Stream logs from the build
+        await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
+
+        // Poll for final status
+        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
+      }
+      finally {
+        // Remove signal handlers
+        process.off('SIGINT', handleSignal)
+        process.off('SIGTERM', handleSignal)
+      }
 
       if (!silent) {
         if (finalStatus === 'succeeded') {
