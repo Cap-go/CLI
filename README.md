@@ -212,7 +212,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--self-assign** | <code>boolean</code> | Allow devices to auto-join this channel (updates channel setting) |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-| **--verbose** | <code>boolean</code> | Enable verbose output |
+| **--verbose** | <code>boolean</code> | Enable verbose output with detailed logging |
 
 ### <a id="bundle-compatibility"></a> 🧪 **Compatibility**
 
@@ -949,6 +949,7 @@ npx @capgo/cli@latest build request com.example.app --platform ios --path .
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+| **--verbose** | <code>boolean</code> | Enable verbose output with detailed logging |
 
 ### <a id="build-credentials"></a> 🔹 **Credentials**
 
