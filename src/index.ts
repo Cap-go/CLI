@@ -38,7 +38,7 @@ const optionDescriptions = {
   supaAnon: `Custom Supabase anon key (for self-hosting)`,
   packageJson: `Paths to package.json files for monorepos (comma-separated)`,
   nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
-  verbose: `Enable verbose output`,
+  verbose: `Enable verbose output with detailed logging`,
 }
 
 program
@@ -589,6 +589,7 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+  .option('--verbose', optionDescriptions.verbose)
 
 const buildCredentials = build
   .command('credentials')

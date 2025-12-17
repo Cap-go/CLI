@@ -96,6 +96,9 @@ export interface BuildRequestOptions extends OptionsBase {
   keystoreKeyPassword?: string
   keystoreStorePassword?: string
   playConfigJson?: string
+
+  // Output control options
+  verbose?: boolean // Enable verbose output with detailed logging
 }
 
 export interface BuildRequestResponse {
@@ -398,6 +401,7 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
   // Track build time
   const buildStartTime = Date.now()
+  const verbose = options.verbose ?? false
 
   try {
     options.apikey = options.apikey || findSavedKey(silent)
@@ -429,10 +433,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Requesting native build for ${appId}`)
       log.info(`Platform: ${options.platform}`)
       log.info(`Project: ${projectDir}`)
-      log.info(`API host: ${host}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
       log.info(`   They are used only during build and deleted after (max 24h)`)
       log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
+    }
+    if (verbose) {
+      log.info(`API host: ${host}`)
     }
 
     // Collect credentials from CLI args (if provided)
@@ -585,6 +591,10 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (!silent) {
       log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
     }
+    if (verbose) {
+      const credentialKeys = Object.keys(mergedCredentials).filter(k => mergedCredentials[k])
+      log.info(`Credentials provided: ${credentialKeys.join(', ')}`)
+    }
 
     // Request build from Capgo backend (POST /build/request)
     if (!silent)
@@ -614,6 +624,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (!silent) {
       log.success(`Build job created: ${buildRequest.job_id}`)
       log.info(`Status: ${buildRequest.status}`)
+    }
+    if (verbose) {
       log.info(`Upload URL: ${buildRequest.upload_url}`)
       log.info(`Upload expires: ${buildRequest.upload_expires_at}`)
     }
@@ -651,7 +663,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       // Upload to builder using TUS protocol
       if (!silent) {
-        log.info('Uploading to builder with TUS protocol...')
+        log.info('Uploading to builder...')
+      }
+      if (verbose) {
         log.info(`Upload endpoint: ${buildRequest.upload_url}`)
         log.info(`File size: ${sizeMB} MB`)
         log.info(`Job ID: ${buildRequest.job_id}`)
@@ -678,7 +692,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           },
           // Callback before request is sent
           onBeforeRequest(req) {
-            if (!silent) {
+            if (verbose) {
               log.info(`[TUS] ${req.getMethod()} ${req.getURL()}`)
               const authHeader = req.getHeader('authorization')
               log.info(`[TUS] Authorization header present: ${!!authHeader}`)
@@ -686,7 +700,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           },
           // Callback after response is received
           onAfterResponse(_req, res) {
-            if (!silent) {
+            if (verbose) {
               log.info(`[TUS] Response status: ${res.getStatus()}`)
               const uploadOffset = res.getHeader('upload-offset')
               const tusResumable = res.getHeader('tus-resumable')
@@ -697,14 +711,14 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           onError(error) {
             if (!silent) {
               spinner.stop('Upload failed')
-              log.error(`[TUS] Upload error: ${error.message}`)
+              log.error(`Upload error: ${error.message}`)
             }
             if (error instanceof tus.DetailedError) {
               const body = error.originalResponse?.getBody()
               const status = error.originalResponse?.getStatus()
               const url = error.originalRequest?.getURL()
 
-              if (!silent) {
+              if (verbose) {
                 log.error(`[TUS] Request URL: ${url}`)
                 log.error(`[TUS] Response status: ${status}`)
                 log.error(`[TUS] Response body: ${body}`)
@@ -734,6 +748,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           onSuccess() {
             if (!silent) {
               spinner.stop('Upload complete!')
+            }
+            if (verbose) {
               log.success('TUS upload completed successfully')
             }
             resolve()
@@ -741,7 +757,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         })
 
         // Start the upload
-        if (!silent)
+        if (verbose)
           log.info('[TUS] Starting upload...')
         upload.start()
       })
