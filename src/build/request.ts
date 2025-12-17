@@ -143,22 +143,34 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       return
 
     const decoder = new TextDecoder()
+    let buffer = '' // Buffer for incomplete lines
 
     while (true) {
       const { done, value } = await reader.read()
       if (done)
         break
 
-      const text = decoder.decode(value, { stream: true })
-      // SSE format: "data: message\n\n"
-      const lines = text.split('\n')
+      buffer += decoder.decode(value, { stream: true })
+
+      // Process complete lines (SSE format: "data: message\n\n")
+      const lines = buffer.split('\n')
+      // Keep the last incomplete line in the buffer
+      buffer = lines.pop() || ''
+
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const message = line.slice(6) // Remove "data: " prefix
           if (message.trim())
-            log.error(message)
+            log.info(message)
         }
       }
+    }
+
+    // Process any remaining data in buffer
+    if (buffer.startsWith('data: ')) {
+      const message = buffer.slice(6)
+      if (message.trim())
+        log.info(message)
     }
   }
   catch (err) {
