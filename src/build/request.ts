@@ -826,8 +826,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       const startResult = await startResponse.json() as { status?: string }
 
       if (!silent) {
-        log.success('Build started successfully!')
-        log.info(`Job ID: ${buildRequest.job_id}`)
+        log.success('Build started!')
         log.info('Streaming build logs...\n')
         log.info('Press Ctrl+C to cancel the build\n')
       }
