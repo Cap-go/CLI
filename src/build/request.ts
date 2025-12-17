@@ -163,6 +163,7 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
 
   const spinner = spinnerC()
   let finalStatus: string | null = null
+  let spinnerActive = false
 
   try {
     const response = await fetch(`${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`, {
@@ -181,6 +182,7 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       return null
 
     spinner.start('Waiting for build logs...')
+    spinnerActive = true
 
     const decoder = new TextDecoder()
     let buffer = '' // Buffer for incomplete lines
@@ -203,10 +205,14 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       if (finalStatus)
         return
 
-      // Stop spinner, print the log line, restart spinner
-      // This preserves the log history while keeping the spinner active
-      spinner.stop(message, 0) // 0 = no symbol, just print the message
-      spinner.start('Building...')
+      // Stop spinner once to show log lines, then print directly
+      // This avoids the _events error caused by rapidly stopping/starting the spinner
+      if (spinnerActive) {
+        spinner.stop('Building...')
+        spinnerActive = false
+      }
+      // Print log line directly to console
+      log.info(message)
     }
 
     while (true) {
@@ -235,14 +241,16 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       processLogMessage(message)
     }
 
-    // Just stop the spinner - the main function will display the final status
-    spinner.stop()
+    // Just stop the spinner if it's still active - the main function will display the final status
+    if (spinnerActive)
+      spinner.stop()
 
     return finalStatus
   }
   catch (err) {
     // Log streaming is best-effort, don't fail the build
-    spinner.stop('Log streaming ended')
+    if (spinnerActive)
+      spinner.stop('Log streaming ended')
     if (!silent)
       log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
     return null
@@ -431,7 +439,11 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
 
     if (stats.isDirectory()) {
       // Skip excluded directories
-      if (item === '.git' || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite')
+      // .git: version control
+      // dist, build, .angular, .vite: build output directories
+      // .gradle, .idea: Android build cache and IDE settings
+      // .swiftpm: Swift Package Manager cache
+      if (item === '.git' || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite' || item === '.gradle' || item === '.idea' || item === '.swiftpm')
         continue
 
       // Always recurse into the platform folder (ios/ or android/)
