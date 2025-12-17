@@ -153,9 +153,16 @@ async function cancelBuild(host: string, jobId: string, appId: string, apikey: s
   }
 }
 
-async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<void> {
+/**
+ * Stream build logs from the server via SSE
+ * Returns the final status if detected from the stream, or null if stream ended without status
+ */
+async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<string | null> {
   if (silent)
-    return
+    return null
+
+  const spinner = spinnerC()
+  let finalStatus: string | null = null
 
   try {
     const response = await fetch(`${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`, {
@@ -166,12 +173,14 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
 
     if (!response.ok) {
       log.warn('Could not stream logs, continuing...')
-      return
+      return null
     }
 
     const reader = response.body?.getReader()
     if (!reader)
-      return
+      return null
+
+    spinner.start('Waiting for build logs...')
 
     const decoder = new TextDecoder()
     let buffer = '' // Buffer for incomplete lines
@@ -191,8 +200,16 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       for (const line of lines) {
         if (line.startsWith('data: ')) {
           const message = line.slice(6) // Remove "data: " prefix
-          if (message.trim())
-            log.info(message)
+          if (message.trim()) {
+            spinner.message(message)
+
+            // Check for final status messages from the server
+            // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
+            const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
+            if (statusMatch) {
+              finalStatus = statusMatch[1].toLowerCase()
+            }
+          }
         }
       }
     }
@@ -200,14 +217,30 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
     // Process any remaining data in buffer
     if (buffer.startsWith('data: ')) {
       const message = buffer.slice(6)
-      if (message.trim())
-        log.info(message)
+      if (message.trim()) {
+        spinner.message(message)
+        const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
+        if (statusMatch) {
+          finalStatus = statusMatch[1].toLowerCase()
+        }
+      }
     }
+
+    if (finalStatus) {
+      spinner.stop(`Build ${finalStatus}`)
+    }
+    else {
+      spinner.stop('Build logs received')
+    }
+
+    return finalStatus
   }
   catch (err) {
     // Log streaming is best-effort, don't fail the build
+    spinner.stop('Log streaming ended')
     if (!silent)
       log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
+    return null
   }
 }
 
@@ -846,11 +879,17 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       let finalStatus: string
       try {
-        // Stream logs from the build
-        await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
+        // Stream logs from the build - returns final status if detected from stream
+        const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
 
-        // Poll for final status
-        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
+        // Only poll if we didn't get the final status from the stream
+        if (streamStatus) {
+          finalStatus = streamStatus
+        }
+        else {
+          // Fall back to polling if stream ended without final status
+          finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
+        }
       }
       finally {
         // Remove signal handlers
