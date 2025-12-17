@@ -959,10 +959,13 @@ npx @capgo/cli@latest build credentials
 
 Manage build credentials stored locally on your machine.
 🔒 SECURITY:
-   - Credentials saved to ~/.capgo-credentials/credentials.json (local machine only)
+   - Credentials saved to ~/.capgo-credentials/credentials.json (global) or .capgo-credentials.json (local)
    - When building, sent to Capgo but NEVER stored permanently
-   - Auto-deleted from Capgo after build
+   - Deleted from Capgo immediately after build
    - Builds sent directly to app stores - Capgo keeps nothing
+📚 DOCUMENTATION:
+   iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
+   Android setup: https://capgo.app/docs/cli/cloud-build/android/
 
 
 
