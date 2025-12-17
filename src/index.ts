@@ -541,7 +541,7 @@ const build = program
 
 🔒 SECURITY GUARANTEE:
    Build credentials are NEVER stored on Capgo servers.
-   They are used only during the build and auto-deleted after (max 24 hours).
+   They are used only during the build and auto-deleted after.
    Builds sent directly to app stores - Capgo keeps nothing.
 
 📋 BEFORE BUILDING:
@@ -596,45 +596,48 @@ const buildCredentials = build
   .description(`Manage build credentials stored locally on your machine.
 
 🔒 SECURITY:
-   - Credentials saved to ~/.capgo-credentials/credentials.json (local machine only)
+   - Credentials saved to ~/.capgo-credentials/credentials.json (global) or .capgo-credentials.json (local)
    - When building, sent to Capgo but NEVER stored permanently
-   - Auto-deleted from Capgo after build (max 24 hours)
-   - Builds sent directly to app stores - Capgo keeps nothing`)
+   - Deleted from Capgo immediately after build
+   - Builds sent directly to app stores - Capgo keeps nothing
+
+📚 DOCUMENTATION:
+   iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
+   Android setup: https://capgo.app/docs/cli/cloud-build/android/`)
 
 buildCredentials
   .command('save')
   .description(`Save build credentials locally for iOS or Android.
 
-Credentials are stored in ~/.capgo-credentials/credentials.json per app ID and automatically used when building.
+Credentials are stored in:
+  - ~/.capgo-credentials/credentials.json (default, global)
+  - .capgo-credentials.json in project root (with --local flag)
 
 ⚠️  REQUIRED BEFORE BUILDING: You must save credentials before requesting a build.
 
 🔒 These credentials are NEVER stored on Capgo servers permanently.
-   They are only used during the build and deleted after (max 24 hours).
-   Builds sent directly to app stores - Capgo keeps nothing.
+   They are deleted immediately after the build completes.
+
+📚 Setup guides:
+   iOS: https://capgo.app/docs/cli/cloud-build/ios/
+   Android: https://capgo.app/docs/cli/cloud-build/android/
 
 iOS Example:
-  npx @capgo/cli build credentials save \\
-    --appId com.example.app \\
-    --platform ios \\
-    --certificate ./cert.p12 \\
-    --p12-password "password" \\  # Optional if cert has no password
+  npx @capgo/cli build credentials save --platform ios \\
+    --certificate ./cert.p12 --p12-password "password" \\
     --provisioning-profile ./profile.mobileprovision \\
-    --apple-key ./AuthKey.p8 \\
-    --apple-key-id "KEY123" \\
-    --apple-issuer-id "issuer-uuid" \\
-    --apple-profile-name "My App Profile" \\
-    --apple-team-id "team-id"
+    --apple-key ./AuthKey.p8 --apple-key-id "KEY123" \\
+    --apple-issuer-id "issuer-uuid" --apple-team-id "team-id" \\
+    --apple-profile-name "My App Profile"
 
 Android Example:
-  npx @capgo/cli build credentials save \\
-    --appId com.example.app \\
-    --platform android \\
-    --keystore ./release.keystore \\  # or ./release.jks
-    --keystore-alias "my-key" \\
+  npx @capgo/cli build credentials save --platform android \\
+    --keystore ./release.keystore --keystore-alias "my-key" \\
     --keystore-key-password "key-pass" \\
-    --keystore-store-password "store-pass" \\
-    --play-config ./service-account.json`)
+    --play-config ./service-account.json
+
+Local storage (per-project):
+  npx @capgo/cli build credentials save --local --platform ios ...`)
   .action(saveCredentialsCommand)
   .option('--appId <appId>', 'App ID (e.g., com.example.app) (required)')
   .option('--platform <platform>', 'Platform: ios or android (required)')
@@ -656,47 +659,52 @@ Android Example:
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')
   .option('--play-config <path>', 'Android: Path to Play Store service account JSON')
+  // Storage option
+  .option('--local', 'Save to .capgo-credentials.json in project root instead of global ~/.capgo-credentials/')
 
 buildCredentials
   .command('list')
   .description(`List saved build credentials (passwords masked).
 
-Shows what credentials are currently saved in ~/.capgo-credentials/credentials.json
+Shows what credentials are currently saved (both global and local).
 
 Examples:
   npx @capgo/cli build credentials list  # List all apps
   npx @capgo/cli build credentials list --appId com.example.app  # List specific app`)
   .action(listCredentialsCommand)
   .option('--appId <appId>', 'App ID to list (optional, lists all if omitted)')
+  .option('--local', 'List credentials from local .capgo-credentials.json only')
 
 buildCredentials
   .command('clear')
   .description(`Clear saved build credentials.
 
-Remove credentials from ~/.capgo-credentials/credentials.json
+Remove credentials from storage.
 Use --appId and --platform to target specific credentials.
 
 Examples:
-  npx @capgo/cli build credentials clear  # Clear all apps
-  npx @capgo/cli build credentials clear --appId com.example.app  # Clear specific app
-  npx @capgo/cli build credentials clear --appId com.example.app --platform ios  # Clear iOS only`)
+  npx @capgo/cli build credentials clear  # Clear all apps (global)
+  npx @capgo/cli build credentials clear --local  # Clear local credentials
+  npx @capgo/cli build credentials clear --appId com.example.app --platform ios`)
   .action(clearCredentialsCommand)
   .option('--appId <appId>', 'App ID to clear (optional, clears all apps if omitted)')
   .option('--platform <platform>', 'Platform to clear: ios or android (optional, clears all platforms if omitted)')
+  .option('--local', 'Clear from local .capgo-credentials.json instead of global')
 
 buildCredentials
   .command('update')
-  .description(`Update specific credentials without providing all of them again
+  .description(`Update specific credentials without providing all of them again.
 
 Update existing credentials by providing only the fields you want to change.
 Platform is auto-detected from the options you provide.
 
 Examples:
   npx @capgo/cli build credentials update --provisioning-profile ./new-profile.mobileprovision
-  npx @capgo/cli build credentials update --keystore ./new-keystore.jks --keystore-key-password "newpass"`)
+  npx @capgo/cli build credentials update --local --keystore ./new-keystore.jks`)
   .action(updateCredentialsCommand)
   .option('--appId <appId>', 'App ID (auto-detected from capacitor.config if omitted)')
   .option('--platform <platform>', 'Platform: ios or android (auto-detected from options)')
+  .option('--local', 'Update local .capgo-credentials.json instead of global')
   // iOS options
   .option('--certificate <path>', 'Path to P12 certificate file')
   .option('--provisioning-profile <path>', 'Path to provisioning profile (.mobileprovision)')

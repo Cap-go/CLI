@@ -31,7 +31,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import process from 'node:process'
+import { cwd, exit, off as processOff, on as processOn } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
@@ -512,7 +512,7 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
  * Credentials provided to this function are:
  * - Transmitted securely over HTTPS to Capgo's build servers
  * - Used ONLY during the active build process
- * - Automatically deleted after build completion (max 24 hours)
+ * - Automatically deleted after build completion
  * - NEVER stored permanently on Capgo servers
  * - Builds sent directly to app stores - Capgo keeps nothing
  */
@@ -538,7 +538,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       throw new Error(`Invalid platform "${options.platform}". Must be "ios" or "android"`)
     }
 
-    const projectDir = resolve(options.path || process.cwd())
+    const projectDir = resolve(options.path || cwd())
     const host = options.supaHost || 'https://api.capgo.app'
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
@@ -913,11 +913,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           return
         cancelled = true
         await cancelBuild(host, buildRequest.job_id, appId, options.apikey, silent)
-        process.exit(130) // 128 + SIGINT(2)
+        exit(130) // 128 + SIGINT(2)
       }
 
-      process.on('SIGINT', handleSignal)
-      process.on('SIGTERM', handleSignal)
+      processOn('SIGINT', handleSignal)
+      processOn('SIGTERM', handleSignal)
 
       let finalStatus: string
       try {
@@ -935,8 +935,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
       finally {
         // Remove signal handlers
-        process.off('SIGINT', handleSignal)
-        process.off('SIGTERM', handleSignal)
+        processOff('SIGINT', handleSignal)
+        processOff('SIGTERM', handleSignal)
       }
 
       if (!silent) {
@@ -997,6 +997,6 @@ export async function requestBuildCommand(appId: string, options: BuildRequestOp
   const result = await requestBuildInternal(appId, options, false)
 
   if (!result.success) {
-    process.exit(1)
+    exit(1)
   }
 }

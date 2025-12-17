@@ -895,7 +895,7 @@ npx @capgo/cli@latest organisation delete ORG_ID
 ⚠️ This feature is currently in PUBLIC BETA and cannot be used by anyone at this time.
 🔒 SECURITY GUARANTEE:
    Build credentials are NEVER stored on Capgo servers.
-   They are used only during the build and auto-deleted after (max 24 hours).
+   They are used only during the build and auto-deleted after.
    Builds sent directly to app stores - Capgo keeps nothing.
 📋 BEFORE BUILDING:
    Save your credentials first:
@@ -961,7 +961,7 @@ Manage build credentials stored locally on your machine.
 🔒 SECURITY:
    - Credentials saved to ~/.capgo-credentials/credentials.json (local machine only)
    - When building, sent to Capgo but NEVER stored permanently
-   - Auto-deleted from Capgo after build (max 24 hours)
+   - Auto-deleted from Capgo after build
    - Builds sent directly to app stores - Capgo keeps nothing
 
 

@@ -1,12 +1,14 @@
 import type { BuildCredentials } from './request'
 import { existsSync } from 'node:fs'
 import { resolve } from 'node:path'
-import process from 'node:process'
+import { exit } from 'node:process'
 import { log } from '@clack/prompts'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, getOrganizationId, sendEvent } from '../utils'
 import {
   clearSavedCredentials,
   convertFilesToCredentials,
+  getGlobalCredentialsPath,
+  getLocalCredentialsPath,
   getSavedCredentials,
   listAllApps,
   loadSavedCredentials,
@@ -16,6 +18,7 @@ import {
 interface SaveCredentialsOptions {
   platform?: 'ios' | 'android'
   appId?: string
+  local?: boolean
 
   // iOS options
   certificate?: string
@@ -43,13 +46,13 @@ interface SaveCredentialsOptions {
  * - Credentials are saved to ~/.capgo-credentials/credentials.json on YOUR local machine only
  * - When you run a build, credentials are sent to Capgo's build servers
  * - Credentials are NEVER stored permanently on Capgo servers
- * - They are automatically deleted after build completion (max 24 hours)
+ * - They are automatically deleted after build completion
  */
 export async function saveCredentialsCommand(options: SaveCredentialsOptions): Promise<void> {
   try {
     if (!options.platform) {
       log.error('Platform is required. Use --platform ios or --platform android')
-      process.exit(1)
+      exit(1)
     }
 
     // Try to infer appId from capacitor.config if not provided
@@ -63,7 +66,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       log.error('  1. Run this command from a Capacitor project directory, OR')
       log.error('  2. Provide --appId explicitly: --appId com.example.app')
       log.error('')
-      process.exit(1)
+      exit(1)
     }
 
     const platform = options.platform
@@ -73,7 +76,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     log.info('  - Credentials saved to ~/.capgo-credentials/credentials.json (local only)')
     log.info('  - When building, credentials are sent to Capgo servers')
     log.info('  - Credentials are NEVER stored on Capgo servers')
-    log.info('  - Auto-deleted after build (max 24 hours)')
+    log.info('  - Auto-deleted after build')
     log.info('  - Builds sent directly to app stores - Capgo keeps nothing\n')
 
     const credentials: Partial<BuildCredentials> = {}
@@ -85,7 +88,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const certPath = resolve(options.certificate)
         if (!existsSync(certPath)) {
           log.error(`Certificate file not found: ${certPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_CERTIFICATE_FILE = certPath
         log.info(`✓ Certificate file: ${certPath}`)
@@ -95,7 +98,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const profilePath = resolve(options.provisioningProfile)
         if (!existsSync(profilePath)) {
           log.error(`Provisioning profile not found: ${profilePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_PROVISION_PROFILE_FILE = profilePath
         log.info(`✓ Provisioning profile: ${profilePath}`)
@@ -105,7 +108,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const profilePath = resolve(options.provisioningProfileProd)
         if (!existsSync(profilePath)) {
           log.error(`Production provisioning profile not found: ${profilePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_PROVISION_PROFILE_FILE_PROD = profilePath
         log.info(`✓ Production provisioning profile: ${profilePath}`)
@@ -115,7 +118,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const keyPath = resolve(options.appleKey)
         if (!existsSync(keyPath)) {
           log.error(`Apple key file not found: ${keyPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.APPLE_KEY_FILE = keyPath
         log.info(`✓ Apple key file: ${keyPath}`)
@@ -145,7 +148,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const keystorePath = resolve(options.keystore)
         if (!existsSync(keystorePath)) {
           log.error(`Keystore file not found: ${keystorePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.ANDROID_KEYSTORE_PATH = keystorePath
         log.info(`✓ Keystore file: ${keystorePath}`)
@@ -155,7 +158,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         const configPath = resolve(options.playConfig)
         if (!existsSync(configPath)) {
           log.error(`Play config file not found: ${configPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.PLAY_CONFIG_JSON_PATH = configPath
         log.info(`✓ Play Store config: ${configPath}`)
@@ -259,11 +262,11 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('        The --play-config is required for uploading to Google Play Store.')
       }
       log.error('')
-      process.exit(1)
+      exit(1)
     }
 
     // Save credentials for this specific app
-    await updateSavedCredentials(appId, platform, fileCredentials)
+    await updateSavedCredentials(appId, platform, fileCredentials, options.local)
 
     // Send analytics event
     try {
@@ -279,6 +282,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
           tags: {
             'app-id': appId,
             'platform': platform,
+            'storage': options.local ? 'local' : 'global',
           },
           notify: false,
         }).catch()
@@ -288,24 +292,29 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // Silently ignore analytics errors
     }
 
+    const credentialsPath = options.local ? getLocalCredentialsPath() : getGlobalCredentialsPath()
     log.success(`\n✅ ${platform.toUpperCase()} credentials saved successfully for ${appId}!`)
-    log.info(`   Location: ~/.capgo-credentials/credentials.json`)
+    log.info(`   Location: ${credentialsPath}`)
     log.info(`   Use: npx @capgo/cli build ${appId} --platform ${platform}\n`)
   }
   catch (error) {
     log.error(`Failed to save credentials: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    exit(1)
   }
 }
 
 /**
  * List saved credentials (masked for security)
  */
-export async function listCredentialsCommand(options?: { appId?: string }): Promise<void> {
+export async function listCredentialsCommand(options?: { appId?: string, local?: boolean }): Promise<void> {
   try {
-    const appIds = await listAllApps()
+    // If local flag is set, only show local credentials
+    // Otherwise show both local and global
+    const localAppIds = options?.local ? await listAllApps(true) : []
+    const globalAppIds = options?.local ? [] : await listAllApps(false)
+    const allAppIds = [...new Set([...localAppIds, ...globalAppIds])]
 
-    if (appIds.length === 0) {
+    if (allAppIds.length === 0) {
       log.info('No saved credentials found.')
       log.info('Use: npx @capgo/cli build credentials save --platform <ios|android>')
       return
@@ -318,14 +327,16 @@ export async function listCredentialsCommand(options?: { appId?: string }): Prom
     const inferredAppId = options?.appId || getAppId(undefined, extConfig?.config)
 
     // If specific appId is provided or inferred, only show that one
-    const appsToShow = inferredAppId ? [inferredAppId] : appIds
+    const appsToShow = inferredAppId ? [inferredAppId] : allAppIds
 
     for (const appId of appsToShow) {
-      const saved = await loadSavedCredentials(appId)
+      const saved = await loadSavedCredentials(appId, options?.local)
       if (!saved)
         continue
 
-      log.info(`\n🔹 App: ${appId}`)
+      const isLocal = localAppIds.includes(appId)
+      const locationLabel = isLocal ? ' (local)' : ' (global)'
+      log.info(`\n🔹 App: ${appId}${locationLabel}`)
 
       if (saved.ios) {
         log.info('  iOS Credentials:')
@@ -364,66 +375,66 @@ export async function listCredentialsCommand(options?: { appId?: string }): Prom
       }
     }
 
-    log.info('\nLocation: ~/.capgo-credentials/credentials.json')
+    log.info(`\nGlobal: ${getGlobalCredentialsPath()}`)
+    log.info(`Local:  ${getLocalCredentialsPath()}`)
     log.info('\n🔒 These credentials are stored locally on your machine only.')
-    log.info('   When building, they are sent to Capgo but NEVER stored there.')
-    log.info('   They are auto-deleted after build completion (max 24 hours).')
-    log.info('   Builds sent directly to app stores - Capgo keeps nothing.\n')
+    log.info('   When building, they are sent to Capgo but NEVER stored there.\n')
   }
   catch (error) {
     log.error(`Failed to list credentials: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    exit(1)
   }
 }
 
 /**
  * Clear saved credentials
  */
-export async function clearCredentialsCommand(options: { appId?: string, platform?: 'ios' | 'android' }): Promise<void> {
+export async function clearCredentialsCommand(options: { appId?: string, platform?: 'ios' | 'android', local?: boolean }): Promise<void> {
   try {
     // Try to infer appId from capacitor.config if not explicitly provided
     const extConfig = await getConfig()
     const appId = options.appId || getAppId(undefined, extConfig?.config)
+    const credentialsPath = options.local ? getLocalCredentialsPath() : getGlobalCredentialsPath()
 
     if (appId && options.platform) {
       // Clear specific platform for specific app
-      const current = await getSavedCredentials(appId, options.platform)
+      const current = await getSavedCredentials(appId, options.platform, options.local)
       if (!current) {
         log.info(`No ${options.platform.toUpperCase()} credentials found for ${appId}.`)
         return
       }
 
-      await clearSavedCredentials(appId, options.platform)
+      await clearSavedCredentials(appId, options.platform, options.local)
       log.success(`✅ ${options.platform.toUpperCase()} credentials cleared for ${appId}!`)
     }
     else if (appId) {
       // Clear all platforms for specific app
-      const saved = await loadSavedCredentials(appId)
+      const saved = await loadSavedCredentials(appId, options.local)
       if (!saved || (!saved.ios && !saved.android)) {
         log.info(`No credentials found for ${appId}.`)
         return
       }
 
-      await clearSavedCredentials(appId)
+      await clearSavedCredentials(appId, undefined, options.local)
       log.success(`✅ All credentials cleared for ${appId}!`)
     }
     else {
       // Clear everything (no appId provided or inferred)
-      const appIds = await listAllApps()
+      const appIds = await listAllApps(options.local)
       if (appIds.length === 0) {
         log.info('No saved credentials found.')
         return
       }
 
-      await clearSavedCredentials()
-      log.success('✅ All credentials cleared for all apps!')
+      await clearSavedCredentials(undefined, undefined, options.local)
+      log.success('✅ All credentials cleared!')
     }
 
-    log.info('   Location: ~/.capgo-credentials/credentials.json\n')
+    log.info(`   Location: ${credentialsPath}\n`)
   }
   catch (error) {
     log.error(`Failed to clear credentials: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    exit(1)
   }
 }
 
@@ -450,7 +461,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       }
       else if (hasIosOptions && hasAndroidOptions) {
         log.error('Cannot mix iOS and Android options. Please use --platform to specify which platform.')
-        process.exit(1)
+        exit(1)
       }
       else {
         log.error('No credentials provided to update.')
@@ -459,7 +470,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         log.error('')
         log.error('iOS options: --certificate, --provisioning-profile, --apple-key, etc.')
         log.error('Android options: --keystore, --keystore-alias, --play-config, etc.')
-        process.exit(1)
+        exit(1)
       }
     }
 
@@ -473,16 +484,16 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       log.error('Either:')
       log.error('  1. Run this command from a Capacitor project directory, OR')
       log.error('  2. Provide --appId explicitly: --appId com.example.app')
-      process.exit(1)
+      exit(1)
     }
 
     // Check if credentials exist for this app/platform
-    const existing = await getSavedCredentials(appId, platform)
+    const existing = await getSavedCredentials(appId, platform, options.local)
     if (!existing) {
       log.error(`❌ No existing ${platform.toUpperCase()} credentials found for ${appId}.`)
       log.error('')
       log.error('Use "build credentials save" to create credentials first.')
-      process.exit(1)
+      exit(1)
     }
 
     const credentials: Partial<BuildCredentials> = {}
@@ -494,7 +505,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const certPath = resolve(options.certificate)
         if (!existsSync(certPath)) {
           log.error(`Certificate file not found: ${certPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_CERTIFICATE_FILE = certPath
         log.info(`✓ Updating certificate: ${certPath}`)
@@ -504,7 +515,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const profilePath = resolve(options.provisioningProfile)
         if (!existsSync(profilePath)) {
           log.error(`Provisioning profile not found: ${profilePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_PROVISION_PROFILE_FILE = profilePath
         log.info(`✓ Updating provisioning profile: ${profilePath}`)
@@ -514,7 +525,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const profilePath = resolve(options.provisioningProfileProd)
         if (!existsSync(profilePath)) {
           log.error(`Production provisioning profile not found: ${profilePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.BUILD_PROVISION_PROFILE_FILE_PROD = profilePath
         log.info(`✓ Updating production provisioning profile: ${profilePath}`)
@@ -524,7 +535,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const keyPath = resolve(options.appleKey)
         if (!existsSync(keyPath)) {
           log.error(`Apple key file not found: ${keyPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.APPLE_KEY_FILE = keyPath
         log.info(`✓ Updating Apple key file: ${keyPath}`)
@@ -558,7 +569,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const keystorePath = resolve(options.keystore)
         if (!existsSync(keystorePath)) {
           log.error(`Keystore file not found: ${keystorePath}`)
-          process.exit(1)
+          exit(1)
         }
         files.ANDROID_KEYSTORE_PATH = keystorePath
         log.info(`✓ Updating keystore: ${keystorePath}`)
@@ -568,7 +579,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         const configPath = resolve(options.playConfig)
         if (!existsSync(configPath)) {
           log.error(`Play config file not found: ${configPath}`)
-          process.exit(1)
+          exit(1)
         }
         files.PLAY_CONFIG_JSON_PATH = configPath
         log.info(`✓ Updating Play Store config: ${configPath}`)
@@ -593,13 +604,14 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
     const fileCredentials = await convertFilesToCredentials(platform, files, credentials)
 
     // Update credentials (merge with existing)
-    await updateSavedCredentials(appId, platform, fileCredentials)
+    await updateSavedCredentials(appId, platform, fileCredentials, options.local)
 
+    const credentialsPath = options.local ? getLocalCredentialsPath() : getGlobalCredentialsPath()
     log.success(`\n✅ ${platform.toUpperCase()} credentials updated for ${appId}!`)
-    log.info('   Location: ~/.capgo-credentials/credentials.json\n')
+    log.info(`   Location: ${credentialsPath}\n`)
   }
   catch (error) {
     log.error(`Failed to update credentials: ${error instanceof Error ? error.message : String(error)}`)
-    process.exit(1)
+    exit(1)
   }
 }

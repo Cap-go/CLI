@@ -369,7 +369,7 @@ export interface RequestBuildOptions {
    * They are:
    * - Transmitted securely over HTTPS
    * - Used ONLY during the active build process
-   * - Automatically deleted after build completion (max 24 hours)
+   * - Automatically deleted after build completion
    * - Builds sent directly to app stores - Capgo keeps nothing
    */
   credentials?: BuildCredentials
@@ -1742,7 +1742,7 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
  *
  * SECURITY GUARANTEE:
  * Credentials are NEVER stored on Capgo servers. They are used only during
- * the build process and automatically deleted after completion (max 24 hours).
+ * the build process and automatically deleted after completion.
  * Builds are sent directly to app stores - Capgo keeps nothing.
  *
  * @example

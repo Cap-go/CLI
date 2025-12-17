@@ -23,10 +23,25 @@ import type { BuildCredentials } from './request'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { env } from 'node:process'
+import { cwd, env } from 'node:process'
 
 const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
+const LOCAL_CREDENTIALS_FILE = '.capgo-credentials.json'
+
+/**
+ * Get the credentials file path based on local flag
+ */
+function getCredentialsPath(local?: boolean): string {
+  return local ? join(cwd(), LOCAL_CREDENTIALS_FILE) : CREDENTIALS_FILE
+}
+
+/**
+ * Get the credentials directory (only for global storage)
+ */
+function getCredentialsDir(local?: boolean): string | null {
+  return local ? null : CREDENTIALS_DIR
+}
 
 export interface CredentialFile {
   // iOS file paths
@@ -66,11 +81,12 @@ async function fileToBase64(filePath: string): Promise<string> {
 }
 
 /**
- * Load all credentials from ~/.capgo/credentials.json
+ * Load all credentials from file (global or local)
  */
-async function loadAllCredentials(): Promise<AllCredentials> {
+async function loadAllCredentials(local?: boolean): Promise<AllCredentials> {
   try {
-    const content = await readFile(CREDENTIALS_FILE, 'utf-8')
+    const filePath = getCredentialsPath(local)
+    const content = await readFile(filePath, 'utf-8')
     return JSON.parse(content) as AllCredentials
   }
   catch {
@@ -79,29 +95,57 @@ async function loadAllCredentials(): Promise<AllCredentials> {
 }
 
 /**
- * Load saved credentials for a specific app from ~/.capgo/credentials.json
+ * Load saved credentials for a specific app
+ * Checks local file first, then global file
  */
-export async function loadSavedCredentials(appId?: string): Promise<SavedCredentials | null> {
-  const all = await loadAllCredentials()
+export async function loadSavedCredentials(appId?: string, local?: boolean): Promise<SavedCredentials | null> {
+  // If local is explicitly set, only check that location
+  if (local !== undefined) {
+    const all = await loadAllCredentials(local)
+    if (!appId) {
+      const appIds = Object.keys(all)
+      if (appIds.length === 0)
+        return null
+      return all[appIds[0]] || null
+    }
+    return all[appId] || null
+  }
+
+  // Otherwise, check local first, then global (local takes precedence)
+  const localAll = await loadAllCredentials(true)
+  const globalAll = await loadAllCredentials(false)
 
   // If no appId provided, try to get default (backward compatibility)
   if (!appId) {
-    // Return the first app's credentials or null
-    const appIds = Object.keys(all)
-    if (appIds.length === 0)
+    // Check local first
+    const localAppIds = Object.keys(localAll)
+    if (localAppIds.length > 0)
+      return localAll[localAppIds[0]] || null
+
+    // Then global
+    const globalAppIds = Object.keys(globalAll)
+    if (globalAppIds.length === 0)
       return null
-    return all[appIds[0]] || null
+    return globalAll[globalAppIds[0]] || null
   }
 
-  return all[appId] || null
+  // Return local if exists, otherwise global
+  return localAll[appId] || globalAll[appId] || null
 }
 
 /**
- * Save all credentials to ~/.capgo/credentials.json
+ * Save all credentials to file (global or local)
  */
-async function saveAllCredentials(credentials: AllCredentials): Promise<void> {
-  await mkdir(CREDENTIALS_DIR, { recursive: true })
-  await writeFile(CREDENTIALS_FILE, JSON.stringify(credentials, null, 2), 'utf-8')
+async function saveAllCredentials(credentials: AllCredentials, local?: boolean): Promise<void> {
+  const filePath = getCredentialsPath(local)
+  const dir = getCredentialsDir(local)
+
+  // Create directory only for global storage
+  if (dir) {
+    await mkdir(dir, { recursive: true })
+  }
+
+  await writeFile(filePath, JSON.stringify(credentials, null, 2), 'utf-8')
 }
 
 /**
@@ -234,8 +278,9 @@ export async function updateSavedCredentials(
   appId: string,
   platform: 'ios' | 'android',
   credentials: Partial<BuildCredentials>,
+  local?: boolean,
 ): Promise<void> {
-  const all = await loadAllCredentials()
+  const all = await loadAllCredentials(local)
   const saved = all[appId] || {}
 
   saved[platform] = {
@@ -244,25 +289,25 @@ export async function updateSavedCredentials(
   }
 
   all[appId] = saved
-  await saveAllCredentials(all)
+  await saveAllCredentials(all, local)
 }
 
 /**
  * Clear saved credentials for a specific app and/or platform
  */
-export async function clearSavedCredentials(appId?: string, platform?: 'ios' | 'android'): Promise<void> {
-  const all = await loadAllCredentials()
+export async function clearSavedCredentials(appId?: string, platform?: 'ios' | 'android', local?: boolean): Promise<void> {
+  const all = await loadAllCredentials(local)
 
   if (!appId) {
     // Clear all apps
-    await saveAllCredentials({})
+    await saveAllCredentials({}, local)
     return
   }
 
   if (!platform) {
     // Clear all platforms for this app
     delete all[appId]
-    await saveAllCredentials(all)
+    await saveAllCredentials(all, local)
     return
   }
 
@@ -278,21 +323,35 @@ export async function clearSavedCredentials(appId?: string, platform?: 'ios' | '
     all[appId] = saved
   }
 
-  await saveAllCredentials(all)
+  await saveAllCredentials(all, local)
 }
 
 /**
  * Get saved credentials for a specific app and platform
  */
-export async function getSavedCredentials(appId: string, platform: 'ios' | 'android'): Promise<Partial<BuildCredentials> | null> {
-  const saved = await loadSavedCredentials(appId)
+export async function getSavedCredentials(appId: string, platform: 'ios' | 'android', local?: boolean): Promise<Partial<BuildCredentials> | null> {
+  const saved = await loadSavedCredentials(appId, local)
   return saved?.[platform] || null
 }
 
 /**
  * List all apps that have saved credentials
  */
-export async function listAllApps(): Promise<string[]> {
-  const all = await loadAllCredentials()
+export async function listAllApps(local?: boolean): Promise<string[]> {
+  const all = await loadAllCredentials(local)
   return Object.keys(all)
+}
+
+/**
+ * Get the local credentials file path (for display purposes)
+ */
+export function getLocalCredentialsPath(): string {
+  return join(cwd(), LOCAL_CREDENTIALS_FILE)
+}
+
+/**
+ * Get the global credentials file path (for display purposes)
+ */
+export function getGlobalCredentialsPath(): string {
+  return CREDENTIALS_FILE
 }
