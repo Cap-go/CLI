@@ -308,25 +308,39 @@ async function pollBuildStatus(
  * Extract native node_modules dependencies from iOS Podfile or Android settings.gradle
  * Returns paths to ONLY the platform-specific subfolder (e.g., node_modules/@capacitor/app/ios)
  */
-async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<Set<string>> {
-  const dependencies = new Set<string>()
+interface NativeDependencies {
+  packages: Set<string> // Package paths like @capacitor/app
+  usesSPM: boolean // true = SPM (Package.swift), false = CocoaPods (podspec)
+}
+
+async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<NativeDependencies> {
+  const packages = new Set<string>()
+  let usesSPM = false
 
   if (platform === 'ios') {
-    // Parse iOS Podfile
-    const podfilePath = join(projectDir, 'ios/App/Podfile')
-    if (existsSync(podfilePath)) {
-      const podfileContent = await readFileAsync(podfilePath, 'utf-8')
-      // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
-      const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
-      for (const match of podMatches) {
-        const packagePath = match[1]
-        // For iOS, we need:
-        // - Package.swift (for Swift Package Manager)
-        // - *.podspec (for CocoaPods)
-        // - ios/ subfolder (native code)
-        dependencies.add(`node_modules/${packagePath}/Package.swift`)
-        dependencies.add(`node_modules/${packagePath}/*.podspec`)
-        dependencies.add(`node_modules/${packagePath}/ios/`)
+    // Check for Swift Package Manager first (Capacitor 7+)
+    // SPM takes precedence over CocoaPods
+    const spmPackagePath = join(projectDir, 'ios/App/CapApp-SPM/Package.swift')
+    if (existsSync(spmPackagePath)) {
+      usesSPM = true
+      const spmContent = await readFileAsync(spmPackagePath, 'utf-8')
+      // Match lines like: .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app")
+      // The path can have varying numbers of ../ depending on project structure
+      const spmMatches = spmContent.matchAll(/\.package\s*\([^)]*path:\s*["'](?:\.\.\/)*node_modules\/([^"']+)["']\s*\)/g)
+      for (const match of spmMatches) {
+        packages.add(match[1])
+      }
+    }
+    else {
+      // Fall back to CocoaPods (legacy, pre-Capacitor 7)
+      const podfilePath = join(projectDir, 'ios/App/Podfile')
+      if (existsSync(podfilePath)) {
+        const podfileContent = await readFileAsync(podfilePath, 'utf-8')
+        // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
+        const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
+        for (const match of podMatches) {
+          packages.add(match[1])
+        }
       }
     }
   }
@@ -341,19 +355,18 @@ async function extractNativeDependencies(projectDir: string, platform: 'ios' | '
         // Extract the full path which already includes /android
         const fullPath = match[1]
         const packagePath = fullPath.replace(/\/android$/, '')
-        // For Android, we only need the android/ subfolder (contains build.gradle, etc.)
-        dependencies.add(`node_modules/${packagePath}/android/`)
+        packages.add(packagePath)
       }
     }
   }
 
-  return dependencies
+  return { packages, usesSPM }
 }
 
 /**
  * Check if a file path should be included in the zip
  */
-function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: Set<string>): boolean {
+function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies): boolean {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
 
@@ -376,9 +389,30 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
     return true
 
   // Check if file is in one of the native dependencies
-  for (const dep of nativeDeps) {
-    if (normalizedPath.startsWith(dep))
-      return true
+  for (const packagePath of nativeDeps.packages) {
+    const packagePrefix = `node_modules/${packagePath}/`
+
+    if (platform === 'android') {
+      // For Android, only include the android/ subfolder
+      if (normalizedPath.startsWith(`${packagePrefix}android/`))
+        return true
+    }
+    else if (platform === 'ios') {
+      // For iOS, include ios/ folder and either Package.swift (SPM) or *.podspec (CocoaPods)
+      if (normalizedPath.startsWith(`${packagePrefix}ios/`))
+        return true
+
+      if (nativeDeps.usesSPM) {
+        // SPM: include Package.swift
+        if (normalizedPath === `${packagePrefix}Package.swift`)
+          return true
+      }
+      else {
+        // CocoaPods: include *.podspec files
+        if (normalizedPath.startsWith(packagePrefix) && normalizedPath.endsWith('.podspec'))
+          return true
+      }
+    }
   }
 
   return false
@@ -387,7 +421,7 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
 /**
  * Recursively add directory to zip with filtering
  */
-function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platform: 'ios' | 'android', nativeDeps: Set<string>) {
+function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies) {
   const items = readdirSync(dirPath)
 
   for (const item of items) {
@@ -424,7 +458,10 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
       const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
       const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps)
-        || Array.from(nativeDeps).some(dep => dep.startsWith(`${normalizedItemPath}/`))
+        || Array.from(nativeDeps.packages).some((pkg) => {
+          const depPath = `node_modules/${pkg}/`
+          return depPath.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`node_modules/${pkg}`)
+        })
 
       if (shouldRecurse) {
         addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
