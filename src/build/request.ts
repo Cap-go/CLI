@@ -122,43 +122,12 @@ export interface BuildRequestResult {
   error?: string
 }
 
-async function cancelBuild(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<void> {
-  try {
-    if (!silent)
-      log.warn('\n⚠️  Cancelling build...')
-
-    const response = await fetch(`${host}/build/cancel/${jobId}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'authorization': apikey,
-      },
-      body: JSON.stringify({ app_id: appId }),
-    })
-
-    if (!response.ok) {
-      const errorText = await response.text()
-      if (!silent)
-        log.warn(`Could not cancel build: ${errorText}`)
-      return
-    }
-
-    const result = await response.json() as { status: string, message?: string }
-    if (!silent)
-      log.info(`Build cancelled (status: ${result.status})`)
-  }
-  catch (err) {
-    if (!silent)
-      log.warn(`Failed to cancel build: ${err instanceof Error ? err.message : String(err)}`)
-  }
-}
-
 /**
  * Stream build logs from the server via SSE
  * Returns the final status if detected from the stream, or null if stream ended without status
- * @param signal - AbortSignal to cancel the stream (e.g., on Ctrl+C)
+ * Note: Build cancellation on disconnect is handled by the proxy (Cloudflare Worker)
  */
-async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean, signal?: AbortSignal, _verbose = false): Promise<string | null> {
+async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean, _verbose = false): Promise<string | null> {
   if (silent)
     return null
 
@@ -170,12 +139,10 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
   log.info(`Connecting to log stream: ${logUrl}`)
 
   try {
-
     const response = await fetch(logUrl, {
       headers: {
         authorization: apikey,
       },
-      signal,
     })
 
     log.info(`Log stream response: ${response.status}`)
@@ -252,11 +219,6 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
     return finalStatus
   }
   catch (err) {
-    // Check if this was an abort (user cancelled)
-    if (err instanceof Error && err.name === 'AbortError') {
-      // Re-throw abort errors so the caller can handle cancellation
-      throw err
-    }
     // Log streaming is best-effort, don't fail the build
     if (!silent)
       log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
@@ -924,35 +886,17 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.info('Streaming build logs...')
       }
 
-      // Create AbortController for cancellation support (e.g., Ctrl+C)
-      const abortController = new AbortController()
-
       let finalStatus: string
-      try {
-        // Stream logs from the build - returns final status if detected from stream
-        const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent, abortController.signal, verbose)
+      // Stream logs from the build - returns final status if detected from stream
+      const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent, verbose)
 
-        // Only poll if we didn't get the final status from the stream
-        if (streamStatus) {
-          finalStatus = streamStatus
-        }
-        else {
-          // Fall back to polling if stream ended without final status
-          finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
-        }
+      // Only poll if we didn't get the final status from the stream
+      if (streamStatus) {
+        finalStatus = streamStatus
       }
-      catch (streamError) {
-        // Handle abort (user pressed Ctrl+C)
-        if (streamError instanceof Error && streamError.name === 'AbortError') {
-          await cancelBuild(host, buildRequest.job_id, appId, options.apikey, silent)
-          return {
-            success: false,
-            jobId: buildRequest.job_id,
-            status: 'cancelled',
-            error: 'Build cancelled by user',
-          }
-        }
-        throw streamError
+      else {
+        // Fall back to polling if stream ended without final status
+        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
       }
 
       if (!silent) {
