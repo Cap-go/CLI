@@ -31,7 +31,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { cwd, exit, off as processOff, on as processOn } from 'node:process'
+import { cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
@@ -156,33 +156,43 @@ async function cancelBuild(host: string, jobId: string, appId: string, apikey: s
 /**
  * Stream build logs from the server via SSE
  * Returns the final status if detected from the stream, or null if stream ended without status
+ * @param signal - AbortSignal to cancel the stream (e.g., on Ctrl+C)
  */
-async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean): Promise<string | null> {
+async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean, signal?: AbortSignal, _verbose = false): Promise<string | null> {
   if (silent)
     return null
 
-  const spinner = spinnerC()
   let finalStatus: string | null = null
-  let spinnerActive = false
+  let hasReceivedLogs = false
+
+  const logUrl = `${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`
+  // Always log the URL we're connecting to for debugging
+  log.info(`Connecting to log stream: ${logUrl}`)
 
   try {
-    const response = await fetch(`${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`, {
+
+    const response = await fetch(logUrl, {
       headers: {
         authorization: apikey,
       },
+      signal,
     })
 
+    log.info(`Log stream response: ${response.status}`)
+
     if (!response.ok) {
-      log.warn('Could not stream logs, continuing...')
+      const errorText = await response.text().catch(() => 'unknown error')
+      log.warn(`Could not stream logs (${response.status}): ${errorText}`)
       return null
     }
 
     const reader = response.body?.getReader()
-    if (!reader)
+    if (!reader) {
+      log.warn('No response body for log stream')
       return null
+    }
 
-    spinner.start('Waiting for build logs...')
-    spinnerActive = true
+    log.info('Reading log stream...')
 
     const decoder = new TextDecoder()
     let buffer = '' // Buffer for incomplete lines
@@ -205,13 +215,11 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       if (finalStatus)
         return
 
-      // Stop spinner once to show log lines, then print directly
-      // This avoids the _events error caused by rapidly stopping/starting the spinner
-      if (spinnerActive) {
-        spinner.stop('Building...')
-        spinnerActive = false
+      // Print log line directly to console (no spinner to avoid _events errors)
+      if (!hasReceivedLogs) {
+        hasReceivedLogs = true
+        log.info('') // Add blank line before first log
       }
-      // Print log line directly to console
       log.info(message)
     }
 
@@ -241,16 +249,15 @@ async function streamBuildLogs(host: string, jobId: string, appId: string, apike
       processLogMessage(message)
     }
 
-    // Just stop the spinner if it's still active - the main function will display the final status
-    if (spinnerActive)
-      spinner.stop()
-
     return finalStatus
   }
   catch (err) {
+    // Check if this was an abort (user cancelled)
+    if (err instanceof Error && err.name === 'AbortError') {
+      // Re-throw abort errors so the caller can handle cancellation
+      throw err
+    }
     // Log streaming is best-effort, don't fail the build
-    if (spinnerActive)
-      spinner.stop('Log streaming ended')
     if (!silent)
       log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
     return null
@@ -914,27 +921,16 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       if (!silent) {
         log.success('Build started!')
-        log.info('Streaming build logs...\n')
-        log.info('Press Ctrl+C to cancel the build\n')
+        log.info('Streaming build logs...')
       }
 
-      // Set up signal handlers to cancel build on exit
-      let cancelled = false
-      const handleSignal = async () => {
-        if (cancelled)
-          return
-        cancelled = true
-        await cancelBuild(host, buildRequest.job_id, appId, options.apikey, silent)
-        exit(130) // 128 + SIGINT(2)
-      }
-
-      processOn('SIGINT', handleSignal)
-      processOn('SIGTERM', handleSignal)
+      // Create AbortController for cancellation support (e.g., Ctrl+C)
+      const abortController = new AbortController()
 
       let finalStatus: string
       try {
         // Stream logs from the build - returns final status if detected from stream
-        const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent)
+        const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent, abortController.signal, verbose)
 
         // Only poll if we didn't get the final status from the stream
         if (streamStatus) {
@@ -945,10 +941,18 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
         }
       }
-      finally {
-        // Remove signal handlers
-        processOff('SIGINT', handleSignal)
-        processOff('SIGTERM', handleSignal)
+      catch (streamError) {
+        // Handle abort (user pressed Ctrl+C)
+        if (streamError instanceof Error && streamError.name === 'AbortError') {
+          await cancelBuild(host, buildRequest.job_id, appId, options.apikey, silent)
+          return {
+            success: false,
+            jobId: buildRequest.job_id,
+            status: 'cancelled',
+            error: 'Build cancelled by user',
+          }
+        }
+        throw streamError
       }
 
       if (!silent) {
