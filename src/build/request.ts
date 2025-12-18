@@ -533,7 +533,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Platform: ${options.platform}`)
       log.info(`Project: ${projectDir}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
-      log.info(`   They are used only during build and deleted after (max 24h)`)
+      log.info(`   They are used only during build and deleted after`)
       log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
     }
     if (verbose) {
