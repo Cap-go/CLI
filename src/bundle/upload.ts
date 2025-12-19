@@ -825,6 +825,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     link: options.link || null,
     comment: options.comment || null,
     key_id: undefined as undefined | string,
+    cli_version: pack.version,
   } as Database['public']['Tables']['app_versions']['Insert']
 
   let zipped: Buffer | null = null
