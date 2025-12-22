@@ -1,6 +1,6 @@
 import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
-import { intro, log, outro } from '@clack/prompts'
+import { intro, isCancel, log, outro, password } from '@clack/prompts'
 import { checkAlerts } from './api/update'
 import { createSupabaseClient, sendEvent, verifyUser } from './utils'
 
@@ -18,6 +18,19 @@ export function doLoginExists() {
 export async function loginInternal(apikey: string, options: Options, silent = false) {
   if (!silent)
     intro(`Login to Capgo`)
+
+  if (!apikey && !silent) {
+    const apikeyInput = await password({
+      message: 'Enter your API key:',
+      mask: '*',
+    })
+
+    if (isCancel(apikeyInput)) {
+      log.error('Login cancelled')
+      throw new Error('Login cancelled')
+    }
+    apikey = apikeyInput as string
+  }
 
   if (!apikey) {
     if (!silent)
