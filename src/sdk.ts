@@ -253,6 +253,10 @@ export interface UpdateChannelOptions {
   dev?: boolean
   /** Enable for emulators */
   emulator?: boolean
+  /** Enable for physical devices */
+  device?: boolean
+  /** Enable for production builds */
+  prod?: boolean
   /** API key for authentication */
   apikey?: string
   /** Custom Supabase host */
@@ -1138,6 +1142,8 @@ export class CapgoSDK {
         disableAutoUpdate: options.disableAutoUpdate ?? undefined,
         dev: options.dev,
         emulator: options.emulator,
+        device: options.device,
+        prod: options.prod,
         latest: false,
         latestRemote: false,
         packageJson: undefined,

@@ -402,7 +402,7 @@ Example: npx @capgo/cli@latest channel currentBundle production com.example.app`
 channel
   .command('set [channelId] [appId]')
   .alias('s')
-  .description(`⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, emulator).
+  .description(`⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, prod, emulator, device).
 
 One channel must be default.
 
@@ -426,8 +426,12 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--disable-auto-update <disableAutoUpdate>', `Block updates by type: major, minor, metadata, patch, or none (allows all)`)
   .option('--dev', `Allow sending update to development devices`)
   .option('--no-dev', `Disable sending update to development devices`)
+  .option('--prod', `Allow sending update to production devices`)
+  .option('--no-prod', `Disable sending update to production devices`)
   .option('--emulator', `Allow sending update to emulator devices`)
   .option('--no-emulator', `Disable sending update to emulator devices`)
+  .option('--device', `Allow sending update to physical devices`)
+  .option('--no-device', `Disable sending update to physical devices`)
   .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .option('--ignore-metadata-check', `Ignore checking node_modules compatibility if present in the bundle`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
