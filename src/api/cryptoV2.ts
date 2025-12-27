@@ -88,38 +88,6 @@ export function encryptChecksumV3(checksum: string, key: string): string {
 
   return checksumEncrypted
 }
-export function createRSA(format: 'pem' | 'der/pem' = 'pem', keySize = 2048): RSAKeys {
-  const { publicKey, privateKey } = generateKeyPairSync('rsa', {
-    // The standard secure default length for RSA keys is 2048 bits
-    modulusLength: keySize,
-  })
-
-  // Generate RSA key pair
-  if (format === 'pem') {
-    return {
-      publicKey: publicKey.export({
-        type: 'pkcs1',
-        format: 'pem',
-      }) as string,
-      privateKey: privateKey.export({
-        type: 'pkcs1',
-        format: 'pem',
-      }) as string,
-    }
-  }
-  else {
-    return {
-      publicKey: publicKey.export({
-        type: 'spki',
-        format: 'der',
-      }).toString('base64'),
-      privateKey: privateKey.export({
-        type: 'pkcs1',
-        format: 'pem',
-      }).toString('base64'),
-    }
-  }
-}
 
 export function decryptChecksumV2(checksum: string, key: string): string {
   const checksumDecrypted = publicDecrypt(
@@ -137,7 +105,7 @@ export interface RSAKeys {
   publicKey: string
   privateKey: string
 }
-export function createRSAV2(): RSAKeys {
+export function createRSA(): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
     modulusLength: 2048,
   })
