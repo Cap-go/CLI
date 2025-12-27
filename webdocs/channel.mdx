@@ -116,7 +116,7 @@ npx @capgo/cli@latest channel currentBundle production com.example.app
 npx @capgo/cli@latest channel set
 ```
 
-⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, emulator).
+⚙️ Configure settings for a channel, such as linking a bundle, setting update strategies (major, minor, metadata, patch, none), or device targeting (iOS, Android, dev, prod, emulator, device).
 One channel must be default.
 
 **Example:**
@@ -145,8 +145,12 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 | **--disable-auto-update** | <code>string</code> | Block updates by type: major, minor, metadata, patch, or none (allows all) |
 | **--dev** | <code>boolean</code> | Allow sending update to development devices |
 | **--no-dev** | <code>boolean</code> | Disable sending update to development devices |
+| **--prod** | <code>boolean</code> | Allow sending update to production devices |
+| **--no-prod** | <code>boolean</code> | Disable sending update to production devices |
 | **--emulator** | <code>boolean</code> | Allow sending update to emulator devices |
 | **--no-emulator** | <code>boolean</code> | Disable sending update to emulator devices |
+| **--device** | <code>boolean</code> | Allow sending update to physical devices |
+| **--no-device** | <code>boolean</code> | Disable sending update to physical devices |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignore checking node_modules compatibility if present in the bundle |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
