@@ -31,6 +31,8 @@ export interface OptionsSetChannel extends OptionsBase {
   disableAutoUpdate?: string
   dev?: boolean
   emulator?: boolean
+  device?: boolean
+  prod?: boolean
   packageJson?: string
   ignoreMetadataCheck?: boolean
 }
@@ -81,6 +83,8 @@ export async function setChannelInternal(channel: string, appId: string, options
     disableAutoUpdate,
     dev,
     emulator,
+    device,
+    prod,
   } = options
 
   if (latest && bundle) {
@@ -112,6 +116,8 @@ export async function setChannelInternal(channel: string, appId: string, options
     && selfAssign == null
     && dev == null
     && emulator == null
+    && device == null
+    && prod == null
     && disableAutoUpdate == null
   ) {
     if (!silent)
@@ -282,6 +288,18 @@ export async function setChannelInternal(channel: string, appId: string, options
     if (!silent)
       log.info(`Set ${appId} channel: ${channel} to ${emulator ? 'allow' : 'disallow'} emulator devices`)
     channelPayload.allow_emulator = !!emulator
+  }
+
+  if (device != null) {
+    if (!silent)
+      log.info(`Set ${appId} channel: ${channel} to ${device ? 'allow' : 'disallow'} physical devices`)
+    channelPayload.allow_device = !!device
+  }
+
+  if (prod != null) {
+    if (!silent)
+      log.info(`Set ${appId} channel: ${channel} to ${prod ? 'allow' : 'disallow'} prod builds`)
+    channelPayload.allow_prod = !!prod
   }
 
   if (disableAutoUpdate != null) {

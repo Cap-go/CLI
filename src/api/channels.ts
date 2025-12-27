@@ -185,7 +185,9 @@ export interface Channel {
   disable_auto_update_under_native: boolean
   allow_device_self_set: boolean
   allow_emulator: boolean
+  allow_device: boolean
   allow_dev: boolean
+  allow_prod: boolean
   version?: Version
 }
 
@@ -195,7 +197,7 @@ export function displayChannels(data: Channel[], silent = false) {
 
   const t = new Table()
   t.theme = Table.roundTheme
-  t.headers = ['Name', 'Version', 'Public', 'iOS', 'Android', 'Auto Update', 'Native Auto Update', 'Device Self Set', 'Progressive Deploy', 'Secondary Version', 'Secondary Version Percentage', 'AB Testing', 'AB Testing Version', 'AB Testing Percentage', 'Emulator', 'Dev']
+  t.headers = ['Name', 'Version', 'Public', 'iOS', 'Android', 'Auto Update', 'Native Auto Update', 'Device Self Set', 'Progressive Deploy', 'Secondary Version', 'Secondary Version Percentage', 'AB Testing', 'AB Testing Version', 'AB Testing Percentage', 'Emulator', 'Device', 'Dev', 'Prod']
   t.rows = []
 
   for (const row of data.toReversed()) {
@@ -209,7 +211,9 @@ export function displayChannels(data: Channel[], silent = false) {
       row.disable_auto_update_under_native ? '❌' : '✅',
       row.allow_device_self_set ? '✅' : '❌',
       row.allow_emulator ? '✅' : '❌',
+      row.allow_device ? '✅' : '❌',
       row.allow_dev ? '✅' : '❌',
+      row.allow_prod ? '✅' : '❌',
     ])
   }
 
@@ -229,7 +233,9 @@ export async function getActiveChannels(
       name,
       public,
       allow_emulator,
+      allow_device,
       allow_dev,
+      allow_prod,
       ios,
       android,
       allow_device_self_set,
