@@ -181,7 +181,15 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
         .map(a => [a.name, a]))
     : new Map()
 
-  const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck) ? Array.from(hashedLocalDependencies, ([name, value]) => ({ name, version: value.version })) : undefined
+  // Include platform checksums in native_packages for precise change detection
+  const nativePackages = (hashedLocalDependencies.size > 0 || !options.ignoreMetadataCheck)
+    ? Array.from(hashedLocalDependencies, ([name, value]) => ({
+        name,
+        version: value.version,
+        ...(value.ios_checksum && { ios_checksum: value.ios_checksum }),
+        ...(value.android_checksum && { android_checksum: value.android_checksum }),
+      }))
+    : undefined
 
   return { nativePackages, minUpdateVersion }
 }
