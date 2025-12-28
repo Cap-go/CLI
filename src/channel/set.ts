@@ -1,6 +1,7 @@
 import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
+import type { Compatibility, OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
+import { Table } from '@sauber/table'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
   checkCompatibilityNativePackages,
@@ -12,13 +13,37 @@ import {
   getCompatibilityDetails,
   getConfig,
   getOrganizationId,
-  getPMAndCommand,
   isCompatible,
   OrganizationPerm,
   sendEvent,
   updateOrCreateChannel,
   verifyUser,
 } from '../utils'
+
+/**
+ * Display a compatibility table for the given packages
+ */
+function displayCompatibilityTable(packages: Compatibility[]) {
+  const table = new Table()
+  table.headers = ['Package', 'Local', 'Remote', 'Status', 'Details']
+  table.theme = Table.roundTheme
+  table.rows = []
+
+  for (const entry of packages) {
+    const { name, localVersion, remoteVersion } = entry
+    const details = getCompatibilityDetails(entry)
+    const statusSymbol = details.compatible ? '✅' : '❌'
+    table.rows.push([
+      name,
+      localVersion || '-',
+      remoteVersion || '-',
+      statusSymbol,
+      details.message,
+    ])
+  }
+
+  log.info(table.toString())
+}
 
 export interface OptionsSetChannel extends OptionsBase {
   bundle?: string
@@ -177,20 +202,15 @@ export async function setChannelInternal(channel: string, appId: string, options
         (data.native_packages as any) ?? [],
       )
 
-      const pm = getPMAndCommand()
       const incompatiblePackages = finalCompatibility.filter(item => !isCompatible(item))
 
       if (localDependencies.length > 0 && incompatiblePackages.length > 0) {
         if (!silent) {
           log.warn(`Bundle NOT compatible with ${channel} channel`)
           log.warn('')
-          // Show detailed incompatibility reasons
-          for (const pkg of incompatiblePackages) {
-            const details = getCompatibilityDetails(pkg)
-            log.warn(`  ${pkg.name}: ${details.message}`)
-          }
+          displayCompatibilityTable(finalCompatibility)
           log.warn('')
-          log.warn(`You can check full compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          log.warn('An app store update may be required for these changes to take effect.')
         }
         throw new Error(`Bundle is not compatible with ${channel} channel`)
       }
@@ -233,20 +253,15 @@ export async function setChannelInternal(channel: string, appId: string, options
         (data.native_packages as any) ?? [],
       )
 
-      const pm = getPMAndCommand()
       const incompatiblePackages = finalCompatibility.filter(item => !isCompatible(item))
 
       if (incompatiblePackages.length > 0) {
         if (!silent) {
           log.warn(`Bundle NOT compatible with ${channel} channel`)
           log.warn('')
-          // Show detailed incompatibility reasons
-          for (const pkg of incompatiblePackages) {
-            const details = getCompatibilityDetails(pkg)
-            log.warn(`  ${pkg.name}: ${details.message}`)
-          }
+          displayCompatibilityTable(finalCompatibility)
           log.warn('')
-          log.warn(`You can check full compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          log.warn('An app store update may be required for these changes to take effect.')
         }
         throw new Error(`Latest remote bundle is not compatible with ${channel} channel`)
       }
