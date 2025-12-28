@@ -175,7 +175,6 @@ function returnVersion(version: string) {
  * @param packageJsonPath - Optional custom package.json path provided by user (takes priority if provided)
  */
 export async function getInstalledVersion(packageName: string, rootDir: string = cwd(), packageJsonPath?: string): Promise<string | null> {
-
   // Determine the base directory for resolution
   // If packageJsonPath is provided, use its directory as the starting point
   const baseDir = packageJsonPath ? dirname(packageJsonPath) : rootDir
@@ -302,6 +301,10 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
     }
   }
   const dependencies = new Map<string, string>()
+
+  // Import createRequire once for use in version resolution
+  const { createRequire } = await import('node:module')
+
   for (const file of files) {
     const packageJson = readFileSync(file)
     const pkg = JSON.parse(packageJson as any)
@@ -312,7 +315,6 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
       // Try to find the actual installed version from node_modules
       try {
         // Use require.resolve to find the package
-        const { createRequire } = require('node:module')
         const requireFromBase = createRequire(join(packageDir, 'package.json'))
         const resolvedPath = requireFromBase.resolve(`${depName}/package.json`)
         const depPkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
