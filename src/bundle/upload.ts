@@ -1,13 +1,14 @@
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig } from '../config'
 import type { Database } from '../types/supabase.types'
-import type { manifestType } from '../utils'
+import type { Compatibility, manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, confirm as pConfirm, isCancel as pIsCancel, select as pSelect, spinner as spinnerC } from '@clack/prompts'
+import { Table } from '@sauber/table'
 import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
@@ -15,7 +16,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
-import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
@@ -39,6 +40,31 @@ export interface UploadBundleResult {
 function uploadFail(message: string): never {
   log.error(message)
   throw new Error(message)
+}
+
+/**
+ * Display a compatibility table for the given packages
+ */
+function displayCompatibilityTable(packages: Compatibility[]) {
+  const table = new Table()
+  table.headers = ['Package', 'Local', 'Remote', 'Status', 'Details']
+  table.theme = Table.roundTheme
+  table.rows = []
+
+  for (const entry of packages) {
+    const { name, localVersion, remoteVersion } = entry
+    const details = getCompatibilityDetails(entry)
+    const statusSymbol = details.compatible ? '✅' : '❌'
+    table.rows.push([
+      name,
+      localVersion || '-',
+      remoteVersion || '-',
+      statusSymbol,
+      details.message,
+    ])
+  }
+
+  log.info(table.toString())
 }
 
 async function getBundle(config: CapacitorConfig, options: OptionsUpload) {
@@ -130,9 +156,13 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     localDependencies = localDependenciesWithChannel
 
     // Check if any package is incompatible
-    if (finalCompatibility.find(x => !isCompatible(x))) {
+    const incompatiblePackages = finalCompatibility.filter(x => !isCompatible(x))
+    if (incompatiblePackages.length > 0) {
       spinner.stop(`Bundle NOT compatible with ${channel} channel`)
-      log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+      log.warn('')
+      displayCompatibilityTable(finalCompatibility)
+      log.warn('')
+      log.warn('An app store update may be required for these changes to take effect.')
 
       if (autoMinUpdateVersion) {
         minUpdateVersion = bundle

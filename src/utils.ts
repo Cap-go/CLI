@@ -1656,7 +1656,14 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   return channelData.version.checksum
 }
 
-export function convertNativePackages(nativePackages: { name: string, version: string }[]) {
+export interface NativePackage {
+  name: string
+  version: string
+  ios_checksum?: string
+  android_checksum?: string
+}
+
+export function convertNativePackages(nativePackages: NativePackage[]): Map<string, NativePackage> {
   if (!nativePackages) {
     log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
     throw new Error('Error parsing native packages')
@@ -1722,10 +1729,29 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
-interface Compatibility {
+export interface Compatibility {
   name: string
   localVersion: string | undefined
   remoteVersion: string | undefined
+  // Platform checksums for detailed change detection
+  localIosChecksum?: string
+  remoteIosChecksum?: string
+  localAndroidChecksum?: string
+  remoteAndroidChecksum?: string
+}
+
+export type IncompatibilityReason
+  = | 'new_plugin' // Plugin exists locally but not on remote
+    | 'removed_plugin' // Plugin exists on remote but not locally
+    | 'version_mismatch' // Versions don't intersect
+    | 'ios_code_changed' // iOS native code changed (same version but different checksum)
+    | 'android_code_changed' // Android native code changed (same version but different checksum)
+    | 'both_platforms_changed' // Both iOS and Android native code changed
+
+export interface CompatibilityDetails {
+  compatible: boolean
+  reasons: IncompatibilityReason[]
+  message: string
 }
 
 export function getAppId(appId: string | undefined, config: CapacitorConfig | undefined) {
@@ -1733,22 +1759,105 @@ export function getAppId(appId: string | undefined, config: CapacitorConfig | un
   return finalAppId
 }
 
-export function isCompatible(pkg: Compatibility): boolean {
-  // Only check compatibility if there's a local version
-  // If there's a local version but no remote version, or versions don't match, it's incompatible
-  if (!pkg.localVersion)
-    return true // If no local version, it's compatible (remote-only package)
-  if (!pkg.remoteVersion)
-    return false // If local version but no remote version, it's incompatible
+/**
+ * Check if a package is compatible and return detailed reasons if not
+ */
+export function getCompatibilityDetails(pkg: Compatibility): CompatibilityDetails {
+  const reasons: IncompatibilityReason[] = []
+
+  // If no local version, it's compatible (remote-only package - being removed is ok for OTA)
+  if (!pkg.localVersion) {
+    return {
+      compatible: true,
+      reasons: [],
+      message: 'Package only exists on remote (will be removed)',
+    }
+  }
+
+  // If local version but no remote version, it's a new plugin
+  if (!pkg.remoteVersion) {
+    reasons.push('new_plugin')
+    return {
+      compatible: false,
+      reasons,
+      message: `New native plugin added (requires app store update)`,
+    }
+  }
+
+  // Check version compatibility
+  let versionsCompatible = false
   try {
-    // Parse both ranges and check if they intersect
     const localRange = parseRange(pkg.localVersion)
     const remoteRange = parseRange(pkg.remoteVersion)
-    return rangeIntersects(localRange, remoteRange)
+    versionsCompatible = rangeIntersects(localRange, remoteRange)
   }
   catch {
-    return false // If version comparison fails, consider it incompatible
+    versionsCompatible = false
   }
+
+  if (!versionsCompatible) {
+    reasons.push('version_mismatch')
+  }
+
+  // Check checksum changes (even if versions match, native code could have changed)
+  const iosChanged = pkg.localIosChecksum && pkg.remoteIosChecksum && pkg.localIosChecksum !== pkg.remoteIosChecksum
+  const androidChanged = pkg.localAndroidChecksum && pkg.remoteAndroidChecksum && pkg.localAndroidChecksum !== pkg.remoteAndroidChecksum
+
+  if (iosChanged && androidChanged) {
+    reasons.push('both_platforms_changed')
+  }
+  else if (iosChanged) {
+    reasons.push('ios_code_changed')
+  }
+  else if (androidChanged) {
+    reasons.push('android_code_changed')
+  }
+
+  // Build message
+  if (reasons.length === 0) {
+    return {
+      compatible: true,
+      reasons: [],
+      message: 'Compatible',
+    }
+  }
+
+  const messages: string[] = []
+  for (const reason of reasons) {
+    switch (reason) {
+      case 'version_mismatch':
+        messages.push(`version changed: ${pkg.remoteVersion} → ${pkg.localVersion}`)
+        break
+      case 'ios_code_changed':
+        messages.push('iOS native code changed')
+        break
+      case 'android_code_changed':
+        messages.push('Android native code changed')
+        break
+      case 'both_platforms_changed':
+        messages.push('iOS and Android native code changed')
+        break
+      case 'new_plugin':
+        messages.push('new plugin (requires app store update)')
+        break
+      case 'removed_plugin':
+        messages.push('plugin removed')
+        break
+    }
+  }
+
+  return {
+    compatible: false,
+    reasons,
+    message: messages.join(', '),
+  }
+}
+
+/**
+ * Simple compatibility check (backward compatible)
+ */
+export function isCompatible(pkg: Compatibility): boolean {
+  return getCompatibilityDetails(pkg).compatible
 }
 
 export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
@@ -1764,6 +1873,10 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
           name: local.name,
           localVersion: local.version,
           remoteVersion: remotePackage.version,
+          localIosChecksum: local.ios_checksum,
+          remoteIosChecksum: remotePackage.ios_checksum,
+          localAndroidChecksum: local.android_checksum,
+          remoteAndroidChecksum: remotePackage.android_checksum,
         }
       }
 
@@ -1771,6 +1884,8 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
         name: local.name,
         localVersion: local.version,
         remoteVersion: undefined,
+        localIosChecksum: local.ios_checksum,
+        localAndroidChecksum: local.android_checksum,
       }
     })
 
@@ -1778,7 +1893,13 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
   // These won't affect compatibility
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
-    .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
+    .map(([name, pkg]) => ({
+      name,
+      localVersion: undefined,
+      remoteVersion: pkg.version,
+      remoteIosChecksum: pkg.ios_checksum,
+      remoteAndroidChecksum: pkg.android_checksum,
+    }))
 
   finalDependencies.push(...removeNotInLocal)
 
@@ -1788,7 +1909,7 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
   }
 }
 
-export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: { name: string, version: string }[]) {
+export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: NativePackage[]) {
   const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
   const finalDependencies: Compatibility[] = nativePackages
@@ -1799,6 +1920,10 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
           name: local.name,
           localVersion: local.version,
           remoteVersion: remotePackage.version,
+          localIosChecksum: local.ios_checksum,
+          remoteIosChecksum: remotePackage.ios_checksum,
+          localAndroidChecksum: local.android_checksum,
+          remoteAndroidChecksum: remotePackage.android_checksum,
         }
       }
 
@@ -1806,6 +1931,8 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
         name: local.name,
         localVersion: local.version,
         remoteVersion: undefined,
+        localIosChecksum: local.ios_checksum,
+        localAndroidChecksum: local.android_checksum,
       }
     })
 
@@ -1813,7 +1940,13 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
   // These won't affect compatibility
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => nativePackages.find(a => a.name === remoteName) === undefined)
-    .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
+    .map(([name, pkg]) => ({
+      name,
+      localVersion: undefined,
+      remoteVersion: pkg.version,
+      remoteIosChecksum: pkg.ios_checksum,
+      remoteAndroidChecksum: pkg.android_checksum,
+    }))
 
   finalDependencies.push(...removeNotInLocal)
 
