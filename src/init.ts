@@ -427,19 +427,26 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     // 3 because this is the 4th step, ergo 3 steps have already been done
     const { dependencies, path } = await getAssistedDependencies(3)
     s.start(`Checking if @capgo/capacitor-updater is installed`)
-    if (!dependencies.has('@capacitor/core')) {
-      s.stop('Error')
-      pLog.warn(`Cannot find @capacitor/core in package.json`)
-      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-      exit()
-    }
 
-    const coreVersion = dependencies.get('@capacitor/core')
-    if (!coreVersion) {
+    // First check if @capacitor/core is declared in package.json
+    const declaredCoreVersion = dependencies.get('@capacitor/core')
+    if (!declaredCoreVersion) {
       s.stop('Error')
       pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
       pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
+    }
+
+    // Get the actual installed version from node_modules (not from package.json)
+    const projectDir = path.replace('/package.json', '')
+    const installedCoreVersion = await getInstalledVersion('@capacitor/core', projectDir, path)
+
+    // Use the installed version if available, otherwise fall back to declared version
+    const coreVersion = installedCoreVersion || declaredCoreVersion
+
+    // Log which version we're using for transparency
+    if (installedCoreVersion && installedCoreVersion !== declaredCoreVersion) {
+      pLog.info(`@capacitor/core declared: ${declaredCoreVersion}, installed: ${installedCoreVersion} (using installed version)`)
     }
 
     if (coreVersion === 'latest') {

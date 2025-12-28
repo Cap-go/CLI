@@ -163,16 +163,18 @@ function returnVersion(version: string) {
 }
 
 /**
- * Get the actual installed version of @capgo/capacitor-updater
- * @param packageName - The package name (only supports '@capgo/capacitor-updater')
+ * Get the actual installed version of a package from node_modules (not from package.json)
+ * Uses multiple resolution strategies to find the installed version:
+ * 1. require.resolve - Works with all package managers
+ * 2. Walk up node_modules - Handles hoisted dependencies in monorepos
+ * 3. Native config files (iOS/Android) - For @capgo/capacitor-updater only
+ * 4. Fallback to declared version in package.json
+ *
+ * @param packageName - The package name to check
  * @param rootDir - The root directory of the project
  * @param packageJsonPath - Optional custom package.json path provided by user (takes priority if provided)
  */
 export async function getInstalledVersion(packageName: string, rootDir: string = cwd(), packageJsonPath?: string): Promise<string | null> {
-  if (packageName !== '@capgo/capacitor-updater') {
-    // Only support @capgo/capacitor-updater for now
-    return null
-  }
 
   // Determine the base directory for resolution
   // If packageJsonPath is provided, use its directory as the starting point
@@ -215,57 +217,59 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
     currentDir = parentDir
   }
 
-  // Priority 4: Check native config files (iOS Podfile or Android gradle)
-  let packagePath: string | null = null
+  // Priority 3: Check native config files (iOS Podfile or Android gradle) - only for @capgo/capacitor-updater
+  if (packageName === '@capgo/capacitor-updater') {
+    let packagePath: string | null = null
 
-  // Try iOS Podfile
-  const podfilePath = join(rootDir, 'ios', 'App', 'Podfile')
-  if (existsSync(podfilePath)) {
-    try {
-      const podfileContent = readFileSync(podfilePath, 'utf-8')
-      // Look for: pod 'CapgoCapacitorUpdater', :path => '../../node_modules/@capgo/capacitor-updater'
-      const match = podfileContent.match(/pod\s+['"]CapgoCapacitorUpdater['"],\s*:path\s*=>\s*['"]([^'"]+)['"]/)
-      if (match?.[1]) {
-        // Resolve relative path from ios/App directory
-        packagePath = resolve(join(rootDir, 'ios', 'App', match[1]))
-      }
-    }
-    catch {
-      // Continue to try Android
-    }
-  }
-
-  // Try Android capacitor.settings.gradle if iOS didn't work
-  if (!packagePath) {
-    const gradlePath = join(rootDir, 'android', 'capacitor.settings.gradle')
-    if (existsSync(gradlePath)) {
+    // Try iOS Podfile
+    const podfilePath = join(rootDir, 'ios', 'App', 'Podfile')
+    if (existsSync(podfilePath)) {
       try {
-        const gradleContent = readFileSync(gradlePath, 'utf-8')
-        // Look for: project(':capgo-capacitor-updater').projectDir = new File('../node_modules/@capgo/capacitor-updater/android')
-        const match = gradleContent.match(/project\(':capgo-capacitor-updater'\)\.projectDir\s*=\s*new\s+File\(['"]([^'"]+)['"]/)
+        const podfileContent = readFileSync(podfilePath, 'utf-8')
+        // Look for: pod 'CapgoCapacitorUpdater', :path => '../../node_modules/@capgo/capacitor-updater'
+        const match = podfileContent.match(/pod\s+['"]CapgoCapacitorUpdater['"],\s*:path\s*=>\s*['"]([^'"]+)['"]/)
         if (match?.[1]) {
-          // Resolve relative path from android directory, remove /android suffix
-          const fullPath = resolve(join(rootDir, 'android', match[1]))
-          packagePath = fullPath.replace(/\/android$/, '')
+          // Resolve relative path from ios/App directory
+          packagePath = resolve(join(rootDir, 'ios', 'App', match[1]))
         }
       }
       catch {
-        // Both failed
+        // Continue to try Android
       }
     }
-  }
 
-  // Read package.json from the resolved path
-  if (packagePath) {
-    const pkgJsonPath = join(packagePath, PACKNAME)
-    if (existsSync(pkgJsonPath)) {
-      try {
-        const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
-        if (pkg.version)
-          return pkg.version
+    // Try Android capacitor.settings.gradle if iOS didn't work
+    if (!packagePath) {
+      const gradlePath = join(rootDir, 'android', 'capacitor.settings.gradle')
+      if (existsSync(gradlePath)) {
+        try {
+          const gradleContent = readFileSync(gradlePath, 'utf-8')
+          // Look for: project(':capgo-capacitor-updater').projectDir = new File('../node_modules/@capgo/capacitor-updater/android')
+          const match = gradleContent.match(/project\(':capgo-capacitor-updater'\)\.projectDir\s*=\s*new\s+File\(['"]([^'"]+)['"]/)
+          if (match?.[1]) {
+            // Resolve relative path from android directory, remove /android suffix
+            const fullPath = resolve(join(rootDir, 'android', match[1]))
+            packagePath = fullPath.replace(/\/android$/, '')
+          }
+        }
+        catch {
+          // Both failed
+        }
       }
-      catch {
-        // Fall through to final fallback
+    }
+
+    // Read package.json from the resolved path
+    if (packagePath) {
+      const pkgJsonPath = join(packagePath, PACKNAME)
+      if (existsSync(pkgJsonPath)) {
+        try {
+          const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
+          if (pkg.version)
+            return pkg.version
+        }
+        catch {
+          // Fall through to final fallback
+        }
       }
     }
   }
