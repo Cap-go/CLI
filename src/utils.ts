@@ -1421,52 +1421,96 @@ function readDirRecursivelyFullPaths(dir: string): string[] {
 }
 
 /**
- * Calculate a checksum for all native code files in a directory.
- * This creates a combined hash of all file contents sorted by relative path
- * to ensure consistent checksums regardless of filesystem order.
+ * Get additional platform-specific files that should be included in checksum.
+ * These files contain platform dependency versions and configurations.
  */
-async function calculateNativeCodeChecksum(platformDir: string): Promise<string | undefined> {
-  if (!existsSync(platformDir))
-    return undefined
+function getPlatformConfigFiles(dependencyFolderPath: string, platform: 'ios' | 'android'): string[] {
+  const files: string[] = []
 
-  const files = readDirRecursivelyFullPaths(platformDir)
-    .filter(f => nativeFileRegex.test(f))
-    .sort() // Sort for consistent ordering
-
-  if (files.length === 0)
-    return undefined
-
-  // Dynamically import crypto
-  const { createHash } = await import('node:crypto')
-  const hash = createHash('sha256')
-
-  for (const file of files) {
+  if (platform === 'ios') {
+    // Include .podspec files (CocoaPods dependency versions)
     try {
-      // Include relative path in hash to detect file renames/moves
-      const relativePath = relative(platformDir, file)
-      hash.update(relativePath)
-      // Include file content
-      const content = readFileSync(file)
-      hash.update(content)
+      const rootFiles = readdirSync(dependencyFolderPath)
+      for (const file of rootFiles) {
+        if (file.endsWith('.podspec')) {
+          files.push(join(dependencyFolderPath, file))
+        }
+      }
     }
     catch {
-      // Skip files that can't be read
+      // Ignore errors reading directory
     }
+
+    // Include Package.swift (SPM dependency versions) - can be at root or in ios folder
+    const packageSwiftRoot = join(dependencyFolderPath, 'Package.swift')
+    const packageSwiftIos = join(dependencyFolderPath, 'ios', 'Package.swift')
+    if (existsSync(packageSwiftRoot))
+      files.push(packageSwiftRoot)
+    if (existsSync(packageSwiftIos))
+      files.push(packageSwiftIos)
+  }
+  else if (platform === 'android') {
+    // Include build.gradle files (Android dependency versions)
+    const androidDir = join(dependencyFolderPath, 'android')
+    const buildGradle = join(androidDir, 'build.gradle')
+    const buildGradleKts = join(androidDir, 'build.gradle.kts')
+
+    if (existsSync(buildGradle))
+      files.push(buildGradle)
+    if (existsSync(buildGradleKts))
+      files.push(buildGradleKts)
   }
 
-  return hash.digest('hex')
+  return files
 }
 
 /**
- * Calculate checksums for iOS and Android native code in a dependency folder
+ * Calculate checksums for iOS and Android native code in a dependency folder.
+ * Includes both native source files and platform configuration files
+ * (podspec, Package.swift, build.gradle) that define platform dependencies.
  */
 async function calculatePlatformChecksums(dependencyFolderPath: string): Promise<{ ios_checksum?: string, android_checksum?: string }> {
   const iosDir = join(dependencyFolderPath, 'ios')
   const androidDir = join(dependencyFolderPath, 'android')
 
+  const calculatePlatformChecksum = async (platformDir: string, platform: 'ios' | 'android'): Promise<string | undefined> => {
+    // Get native code files
+    const nativeFiles = existsSync(platformDir)
+      ? readDirRecursivelyFullPaths(platformDir).filter(f => nativeFileRegex.test(f))
+      : []
+
+    // Get platform config files (podspec, Package.swift, build.gradle)
+    const configFiles = getPlatformConfigFiles(dependencyFolderPath, platform)
+
+    // Combine and sort all files for consistent checksumming
+    const allFiles = [...nativeFiles, ...configFiles].sort()
+
+    if (allFiles.length === 0)
+      return undefined
+
+    const { createHash } = await import('node:crypto')
+    const hash = createHash('sha256')
+
+    for (const file of allFiles) {
+      try {
+        // Include relative path in hash to detect file renames/moves
+        const relativePath = relative(dependencyFolderPath, file)
+        hash.update(relativePath)
+        // Include file content
+        const content = readFileSync(file)
+        hash.update(content)
+      }
+      catch {
+        // Skip files that can't be read
+      }
+    }
+
+    return hash.digest('hex')
+  }
+
   const [ios_checksum, android_checksum] = await Promise.all([
-    calculateNativeCodeChecksum(iosDir),
-    calculateNativeCodeChecksum(androidDir),
+    calculatePlatformChecksum(iosDir, 'ios'),
+    calculatePlatformChecksum(androidDir, 'android'),
   ])
 
   return { ios_checksum, android_checksum }
