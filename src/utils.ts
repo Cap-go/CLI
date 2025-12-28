@@ -305,11 +305,56 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
   for (const file of files) {
     const packageJson = readFileSync(file)
     const pkg = JSON.parse(packageJson as any)
+    const packageDir = dirname(file)
+
+    // Helper function to resolve actual installed version from node_modules
+    const resolveInstalledVersion = (depName: string, declaredVersion: string): string => {
+      // Try to find the actual installed version from node_modules
+      try {
+        // Use require.resolve to find the package
+        const { createRequire } = require('node:module')
+        const requireFromBase = createRequire(join(packageDir, 'package.json'))
+        const resolvedPath = requireFromBase.resolve(`${depName}/package.json`)
+        const depPkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
+        if (depPkg.version) {
+          return depPkg.version
+        }
+      }
+      catch {
+        // require.resolve failed, try direct node_modules lookup
+      }
+
+      // Walk up directories looking for node_modules (handles monorepos with hoisting)
+      let currentDir = packageDir
+      const root = path.parse(currentDir).root
+      while (currentDir !== root) {
+        const nodeModulesPath = join(currentDir, 'node_modules', depName, PACKNAME)
+        if (existsSync(nodeModulesPath)) {
+          try {
+            const depPkg = JSON.parse(readFileSync(nodeModulesPath, 'utf-8'))
+            if (depPkg.version) {
+              return depPkg.version
+            }
+          }
+          catch {
+            // Continue walking up
+          }
+        }
+        const parentDir = dirname(currentDir)
+        if (parentDir === currentDir)
+          break
+        currentDir = parentDir
+      }
+
+      // Fall back to declared version (stripped of ^ and ~)
+      return returnVersion(declaredVersion)
+    }
+
     for (const dependency in pkg.dependencies) {
-      dependencies.set(dependency, returnVersion(pkg.dependencies[dependency]))
+      dependencies.set(dependency, resolveInstalledVersion(dependency, pkg.dependencies[dependency]))
     }
     for (const dependency in pkg.devDependencies) {
-      dependencies.set(dependency, returnVersion(pkg.devDependencies[dependency]))
+      dependencies.set(dependency, resolveInstalledVersion(dependency, pkg.devDependencies[dependency]))
     }
   }
   return dependencies
