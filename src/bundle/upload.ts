@@ -15,7 +15,7 @@ import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
-import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
@@ -130,9 +130,17 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     localDependencies = localDependenciesWithChannel
 
     // Check if any package is incompatible
-    if (finalCompatibility.find(x => !isCompatible(x))) {
+    const incompatiblePackages = finalCompatibility.filter(x => !isCompatible(x))
+    if (incompatiblePackages.length > 0) {
       spinner.stop(`Bundle NOT compatible with ${channel} channel`)
-      log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+      log.warn('')
+      // Show detailed incompatibility reasons
+      for (const pkg of incompatiblePackages) {
+        const details = getCompatibilityDetails(pkg)
+        log.warn(`  ${pkg.name}: ${details.message}`)
+      }
+      log.warn('')
+      log.warn(`You can check full compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
 
       if (autoMinUpdateVersion) {
         minUpdateVersion = bundle

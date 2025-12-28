@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { Compatibility, OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
@@ -8,6 +8,7 @@ import {
   findSavedKey,
   formatError,
   getAppId,
+  getCompatibilityDetails,
   getConfig,
   isCompatible,
   OrganizationPerm,
@@ -22,7 +23,8 @@ interface Options extends OptionsBase {
 }
 
 interface CompatibilityResult {
-  finalCompatibility: Awaited<ReturnType<typeof checkCompatibilityCloud>>['finalCompatibility']
+  finalCompatibility: Compatibility[]
+  hasIncompatible: boolean
 }
 
 export async function checkCompatibilityInternal(
@@ -83,27 +85,47 @@ export async function checkCompatibilityInternal(
     enrichedOptions.nodeModules,
   )
 
+  const hasIncompatible = compatibility.finalCompatibility.some(entry => !isCompatible(entry))
+
   if (!silent) {
     const table = new Table()
-    table.headers = ['Package', 'Local version', 'Remote version', 'Compatible']
+    table.headers = ['Package', 'Local', 'Remote', 'Status', 'Details']
     table.theme = Table.roundTheme
     table.rows = []
 
-    const yesSymbol = enrichedOptions.text ? 'Yes' : '✅'
-    const noSymbol = enrichedOptions.text ? 'No' : '❌'
+    const yesSymbol = enrichedOptions.text ? 'OK' : '✅'
+    const noSymbol = enrichedOptions.text ? 'FAIL' : '❌'
 
     for (const entry of compatibility.finalCompatibility) {
       const { name, localVersion, remoteVersion } = entry
-      const compatible = isCompatible(entry) ? yesSymbol : noSymbol
-      table.rows.push([name, localVersion, remoteVersion, compatible])
+      const details = getCompatibilityDetails(entry)
+      const statusSymbol = details.compatible ? yesSymbol : noSymbol
+      table.rows.push([
+        name,
+        localVersion || '-',
+        remoteVersion || '-',
+        statusSymbol,
+        details.message,
+      ])
     }
 
-    log.success('Compatibility')
-    log.success(table.toString())
+    log.success('Compatibility Check Results')
+    log.info(table.toString())
+
+    // Summary
+    if (hasIncompatible) {
+      const incompatibleCount = compatibility.finalCompatibility.filter(e => !isCompatible(e)).length
+      log.warn(`\n${incompatibleCount} package(s) are incompatible with channel "${channel}"`)
+      log.warn('An app store update may be required for these changes to take effect.')
+    }
+    else {
+      log.success(`\nAll packages are compatible with channel "${channel}"`)
+    }
   }
 
   return {
     finalCompatibility: compatibility.finalCompatibility,
+    hasIncompatible,
   }
 }
 
