@@ -1483,7 +1483,7 @@ async function calculatePlatformChecksums(dependencyFolderPath: string): Promise
     const configFiles = getPlatformConfigFiles(dependencyFolderPath, platform)
 
     // Combine and sort all files for consistent checksumming
-    const allFiles = [...nativeFiles, ...configFiles].sort()
+    const allFiles = [...nativeFiles, ...configFiles].sort((a, b) => a.localeCompare(b))
 
     if (allFiles.length === 0)
       return undefined
