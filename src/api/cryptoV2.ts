@@ -124,10 +124,12 @@ export function createRSA(): RSAKeys {
 }
 
 /**
- * Calculate the key ID from a public key (first 4 characters of base64-encoded key)
- * This matches the implementation in the iOS/Android updater plugins
+ * Calculate the key ID from a public key
+ * Shows the first 20 characters of base64-encoded key body for easy visual verification
+ * Note: First 12 characters (MIIBCgKCAQEA) are always the same for 2048-bit RSA PKCS#1 keys,
+ * but we show all of them so users can easily match with their key file
  * @param publicKey - RSA public key in PEM format
- * @returns 4-character key ID or empty string if key is invalid
+ * @returns 20-character key ID or empty string if key is invalid
  */
 export function calcKeyId(publicKey: string): string {
   if (!publicKey) {
@@ -135,7 +137,6 @@ export function calcKeyId(publicKey: string): string {
   }
 
   // Remove PEM headers and whitespace to get the raw key data
-  // This matches the iOS/Android implementation exactly
   const cleanedKey = publicKey
     .replace(/-----BEGIN RSA PUBLIC KEY-----/g, '')
     .replace(/-----END RSA PUBLIC KEY-----/g, '')
@@ -143,6 +144,7 @@ export function calcKeyId(publicKey: string): string {
     .replace(/\r/g, '')
     .replace(/ /g, '')
 
-  // Return first 4 characters of the base64-encoded key
-  return cleanedKey.substring(0, 4)
+  // Return first 20 characters - includes the standard header plus 8 unique chars
+  // This makes it easy for users to visually verify against their key file
+  return cleanedKey.substring(0, 20)
 }
