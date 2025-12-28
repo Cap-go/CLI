@@ -434,6 +434,8 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
       exit()
     }
 
+    // Note: dependencies.get() now returns the actual installed version from node_modules
+    // (not the declared version from package.json)
     const coreVersion = dependencies.get('@capacitor/core')
     if (!coreVersion) {
       s.stop('Error')

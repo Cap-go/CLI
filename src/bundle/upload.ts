@@ -16,7 +16,7 @@ import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, gener
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
-import { autoBumpVersion, getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
+import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
 
