@@ -9,6 +9,7 @@ import {
   findSavedKey,
   getAppId,
   getBundleVersion,
+  getCompatibilityDetails,
   getConfig,
   getOrganizationId,
   getPMAndCommand,
@@ -177,11 +178,19 @@ export async function setChannelInternal(channel: string, appId: string, options
       )
 
       const pm = getPMAndCommand()
+      const incompatiblePackages = finalCompatibility.filter(item => !isCompatible(item))
 
-      if (localDependencies.length > 0 && finalCompatibility.some(item => !isCompatible(item))) {
+      if (localDependencies.length > 0 && incompatiblePackages.length > 0) {
         if (!silent) {
           log.warn(`Bundle NOT compatible with ${channel} channel`)
-          log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          log.warn('')
+          // Show detailed incompatibility reasons
+          for (const pkg of incompatiblePackages) {
+            const details = getCompatibilityDetails(pkg)
+            log.warn(`  ${pkg.name}: ${details.message}`)
+          }
+          log.warn('')
+          log.warn(`You can check full compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
         }
         throw new Error(`Bundle is not compatible with ${channel} channel`)
       }
@@ -225,11 +234,19 @@ export async function setChannelInternal(channel: string, appId: string, options
       )
 
       const pm = getPMAndCommand()
+      const incompatiblePackages = finalCompatibility.filter(item => !isCompatible(item))
 
-      if (finalCompatibility.some(item => !isCompatible(item))) {
+      if (incompatiblePackages.length > 0) {
         if (!silent) {
           log.warn(`Bundle NOT compatible with ${channel} channel`)
-          log.warn(`You can check compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
+          log.warn('')
+          // Show detailed incompatibility reasons
+          for (const pkg of incompatiblePackages) {
+            const details = getCompatibilityDetails(pkg)
+            log.warn(`  ${pkg.name}: ${details.message}`)
+          }
+          log.warn('')
+          log.warn(`You can check full compatibility with "${pm.runner} @capgo/cli bundle compatibility"`)
         }
         throw new Error(`Latest remote bundle is not compatible with ${channel} channel`)
       }
