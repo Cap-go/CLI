@@ -1395,6 +1395,83 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
+/**
+ * Read directory recursively and return full paths for all files
+ */
+function readDirRecursivelyFullPaths(dir: string): string[] {
+  if (!existsSync(dir))
+    return []
+
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true })
+    const files = entries.flatMap((entry) => {
+      const fullPath = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        return readDirRecursivelyFullPaths(fullPath)
+      }
+      else {
+        return fullPath
+      }
+    })
+    return files
+  }
+  catch {
+    return []
+  }
+}
+
+/**
+ * Calculate a checksum for all native code files in a directory.
+ * This creates a combined hash of all file contents sorted by relative path
+ * to ensure consistent checksums regardless of filesystem order.
+ */
+async function calculateNativeCodeChecksum(platformDir: string): Promise<string | undefined> {
+  if (!existsSync(platformDir))
+    return undefined
+
+  const files = readDirRecursivelyFullPaths(platformDir)
+    .filter(f => nativeFileRegex.test(f))
+    .sort() // Sort for consistent ordering
+
+  if (files.length === 0)
+    return undefined
+
+  // Dynamically import crypto
+  const { createHash } = await import('node:crypto')
+  const hash = createHash('sha256')
+
+  for (const file of files) {
+    try {
+      // Include relative path in hash to detect file renames/moves
+      const relativePath = relative(platformDir, file)
+      hash.update(relativePath)
+      // Include file content
+      const content = readFileSync(file)
+      hash.update(content)
+    }
+    catch {
+      // Skip files that can't be read
+    }
+  }
+
+  return hash.digest('hex')
+}
+
+/**
+ * Calculate checksums for iOS and Android native code in a dependency folder
+ */
+async function calculatePlatformChecksums(dependencyFolderPath: string): Promise<{ ios_checksum?: string, android_checksum?: string }> {
+  const iosDir = join(dependencyFolderPath, 'ios')
+  const androidDir = join(dependencyFolderPath, 'android')
+
+  const [ios_checksum, android_checksum] = await Promise.all([
+    calculateNativeCodeChecksum(iosDir),
+    calculateNativeCodeChecksum(androidDir),
+  ])
+
+  return { ios_checksum, android_checksum }
+}
+
 export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
   let dependencies
@@ -1438,11 +1515,13 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
       let dependencyFound = false
       let hasNativeFiles = false
       let actualVersion = value
+      let foundDependencyPath: string | undefined
 
       for (const modulePath of nodeModulesPaths) {
         const dependencyFolderPath = join(modulePath, key)
         if (existsSync(dependencyFolderPath)) {
           dependencyFound = true
+          foundDependencyPath = dependencyFolderPath
           // Read actual version from node_modules package.json
           // This handles catalog:, workspace:, link:, and other special specifiers
           try {
@@ -1480,10 +1559,21 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
         return { name: key, version: value }
       }
 
+      // Calculate platform checksums for native packages
+      let ios_checksum: string | undefined
+      let android_checksum: string | undefined
+      if (hasNativeFiles && foundDependencyPath) {
+        const checksums = await calculatePlatformChecksums(foundDependencyPath)
+        ios_checksum = checksums.ios_checksum
+        android_checksum = checksums.android_checksum
+      }
+
       return {
         name: key,
         version: actualVersion,
         native: hasNativeFiles,
+        ios_checksum,
+        android_checksum,
       }
     })).catch(() => [])
 
@@ -1493,7 +1583,7 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
     throw new Error('Missing dependencies or invalid dependencies')
   }
 
-  return dependenciesObject as { name: string, version: string, native: boolean }[]
+  return dependenciesObject as { name: string, version: string, native: boolean, ios_checksum?: string, android_checksum?: string }[]
 }
 
 interface ChannelChecksum {
