@@ -28,7 +28,7 @@ import { initApp } from './init'
 import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
-import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
+import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organization'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
 
