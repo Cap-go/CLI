@@ -27,7 +27,7 @@ import { generateDocs } from './docs'
 import { initApp } from './init'
 import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
 import { login } from './login'
-import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
+import { addOrganization, deleteOrganization, listMembers, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
 
@@ -512,14 +512,33 @@ Example: npx @capgo/cli@latest organisation add --name "My Company" --email admi
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 organisation
+  .command('members [orgId]')
+  .alias('m')
+  .description(`👥 List organization members and their 2FA status.
+
+Shows all members of an organization with their roles and whether they have 2FA enabled.
+Useful before enabling 2FA enforcement to see which members will be affected.
+
+Note: Viewing 2FA status requires super_admin rights in the organization.
+
+Example: npx @capgo/cli@latest organisation members ORG_ID`)
+  .action(listMembers)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organisation
   .command('set [orgId]')
   .alias('s')
-  .description(`⚙️ Update organization settings such as name and management email.
+  .description(`⚙️ Update organization settings such as name, email, and 2FA enforcement.
 
-Example: npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"`)
+Example: npx @capgo/cli@latest organisation set ORG_ID --name "New Name"
+Example: npx @capgo/cli@latest organisation set ORG_ID --enforce-2fa`)
   .action(setOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
+  .option('--enforce-2fa', `Enable 2FA enforcement for all organization members`)
+  .option('--no-enforce-2fa', `Disable 2FA enforcement for organization`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)

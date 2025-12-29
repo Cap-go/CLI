@@ -11,6 +11,37 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
   return !!app
 }
 
+async function check2FAComplianceForApp(
+  supabase: SupabaseClient<Database>,
+  appid: string,
+  silent = false,
+): Promise<void> {
+  // Use the new reject_access_due_to_2fa_for_app function
+  // This handles getting the org, user identity (JWT or API key), and checking 2FA compliance
+  const { data: shouldReject, error: rejectError } = await supabase
+    .rpc('reject_access_due_to_2fa_for_app', { app_id: appid })
+
+  if (rejectError) {
+    if (!silent)
+      log.error(`Cannot check 2FA compliance: ${rejectError.message}`)
+    throw new Error(`Cannot check 2FA compliance: ${rejectError.message}`)
+  }
+
+  if (shouldReject) {
+    if (!silent) {
+      log.error(`\n🔐 Access Denied: Two-Factor Authentication Required`)
+      log.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+      log.error(`\nThis organization requires all members to have 2FA enabled.`)
+      log.error(`\nTo regain access:`)
+      log.error(`  1. Go to https://web.capgo.app/settings/account`)
+      log.error(`  2. Enable Two-Factor Authentication on your account`)
+      log.error(`  3. Try your command again`)
+      log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
+    }
+    throw new Error('2FA required for this organization')
+  }
+}
+
 export async function checkAppExistsAndHasPermissionOrgErr(
   supabase: SupabaseClient<Database>,
   apikey: string,
@@ -19,6 +50,10 @@ export async function checkAppExistsAndHasPermissionOrgErr(
   silent = false,
 ) {
   const pm = getPMAndCommand()
+
+  // Check 2FA compliance first
+  await check2FAComplianceForApp(supabase, appid, silent)
+
   const permissions = await isAllowedAppOrg(supabase, apikey, appid)
   if (!permissions.okay) {
     switch (permissions.error) {
