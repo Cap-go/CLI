@@ -27,6 +27,7 @@ import { generateDocs } from './docs'
 import { initApp } from './init'
 import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
 import { login } from './login'
+import { startMcpServer } from './mcp/server'
 import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
@@ -732,6 +733,38 @@ program
   .option('--folder <folderPath>', 'Generate individual markdown files for each command in the specified folder (instead of updating README)')
   .action((filePath, options) => {
     generateDocs(filePath, options.folder)
+  })
+
+program
+  .command('mcp')
+  .description(`🤖 Start the Capgo MCP (Model Context Protocol) server for AI agent integration.
+
+This command starts an MCP server that exposes Capgo functionality as tools for AI agents.
+The server communicates via stdio and is designed for non-interactive, programmatic use.
+
+Available tools exposed via MCP:
+  - capgo_list_apps, capgo_add_app, capgo_update_app, capgo_delete_app
+  - capgo_upload_bundle, capgo_list_bundles, capgo_delete_bundle, capgo_cleanup_bundles
+  - capgo_list_channels, capgo_add_channel, capgo_update_channel, capgo_delete_channel
+  - capgo_get_current_bundle, capgo_check_compatibility
+  - capgo_list_organizations, capgo_add_organization
+  - capgo_get_account_id, capgo_doctor, capgo_get_stats
+  - capgo_request_build, capgo_generate_encryption_keys
+
+Example usage with Claude Desktop:
+  Add to claude_desktop_config.json:
+  {
+    "mcpServers": {
+      "capgo": {
+        "command": "npx",
+        "args": ["@capgo/cli", "mcp"]
+      }
+    }
+  }
+
+Example: npx @capgo/cli mcp`)
+  .action(async () => {
+    await startMcpServer()
   })
 
 program.exitOverride()

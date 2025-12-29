@@ -73,6 +73,7 @@
     "@capacitor/cli": "^8.0.0",
     "@capgo/find-package-manager": "^0.0.18",
     "@clack/prompts": "^0.11.0",
+    "@modelcontextprotocol/sdk": "^1.0.0",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver@1.0.6",
     "@supabase/supabase-js": "^2.79.0",
@@ -93,6 +94,10 @@
     "prettyjson": "^1.2.5",
     "tmp": "^0.2.5",
     "tus-js-client": "^4.3.1",
-    "typescript": "^5.9.3"
+    "typescript": "^5.9.3",
+    "zod": "^3.24.0"
+  },
+  "dependencies": {
+    "micromatch": "^4.0.8"
   }
 }
