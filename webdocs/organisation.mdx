@@ -1,12 +1,12 @@
 ---
 title: 🔹 organisation
-description: [DEPRECATED] Use "organization" instead. This command will be removed in a future version.
+description: 🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.
 sidebar_label: organisation
 sidebar:
-  order: 10
+  order: 9
 ---
 
-[DEPRECATED] Use "organization" instead. This command will be removed in a future version.
+🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.
 
 ### <a id="organisation-list"></a> 📋 **List**
 
@@ -16,7 +16,13 @@ sidebar:
 npx @capgo/cli@latest organisation list
 ```
 
-[DEPRECATED] Use "organization list" instead.
+📋 List all organizations you have access to in Capgo Cloud.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation list
+```
 
 **Options:**
 
@@ -34,7 +40,13 @@ npx @capgo/cli@latest organisation list
 npx @capgo/cli@latest organisation add
 ```
 
-[DEPRECATED] Use "organization add" instead.
+➕ Create a new organization in Capgo Cloud for team collaboration.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompany.com
+```
 
 **Options:**
 
@@ -54,7 +66,13 @@ npx @capgo/cli@latest organisation add
 npx @capgo/cli@latest organisation set
 ```
 
-[DEPRECATED] Use "organization set" instead.
+⚙️ Update organization settings such as name and management email.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"
+```
 
 **Options:**
 
@@ -74,7 +92,14 @@ npx @capgo/cli@latest organisation set
 npx @capgo/cli@latest organisation delete
 ```
 
-[DEPRECATED] Use "organization delete" instead.
+🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
+Only organization owners can delete organizations.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation delete ORG_ID
+```
 
 **Options:**
 

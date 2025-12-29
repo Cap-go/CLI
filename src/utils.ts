@@ -41,7 +41,7 @@ export const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]>
   = ArrayType extends readonly (infer ElementType)[] ? ElementType : never
-export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v7']['Returns']>
+export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v6']['Returns']>
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''

@@ -54,11 +54,6 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
   - [Delete_old](#key-delete_old)
 - 👤 [Account](#account)
   - [Id](#account-id)
-- 🔹 [Organization](#organization)
-  - [List](#organization-list)
-  - [Add](#organization-add)
-  - [Set](#organization-set)
-  - [Delete](#organization-delete)
 - 🔹 [Organisation](#organisation)
   - [List](#organisation-list)
   - [Add](#organisation-add)
@@ -793,115 +788,9 @@ npx @capgo/cli@latest account id
 | **-a,** | <code>string</code> | API key to link to your account |
 
 
-## <a id="organization"></a> 🔹 **Organization**
-
-🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.
-
-### <a id="organization-list"></a> 📋 **List**
-
-**Alias:** `l`
-
-```bash
-npx @capgo/cli@latest organization list
-```
-
-📋 List all organizations you have access to in Capgo Cloud.
-
-**Example:**
-
-```bash
-npx @capgo/cli@latest organization list
-```
-
-**Options:**
-
-| Param          | Type          | Description          |
-| -------------- | ------------- | -------------------- |
-| **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
-| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
-### <a id="organization-add"></a> ➕ **Add**
-
-**Alias:** `a`
-
-```bash
-npx @capgo/cli@latest organization add
-```
-
-➕ Create a new organization in Capgo Cloud for team collaboration.
-
-**Example:**
-
-```bash
-npx @capgo/cli@latest organization add --name "My Company" --email admin@mycompany.com
-```
-
-**Options:**
-
-| Param          | Type          | Description          |
-| -------------- | ------------- | -------------------- |
-| **-n,** | <code>string</code> | Organization name |
-| **-e,** | <code>string</code> | Management email for the organization |
-| **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
-| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
-### <a id="organization-set"></a> ⚙️ **Set**
-
-**Alias:** `s`
-
-```bash
-npx @capgo/cli@latest organization set
-```
-
-⚙️ Update organization settings such as name and management email.
-
-**Example:**
-
-```bash
-npx @capgo/cli@latest organization set ORG_ID --name "Updated Company Name"
-```
-
-**Options:**
-
-| Param          | Type          | Description          |
-| -------------- | ------------- | -------------------- |
-| **-n,** | <code>string</code> | Organization name |
-| **-e,** | <code>string</code> | Management email for the organization |
-| **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
-| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
-### <a id="organization-delete"></a> 🗑️ **Delete**
-
-**Alias:** `d`
-
-```bash
-npx @capgo/cli@latest organization delete
-```
-
-🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
-Only organization owners can delete organizations.
-
-**Example:**
-
-```bash
-npx @capgo/cli@latest organization delete ORG_ID
-```
-
-**Options:**
-
-| Param          | Type          | Description          |
-| -------------- | ------------- | -------------------- |
-| **-a,** | <code>string</code> | API key to link to your account |
-| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
-| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
-
 ## <a id="organisation"></a> 🔹 **Organisation**
 
-[DEPRECATED] Use "organization" instead. This command will be removed in a future version.
+🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.
 
 ### <a id="organisation-list"></a> 📋 **List**
 
@@ -911,7 +800,13 @@ npx @capgo/cli@latest organization delete ORG_ID
 npx @capgo/cli@latest organisation list
 ```
 
-[DEPRECATED] Use "organization list" instead.
+📋 List all organizations you have access to in Capgo Cloud.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation list
+```
 
 **Options:**
 
@@ -929,7 +824,13 @@ npx @capgo/cli@latest organisation list
 npx @capgo/cli@latest organisation add
 ```
 
-[DEPRECATED] Use "organization add" instead.
+➕ Create a new organization in Capgo Cloud for team collaboration.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompany.com
+```
 
 **Options:**
 
@@ -949,7 +850,13 @@ npx @capgo/cli@latest organisation add
 npx @capgo/cli@latest organisation set
 ```
 
-[DEPRECATED] Use "organization set" instead.
+⚙️ Update organization settings such as name and management email.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"
+```
 
 **Options:**
 
@@ -969,7 +876,14 @@ npx @capgo/cli@latest organisation set
 npx @capgo/cli@latest organisation delete
 ```
 
-[DEPRECATED] Use "organization delete" instead.
+🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
+Only organization owners can delete organizations.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organisation delete ORG_ID
+```
 
 **Options:**
 

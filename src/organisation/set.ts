@@ -1,5 +1,5 @@
 import type { OptionsBase } from '../utils'
-import { confirm, intro, isCancel, log, outro, text } from '@clack/prompts'
+import { intro, isCancel, log, outro, text } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -12,7 +12,6 @@ import {
 interface OptionsOrganization extends OptionsBase {
   name?: string
   email?: string
-  enforce2fa?: boolean
 }
 
 export async function setOrganizationInternal(
@@ -51,7 +50,7 @@ export async function setOrganizationInternal(
 
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')
-    .select('name, management_email, created_by, enforcing_2fa')
+    .select('name, management_email, created_by')
     .eq('id', orgId)
     .single()
 
@@ -61,69 +60,7 @@ export async function setOrganizationInternal(
     throw new Error(`Cannot get organization details: ${formatError(orgError)}`)
   }
 
-  let { name, email, enforce2fa } = enrichedOptions
-
-  // Handle 2FA enforcement option
-  if (enforce2fa !== undefined) {
-    if (enforce2fa && !orgData.enforcing_2fa) {
-      // User wants to enable 2FA enforcement - check members first
-      const { data: membersData, error: membersError } = await supabase
-        .rpc('check_org_members_2fa_enabled', { org_id: orgId })
-
-      if (membersError) {
-        if (!silent)
-          log.error(`Cannot check organization members 2FA status: ${formatError(membersError)}`)
-        throw new Error(`Cannot check organization members 2FA status: ${formatError(membersError)}`)
-      }
-
-      const membersWithout2FA = membersData?.filter((m: { has_2fa: boolean }) => !m.has_2fa) || []
-
-      if (membersWithout2FA.length > 0) {
-        if (!silent) {
-          log.warn(`${membersWithout2FA.length} member${membersWithout2FA.length > 1 ? 's don\'t' : ' doesn\'t'} have 2FA enabled:`)
-          for (const member of membersWithout2FA) {
-            log.warn(`  - ${(member as { email: string }).email}`)
-          }
-          log.warn('These members will lose access to organization resources until they enable 2FA.')
-
-          const shouldContinue = await confirm({
-            message: 'Do you want to enable 2FA enforcement anyway?',
-          })
-
-          if (isCancel(shouldContinue) || !shouldContinue) {
-            log.error('Canceled enabling 2FA enforcement')
-            throw new Error('2FA enforcement cancelled')
-          }
-        }
-      }
-    }
-
-    // Update 2FA enforcement setting
-    const { error: twoFaError } = await supabase
-      .from('orgs')
-      .update({ enforcing_2fa: enforce2fa })
-      .eq('id', orgId)
-
-    if (twoFaError) {
-      if (!silent)
-        log.error(`Could not update 2FA enforcement: ${formatError(twoFaError)}`)
-      throw new Error(`Could not update 2FA enforcement: ${formatError(twoFaError)}`)
-    }
-
-    if (!silent) {
-      if (enforce2fa)
-        log.success('2FA enforcement enabled')
-      else
-        log.success('2FA enforcement disabled')
-    }
-
-    // If only updating 2FA, we're done
-    if (!name && !email) {
-      if (!silent)
-        outro('Done ✅')
-      return { orgId, enforce2fa }
-    }
-  }
+  let { name, email } = enrichedOptions
 
   if (!silent && !name) {
     const nameInput = await text({
