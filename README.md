@@ -62,6 +62,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 - 🔹 [Build](#build)
   - [Request](#build-request)
   - [Credentials](#build-credentials)
+- 🔹 [Mcp](#mcp)
 
 ## <a id="init"></a> 🚀 **Init**
 
@@ -970,6 +971,41 @@ Manage build credentials stored locally on your machine.
 📚 DOCUMENTATION:
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
+
+
+## <a id="mcp"></a> 🔹 **Mcp**
+
+```bash
+npx @capgo/cli@latest mcp
+```
+
+🤖 Start the Capgo MCP (Model Context Protocol) server for AI agent integration.
+This command starts an MCP server that exposes Capgo functionality as tools for AI agents.
+The server communicates via stdio and is designed for non-interactive, programmatic use.
+Available tools exposed via MCP:
+  - capgo_list_apps, capgo_add_app, capgo_update_app, capgo_delete_app
+  - capgo_upload_bundle, capgo_list_bundles, capgo_delete_bundle, capgo_cleanup_bundles
+  - capgo_list_channels, capgo_add_channel, capgo_update_channel, capgo_delete_channel
+  - capgo_get_current_bundle, capgo_check_compatibility
+  - capgo_list_organizations, capgo_add_organization
+  - capgo_get_account_id, capgo_doctor, capgo_get_stats
+  - capgo_request_build, capgo_generate_encryption_keys
+Example usage with Claude Desktop:
+  Add to claude_desktop_config.json:
+  {
+    "mcpServers": {
+      "capgo": {
+        "command": "npx",
+        "args": ["@capgo/cli", "mcp"]
+      }
+    }
+  }
+
+**Example:**
+
+```bash
+npx @capgo/cli mcp
+```
 
 
 
