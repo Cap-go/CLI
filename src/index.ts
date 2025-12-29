@@ -538,6 +538,56 @@ Example: npx @capgo/cli@latest organization delete ORG_ID`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
+// Deprecated alias for backward compatibility
+const warnDeprecated = () => {
+  console.warn('⚠️  Warning: "organisation" is deprecated. Please use "organization" instead.')
+}
+
+const organisation = program
+  .command('organisation')
+  .description(`[DEPRECATED] Use "organization" instead. This command will be removed in a future version.`)
+  .hook('preAction', warnDeprecated)
+
+organisation
+  .command('list')
+  .alias('l')
+  .description(`[DEPRECATED] Use "organization list" instead.`)
+  .action(listOrganizations)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organisation
+  .command('add')
+  .alias('a')
+  .description(`[DEPRECATED] Use "organization add" instead.`)
+  .action(addOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organisation
+  .command('set [orgId]')
+  .alias('s')
+  .description(`[DEPRECATED] Use "organization set" instead.`)
+  .action(setOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organisation
+  .command('delete [orgId]')
+  .alias('d')
+  .description(`[DEPRECATED] Use "organization delete" instead.`)
+  .action(deleteOrganization)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
 const build = program
   .command('build')
   .description(`🏗️  Manage native iOS/Android builds through Capgo Cloud.
