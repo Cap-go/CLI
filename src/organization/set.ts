@@ -1,6 +1,5 @@
 import type { OptionsBase } from '../utils'
 import { confirm as confirmC, intro, isCancel, log, outro, text } from '@clack/prompts'
-import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'
 import {
   check2FAAccessForOrg,

@@ -152,4 +152,3 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
 export async function listMembers(orgId: string, options: OptionsBase) {
   await listMembersInternal(orgId, options, false)
 }
-

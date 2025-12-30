@@ -47,7 +47,12 @@ export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
 
 export async function check2FAAccessForOrg(supabase: SupabaseClient<Database>, orgId: string, silent = false): Promise<void> {
-  const { data: reject2fa } = await supabase.rpc('reject_access_due_to_2fa_for_org', { org_id: orgId })
+  const { data: reject2fa, error } = await supabase.rpc('reject_access_due_to_2fa_for_org', { org_id: orgId })
+  if (error) {
+    if (!silent)
+      log.error(`Cannot check 2FA compliance: ${error.message}`)
+    throw new Error(`Cannot check 2FA compliance: ${error.message}`)
+  }
   if (reject2fa) {
     if (!silent)
       log.error(`🔐 Access Denied: 2FA Required. Enable 2FA at https://web.capgo.app/settings/account`)

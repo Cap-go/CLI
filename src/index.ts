@@ -558,7 +558,7 @@ Example: npx @capgo/cli@latest organization delete ORG_ID`)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 // Deprecated alias for backward compatibility
-const warnDeprecated = () => {
+function warnDeprecated() {
   console.warn('⚠️  Warning: "organisation" is deprecated. Please use "organization" instead.')
 }
 
