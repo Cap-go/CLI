@@ -28,7 +28,7 @@ import { initApp } from './init'
 import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
-import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organisation'
+import { addOrganization, deleteOrganization, listOrganizations, setOrganization } from './organization'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
 
@@ -484,16 +484,74 @@ Example: npx @capgo/cli@latest account id`)
   .action(getUserId)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
 
-const organisation = program
-  .command('organisation')
+const organization = program
+  .command('organization')
   .description(`🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.`)
 
-organisation
+organization
   .command('list')
   .alias('l')
   .description(`📋 List all organizations you have access to in Capgo Cloud.
 
-Example: npx @capgo/cli@latest organisation list`)
+Example: npx @capgo/cli@latest organization list`)
+  .action(listOrganizations)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organization
+  .command('add')
+  .alias('a')
+  .description(`➕ Create a new organization in Capgo Cloud for team collaboration.
+
+Example: npx @capgo/cli@latest organization add --name "My Company" --email admin@mycompany.com`)
+  .action(addOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organization
+  .command('set [orgId]')
+  .alias('s')
+  .description(`⚙️ Update organization settings such as name and management email.
+
+Example: npx @capgo/cli@latest organization set ORG_ID --name "Updated Company Name"`)
+  .action(setOrganization)
+  .option('-n, --name <name>', `Organization name`)
+  .option('-e, --email <email>', `Management email for the organization`)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+organization
+  .command('delete [orgId]')
+  .alias('d')
+  .description(`🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
+
+Only organization owners can delete organizations.
+
+Example: npx @capgo/cli@latest organization delete ORG_ID`)
+  .action(deleteOrganization)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+// Deprecated alias for backward compatibility
+const warnDeprecated = () => {
+  console.warn('⚠️  Warning: "organisation" is deprecated. Please use "organization" instead.')
+}
+
+const organisation = program
+  .command('organisation')
+  .description(`[DEPRECATED] Use "organization" instead. This command will be removed in a future version.`)
+  .hook('preAction', warnDeprecated)
+
+organisation
+  .command('list')
+  .alias('l')
+  .description(`[DEPRECATED] Use "organization list" instead.`)
   .action(listOrganizations)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
@@ -502,9 +560,7 @@ Example: npx @capgo/cli@latest organisation list`)
 organisation
   .command('add')
   .alias('a')
-  .description(`➕ Create a new organization in Capgo Cloud for team collaboration.
-
-Example: npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompany.com`)
+  .description(`[DEPRECATED] Use "organization add" instead.`)
   .action(addOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
@@ -515,9 +571,7 @@ Example: npx @capgo/cli@latest organisation add --name "My Company" --email admi
 organisation
   .command('set [orgId]')
   .alias('s')
-  .description(`⚙️ Update organization settings such as name and management email.
-
-Example: npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"`)
+  .description(`[DEPRECATED] Use "organization set" instead.`)
   .action(setOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
@@ -528,11 +582,7 @@ Example: npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company N
 organisation
   .command('delete [orgId]')
   .alias('d')
-  .description(`🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
-
-Only organization owners can delete organizations.
-
-Example: npx @capgo/cli@latest organisation delete ORG_ID`)
+  .description(`[DEPRECATED] Use "organization delete" instead.`)
   .action(deleteOrganization)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
