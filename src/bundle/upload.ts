@@ -12,7 +12,7 @@ import { Table } from '@sauber/table'
 import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
@@ -778,6 +778,9 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Supabase client created successfully`)
 
+  // Check 2FA compliance early to give a clear error message
+  await check2FAComplianceForApp(supabase, appid, silent)
+
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
   if (options.verbose)
     log.info(`[Verbose] User verified successfully, user_id: ${userId}`)
@@ -1147,7 +1150,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Checking app permissions...`)
 
-  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload)
+  const permissions = await checkAppExistsAndHasPermissionOrgErr(supabase, apikey, appid, OrganizationPerm.upload, false, true)
 
   if (options.verbose) {
     log.info(`[Verbose] Permissions:`)

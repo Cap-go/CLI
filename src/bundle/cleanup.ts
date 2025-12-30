@@ -10,7 +10,7 @@ import {
   lessThan,
   parse,
 } from '@std/semver'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkAlerts } from '../api/update'
 import { deleteSpecificVersion, displayBundles, getActiveAppVersions, getChannelsVersion } from '../api/versions'
 import {
@@ -87,9 +87,9 @@ export async function cleanupBundleInternal(appId: string, options: Options, sil
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-
+  await check2FAComplianceForApp(supabase, appId, silent)
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent, true)
 
   if (!silent)
     log.info('Querying all available versions in Capgo')

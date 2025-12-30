@@ -1,7 +1,7 @@
 import type { Compatibility, OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
   checkCompatibilityCloud,
   createSupabaseClient,
@@ -67,7 +67,7 @@ export async function checkCompatibilityInternal(
     enrichedOptions.supaHost,
     enrichedOptions.supaAnon,
   )
-
+  await check2FAComplianceForApp(supabase, resolvedAppId, silent)
   await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all', 'read', 'upload'])
   await checkAppExistsAndHasPermissionOrgErr(
     supabase,
@@ -75,6 +75,7 @@ export async function checkCompatibilityInternal(
     resolvedAppId,
     OrganizationPerm.read,
     silent,
+    true,
   )
 
   const compatibility = await checkCompatibilityCloud(

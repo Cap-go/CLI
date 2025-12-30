@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel, delChannelDevices, findBundleIdByChannelName, findChannel } from '../api/channels'
 import { deleteAppVersion } from '../api/versions'
 import {
@@ -41,9 +41,10 @@ export async function deleteChannelInternal(channelId: string, appId: string, op
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  await check2FAComplianceForApp(supabase, appId, silent)
   const userId = await verifyUser(supabase, options.apikey, ['all'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent, true)
 
   if (options.deleteBundle && !silent)
     log.info(`Deleting bundle ${appId}#${channelId} from Capgo`)

@@ -2,6 +2,7 @@ import type { OptionsBase } from '../utils'
 import { confirm as confirmC, intro, isCancel, log, outro, select } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
+  check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -46,6 +47,8 @@ export async function deleteOrganizationInternal(
     enrichedOptions.supaAnon,
   )
   const userId = await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
+
+  await check2FAAccessForOrg(supabase, orgId, silent)
 
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')

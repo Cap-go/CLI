@@ -11,7 +11,7 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
   return !!app
 }
 
-async function check2FAComplianceForApp(
+export async function check2FAComplianceForApp(
   supabase: SupabaseClient<Database>,
   appid: string,
   silent = false,
@@ -48,11 +48,13 @@ export async function checkAppExistsAndHasPermissionOrgErr(
   appid: string,
   requiredPermission: OrganizationPerm,
   silent = false,
+  skip2FACheck = false,
 ) {
   const pm = getPMAndCommand()
 
-  // Check 2FA compliance first
-  await check2FAComplianceForApp(supabase, appid, silent)
+  // Check 2FA compliance first (unless already checked earlier)
+  if (!skip2FACheck)
+    await check2FAComplianceForApp(supabase, appid, silent)
 
   const permissions = await isAllowedAppOrg(supabase, apikey, appid)
   if (!permissions.okay) {

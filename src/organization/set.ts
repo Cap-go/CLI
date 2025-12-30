@@ -3,6 +3,7 @@ import { confirm as confirmC, intro, isCancel, log, outro, text } from '@clack/p
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'
 import {
+  check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -49,6 +50,8 @@ export async function setOrganizationInternal(
     enrichedOptions.supaAnon,
   )
   await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
+
+  await check2FAAccessForOrg(supabase, orgId, silent)
 
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')

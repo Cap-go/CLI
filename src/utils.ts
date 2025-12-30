@@ -46,6 +46,15 @@ export type Organization = ArrayElement<Database['public']['Functions']['get_org
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
 export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
 
+export async function check2FAAccessForOrg(supabase: SupabaseClient<Database>, orgId: string, silent = false): Promise<void> {
+  const { data: reject2fa } = await supabase.rpc('reject_access_due_to_2fa_for_org', { org_id: orgId })
+  if (reject2fa) {
+    if (!silent)
+      log.error(`🔐 Access Denied: 2FA Required. Enable 2FA at https://web.capgo.app/settings/account`)
+    throw new Error('2FA required for this organization')
+  }
+}
+
 type TagKey = Lowercase<string>
 /** Tag Type */
 type Tags = Record<TagKey, string | number | boolean>

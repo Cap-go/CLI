@@ -3,6 +3,7 @@ import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'
 import {
+  check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
@@ -75,6 +76,7 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
     enrichedOptions.supaAnon,
   )
   await verifyUser(supabase, enrichedOptions.apikey, ['read', 'write', 'all'])
+  await check2FAAccessForOrg(supabase, orgId, silent)
 
   // Get organization name
   const { data: orgData, error: orgError } = await supabase
