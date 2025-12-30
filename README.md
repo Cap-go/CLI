@@ -54,14 +54,15 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
   - [Delete_old](#key-delete_old)
 - 👤 [Account](#account)
   - [Id](#account-id)
-- 🔹 [Organisation](#organisation)
-  - [List](#organisation-list)
-  - [Add](#organisation-add)
-  - [Set](#organisation-set)
-  - [Delete](#organisation-delete)
+- 🔹 [Organization](#organization)
+  - [List](#organization-list)
+  - [Add](#organization-add)
+  - [Set](#organization-set)
+  - [Delete](#organization-delete)
 - 🔹 [Build](#build)
   - [Request](#build-request)
   - [Credentials](#build-credentials)
+- 🔹 [Mcp](#mcp)
 
 ## <a id="init"></a> 🚀 **Init**
 
@@ -787,16 +788,16 @@ npx @capgo/cli@latest account id
 | **-a,** | <code>string</code> | API key to link to your account |
 
 
-## <a id="organisation"></a> 🔹 **Organisation**
+## <a id="organization"></a> 🔹 **Organization**
 
 🏢 Manage your organizations in Capgo Cloud for team collaboration and app management.
 
-### <a id="organisation-list"></a> 📋 **List**
+### <a id="organization-list"></a> 📋 **List**
 
 **Alias:** `l`
 
 ```bash
-npx @capgo/cli@latest organisation list
+npx @capgo/cli@latest organization list
 ```
 
 📋 List all organizations you have access to in Capgo Cloud.
@@ -804,7 +805,7 @@ npx @capgo/cli@latest organisation list
 **Example:**
 
 ```bash
-npx @capgo/cli@latest organisation list
+npx @capgo/cli@latest organization list
 ```
 
 **Options:**
@@ -815,12 +816,12 @@ npx @capgo/cli@latest organisation list
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-### <a id="organisation-add"></a> ➕ **Add**
+### <a id="organization-add"></a> ➕ **Add**
 
 **Alias:** `a`
 
 ```bash
-npx @capgo/cli@latest organisation add
+npx @capgo/cli@latest organization add
 ```
 
 ➕ Create a new organization in Capgo Cloud for team collaboration.
@@ -828,7 +829,7 @@ npx @capgo/cli@latest organisation add
 **Example:**
 
 ```bash
-npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompany.com
+npx @capgo/cli@latest organization add --name "My Company" --email admin@mycompany.com
 ```
 
 **Options:**
@@ -841,12 +842,12 @@ npx @capgo/cli@latest organisation add --name "My Company" --email admin@mycompa
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-### <a id="organisation-set"></a> ⚙️ **Set**
+### <a id="organization-set"></a> ⚙️ **Set**
 
 **Alias:** `s`
 
 ```bash
-npx @capgo/cli@latest organisation set
+npx @capgo/cli@latest organization set
 ```
 
 ⚙️ Update organization settings such as name and management email.
@@ -854,7 +855,7 @@ npx @capgo/cli@latest organisation set
 **Example:**
 
 ```bash
-npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"
+npx @capgo/cli@latest organization set ORG_ID --name "Updated Company Name"
 ```
 
 **Options:**
@@ -867,12 +868,12 @@ npx @capgo/cli@latest organisation set ORG_ID --name "Updated Company Name"
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-### <a id="organisation-delete"></a> 🗑️ **Delete**
+### <a id="organization-delete"></a> 🗑️ **Delete**
 
 **Alias:** `d`
 
 ```bash
-npx @capgo/cli@latest organisation delete
+npx @capgo/cli@latest organization delete
 ```
 
 🗑️ Delete an organization from Capgo Cloud. This action cannot be undone.
@@ -881,7 +882,7 @@ Only organization owners can delete organizations.
 **Example:**
 
 ```bash
-npx @capgo/cli@latest organisation delete ORG_ID
+npx @capgo/cli@latest organization delete ORG_ID
 ```
 
 **Options:**
@@ -970,6 +971,41 @@ Manage build credentials stored locally on your machine.
 📚 DOCUMENTATION:
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
+
+
+## <a id="mcp"></a> 🔹 **Mcp**
+
+```bash
+npx @capgo/cli@latest mcp
+```
+
+🤖 Start the Capgo MCP (Model Context Protocol) server for AI agent integration.
+This command starts an MCP server that exposes Capgo functionality as tools for AI agents.
+The server communicates via stdio and is designed for non-interactive, programmatic use.
+Available tools exposed via MCP:
+  - capgo_list_apps, capgo_add_app, capgo_update_app, capgo_delete_app
+  - capgo_upload_bundle, capgo_list_bundles, capgo_delete_bundle, capgo_cleanup_bundles
+  - capgo_list_channels, capgo_add_channel, capgo_update_channel, capgo_delete_channel
+  - capgo_get_current_bundle, capgo_check_compatibility
+  - capgo_list_organizations, capgo_add_organization
+  - capgo_get_account_id, capgo_doctor, capgo_get_stats
+  - capgo_request_build, capgo_generate_encryption_keys
+Example usage with Claude Desktop:
+  Add to claude_desktop_config.json:
+  {
+    "mcpServers": {
+      "capgo": {
+        "command": "npx",
+        "args": ["@capgo/cli", "mcp"]
+      }
+    }
+  }
+
+**Example:**
+
+```bash
+npx @capgo/cli mcp
+```
 
 
 

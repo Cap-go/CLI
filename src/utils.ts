@@ -1409,6 +1409,127 @@ function readDirRecursively(dir: string): string[] {
   return files
 }
 
+/**
+ * Read directory recursively and return full paths for all files
+ */
+function readDirRecursivelyFullPaths(dir: string): string[] {
+  if (!existsSync(dir))
+    return []
+
+  try {
+    const entries = readdirSync(dir, { withFileTypes: true })
+    const files = entries.flatMap((entry) => {
+      const fullPath = join(dir, entry.name)
+      if (entry.isDirectory()) {
+        return readDirRecursivelyFullPaths(fullPath)
+      }
+      else {
+        return fullPath
+      }
+    })
+    return files
+  }
+  catch {
+    return []
+  }
+}
+
+/**
+ * Get additional platform-specific files that should be included in checksum.
+ * These files contain platform dependency versions and configurations.
+ */
+function getPlatformConfigFiles(dependencyFolderPath: string, platform: 'ios' | 'android'): string[] {
+  const files: string[] = []
+
+  if (platform === 'ios') {
+    // Include .podspec files (CocoaPods dependency versions)
+    try {
+      const rootFiles = readdirSync(dependencyFolderPath)
+      for (const file of rootFiles) {
+        if (file.endsWith('.podspec')) {
+          files.push(join(dependencyFolderPath, file))
+        }
+      }
+    }
+    catch {
+      // Ignore errors reading directory
+    }
+
+    // Include Package.swift (SPM dependency versions) - can be at root or in ios folder
+    const packageSwiftRoot = join(dependencyFolderPath, 'Package.swift')
+    const packageSwiftIos = join(dependencyFolderPath, 'ios', 'Package.swift')
+    if (existsSync(packageSwiftRoot))
+      files.push(packageSwiftRoot)
+    if (existsSync(packageSwiftIos))
+      files.push(packageSwiftIos)
+  }
+  else if (platform === 'android') {
+    // Include build.gradle files (Android dependency versions)
+    const androidDir = join(dependencyFolderPath, 'android')
+    const buildGradle = join(androidDir, 'build.gradle')
+    const buildGradleKts = join(androidDir, 'build.gradle.kts')
+
+    if (existsSync(buildGradle))
+      files.push(buildGradle)
+    if (existsSync(buildGradleKts))
+      files.push(buildGradleKts)
+  }
+
+  return files
+}
+
+/**
+ * Calculate checksums for iOS and Android native code in a dependency folder.
+ * Includes both native source files and platform configuration files
+ * (podspec, Package.swift, build.gradle) that define platform dependencies.
+ */
+async function calculatePlatformChecksums(dependencyFolderPath: string): Promise<{ ios_checksum?: string, android_checksum?: string }> {
+  const iosDir = join(dependencyFolderPath, 'ios')
+  const androidDir = join(dependencyFolderPath, 'android')
+
+  const calculatePlatformChecksum = async (platformDir: string, platform: 'ios' | 'android'): Promise<string | undefined> => {
+    // Get native code files
+    const nativeFiles = existsSync(platformDir)
+      ? readDirRecursivelyFullPaths(platformDir).filter(f => nativeFileRegex.test(f))
+      : []
+
+    // Get platform config files (podspec, Package.swift, build.gradle)
+    const configFiles = getPlatformConfigFiles(dependencyFolderPath, platform)
+
+    // Combine and sort all files for consistent checksumming
+    const allFiles = [...nativeFiles, ...configFiles].sort((a, b) => a.localeCompare(b))
+
+    if (allFiles.length === 0)
+      return undefined
+
+    const { createHash } = await import('node:crypto')
+    const hash = createHash('sha256')
+
+    for (const file of allFiles) {
+      try {
+        // Include relative path in hash to detect file renames/moves
+        const relativePath = relative(dependencyFolderPath, file)
+        hash.update(relativePath)
+        // Include file content
+        const content = readFileSync(file)
+        hash.update(content)
+      }
+      catch {
+        // Skip files that can't be read
+      }
+    }
+
+    return hash.digest('hex')
+  }
+
+  const [ios_checksum, android_checksum] = await Promise.all([
+    calculatePlatformChecksum(iosDir, 'ios'),
+    calculatePlatformChecksum(androidDir, 'android'),
+  ])
+
+  return { ios_checksum, android_checksum }
+}
+
 export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
   let dependencies
@@ -1452,11 +1573,13 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
       let dependencyFound = false
       let hasNativeFiles = false
       let actualVersion = value
+      let foundDependencyPath: string | undefined
 
       for (const modulePath of nodeModulesPaths) {
         const dependencyFolderPath = join(modulePath, key)
         if (existsSync(dependencyFolderPath)) {
           dependencyFound = true
+          foundDependencyPath = dependencyFolderPath
           // Read actual version from node_modules package.json
           // This handles catalog:, workspace:, link:, and other special specifiers
           try {
@@ -1494,10 +1617,21 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
         return { name: key, version: value }
       }
 
+      // Calculate platform checksums for native packages
+      let ios_checksum: string | undefined
+      let android_checksum: string | undefined
+      if (hasNativeFiles && foundDependencyPath) {
+        const checksums = await calculatePlatformChecksums(foundDependencyPath)
+        ios_checksum = checksums.ios_checksum
+        android_checksum = checksums.android_checksum
+      }
+
       return {
         name: key,
         version: actualVersion,
         native: hasNativeFiles,
+        ios_checksum,
+        android_checksum,
       }
     })).catch(() => [])
 
@@ -1507,7 +1641,7 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
     throw new Error('Missing dependencies or invalid dependencies')
   }
 
-  return dependenciesObject as { name: string, version: string, native: boolean }[]
+  return dependenciesObject as { name: string, version: string, native: boolean, ios_checksum?: string, android_checksum?: string }[]
 }
 
 interface ChannelChecksum {
@@ -1536,7 +1670,14 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   return channelData.version.checksum
 }
 
-export function convertNativePackages(nativePackages: { name: string, version: string }[]) {
+export interface NativePackage {
+  name: string
+  version: string
+  ios_checksum?: string
+  android_checksum?: string
+}
+
+export function convertNativePackages(nativePackages: NativePackage[]): Map<string, NativePackage> {
   if (!nativePackages) {
     log.error(`Error parsing native packages, perhaps the metadata does not exist in Capgo?`)
     throw new Error('Error parsing native packages')
@@ -1602,10 +1743,29 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
-interface Compatibility {
+export interface Compatibility {
   name: string
   localVersion: string | undefined
   remoteVersion: string | undefined
+  // Platform checksums for detailed change detection
+  localIosChecksum?: string
+  remoteIosChecksum?: string
+  localAndroidChecksum?: string
+  remoteAndroidChecksum?: string
+}
+
+export type IncompatibilityReason
+  = | 'new_plugin' // Plugin exists locally but not on remote
+    | 'removed_plugin' // Plugin exists on remote but not locally
+    | 'version_mismatch' // Versions don't intersect
+    | 'ios_code_changed' // iOS native code changed (same version but different checksum)
+    | 'android_code_changed' // Android native code changed (same version but different checksum)
+    | 'both_platforms_changed' // Both iOS and Android native code changed
+
+export interface CompatibilityDetails {
+  compatible: boolean
+  reasons: IncompatibilityReason[]
+  message: string
 }
 
 export function getAppId(appId: string | undefined, config: CapacitorConfig | undefined) {
@@ -1613,22 +1773,105 @@ export function getAppId(appId: string | undefined, config: CapacitorConfig | un
   return finalAppId
 }
 
-export function isCompatible(pkg: Compatibility): boolean {
-  // Only check compatibility if there's a local version
-  // If there's a local version but no remote version, or versions don't match, it's incompatible
-  if (!pkg.localVersion)
-    return true // If no local version, it's compatible (remote-only package)
-  if (!pkg.remoteVersion)
-    return false // If local version but no remote version, it's incompatible
+/**
+ * Check if a package is compatible and return detailed reasons if not
+ */
+export function getCompatibilityDetails(pkg: Compatibility): CompatibilityDetails {
+  const reasons: IncompatibilityReason[] = []
+
+  // If no local version, it's compatible (remote-only package - being removed is ok for OTA)
+  if (!pkg.localVersion) {
+    return {
+      compatible: true,
+      reasons: [],
+      message: 'Package only exists on remote (will be removed)',
+    }
+  }
+
+  // If local version but no remote version, it's a new plugin
+  if (!pkg.remoteVersion) {
+    reasons.push('new_plugin')
+    return {
+      compatible: false,
+      reasons,
+      message: `New native plugin added (requires app store update)`,
+    }
+  }
+
+  // Check version compatibility
+  let versionsCompatible = false
   try {
-    // Parse both ranges and check if they intersect
     const localRange = parseRange(pkg.localVersion)
     const remoteRange = parseRange(pkg.remoteVersion)
-    return rangeIntersects(localRange, remoteRange)
+    versionsCompatible = rangeIntersects(localRange, remoteRange)
   }
   catch {
-    return false // If version comparison fails, consider it incompatible
+    versionsCompatible = false
   }
+
+  if (!versionsCompatible) {
+    reasons.push('version_mismatch')
+  }
+
+  // Check checksum changes (even if versions match, native code could have changed)
+  const iosChanged = pkg.localIosChecksum && pkg.remoteIosChecksum && pkg.localIosChecksum !== pkg.remoteIosChecksum
+  const androidChanged = pkg.localAndroidChecksum && pkg.remoteAndroidChecksum && pkg.localAndroidChecksum !== pkg.remoteAndroidChecksum
+
+  if (iosChanged && androidChanged) {
+    reasons.push('both_platforms_changed')
+  }
+  else if (iosChanged) {
+    reasons.push('ios_code_changed')
+  }
+  else if (androidChanged) {
+    reasons.push('android_code_changed')
+  }
+
+  // Build message
+  if (reasons.length === 0) {
+    return {
+      compatible: true,
+      reasons: [],
+      message: 'Compatible',
+    }
+  }
+
+  const messages: string[] = []
+  for (const reason of reasons) {
+    switch (reason) {
+      case 'version_mismatch':
+        messages.push(`version changed: ${pkg.remoteVersion} → ${pkg.localVersion}`)
+        break
+      case 'ios_code_changed':
+        messages.push('iOS native code changed')
+        break
+      case 'android_code_changed':
+        messages.push('Android native code changed')
+        break
+      case 'both_platforms_changed':
+        messages.push('iOS and Android native code changed')
+        break
+      case 'new_plugin':
+        messages.push('new plugin (requires app store update)')
+        break
+      case 'removed_plugin':
+        messages.push('plugin removed')
+        break
+    }
+  }
+
+  return {
+    compatible: false,
+    reasons,
+    message: messages.join(', '),
+  }
+}
+
+/**
+ * Simple compatibility check (backward compatible)
+ */
+export function isCompatible(pkg: Compatibility): boolean {
+  return getCompatibilityDetails(pkg).compatible
 }
 
 export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>, appId: string, channel: string, packageJsonPath: string | undefined, nodeModules: string | undefined) {
@@ -1644,6 +1887,10 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
           name: local.name,
           localVersion: local.version,
           remoteVersion: remotePackage.version,
+          localIosChecksum: local.ios_checksum,
+          remoteIosChecksum: remotePackage.ios_checksum,
+          localAndroidChecksum: local.android_checksum,
+          remoteAndroidChecksum: remotePackage.android_checksum,
         }
       }
 
@@ -1651,6 +1898,8 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
         name: local.name,
         localVersion: local.version,
         remoteVersion: undefined,
+        localIosChecksum: local.ios_checksum,
+        localAndroidChecksum: local.android_checksum,
       }
     })
 
@@ -1658,7 +1907,13 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
   // These won't affect compatibility
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => dependenciesObject.find(a => a.name === remoteName) === undefined)
-    .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
+    .map(([name, pkg]) => ({
+      name,
+      localVersion: undefined,
+      remoteVersion: pkg.version,
+      remoteIosChecksum: pkg.ios_checksum,
+      remoteAndroidChecksum: pkg.android_checksum,
+    }))
 
   finalDependencies.push(...removeNotInLocal)
 
@@ -1668,7 +1923,7 @@ export async function checkCompatibilityCloud(supabase: SupabaseClient<Database>
   }
 }
 
-export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: { name: string, version: string }[]) {
+export async function checkCompatibilityNativePackages(supabase: SupabaseClient<Database>, appId: string, channel: string, nativePackages: NativePackage[]) {
   const mappedRemoteNativePackages = await getRemoteDependencies(supabase, appId, channel)
 
   const finalDependencies: Compatibility[] = nativePackages
@@ -1679,6 +1934,10 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
           name: local.name,
           localVersion: local.version,
           remoteVersion: remotePackage.version,
+          localIosChecksum: local.ios_checksum,
+          remoteIosChecksum: remotePackage.ios_checksum,
+          localAndroidChecksum: local.android_checksum,
+          remoteAndroidChecksum: remotePackage.android_checksum,
         }
       }
 
@@ -1686,6 +1945,8 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
         name: local.name,
         localVersion: local.version,
         remoteVersion: undefined,
+        localIosChecksum: local.ios_checksum,
+        localAndroidChecksum: local.android_checksum,
       }
     })
 
@@ -1693,7 +1954,13 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
   // These won't affect compatibility
   const removeNotInLocal = [...mappedRemoteNativePackages]
     .filter(([remoteName]) => nativePackages.find(a => a.name === remoteName) === undefined)
-    .map(([name, version]) => ({ name, localVersion: undefined, remoteVersion: version.version }))
+    .map(([name, pkg]) => ({
+      name,
+      localVersion: undefined,
+      remoteVersion: pkg.version,
+      remoteIosChecksum: pkg.ios_checksum,
+      remoteAndroidChecksum: pkg.android_checksum,
+    }))
 
   finalDependencies.push(...removeNotInLocal)
 
