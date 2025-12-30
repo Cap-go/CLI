@@ -30,15 +30,9 @@ function displayMembers(data: MemberInfo[], orgName: string, silent: boolean) {
   t.headers = ['Email', 'Role', 'Status', '2FA Enabled']
   t.rows = []
 
-  const membersWithout2FA: string[] = []
-
   for (const row of data) {
     const status = row.is_tmp ? 'Invited' : 'Active'
     const has2FA = row.has_2fa ? '✓ Yes' : '✗ No'
-
-    if (!row.has_2fa) {
-      membersWithout2FA.push(row.email)
-    }
 
     t.rows.push([
       row.email,
@@ -50,21 +44,6 @@ function displayMembers(data: MemberInfo[], orgName: string, silent: boolean) {
 
   log.success(`Members of "${orgName}"`)
   log.success(t.toString())
-
-  // Summary
-  const total = data.length
-  const with2FA = data.filter(m => m.has_2fa).length
-  const without2FA = total - with2FA
-
-  log.info(`\n📊 Summary: ${total} member(s), ${with2FA} with 2FA, ${without2FA} without 2FA`)
-
-  if (without2FA > 0) {
-    log.warn(`\n⚠️  ${without2FA} member(s) do not have 2FA enabled:`)
-    for (const email of membersWithout2FA) {
-      log.warn(`   - ${email}`)
-    }
-    log.warn(`\nIf 2FA enforcement is enabled, these members will lose access.`)
-  }
 }
 
 export async function listMembersInternal(orgId: string, options: OptionsBase, silent = false) {
