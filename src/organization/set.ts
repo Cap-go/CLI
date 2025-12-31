@@ -109,11 +109,12 @@ export async function setOrganizationInternal(
             const { data: members } = await supabase
               .rpc('get_org_members', { guild_id: orgId })
 
-            const emails: string[] = []
-            for (const member of membersWithout2FA) {
-              const memberInfo = members?.find(m => m.uid === member.user_id)
-              emails.push(memberInfo?.email || member.user_id)
-            }
+            // Create a Map for O(1) lookups instead of O(n) .find() calls
+            const membersByUid = new Map(members?.map(m => [m.uid, m]) || [])
+            const emails = membersWithout2FA.map((member) => {
+              const memberInfo = membersByUid.get(member.user_id)
+              return memberInfo?.email || member.user_id
+            })
 
             const memberWord = membersWithout2FA.length === 1 ? 'member does' : 'members do'
             const thisThese = membersWithout2FA.length === 1 ? 'This member will' : 'These members will'
