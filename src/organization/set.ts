@@ -93,8 +93,8 @@ export async function setOrganizationInternal(
         // Get current user ID to exclude from member count
         const { data: currentUserId, error: identityError } = await supabase.rpc('get_identity_apikey_only', { keymode: ['read', 'upload', 'write', 'all'] })
 
-        if (identityError) {
-          log.error(`Cannot get current user identity: ${formatError(identityError)}`)
+        if (identityError || !currentUserId) {
+          log.error(`Cannot get current user identity: ${identityError ? formatError(identityError) : 'No user ID returned'}`)
           throw new Error('Cannot get current user identity')
         }
 
