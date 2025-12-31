@@ -111,8 +111,13 @@ export async function setOrganizationInternal(
 
           if (membersWithout2FA.length > 0) {
             // Get member details
-            const { data: members } = await supabase
+            const { data: members, error: membersListError } = await supabase
               .rpc('get_org_members', { guild_id: orgId })
+
+            if (membersListError) {
+              log.error(`Cannot get organization members: ${formatError(membersListError)}`)
+              throw new Error('Cannot get organization members')
+            }
 
             // Create a Map for O(1) lookups instead of O(n) .find() calls
             const membersByUid = new Map(members?.map(m => [m.uid, m]) || [])
@@ -252,7 +257,7 @@ export async function setOrganizationInternal(
     outro('Done ✅')
   }
 
-  return { orgId, name, email }
+  return { orgId, name, email, enforce2fa: orgData.enforcing_2fa }
 }
 
 export async function setOrganization(orgId: string, options: OptionsOrganization) {
