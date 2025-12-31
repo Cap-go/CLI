@@ -91,7 +91,12 @@ export async function setOrganizationInternal(
         }
 
         // Get current user ID to exclude from member count
-        const { data: currentUserId } = await supabase.rpc('get_identity', { keymode: ['read', 'upload', 'write', 'all'] })
+        const { data: currentUserId, error: identityError } = await supabase.rpc('get_identity_apikey_only', { keymode: ['read', 'upload', 'write', 'all'] })
+
+        if (identityError) {
+          log.error(`Cannot get current user identity: ${formatError(identityError)}`)
+          throw new Error('Cannot get current user identity')
+        }
 
         // Filter out members without 2FA, excluding the current user (they're warned separately)
         const membersWithout2FA = (membersStatus?.filter(m => !m['2fa_enabled'] && m.user_id !== currentUserId) || [])
