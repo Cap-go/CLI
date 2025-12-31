@@ -23,7 +23,7 @@ function displayOrganizations(data: Organization[], silent: boolean) {
   t.rows = []
 
   for (const row of data.toReversed()) {
-    const twoFaRequired = row.enforcing_2fa ? '✓ Yes' : 'No'
+    const twoFaRequired = row.enforcing_2fa ? '✓ Yes' : '✗ No'
     const twoFaAccess = row['2fa_has_access'] ? '✓ Yes' : '✗ No'
 
     t.rows.push([
