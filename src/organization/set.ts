@@ -257,7 +257,7 @@ export async function setOrganizationInternal(
     outro('Done ✅')
   }
 
-  return { orgId, name, email, enforce2fa: orgData.enforcing_2fa }
+  return { orgId, name, email, enforce2fa: enforce2fa ?? orgData.enforcing_2fa }
 }
 
 export async function setOrganization(orgId: string, options: OptionsOrganization) {
