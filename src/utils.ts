@@ -1329,7 +1329,7 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
     log.error(`  1. Go to https://web.capgo.app/settings/account`)
     log.error(`  2. Enable Two-Factor Authentication on your account`)
     log.error(`  3. Try your command again`)
-    log.error(`\nFor more information, visit: https://capgo.app/docs/security/2fa-enforcement/\n`)
+    log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
     throw new Error('2FA required for this organization')
   }
 
