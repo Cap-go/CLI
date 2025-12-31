@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import type { OptionsBase } from '../utils'
 import { log } from '@clack/prompts'
-import { getPMAndCommand, isAllowedAppOrg, OrganizationPerm } from '../utils'
+import { getPMAndCommand, isAllowedAppOrg, OrganizationPerm, show2FADeniedError } from '../utils'
 
 export async function checkAppExists(supabase: SupabaseClient<Database>, appid: string) {
   const { data: app } = await supabase
@@ -28,17 +28,10 @@ export async function check2FAComplianceForApp(
   }
 
   if (shouldReject) {
-    if (!silent) {
-      log.error(`\n🔐 Access Denied: Two-Factor Authentication Required`)
-      log.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-      log.error(`\nThis organization requires all members to have 2FA enabled.`)
-      log.error(`\nTo regain access:`)
-      log.error(`  1. Go to https://web.capgo.app/settings/account`)
-      log.error(`  2. Enable Two-Factor Authentication on your account`)
-      log.error(`  3. Try your command again`)
-      log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
+    if (silent) {
+      throw new Error('2FA required for this organization')
     }
-    throw new Error('2FA required for this organization')
+    show2FADeniedError()
   }
 }
 

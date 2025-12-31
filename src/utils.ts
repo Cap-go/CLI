@@ -1280,6 +1280,23 @@ export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?
   }
 }
 
+export function show2FADeniedError(organizationName?: string): never {
+  log.error(`\n🔐 Access Denied: Two-Factor Authentication Required`)
+  log.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+  if (organizationName) {
+    log.error(`\nThe organization "${organizationName}" requires all members to have 2FA enabled.`)
+  }
+  else {
+    log.error(`\nThis organization requires all members to have 2FA enabled.`)
+  }
+  log.error(`\nTo regain access:`)
+  log.error(`  1. Go to https://web.capgo.app/settings/account`)
+  log.error(`  2. Enable Two-Factor Authentication on your account`)
+  log.error(`  3. Try your command again`)
+  log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
+  throw new Error('2FA required for this organization')
+}
+
 export async function getOrganization(supabase: SupabaseClient<Database>, roles: string[]): Promise<Organization> {
   const { error: orgError, data: allOrganizations } = await supabase
     .rpc('get_orgs_v7')
@@ -1322,15 +1339,7 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   // Check 2FA compliance for selected organization
   if (organization.enforcing_2fa && !organization['2fa_has_access']) {
-    log.error(`\n🔐 Access Denied: Two-Factor Authentication Required`)
-    log.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
-    log.error(`\nThe organization "${organization.name}" requires all members to have 2FA enabled.`)
-    log.error(`\nTo regain access:`)
-    log.error(`  1. Go to https://web.capgo.app/settings/account`)
-    log.error(`  2. Enable Two-Factor Authentication on your account`)
-    log.error(`  3. Try your command again`)
-    log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
-    throw new Error('2FA required for this organization')
+    show2FADeniedError(organization.name)
   }
 
   log.info(`Using the organization "${organization.name}" as the app owner`)
