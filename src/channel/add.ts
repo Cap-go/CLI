@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { createChannel, findUnknownVersion } from '../api/channels'
 import {
   createSupabaseClient,
@@ -40,9 +40,9 @@ export async function addChannelInternal(channelId: string, appId: string, optio
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-
+  await check2FAComplianceForApp(supabase, appId, silent)
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent, true)
 
   if (!silent)
     log.info(`Creating channel ${appId}#${channelId} to Capgo`)

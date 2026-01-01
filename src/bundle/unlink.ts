@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkVersionNotUsedInChannel } from '../api/channels'
 import { getVersionData } from '../api/versions'
 import {
@@ -71,6 +71,7 @@ export async function unlinkDeviceInternal(
       enrichedOptions.supaHost,
       enrichedOptions.supaAnon,
     )
+    await check2FAComplianceForApp(supabase, resolvedAppId, silent)
 
     const [userId, orgId] = await Promise.all([
       verifyUser(supabase, enrichedOptions.apikey, ['all', 'write']),
@@ -83,6 +84,7 @@ export async function unlinkDeviceInternal(
       resolvedAppId,
       OrganizationPerm.write,
       silent,
+      true,
     )
 
     await checkPlanValid(supabase, orgId, enrichedOptions.apikey, resolvedAppId)

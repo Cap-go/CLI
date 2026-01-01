@@ -2,7 +2,7 @@ import type { Database } from '../types/supabase.types'
 import type { Compatibility, OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
   checkCompatibilityNativePackages,
   checkPlanValid,
@@ -92,9 +92,10 @@ export async function setChannelInternal(channel: string, appId: string, options
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  await check2FAComplianceForApp(supabase, appId, silent)
   const userId = await verifyUser(supabase, options.apikey, ['write', 'all'])
 
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent, true)
   const orgId = await getOrganizationId(supabase, appId)
 
   const {

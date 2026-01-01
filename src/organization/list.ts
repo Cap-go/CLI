@@ -19,20 +19,35 @@ function displayOrganizations(data: Organization[], silent: boolean) {
   }
 
   const t = new Table()
-  t.headers = ['Name', 'ID', 'Role', 'Apps']
+  t.headers = ['Name', 'ID', 'Role', 'Apps', '2FA Required', '2FA Access']
   t.rows = []
 
   for (const row of data.toReversed()) {
+    const twoFaRequired = row.enforcing_2fa ? '✓ Yes' : '✗ No'
+    const twoFaAccess = row['2fa_has_access'] ? '✓ Yes' : '✗ No'
+
     t.rows.push([
       row.name ?? 'Unknown',
       row.gid,
       row.role,
       row.app_count?.toString() || '0',
+      twoFaRequired,
+      twoFaAccess,
     ])
   }
 
   log.success('Organizations')
   log.success(t.toString())
+
+  // Warn about organizations where user doesn't have 2FA access
+  const noAccessOrgs = data.filter(org => org.enforcing_2fa && !org['2fa_has_access'])
+  if (noAccessOrgs.length > 0) {
+    log.warn(`\n⚠️  You don't have access to ${noAccessOrgs.length} organization(s) due to 2FA enforcement:`)
+    for (const org of noAccessOrgs) {
+      log.warn(`   - ${org.name} (${org.gid})`)
+    }
+    log.warn(`\nTo regain access, enable 2FA on your account at https://web.capgo.app/settings/account`)
+  }
 }
 
 export async function listOrganizationsInternal(options: OptionsBase, silent = false) {
@@ -62,7 +77,7 @@ export async function listOrganizationsInternal(options: OptionsBase, silent = f
   if (!silent)
     log.info('Getting organizations from Capgo')
 
-  const { error, data: allOrganizations } = await supabase.rpc('get_orgs_v6')
+  const { error, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
 
   if (error) {
     if (!silent)

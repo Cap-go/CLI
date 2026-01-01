@@ -42,7 +42,7 @@ export const PACKNAME = 'package.json'
 
 export type ArrayElement<ArrayType extends readonly unknown[]>
   = ArrayType extends readonly (infer ElementType)[] ? ElementType : never
-export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v6']['Returns']>
+export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v7']['Returns']>
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
 
@@ -62,6 +62,20 @@ export function formatError(error: any): string {
 
   // Fall back to prettyjson for other errors
   return `\n${prettyjson.render(error)}`
+}
+
+export async function check2FAAccessForOrg(supabase: SupabaseClient<Database>, orgId: string, silent = false): Promise<void> {
+  const { data: reject2fa, error } = await supabase.rpc('reject_access_due_to_2fa_for_org', { org_id: orgId })
+  if (error) {
+    if (!silent)
+      log.error(`Cannot check 2FA compliance: ${error.message}`)
+    throw new Error(`Cannot check 2FA compliance: ${error.message}`)
+  }
+  if (reject2fa) {
+    if (!silent)
+      log.error(`🔐 Access Denied: 2FA Required. Enable 2FA at https://web.capgo.app/settings/account`)
+    throw new Error('2FA required for this organization')
+  }
 }
 
 type TagKey = Lowercase<string>
@@ -1284,9 +1298,26 @@ export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?
   }
 }
 
+export function show2FADeniedError(organizationName?: string): never {
+  log.error(`\n🔐 Access Denied: Two-Factor Authentication Required`)
+  log.error(`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`)
+  if (organizationName) {
+    log.error(`\nThe organization "${organizationName}" requires all members to have 2FA enabled.`)
+  }
+  else {
+    log.error(`\nThis organization requires all members to have 2FA enabled.`)
+  }
+  log.error(`\nTo regain access:`)
+  log.error(`  1. Go to https://web.capgo.app/settings/account`)
+  log.error(`  2. Enable Two-Factor Authentication on your account`)
+  log.error(`  3. Try your command again`)
+  log.error(`\nFor more information, visit: https://capgo.app/docs/webapp/2fa-enforcement/\n`)
+  throw new Error('2FA required for this organization')
+}
+
 export async function getOrganization(supabase: SupabaseClient<Database>, roles: string[]): Promise<Organization> {
   const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v6')
+    .rpc('get_orgs_v7')
 
   if (orgError) {
     log.error('Cannot get the list of organizations - exiting')
@@ -1310,7 +1341,8 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
     ? await select({
         message: 'Please pick the organization that you want to insert to',
         options: adminOrgs.map((org) => {
-          return { value: org.gid, label: org.name }
+          const twoFaWarning = (org.enforcing_2fa && !org['2fa_has_access']) ? ' ⚠️ (2FA required)' : ''
+          return { value: org.gid, label: `${org.name}${twoFaWarning}` }
         }),
       })
     : adminOrgs[0].gid
@@ -1322,6 +1354,11 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
 
   const organizationUid = organizationUidRaw as string
   const organization = allOrganizations.find(org => org.gid === organizationUid)!
+
+  // Check 2FA compliance for selected organization
+  if (organization.enforcing_2fa && !organization['2fa_has_access']) {
+    show2FADeniedError(organization.name)
+  }
 
   log.info(`Using the organization "${organization.name}" as the app owner`)
   return organization

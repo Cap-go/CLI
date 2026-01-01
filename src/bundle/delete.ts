@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { deleteSpecificVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
 
@@ -35,9 +35,9 @@ export async function deleteBundleInternal(bundleId: string, appId: string, opti
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-
+  await check2FAComplianceForApp(supabase, appId, silent)
   await verifyUser(supabase, options.apikey, ['write', 'all'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.write, silent, true)
 
   if (!silent) {
     log.info(`Deleting bundle ${appId}@${bundleId} from Capgo`)

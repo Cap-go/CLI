@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../utils'
 import { intro, log } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
   createSupabaseClient,
   findSavedKey,
@@ -44,9 +44,9 @@ export async function currentBundleInternal(channel: string, appId: string, opti
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-
+  await check2FAComplianceForApp(supabase, appId, silent)
   await verifyUser(supabase, options.apikey, ['write', 'all', 'read'])
-  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent)
+  await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.read, silent, true)
 
   if (!channel) {
     if (!silent)

@@ -7,10 +7,30 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instantiate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: "13.0.5"
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -307,6 +327,60 @@ export type Database = {
           },
         ]
       }
+      audit_logs: {
+        Row: {
+          changed_fields: string[] | null
+          created_at: string
+          id: number
+          new_record: Json | null
+          old_record: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: number
+          new_record?: Json | null
+          old_record?: Json | null
+          operation: string
+          org_id: string
+          record_id: string
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          changed_fields?: string[] | null
+          created_at?: string
+          id?: number
+          new_record?: Json | null
+          old_record?: Json | null
+          operation?: string
+          org_id?: string
+          record_id?: string
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_logs_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bandwidth_usage: {
         Row: {
           app_id: string
@@ -362,15 +436,7 @@ export type Database = {
           platform?: string
           user_id?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "build_logs_org_id_fkey"
-            columns: ["org_id"]
-            isOneToOne: false
-            referencedRelation: "orgs"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       build_requests: {
         Row: {
@@ -625,6 +691,69 @@ export type Database = {
           },
         ]
       }
+      cron_tasks: {
+        Row: {
+          batch_size: number | null
+          created_at: string
+          description: string | null
+          enabled: boolean
+          hour_interval: number | null
+          id: number
+          minute_interval: number | null
+          name: string
+          payload: Json | null
+          run_at_hour: number | null
+          run_at_minute: number | null
+          run_at_second: number | null
+          run_on_day: number | null
+          run_on_dow: number | null
+          second_interval: number | null
+          target: string
+          task_type: Database["public"]["Enums"]["cron_task_type"]
+          updated_at: string
+        }
+        Insert: {
+          batch_size?: number | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          hour_interval?: number | null
+          id?: number
+          minute_interval?: number | null
+          name: string
+          payload?: Json | null
+          run_at_hour?: number | null
+          run_at_minute?: number | null
+          run_at_second?: number | null
+          run_on_day?: number | null
+          run_on_dow?: number | null
+          second_interval?: number | null
+          target: string
+          task_type?: Database["public"]["Enums"]["cron_task_type"]
+          updated_at?: string
+        }
+        Update: {
+          batch_size?: number | null
+          created_at?: string
+          description?: string | null
+          enabled?: boolean
+          hour_interval?: number | null
+          id?: number
+          minute_interval?: number | null
+          name?: string
+          payload?: Json | null
+          run_at_hour?: number | null
+          run_at_minute?: number | null
+          run_at_second?: number | null
+          run_on_day?: number | null
+          run_on_dow?: number | null
+          second_interval?: number | null
+          target?: string
+          task_type?: Database["public"]["Enums"]["cron_task_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_bandwidth: {
         Row: {
           app_id: string
@@ -797,6 +926,7 @@ export type Database = {
           created_by: string
           deployed_at: string | null
           id: number
+          install_stats_email_sent_at: string | null
           owner_org: string
           updated_at: string | null
           version_id: number
@@ -808,6 +938,7 @@ export type Database = {
           created_by: string
           deployed_at?: string | null
           id?: number
+          install_stats_email_sent_at?: string | null
           owner_org: string
           updated_at?: string | null
           version_id: number
@@ -819,6 +950,7 @@ export type Database = {
           created_by?: string
           deployed_at?: string | null
           id?: number
+          install_stats_email_sent_at?: string | null
           owner_org?: string
           updated_at?: string | null
           version_id?: number
@@ -943,7 +1075,7 @@ export type Database = {
           credits_consumed: number
           date_id: string
           devices_last_month: number | null
-          mrrr: number
+          mrr: number
           need_upgrade: number | null
           new_paying_orgs: number
           not_paying: number | null
@@ -951,7 +1083,6 @@ export type Database = {
           paying: number | null
           paying_monthly: number | null
           paying_yearly: number | null
-          plan_enterprise: number | null
           plan_enterprise_monthly: number
           plan_enterprise_yearly: number
           plan_maker: number | null
@@ -988,7 +1119,7 @@ export type Database = {
           credits_consumed?: number
           date_id: string
           devices_last_month?: number | null
-          mrrr?: number
+          mrr?: number
           need_upgrade?: number | null
           new_paying_orgs?: number
           not_paying?: number | null
@@ -996,7 +1127,6 @@ export type Database = {
           paying?: number | null
           paying_monthly?: number | null
           paying_yearly?: number | null
-          plan_enterprise?: number | null
           plan_enterprise_monthly?: number
           plan_enterprise_yearly?: number
           plan_maker?: number | null
@@ -1033,7 +1163,7 @@ export type Database = {
           credits_consumed?: number
           date_id?: string
           devices_last_month?: number | null
-          mrrr?: number
+          mrr?: number
           need_upgrade?: number | null
           new_paying_orgs?: number
           not_paying?: number | null
@@ -1041,7 +1171,6 @@ export type Database = {
           paying?: number | null
           paying_monthly?: number | null
           paying_yearly?: number | null
-          plan_enterprise?: number | null
           plan_enterprise_monthly?: number
           plan_enterprise_yearly?: number
           plan_maker?: number | null
@@ -1210,11 +1339,14 @@ export type Database = {
           created_at: string | null
           created_by: string
           customer_id: string | null
+          email_preferences: Json
+          enforcing_2fa: boolean
           id: string
           last_stats_updated_at: string | null
           logo: string | null
           management_email: string
           name: string
+          password_policy_config: Json | null
           stats_updated_at: string | null
           updated_at: string | null
         }
@@ -1222,11 +1354,14 @@ export type Database = {
           created_at?: string | null
           created_by: string
           customer_id?: string | null
+          email_preferences?: Json
+          enforcing_2fa?: boolean
           id?: string
           last_stats_updated_at?: string | null
           logo?: string | null
           management_email: string
           name: string
+          password_policy_config?: Json | null
           stats_updated_at?: string | null
           updated_at?: string | null
         }
@@ -1234,11 +1369,14 @@ export type Database = {
           created_at?: string | null
           created_by?: string
           customer_id?: string | null
+          email_preferences?: Json
+          enforcing_2fa?: boolean
           id?: string
           last_stats_updated_at?: string | null
           logo?: string | null
           management_email?: string
           name?: string
+          password_policy_config?: Json | null
           stats_updated_at?: string | null
           updated_at?: string | null
         }
@@ -1730,12 +1868,51 @@ export type Database = {
           },
         ]
       }
+      user_password_compliance: {
+        Row: {
+          created_at: string
+          id: number
+          org_id: string
+          policy_hash: string
+          updated_at: string
+          user_id: string
+          validated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: number
+          org_id: string
+          policy_hash: string
+          updated_at?: string
+          user_id: string
+          validated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: number
+          org_id?: string
+          policy_hash?: string
+          updated_at?: string
+          user_id?: string
+          validated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_password_compliance_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       users: {
         Row: {
           ban_time: string | null
           country: string | null
           created_at: string | null
           email: string
+          email_preferences: Json
           enable_notifications: boolean
           first_name: string | null
           id: string
@@ -1749,6 +1926,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email: string
+          email_preferences?: Json
           enable_notifications?: boolean
           first_name?: string | null
           id: string
@@ -1762,6 +1940,7 @@ export type Database = {
           country?: string | null
           created_at?: string | null
           email?: string
+          email_preferences?: Json
           enable_notifications?: boolean
           first_name?: string | null
           id?: string
@@ -1813,6 +1992,132 @@ export type Database = {
           version_id?: number
         }
         Relationships: []
+      }
+      webhook_deliveries: {
+        Row: {
+          attempt_count: number
+          audit_log_id: number | null
+          completed_at: string | null
+          created_at: string
+          duration_ms: number | null
+          event_type: string
+          id: string
+          max_attempts: number
+          next_retry_at: string | null
+          org_id: string
+          request_payload: Json
+          response_body: string | null
+          response_headers: Json | null
+          response_status: number | null
+          status: string
+          webhook_id: string
+        }
+        Insert: {
+          attempt_count?: number
+          audit_log_id?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          event_type: string
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          org_id: string
+          request_payload: Json
+          response_body?: string | null
+          response_headers?: Json | null
+          response_status?: number | null
+          status?: string
+          webhook_id: string
+        }
+        Update: {
+          attempt_count?: number
+          audit_log_id?: number | null
+          completed_at?: string | null
+          created_at?: string
+          duration_ms?: number | null
+          event_type?: string
+          id?: string
+          max_attempts?: number
+          next_retry_at?: string | null
+          org_id?: string
+          request_payload?: Json
+          response_body?: string | null
+          response_headers?: Json | null
+          response_status?: number | null
+          status?: string
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_deliveries_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhook_deliveries_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          enabled: boolean
+          events: string[]
+          id: string
+          name: string
+          org_id: string
+          secret: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          events: string[]
+          id?: string
+          name: string
+          org_id: string
+          secret?: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          enabled?: boolean
+          events?: string[]
+          id?: string
+          name?: string
+          org_id?: string
+          secret?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "webhooks_org_id_fkey"
+            columns: ["org_id"]
+            isOneToOne: false
+            referencedRelation: "orgs"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
@@ -1909,12 +2214,32 @@ export type Database = {
             }
             Returns: boolean
           }
+      check_org_members_2fa_enabled: {
+        Args: { org_id: string }
+        Returns: {
+          "2fa_enabled": boolean
+          user_id: string
+        }[]
+      }
+      check_org_members_password_policy: {
+        Args: { org_id: string }
+        Returns: {
+          email: string
+          first_name: string
+          last_name: string
+          password_policy_compliant: boolean
+          user_id: string
+        }[]
+      }
       check_revert_to_builtin_version: {
         Args: { appid: string }
         Returns: number
       }
       cleanup_frequent_job_details: { Args: never; Returns: undefined }
+      cleanup_job_run_details_7days: { Args: never; Returns: undefined }
+      cleanup_old_audit_logs: { Args: never; Returns: undefined }
       cleanup_queue_messages: { Args: never; Returns: undefined }
+      cleanup_webhook_deliveries: { Args: never; Returns: undefined }
       convert_bytes_to_gb: { Args: { bytes_value: number }; Returns: number }
       convert_bytes_to_mb: { Args: { bytes_value: number }; Returns: number }
       convert_gb_to_bytes: { Args: { gb: number }; Returns: number }
@@ -2034,8 +2359,6 @@ export type Database = {
           subscription_anchor_start: string
         }[]
       }
-      get_d1_sync_url: { Args: never; Returns: string }
-      get_d1_webhook_signature: { Args: never; Returns: string }
       get_db_url: { Args: never; Returns: string }
       get_global_metrics:
         | {
@@ -2218,6 +2541,67 @@ export type Database = {
               trial_left: number
             }[]
           }
+      get_orgs_v7:
+        | {
+            Args: never
+            Returns: {
+              "2fa_has_access": boolean
+              app_count: number
+              can_use_more: boolean
+              created_by: string
+              credit_available: number
+              credit_next_expiration: string
+              credit_total: number
+              enforcing_2fa: boolean
+              gid: string
+              is_canceled: boolean
+              is_yearly: boolean
+              logo: string
+              management_email: string
+              name: string
+              next_stats_update_at: string
+              password_has_access: boolean
+              password_policy_config: Json
+              paying: boolean
+              role: string
+              stats_updated_at: string
+              subscription_end: string
+              subscription_start: string
+              trial_left: number
+            }[]
+          }
+        | {
+            Args: { userid: string }
+            Returns: {
+              "2fa_has_access": boolean
+              app_count: number
+              can_use_more: boolean
+              created_by: string
+              credit_available: number
+              credit_next_expiration: string
+              credit_total: number
+              enforcing_2fa: boolean
+              gid: string
+              is_canceled: boolean
+              is_yearly: boolean
+              logo: string
+              management_email: string
+              name: string
+              next_stats_update_at: string
+              password_has_access: boolean
+              password_policy_config: Json
+              paying: boolean
+              role: string
+              stats_updated_at: string
+              subscription_end: string
+              subscription_start: string
+              trial_left: number
+            }[]
+          }
+      get_password_policy_hash: {
+        Args: { policy_config: Json }
+        Returns: string
+      }
       get_plan_usage_percent_detailed:
         | {
             Args: { orgid: string }
@@ -2295,6 +2679,7 @@ export type Database = {
         Returns: {
           app_id: string
           checksum: string | null
+          cli_version: string | null
           comment: string | null
           created_at: string | null
           deleted: boolean
@@ -2331,6 +2716,9 @@ export type Database = {
           open_app: number
         }[]
       }
+      has_2fa_enabled:
+        | { Args: never; Returns: boolean }
+        | { Args: { user_id: string }; Returns: boolean }
       has_app_right: {
         Args: {
           appid: string
@@ -2459,7 +2847,7 @@ export type Database = {
       }
       process_cron_stats_jobs: { Args: never; Returns: undefined }
       process_cron_sync_sub_jobs: { Args: never; Returns: undefined }
-      process_d1_replication_batch: { Args: never; Returns: undefined }
+      process_deploy_install_stats_email: { Args: never; Returns: undefined }
       process_failed_uploads: { Args: never; Returns: undefined }
       process_free_trial_expired: { Args: never; Returns: undefined }
       process_function_queue:
@@ -2524,11 +2912,46 @@ export type Database = {
         }
         Returns: string
       }
+      reject_access_due_to_2fa: {
+        Args: { org_id: string; user_id: string }
+        Returns: boolean
+      }
+      reject_access_due_to_2fa_for_app: {
+        Args: { app_id: string }
+        Returns: boolean
+      }
+      reject_access_due_to_2fa_for_org: {
+        Args: { org_id: string }
+        Returns: boolean
+      }
+      reject_access_due_to_password_policy: {
+        Args: { org_id: string; user_id: string }
+        Returns: boolean
+      }
       remove_old_jobs: { Args: never; Returns: undefined }
       rescind_invitation: {
         Args: { email: string; org_id: string }
         Returns: string
       }
+      reset_and_seed_app_data: {
+        Args: {
+          p_admin_user_id?: string
+          p_app_id: string
+          p_org_id?: string
+          p_plan_product_id?: string
+          p_stripe_customer_id?: string
+          p_user_id?: string
+        }
+        Returns: undefined
+      }
+      reset_and_seed_app_stats_data: {
+        Args: { p_app_id: string }
+        Returns: undefined
+      }
+      reset_and_seed_data: { Args: never; Returns: undefined }
+      reset_and_seed_stats_data: { Args: never; Returns: undefined }
+      reset_app_data: { Args: { p_app_id: string }; Returns: undefined }
+      reset_app_stats_data: { Args: { p_app_id: string }; Returns: undefined }
       seed_get_app_metrics_caches: {
         Args: { p_end_date: string; p_org_id: string; p_start_date: string }
         Returns: {
@@ -2597,6 +3020,10 @@ export type Database = {
         Args: { p_app_id: string; p_size: number; p_version_id: number }
         Returns: boolean
       }
+      user_meets_password_policy: {
+        Args: { org_id: string; user_id: string }
+        Returns: boolean
+      }
       verify_mfa: { Args: never; Returns: boolean }
     }
     Enums: {
@@ -2609,6 +3036,7 @@ export type Database = {
         | "deduction"
         | "expiry"
         | "refund"
+      cron_task_type: "function" | "queue" | "function_queue"
       disable_update: "major" | "minor" | "patch" | "version_number" | "none"
       key_mode: "read" | "write" | "all" | "upload"
       platform_os: "ios" | "android"
@@ -2662,6 +3090,7 @@ export type Database = {
         | "getChannel"
         | "rateLimited"
         | "disableAutoUpdate"
+        | "keyMismatch"
         | "ping"
         | "InvalidIp"
         | "blocked_by_server_url"
@@ -2848,6 +3277,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       action_type: ["mau", "storage", "bandwidth", "build_time"],
@@ -2860,6 +3292,7 @@ export const Constants = {
         "expiry",
         "refund",
       ],
+      cron_task_type: ["function", "queue", "function_queue"],
       disable_update: ["major", "minor", "patch", "version_number", "none"],
       key_mode: ["read", "write", "all", "upload"],
       platform_os: ["ios", "android"],
@@ -2913,6 +3346,7 @@ export const Constants = {
         "getChannel",
         "rateLimited",
         "disableAutoUpdate",
+        "keyMismatch",
         "ping",
         "InvalidIp",
         "blocked_by_server_url",
@@ -2951,3 +3385,4 @@ export const Constants = {
     },
   },
 } as const
+
