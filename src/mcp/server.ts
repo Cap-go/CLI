@@ -2,8 +2,27 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import pack from '../../package.json'
+import type { SDKResult } from '../sdk'
 import { CapgoSDK } from '../sdk'
 import { findSavedKey } from '../utils'
+
+/**
+ * Format an SDK result error for MCP response.
+ * Provides detailed error messages for security policy errors.
+ */
+function formatMcpError<T>(result: SDKResult<T>): { content: Array<{ type: string, text: string }>, isError: true } {
+  let errorMessage = result.error || 'Unknown error'
+
+  // If it's a security policy error, use the detailed message
+  if (result.isSecurityPolicyError && result.securityPolicyMessage) {
+    errorMessage = `Security Policy Error:\n\n${result.securityPolicyMessage}`
+  }
+
+  return {
+    content: [{ type: 'text', text: errorMessage }],
+    isError: true,
+  }
+}
 
 /**
  * Start the Capgo MCP (Model Context Protocol) server.
@@ -30,7 +49,7 @@ export async function startMcpServer(): Promise<void> {
     async () => {
       const result = await sdk.listApps()
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -52,7 +71,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId, name, icon }) => {
       const result = await sdk.addApp({ appId, name, icon })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully added app: ${appId}` }],
@@ -72,7 +91,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId, name, icon, retention }) => {
       const result = await sdk.updateApp({ appId, name, icon, retention })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully updated app: ${appId}` }],
@@ -89,7 +108,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId }) => {
       const result = await sdk.deleteApp(appId, true) // skipConfirmation=true for non-interactive
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully deleted app: ${appId}` }],
@@ -126,7 +145,7 @@ export async function startMcpServer(): Promise<void> {
         encrypt,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -152,7 +171,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId }) => {
       const result = await sdk.listBundles(appId)
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -173,7 +192,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId, bundleId }) => {
       const result = await sdk.deleteBundle(appId, bundleId)
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully deleted bundle: ${bundleId}` }],
@@ -200,7 +219,7 @@ export async function startMcpServer(): Promise<void> {
         ignoreChannel,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -230,7 +249,7 @@ export async function startMcpServer(): Promise<void> {
         packageJson,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -254,7 +273,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId }) => {
       const result = await sdk.listChannels(appId)
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -282,7 +301,7 @@ export async function startMcpServer(): Promise<void> {
         selfAssign,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully created channel: ${channelId}` }],
@@ -325,7 +344,7 @@ export async function startMcpServer(): Promise<void> {
         prod,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully updated channel: ${channelId}` }],
@@ -344,7 +363,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId, channelId, deleteBundle }) => {
       const result = await sdk.deleteChannel(channelId, appId, deleteBundle)
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{ type: 'text', text: `Successfully deleted channel: ${channelId}` }],
@@ -362,7 +381,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ appId, channelId }) => {
       const result = await sdk.getCurrentBundle(appId, channelId)
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -384,7 +403,7 @@ export async function startMcpServer(): Promise<void> {
     async () => {
       const result = await sdk.listOrganizations()
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -405,7 +424,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ name, email }) => {
       const result = await sdk.addOrganization({ name, email })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -430,7 +449,7 @@ export async function startMcpServer(): Promise<void> {
     async () => {
       const result = await sdk.getAccountId()
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -450,7 +469,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ packageJson }) => {
       const result = await sdk.doctor({ packageJson })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -480,7 +499,7 @@ export async function startMcpServer(): Promise<void> {
         rangeEnd,
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -511,7 +530,7 @@ export async function startMcpServer(): Promise<void> {
         // Credentials should be pre-saved using the CLI
       })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{
@@ -538,7 +557,7 @@ export async function startMcpServer(): Promise<void> {
     async ({ force }) => {
       const result = await sdk.generateEncryptionKeys({ force })
       if (!result.success) {
-        return { content: [{ type: 'text', text: `Error: ${result.error}` }], isError: true }
+        return formatMcpError(result)
       }
       return {
         content: [{

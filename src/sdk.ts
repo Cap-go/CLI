@@ -36,6 +36,7 @@ import { listOrganizationsInternal } from './organization/list'
 import { setOrganizationInternal } from './organization/set'
 import { getUserIdInternal } from './user/account'
 import { createSupabaseClient, findSavedKey, getConfig, getLocalConfig } from './utils'
+import { parseSecurityPolicyError } from './utils/security_policy_errors'
 
 export type DoctorInfo = Awaited<ReturnType<typeof getInfoInternal>>
 type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityInternal>>['finalCompatibility']
@@ -50,7 +51,28 @@ export interface SDKResult<T = void> {
   success: boolean
   data?: T
   error?: string
+  /** Human-readable message for security policy errors (2FA, password policy, API key requirements) */
+  securityPolicyMessage?: string
+  /** Whether this error is due to a security policy (2FA, password policy, hashed API key requirement, etc.) */
+  isSecurityPolicyError?: boolean
   warnings?: string[]
+}
+
+/**
+ * Create an SDK error result from an error, with security policy awareness.
+ * This parses the error to check if it's a security policy error and provides
+ * human-readable messages for 2FA, password policy, and API key requirements.
+ */
+function createErrorResult<T = void>(error: unknown): SDKResult<T> {
+  const errorMessage = error instanceof Error ? error.message : String(error)
+  const parsed = parseSecurityPolicyError(error)
+
+  return {
+    success: false,
+    error: errorMessage,
+    isSecurityPolicyError: parsed.isSecurityPolicyError,
+    securityPolicyMessage: parsed.isSecurityPolicyError ? parsed.message : undefined,
+  }
 }
 
 // ============================================================================
@@ -497,10 +519,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -517,10 +536,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -551,10 +567,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -589,10 +602,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -620,10 +630,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -663,10 +670,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -689,10 +693,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -720,10 +721,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -741,10 +739,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -762,10 +757,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -788,10 +780,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -850,10 +839,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -891,10 +877,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -922,10 +905,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -962,10 +942,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1046,10 +1023,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1074,10 +1048,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1108,10 +1079,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1155,10 +1123,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1185,10 +1150,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1221,10 +1183,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1245,10 +1204,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1266,10 +1222,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1289,10 +1242,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1321,10 +1271,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1355,10 +1302,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1386,10 +1330,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1410,10 +1351,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1516,10 +1454,7 @@ export class CapgoSDK {
       }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 
@@ -1538,10 +1473,7 @@ export class CapgoSDK {
       return { success: true }
     }
     catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-      }
+      return createErrorResult(error)
     }
   }
 }
@@ -1854,3 +1786,12 @@ export type { BuildCredentials } from './build/request'
 export type { CapacitorConfig } from './config'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
+export {
+  SECURITY_POLICY_ERRORS,
+  SECURITY_POLICY_MESSAGES,
+  isSecurityPolicyError,
+  parseSecurityPolicyError,
+  getSecurityPolicyMessage,
+  formatApiErrorForCli,
+} from './utils/security_policy_errors'
+export type { SecurityPolicyErrorCode, ParsedSecurityError } from './utils/security_policy_errors'

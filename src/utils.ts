@@ -23,6 +23,7 @@ import * as tus from 'tus-js-client'
 import { markSnag } from './app/debug'
 import { getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
+import { formatApiErrorForCli, parseSecurityPolicyError } from './utils/security_policy_errors'
 
 export const baseKey = '.capgo_key'
 export const baseKeyV2 = '.capgo_key_v2'
@@ -44,7 +45,24 @@ export type ArrayElement<ArrayType extends readonly unknown[]>
 export type Organization = ArrayElement<Database['public']['Functions']['get_orgs_v6']['Returns']>
 
 export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-z-][0-9a-z-]*))*))?(?:\+([0-9a-z-]+(?:\.[0-9a-z-]+)*))?$/i
-export const formatError = (error: any) => error ? `\n${prettyjson.render(error)}` : ''
+
+/**
+ * Format an error for display. If it's a security policy error,
+ * returns a human-readable message with actionable steps.
+ */
+export function formatError(error: any): string {
+  if (!error)
+    return ''
+
+  // Check if this is a security policy error first
+  const parsed = parseSecurityPolicyError(error)
+  if (parsed.isSecurityPolicyError) {
+    return formatApiErrorForCli(error)
+  }
+
+  // Fall back to prettyjson for other errors
+  return `\n${prettyjson.render(error)}`
+}
 
 type TagKey = Lowercase<string>
 /** Tag Type */
