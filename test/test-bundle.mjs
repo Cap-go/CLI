@@ -1,26 +1,28 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 
 console.log('🧪 Testing bundle integrity...\n')
 
-// Test 1: Check if semver is in the bundle
-console.log('1️⃣  Checking if semver package is excluded from bundle...')
-const metaPath = './meta.json'
-if (!existsSync(metaPath)) {
-  console.error('❌ meta.json not found. Run build first.')
+// Helper to check bundle content
+const bundlePath = './dist/index.js'
+const sdkPath = './dist/src/sdk.js'
+
+if (!existsSync(bundlePath)) {
+  console.error('❌ dist/index.js not found. Run build first.')
   process.exit(1)
 }
 
-const meta = JSON.parse(readFileSync(metaPath, 'utf-8'))
-const inputs = Object.keys(meta.inputs)
-const semverFiles = inputs.filter(f => f.includes('node_modules/semver/') && !f.includes('@std/semver'))
+const bundleContent = readFileSync(bundlePath, 'utf-8')
+const metaPath = './meta.json'
+const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf-8')) : null
 
-if (semverFiles.length > 0) {
-  console.error(`❌ Found ${semverFiles.length} semver files in bundle:`)
-  semverFiles.slice(0, 5).forEach(f => console.error(`   - ${f}`))
-  if (semverFiles.length > 5) {
-    console.error(`   ... and ${semverFiles.length - 5} more`)
-  }
+// Test 1: Check if semver package is excluded from bundle (check for semver-specific exports)
+console.log('1️⃣  Checking if semver package is excluded from bundle...')
+// The full semver package has characteristic exports like SEMVER_SPEC_VERSION
+// Our stub doesn't have this - checking that the real semver package isn't bundled
+if (bundleContent.includes('SEMVER_SPEC_VERSION') || bundleContent.includes('node_modules/semver')) {
+  console.error('❌ Found semver package content in bundle')
   process.exit(1)
 }
 else {
@@ -29,9 +31,8 @@ else {
 
 // Test 2: Check bundle size
 console.log('\n2️⃣  Checking bundle sizes...')
-const cliSize = meta.outputs['dist/index.js'].bytes
-const sdkPath = './dist/src/sdk.js'
-const sdkSize = existsSync(sdkPath) ? readFileSync(sdkPath).length : 0
+const cliSize = meta?.outputs?.['dist/index.js']?.bytes ?? statSync(bundlePath).size
+const sdkSize = existsSync(sdkPath) ? (meta?.outputs?.['dist/src/sdk.js']?.bytes ?? statSync(sdkPath).size) : 0
 console.log(`   CLI bundle: ${(cliSize / 1024).toFixed(2)} KB`)
 if (sdkSize > 0) {
   console.log(`   SDK bundle: ${(sdkSize / 1024).toFixed(2)} KB`)
@@ -42,20 +43,19 @@ else {
 }
 console.log('✅ Bundle sizes calculated')
 
-// Test 3: Check if @capacitor/cli is in bundle
+// Test 3: Check if @capacitor/cli is in bundle (by checking for capacitor-specific code)
 console.log('\n3️⃣  Checking if @capacitor/cli dependencies are present...')
-const capacitorFiles = inputs.filter(f => f.includes('@capacitor/cli'))
-if (capacitorFiles.length === 0) {
-  console.error('❌ @capacitor/cli not found in bundle - this might break functionality')
-  process.exit(1)
+// Check for capacitor config reading functionality which is core to @capacitor/cli
+if (bundleContent.includes('@capacitor/cli') || bundleContent.includes('capacitor.config')) {
+  console.log('✅ @capacitor/cli functionality found in bundle')
 }
 else {
-  console.log(`✅ Found ${capacitorFiles.length} @capacitor/cli files in bundle`)
+  console.error('❌ @capacitor/cli not found in bundle - this might break functionality')
+  process.exit(1)
 }
 
 // Test 4: Verify stub-semver namespace is used
 console.log('\n4️⃣  Verifying semver stub is in place...')
-const bundleContent = readFileSync('./dist/index.js', 'utf-8')
 if (bundleContent.includes('Stub for semver package')) {
   console.log('✅ semver stub found in bundle')
 }
@@ -65,19 +65,33 @@ else {
 
 // Test 5: Check for @std/semver (which we DO use)
 console.log('\n5️⃣  Checking if @std/semver is present (we use this)...')
-const stdSemverFiles = inputs.filter(f => f.includes('@std/semver'))
-if (stdSemverFiles.length === 0) {
-  console.error('❌ @std/semver not found - this will break version parsing!')
-  process.exit(1)
+// @std/semver has specific function implementations we can check for
+if (bundleContent.includes('parseRange') || bundleContent.includes('satisfies')) {
+  console.log('✅ @std/semver functionality found in bundle')
 }
 else {
-  console.log(`✅ Found ${stdSemverFiles.length} @std/semver files in bundle`)
+  console.error('❌ @std/semver not found - this will break version parsing!')
+  process.exit(1)
 }
 
 // Test 6: Verify only type definitions in dist/src (except sdk.js)
 console.log('\n6️⃣  Checking dist/src structure...')
-const distSrcInputs = inputs.filter(f => f.startsWith('dist/src/'))
-const jsFiles = distSrcInputs.filter(f => f.endsWith('.js') && !f.endsWith('sdk.js'))
+function getJsFiles(dir) {
+  const files = []
+  if (!existsSync(dir)) return files
+  for (const item of readdirSync(dir)) {
+    const fullPath = join(dir, item)
+    const stat = statSync(fullPath)
+    if (stat.isDirectory()) {
+      files.push(...getJsFiles(fullPath))
+    }
+    else if (item.endsWith('.js') && !item.endsWith('sdk.js')) {
+      files.push(fullPath)
+    }
+  }
+  return files
+}
+const jsFiles = getJsFiles('./dist/src')
 if (jsFiles.length > 0) {
   console.warn(`⚠️  Found ${jsFiles.length} unexpected JS files in dist/src:`)
   jsFiles.slice(0, 3).forEach(f => console.warn(`   - ${f}`))

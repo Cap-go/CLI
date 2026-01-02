@@ -19,7 +19,6 @@
     "typeRoots": ["src/types/*", "node_modules/@types"],
     "strict": true,
     "declaration": true,
-    "declarationMap": true,
     "emitDeclarationOnly": true,
     "outDir": "dist",
     "esModuleInterop": true,
