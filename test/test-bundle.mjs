@@ -100,9 +100,51 @@ else {
   console.log('✅ No unexpected compiled JS files in dist/src')
 }
 
+// Test 7: CRITICAL - Check for hardcoded CI build paths (bun/esbuild __dirname issue)
+// See: https://github.com/oven-sh/bun/issues/4216
+console.log('\n7️⃣  Checking for hardcoded CI build paths (CRITICAL)...')
+const ciPathPatterns = [
+  /\/home\/runner\/work\//g, // GitHub Actions Linux
+  /\/Users\/runner\//g, // GitHub Actions macOS
+  /C:\\\\actions-runner\\\\/g, // GitHub Actions Windows
+  /\/opt\/actions-runner\//g, // Self-hosted runners
+  /\/github\/workspace\//g, // GitHub container actions
+]
+
+let foundHardcodedPaths = false
+for (const pattern of ciPathPatterns) {
+  const matches = bundleContent.match(pattern)
+  if (matches) {
+    console.error(`❌ CRITICAL: Found hardcoded CI path in bundle: ${matches[0]}`)
+    console.error('   This will cause "ENOENT: no such file or directory" errors for users!')
+    console.error('   The __dirname fix in build.mjs is not working correctly.')
+    foundHardcodedPaths = true
+  }
+}
+
+if (foundHardcodedPaths) {
+  process.exit(1)
+}
+else {
+  console.log('✅ No hardcoded CI paths found in bundle')
+}
+
+// Test 8: Verify import.meta.url is used for runtime path resolution
+console.log('\n8️⃣  Checking for runtime path resolution (import.meta.url)...')
+if (bundleContent.includes('import.meta.url')) {
+  console.log('✅ import.meta.url found - paths will be resolved at runtime')
+}
+else {
+  console.error('❌ import.meta.url not found - path resolution may fail')
+  console.error('   The fixCapacitorCliDirname plugin should inject this.')
+  process.exit(1)
+}
+
 console.log('\n✅ All bundle integrity tests passed!')
 console.log('\n📊 Summary:')
 console.log(`   - semver package: excluded ✓`)
 console.log(`   - @std/semver: included ✓`)
 console.log(`   - @capacitor/cli: included ✓`)
+console.log(`   - Hardcoded paths: none ✓`)
+console.log(`   - Runtime resolution: enabled ✓`)
 console.log(`   - Bundle size: ${((cliSize + sdkSize) / 1024).toFixed(0)} KB`)

@@ -1,5 +1,7 @@
-import { copyFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { env, exit } from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 // Shared plugin definitions - Bun's plugin API is compatible with esbuild's
 const stubSemver = {
@@ -252,6 +254,26 @@ const noopSupabaseNodeFetch = {
   },
 }
 
+// Fix for @capacitor/cli __dirname issue
+// When bundled, __dirname gets baked in as the build machine path
+// We use import.meta.url for runtime resolution instead
+// See: https://github.com/oven-sh/bun/issues/4216
+const fixCapacitorCliDirname = {
+  name: 'fix-capacitor-cli-dirname',
+  setup(build) {
+    build.onLoad({ filter: /node_modules[\\/]@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
+      const contents = readFileSync(args.path, 'utf-8')
+      // Replace __dirname with import.meta.url based resolution
+      // Original: const cliRootDir = (0, path_1.dirname)(__dirname);
+      const patched = contents.replace(
+        /const cliRootDir = \(0, path_1\.dirname\)\(__dirname\);/g,
+        `const cliRootDir = (0, path_1.dirname)(require('url').fileURLToPath(import.meta.url));`
+      )
+      return { contents: patched, loader: 'js' }
+    })
+  },
+}
+
 // Build CLI
 const buildCLI = Bun.build({
   entrypoints: ['src/index.ts'],
@@ -264,6 +286,7 @@ const buildCLI = Bun.build({
     'process.env.SUPA_DB': '"production"',
   },
   plugins: [
+    fixCapacitorCliDirname,
     stubSemver,
     ignorePunycode,
     noopXml2js,
