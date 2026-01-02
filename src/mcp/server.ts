@@ -10,7 +10,7 @@ import { findSavedKey } from '../utils'
  * Format an SDK result error for MCP response.
  * Provides detailed error messages for security policy errors.
  */
-function formatMcpError<T>(result: SDKResult<T>): { content: Array<{ type: string, text: string }>, isError: true } {
+function formatMcpError<T>(result: SDKResult<T>): { content: Array<{ type: 'text', text: string }>, isError: true } {
   let errorMessage = result.error || 'Unknown error'
 
   // If it's a security policy error, use the detailed message
@@ -19,7 +19,7 @@ function formatMcpError<T>(result: SDKResult<T>): { content: Array<{ type: strin
   }
 
   return {
-    content: [{ type: 'text', text: errorMessage }],
+    content: [{ type: 'text' as const, text: errorMessage }],
     isError: true,
   }
 }
@@ -53,7 +53,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -74,7 +74,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully added app: ${appId}` }],
+        content: [{ type: 'text' as const, text: `Successfully added app: ${appId}` }],
       }
     },
   )
@@ -94,7 +94,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully updated app: ${appId}` }],
+        content: [{ type: 'text' as const, text: `Successfully updated app: ${appId}` }],
       }
     },
   )
@@ -111,7 +111,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully deleted app: ${appId}` }],
+        content: [{ type: 'text' as const, text: `Successfully deleted app: ${appId}` }],
       }
     },
   )
@@ -149,7 +149,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({
             message: 'Bundle uploaded successfully',
             bundleId: result.bundleId,
@@ -175,7 +175,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -195,7 +195,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully deleted bundle: ${bundleId}` }],
+        content: [{ type: 'text' as const, text: `Successfully deleted bundle: ${bundleId}` }],
       }
     },
   )
@@ -223,7 +223,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({
             message: 'Cleanup completed',
             removed: result.data?.removed,
@@ -253,7 +253,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -277,7 +277,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -304,7 +304,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully created channel: ${channelId}` }],
+        content: [{ type: 'text' as const, text: `Successfully created channel: ${channelId}` }],
       }
     },
   )
@@ -347,7 +347,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully updated channel: ${channelId}` }],
+        content: [{ type: 'text' as const, text: `Successfully updated channel: ${channelId}` }],
       }
     },
   )
@@ -366,7 +366,7 @@ export async function startMcpServer(): Promise<void> {
         return formatMcpError(result)
       }
       return {
-        content: [{ type: 'text', text: `Successfully deleted channel: ${channelId}` }],
+        content: [{ type: 'text' as const, text: `Successfully deleted channel: ${channelId}` }],
       }
     },
   )
@@ -385,7 +385,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({ channel: channelId, currentBundle: result.data }, null, 2),
         }],
       }
@@ -407,7 +407,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -428,7 +428,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({
             message: 'Organization created successfully',
             ...result.data,
@@ -453,7 +453,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({ accountId: result.data }, null, 2),
         }],
       }
@@ -473,7 +473,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -503,7 +503,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify(result.data, null, 2),
         }],
       }
@@ -534,7 +534,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: JSON.stringify({
             message: 'Build requested successfully',
             ...result.data,
@@ -561,7 +561,7 @@ export async function startMcpServer(): Promise<void> {
       }
       return {
         content: [{
-          type: 'text',
+          type: 'text' as const,
           text: 'Encryption keys generated successfully. Private key saved to .capgo_key_v2, public key to .capgo_key_v2.pub',
         }],
       }

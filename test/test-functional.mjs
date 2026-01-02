@@ -49,54 +49,33 @@ try {
 
   console.log('\n2️⃣  Testing loadConfig from bundled CLI...')
 
-  // Dynamic import the bundled dist/index.js to test it
-  // We're testing that the stub doesn't break the bundle
-  try {
-    // Just verify the bundle can be loaded without errors
-    const bundlePath = join(originalDir, 'dist', 'index.js')
-    if (!existsSync(bundlePath)) {
-      throw new Error('dist/index.js not found')
-    }
-
-    // Read the bundle to verify semver stub is present
-    const bundleContent = readFileSync(bundlePath, 'utf-8')
-
-    // Check that semver methods exist (even if stubbed)
-    const hasDiff = bundleContent.includes('diff')
-    const hasParse = bundleContent.includes('parse')
-
-    if (!hasDiff || !hasParse) {
-      console.warn('   ⚠️  Warning: Could not verify semver stub presence')
-    }
-    else {
-      console.log('   ✓ Bundle contains expected semver methods')
-    }
-
-    console.log('   ✓ Bundle loaded successfully')
+  // Just verify the bundle can be loaded without errors
+  const bundlePath = join(originalDir, 'dist', 'index.js')
+  if (!existsSync(bundlePath)) {
+    throw new Error('dist/index.js not found')
   }
-  catch (error) {
-    console.error('   ❌ Failed to load bundle:', error.message)
-    process.chdir(originalDir)
-    throw error
+
+  // Read the bundle to verify semver stub is present
+  const bundleContent = readFileSync(bundlePath, 'utf-8')
+
+  // Check that semver methods exist (even if stubbed)
+  const hasDiff = bundleContent.includes('diff')
+  const hasParse = bundleContent.includes('parse')
+
+  if (!hasDiff || !hasParse) {
+    console.warn('   ⚠️  Warning: Could not verify semver stub presence')
   }
+  else {
+    console.log('   ✓ Bundle contains expected semver methods')
+  }
+
+  console.log('   ✓ Bundle loaded successfully')
 
   console.log('\n3️⃣  Verifying semver is NOT in node_modules imports...')
 
-  // Read meta.json to verify semver is stubbed
-  const metaPath = join(originalDir, 'meta.json')
-  const meta = JSON.parse(readFileSync(metaPath, 'utf-8'))
-  const inputs = Object.keys(meta.inputs)
-
-  // Look for any semver imports (not @std/semver)
-  const semverImports = inputs.filter((f) => {
-    return f.includes('semver')
-      && !f.includes('@std/semver')
-      && f.includes('node_modules')
-  })
-
-  if (semverImports.length > 0) {
-    console.error(`   ❌ Found ${semverImports.length} semver imports in bundle`)
-    semverImports.slice(0, 3).forEach(f => console.error(`      - ${f}`))
+  // Check bundle content to verify semver is stubbed
+  // The real semver package has SEMVER_SPEC_VERSION exported
+  if (bundleContent.includes('SEMVER_SPEC_VERSION') || bundleContent.includes('node_modules/semver/')) {
     throw new Error('semver package should be stubbed but was found in bundle')
   }
 
@@ -105,20 +84,19 @@ try {
 
   console.log('\n4️⃣  Checking @capacitor/cli integration...')
 
-  // Verify that @capacitor/cli files are in the bundle
-  const capacitorFiles = inputs.filter(f => f.includes('@capacitor/cli'))
+  // Verify that @capacitor/cli functionality is in the bundle by checking for characteristic code
+  const hasCapacitorCli = bundleContent.includes('@capacitor/cli') || bundleContent.includes('capacitor.config')
 
-  if (capacitorFiles.length === 0) {
+  if (!hasCapacitorCli) {
     throw new Error('@capacitor/cli not found in bundle')
   }
 
-  console.log(`   ✓ Found ${capacitorFiles.length} @capacitor/cli files`)
+  console.log('   ✓ @capacitor/cli functionality found in bundle')
 
-  // Check if common.js is included (which imports semver)
-  const hasCommon = capacitorFiles.some(f => f.includes('common.js'))
-  if (hasCommon) {
-    console.log('   ✓ @capacitor/cli/dist/common.js is in bundle')
-    console.log('   ✓ common.js uses stubbed semver (no errors)')
+  // Check if capacitor config handling is included
+  if (bundleContent.includes('loadConfig') || bundleContent.includes('CapacitorConfig')) {
+    console.log('   ✓ Capacitor config loading functionality present')
+    console.log('   ✓ Uses stubbed semver (no errors)')
   }
 
   // Cleanup

@@ -45,7 +45,7 @@
     "node": ">=20.0.0"
   },
   "scripts": {
-    "build": "tsc && node build.mjs",
+    "build": "tsc && bun build.mjs",
     "dev": "NODE_ENV=development ncc build",
     "no-debug": "node dist/index.js",
     "dev-build": "SUPA_DB=development ncc build",
@@ -85,7 +85,6 @@
     "adm-zip": "^0.5.16",
     "ci-info": "^4.3.1",
     "commander": "^14.0.2",
-    "esbuild": "^0.27.0",
     "eslint": "^9.38.0",
     "git-format-staged": "3.1.1",
     "husky": "^9.1.7",
