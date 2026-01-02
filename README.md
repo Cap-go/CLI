@@ -57,8 +57,14 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 - 🔹 [Organization](#organization)
   - [List](#organization-list)
   - [Add](#organization-add)
+  - [Members](#organization-members)
   - [Set](#organization-set)
   - [Delete](#organization-delete)
+- 🔹 [Organisation](#organisation)
+  - [List](#organisation-list)
+  - [Add](#organisation-add)
+  - [Set](#organisation-set)
+  - [Delete](#organisation-delete)
 - 🔹 [Build](#build)
   - [Request](#build-request)
   - [Credentials](#build-credentials)
@@ -842,6 +848,34 @@ npx @capgo/cli@latest organization add --name "My Company" --email admin@mycompa
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
+### <a id="organization-members"></a> 🔹 **Members**
+
+**Alias:** `m`
+
+```bash
+npx @capgo/cli@latest organization members
+```
+
+👥 List organization members and their 2FA status.
+Shows all members of an organization with their roles and whether they have 2FA enabled.
+Useful before enabling 2FA enforcement to see which members will be affected.
+> ℹ️ Viewing 2FA status requires super_admin rights in the organization.
+
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest organization members ORG_ID
+```
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
 ### <a id="organization-set"></a> ⚙️ **Set**
 
 **Alias:** `s`
@@ -850,12 +884,12 @@ npx @capgo/cli@latest organization add --name "My Company" --email admin@mycompa
 npx @capgo/cli@latest organization set
 ```
 
-⚙️ Update organization settings such as name and management email.
+⚙️ Update organization settings such as name, email, and 2FA enforcement.
 
 **Example:**
 
 ```bash
-npx @capgo/cli@latest organization set ORG_ID --name "Updated Company Name"
+npx @capgo/cli@latest organization set ORG_ID --name "New Name"
 ```
 
 **Options:**
@@ -864,6 +898,8 @@ npx @capgo/cli@latest organization set ORG_ID --name "Updated Company Name"
 | -------------- | ------------- | -------------------- |
 | **-n,** | <code>string</code> | Organization name |
 | **-e,** | <code>string</code> | Management email for the organization |
+| **--enforce-2fa** | <code>boolean</code> | Enable 2FA enforcement for all organization members |
+| **--no-enforce-2fa** | <code>boolean</code> | Disable 2FA enforcement for organization |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
@@ -884,6 +920,87 @@ Only organization owners can delete organizations.
 ```bash
 npx @capgo/cli@latest organization delete ORG_ID
 ```
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+
+## <a id="organisation"></a> 🔹 **Organisation**
+
+[DEPRECATED] Use "organization" instead. This command will be removed in a future version.
+
+### <a id="organisation-list"></a> 📋 **List**
+
+**Alias:** `l`
+
+```bash
+npx @capgo/cli@latest organisation list
+```
+
+[DEPRECATED] Use "organization list" instead.
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+### <a id="organisation-add"></a> ➕ **Add**
+
+**Alias:** `a`
+
+```bash
+npx @capgo/cli@latest organisation add
+```
+
+[DEPRECATED] Use "organization add" instead.
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-n,** | <code>string</code> | Organization name |
+| **-e,** | <code>string</code> | Management email for the organization |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+### <a id="organisation-set"></a> ⚙️ **Set**
+
+**Alias:** `s`
+
+```bash
+npx @capgo/cli@latest organisation set
+```
+
+[DEPRECATED] Use "organization set" instead.
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-n,** | <code>string</code> | Organization name |
+| **-e,** | <code>string</code> | Management email for the organization |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+### <a id="organisation-delete"></a> 🗑️ **Delete**
+
+**Alias:** `d`
+
+```bash
+npx @capgo/cli@latest organisation delete
+```
+
+[DEPRECATED] Use "organization delete" instead.
 
 **Options:**
 
