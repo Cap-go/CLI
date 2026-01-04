@@ -884,7 +884,8 @@ npx @capgo/cli@latest organization members ORG_ID
 npx @capgo/cli@latest organization set
 ```
 
-⚙️ Update organization settings such as name, email, and 2FA enforcement.
+⚙️ Update organization settings including name, email, security policies, and enforcement options.
+Security settings require super_admin role.
 
 **Example:**
 
@@ -900,6 +901,20 @@ npx @capgo/cli@latest organization set ORG_ID --name "New Name"
 | **-e,** | <code>string</code> | Management email for the organization |
 | **--enforce-2fa** | <code>boolean</code> | Enable 2FA enforcement for all organization members |
 | **--no-enforce-2fa** | <code>boolean</code> | Disable 2FA enforcement for organization |
+| **--password-policy** | <code>boolean</code> | Enable password policy enforcement for organization |
+| **--no-password-policy** | <code>boolean</code> | Disable password policy enforcement |
+| **--min-length** | <code>string</code> | Minimum password length (6-128, default: 10) |
+| **--require-uppercase** | <code>boolean</code> | Require uppercase letter in password |
+| **--no-require-uppercase** | <code>boolean</code> | Do not require uppercase letter |
+| **--require-number** | <code>boolean</code> | Require number in password |
+| **--no-require-number** | <code>boolean</code> | Do not require number |
+| **--require-special** | <code>boolean</code> | Require special character in password |
+| **--no-require-special** | <code>boolean</code> | Do not require special character |
+| **--require-apikey-expiration** | <code>boolean</code> | Require all API keys to have an expiration date |
+| **--no-require-apikey-expiration** | <code>boolean</code> | Do not require API key expiration |
+| **--max-apikey-expiration-days** | <code>string</code> | Maximum days before API key expiration (1-365, null for no limit) |
+| **--enforce-hashed-api-keys** | <code>boolean</code> | Enforce hashed/secure API keys (key value stored as hash, shown only once) |
+| **--no-enforce-hashed-api-keys** | <code>boolean</code> | Allow plain-text API keys |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
@@ -988,6 +1003,22 @@ npx @capgo/cli@latest organisation set
 | -------------- | ------------- | -------------------- |
 | **-n,** | <code>string</code> | Organization name |
 | **-e,** | <code>string</code> | Management email for the organization |
+| **--enforce-2fa** | <code>boolean</code> | Enable 2FA enforcement for all organization members |
+| **--no-enforce-2fa** | <code>boolean</code> | Disable 2FA enforcement for organization |
+| **--password-policy** | <code>boolean</code> | Enable password policy enforcement for organization |
+| **--no-password-policy** | <code>boolean</code> | Disable password policy enforcement |
+| **--min-length** | <code>string</code> | Minimum password length (6-128, default: 10) |
+| **--require-uppercase** | <code>boolean</code> | Require uppercase letter in password |
+| **--no-require-uppercase** | <code>boolean</code> | Do not require uppercase letter |
+| **--require-number** | <code>boolean</code> | Require number in password |
+| **--no-require-number** | <code>boolean</code> | Do not require number |
+| **--require-special** | <code>boolean</code> | Require special character in password |
+| **--no-require-special** | <code>boolean</code> | Do not require special character |
+| **--require-apikey-expiration** | <code>boolean</code> | Require all API keys to have an expiration date |
+| **--no-require-apikey-expiration** | <code>boolean</code> | Do not require API key expiration |
+| **--max-apikey-expiration-days** | <code>string</code> | Maximum days before API key expiration (1-365, null for no limit) |
+| **--enforce-hashed-api-keys** | <code>boolean</code> | Enforce hashed/secure API keys (key value stored as hash, shown only once) |
+| **--no-enforce-hashed-api-keys** | <code>boolean</code> | Allow plain-text API keys |
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
