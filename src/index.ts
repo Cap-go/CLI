@@ -531,15 +531,46 @@ Example: npx @capgo/cli@latest organization members ORG_ID`)
 organization
   .command('set [orgId]')
   .alias('s')
-  .description(`⚙️ Update organization settings such as name, email, and 2FA enforcement.
+  .description(`⚙️ Update organization settings including name, email, security policies, and enforcement options.
+
+Security settings require super_admin role.
 
 Example: npx @capgo/cli@latest organization set ORG_ID --name "New Name"
-Example: npx @capgo/cli@latest organization set ORG_ID --enforce-2fa`)
+Example: npx @capgo/cli@latest organization set ORG_ID --enforce-2fa
+Example: npx @capgo/cli@latest organization set ORG_ID --password-policy --min-length 12
+Example: npx @capgo/cli@latest organization set ORG_ID --require-apikey-expiration --max-apikey-expiration-days 90
+Example: npx @capgo/cli@latest organization set ORG_ID --enforce-hashed-api-keys`)
   .action(setOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
   .option('--enforce-2fa', `Enable 2FA enforcement for all organization members`)
   .option('--no-enforce-2fa', `Disable 2FA enforcement for organization`)
+  .option('--password-policy', `Enable password policy enforcement for organization`)
+  .option('--no-password-policy', `Disable password policy enforcement`)
+  .option('--min-length <minLength>', `Minimum password length (6-128, default: 10)`, (val) => {
+    const num = Number.parseInt(val, 10)
+    if (Number.isNaN(num) || num < 6 || num > 128)
+      throw new Error('min-length must be between 6 and 128')
+    return num
+  })
+  .option('--require-uppercase', `Require uppercase letter in password`)
+  .option('--no-require-uppercase', `Do not require uppercase letter`)
+  .option('--require-number', `Require number in password`)
+  .option('--no-require-number', `Do not require number`)
+  .option('--require-special', `Require special character in password`)
+  .option('--no-require-special', `Do not require special character`)
+  .option('--require-apikey-expiration', `Require all API keys to have an expiration date`)
+  .option('--no-require-apikey-expiration', `Do not require API key expiration`)
+  .option('--max-apikey-expiration-days <days>', `Maximum days before API key expiration (1-365, null for no limit)`, (val) => {
+    if (val === 'null' || val === '')
+      return null
+    const num = Number.parseInt(val, 10)
+    if (Number.isNaN(num) || num < 1 || num > 365)
+      throw new Error('max-apikey-expiration-days must be between 1 and 365, or null')
+    return num
+  })
+  .option('--enforce-hashed-api-keys', `Enforce hashed/secure API keys (key value stored as hash, shown only once)`)
+  .option('--no-enforce-hashed-api-keys', `Allow plain-text API keys`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -594,6 +625,34 @@ organisation
   .action(setOrganization)
   .option('-n, --name <name>', `Organization name`)
   .option('-e, --email <email>', `Management email for the organization`)
+  .option('--enforce-2fa', `Enable 2FA enforcement for all organization members`)
+  .option('--no-enforce-2fa', `Disable 2FA enforcement for organization`)
+  .option('--password-policy', `Enable password policy enforcement for organization`)
+  .option('--no-password-policy', `Disable password policy enforcement`)
+  .option('--min-length <minLength>', `Minimum password length (6-128, default: 10)`, (val) => {
+    const num = Number.parseInt(val, 10)
+    if (Number.isNaN(num) || num < 6 || num > 128)
+      throw new Error('min-length must be between 6 and 128')
+    return num
+  })
+  .option('--require-uppercase', `Require uppercase letter in password`)
+  .option('--no-require-uppercase', `Do not require uppercase letter`)
+  .option('--require-number', `Require number in password`)
+  .option('--no-require-number', `Do not require number`)
+  .option('--require-special', `Require special character in password`)
+  .option('--no-require-special', `Do not require special character`)
+  .option('--require-apikey-expiration', `Require all API keys to have an expiration date`)
+  .option('--no-require-apikey-expiration', `Do not require API key expiration`)
+  .option('--max-apikey-expiration-days <days>', `Maximum days before API key expiration (1-365, null for no limit)`, (val) => {
+    if (val === 'null' || val === '')
+      return null
+    const num = Number.parseInt(val, 10)
+    if (Number.isNaN(num) || num < 1 || num > 365)
+      throw new Error('max-apikey-expiration-days must be between 1 and 365, or null')
+    return num
+  })
+  .option('--enforce-hashed-api-keys', `Enforce hashed/secure API keys (key value stored as hash, shown only once)`)
+  .option('--no-enforce-hashed-api-keys', `Allow plain-text API keys`)
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)

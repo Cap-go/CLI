@@ -10,10 +10,28 @@ import {
   verifyUser,
 } from '../utils'
 
+interface PasswordPolicyConfig {
+  enabled: boolean
+  min_length: number
+  require_uppercase: boolean
+  require_number: boolean
+  require_special: boolean
+}
+
 interface OptionsOrganization extends OptionsBase {
   name?: string
   email?: string
   enforce2fa?: boolean
+  // Password policy options
+  passwordPolicy?: boolean
+  minLength?: number
+  requireUppercase?: boolean
+  requireNumber?: boolean
+  requireSpecial?: boolean
+  // API key security options
+  requireApikeyExpiration?: boolean
+  maxApikeyExpirationDays?: number | null
+  enforceHashedApiKeys?: boolean
 }
 
 export async function setOrganizationInternal(
@@ -54,7 +72,7 @@ export async function setOrganizationInternal(
 
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')
-    .select('name, management_email, created_by, enforcing_2fa')
+    .select('name, management_email, created_by, enforcing_2fa, password_policy_config, require_apikey_expiration, max_apikey_expiration_days, enforce_hashed_api_keys')
     .eq('id', orgId)
     .single()
 
@@ -65,6 +83,8 @@ export async function setOrganizationInternal(
   }
 
   let { name, email, enforce2fa } = enrichedOptions
+  const { passwordPolicy, minLength, requireUppercase, requireNumber, requireSpecial } = enrichedOptions
+  const { requireApikeyExpiration, maxApikeyExpirationDays, enforceHashedApiKeys } = enrichedOptions
 
   // Handle 2FA enforcement changes
   if (enforce2fa !== undefined) {
@@ -170,8 +190,13 @@ export async function setOrganizationInternal(
       }
     }
 
-    // If only changing 2FA enforcement, we can skip the name/email update
-    if (name === undefined && email === undefined) {
+    // If only changing 2FA enforcement and no other security settings, we can skip the rest
+    const hasOtherSecuritySettings = passwordPolicy !== undefined
+      || requireApikeyExpiration !== undefined
+      || maxApikeyExpirationDays !== undefined
+      || enforceHashedApiKeys !== undefined
+
+    if (name === undefined && email === undefined && !hasOtherSecuritySettings) {
       await sendEvent(enrichedOptions.apikey, {
         channel: 'organization',
         event: enforce2fa ? 'Organization 2FA Enabled' : 'Organization 2FA Disabled',
@@ -189,6 +214,176 @@ export async function setOrganizationInternal(
       }
 
       return { orgId, name: orgData.name, email: orgData.management_email, enforce2fa }
+    }
+  }
+
+  // Handle password policy changes
+  if (passwordPolicy !== undefined) {
+    if (!silent) {
+      if (passwordPolicy) {
+        log.info('Configuring password policy for organization...')
+
+        // Check which members will be affected
+        const { data: membersStatus, error: membersError } = await supabase
+          .rpc('check_org_members_password_policy', { org_id: orgId })
+
+        if (membersError) {
+          if (!membersError.message?.includes('NO_RIGHTS')) {
+            log.warn(`Cannot check members password policy status: ${formatError(membersError)}`)
+          }
+        }
+        else if (membersStatus) {
+          const nonCompliantMembers = membersStatus.filter((m: { password_policy_compliant: boolean }) => !m.password_policy_compliant)
+          if (nonCompliantMembers.length > 0) {
+            log.warn(`⚠️  Warning: ${nonCompliantMembers.length} member(s) do not meet the password policy requirements`)
+            log.warn('These members will need to update their passwords to regain access.')
+
+            const shouldContinue = await confirmC({
+              message: 'Are you sure you want to enable the password policy?',
+            })
+
+            if (isCancel(shouldContinue) || !shouldContinue) {
+              log.error('Canceled enabling password policy')
+              throw new Error('Password policy configuration cancelled')
+            }
+          }
+        }
+      }
+      else {
+        log.info('Disabling password policy for organization...')
+      }
+    }
+
+    const policyConfig: PasswordPolicyConfig = {
+      enabled: passwordPolicy,
+      min_length: minLength ?? 10,
+      require_uppercase: requireUppercase ?? true,
+      require_number: requireNumber ?? true,
+      require_special: requireSpecial ?? true,
+    }
+
+    const { error: policyError } = await supabase
+      .from('orgs')
+      .update({ password_policy_config: policyConfig as unknown as { [key: string]: boolean | number } })
+      .eq('id', orgId)
+
+    if (policyError) {
+      if (!silent)
+        log.error(`Could not update password policy: ${formatError(policyError)}`)
+      throw new Error(`Could not update password policy: ${formatError(policyError)}`)
+    }
+
+    if (!silent) {
+      if (passwordPolicy) {
+        log.success('✓ Password policy enabled for this organization')
+        log.info(`  - Minimum length: ${policyConfig.min_length} characters`)
+        log.info(`  - Require uppercase: ${policyConfig.require_uppercase ? 'Yes' : 'No'}`)
+        log.info(`  - Require number: ${policyConfig.require_number ? 'Yes' : 'No'}`)
+        log.info(`  - Require special character: ${policyConfig.require_special ? 'Yes' : 'No'}`)
+      }
+      else {
+        log.success('✓ Password policy disabled for this organization')
+      }
+    }
+
+    // If only changing password policy and no name/email/other settings, we're done
+    if (name === undefined && email === undefined
+      && enforce2fa === undefined
+      && requireApikeyExpiration === undefined
+      && maxApikeyExpirationDays === undefined
+      && enforceHashedApiKeys === undefined) {
+      await sendEvent(enrichedOptions.apikey, {
+        channel: 'organization',
+        event: passwordPolicy ? 'Password Policy Enabled' : 'Password Policy Disabled',
+        icon: '🔑',
+        user_id: orgId,
+        tags: {
+          'org-name': orgData.name,
+        },
+        notify: false,
+      }).catch(() => {})
+
+      if (!silent) {
+        outro('Done ✅')
+      }
+
+      return { orgId, name: orgData.name, email: orgData.management_email, passwordPolicy }
+    }
+  }
+
+  // Handle API key security settings
+  const hasApiKeySettings = requireApikeyExpiration !== undefined
+    || maxApikeyExpirationDays !== undefined
+    || enforceHashedApiKeys !== undefined
+
+  if (hasApiKeySettings) {
+    if (!silent) {
+      log.info('Updating API key security settings...')
+    }
+
+    // Validate maxApikeyExpirationDays if provided
+    if (maxApikeyExpirationDays !== undefined && maxApikeyExpirationDays !== null) {
+      if (maxApikeyExpirationDays < 1 || maxApikeyExpirationDays > 365) {
+        if (!silent)
+          log.error('Maximum API key expiration days must be between 1 and 365')
+        throw new Error('Maximum API key expiration days must be between 1 and 365')
+      }
+    }
+
+    const updateFields: Record<string, unknown> = {}
+    if (requireApikeyExpiration !== undefined)
+      updateFields.require_apikey_expiration = requireApikeyExpiration
+    if (maxApikeyExpirationDays !== undefined)
+      updateFields.max_apikey_expiration_days = maxApikeyExpirationDays
+    if (enforceHashedApiKeys !== undefined)
+      updateFields.enforce_hashed_api_keys = enforceHashedApiKeys
+
+    const { error: apiKeyError } = await supabase
+      .from('orgs')
+      .update(updateFields)
+      .eq('id', orgId)
+
+    if (apiKeyError) {
+      if (!silent)
+        log.error(`Could not update API key settings: ${formatError(apiKeyError)}`)
+      throw new Error(`Could not update API key settings: ${formatError(apiKeyError)}`)
+    }
+
+    if (!silent) {
+      if (requireApikeyExpiration !== undefined) {
+        log.success(`✓ API key expiration requirement: ${requireApikeyExpiration ? 'Enabled' : 'Disabled'}`)
+      }
+      if (maxApikeyExpirationDays !== undefined) {
+        if (maxApikeyExpirationDays === null) {
+          log.success('✓ Maximum API key expiration days: No limit')
+        }
+        else {
+          log.success(`✓ Maximum API key expiration days: ${maxApikeyExpirationDays}`)
+        }
+      }
+      if (enforceHashedApiKeys !== undefined) {
+        log.success(`✓ Hashed API keys enforcement: ${enforceHashedApiKeys ? 'Enabled' : 'Disabled'}`)
+      }
+    }
+
+    // If only changing API key settings and no name/email, we're done
+    if (name === undefined && email === undefined && enforce2fa === undefined && passwordPolicy === undefined) {
+      await sendEvent(enrichedOptions.apikey, {
+        channel: 'organization',
+        event: 'API Key Settings Updated',
+        icon: '🔐',
+        user_id: orgId,
+        tags: {
+          'org-name': orgData.name,
+        },
+        notify: false,
+      }).catch(() => {})
+
+      if (!silent) {
+        outro('Done ✅')
+      }
+
+      return { orgId, name: orgData.name, email: orgData.management_email }
     }
   }
 

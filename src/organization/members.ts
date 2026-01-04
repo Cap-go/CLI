@@ -10,15 +10,29 @@ import {
   verifyUser,
 } from '../utils'
 
+interface PasswordPolicyConfig {
+  enabled: boolean
+  min_length: number
+  require_uppercase: boolean
+  require_number: boolean
+  require_special: boolean
+}
+
 interface MemberInfo {
   uid: string
   email: string
   role: string
   is_tmp: boolean
   has_2fa: boolean
+  password_policy_compliant: boolean
 }
 
-function displayMembers(data: MemberInfo[], orgName: string, silent: boolean) {
+interface DisplayOptions {
+  orgName: string
+  hasPasswordPolicy: boolean
+}
+
+function displayMembers(data: MemberInfo[], options: DisplayOptions, silent: boolean) {
   if (silent)
     return
 
@@ -28,22 +42,31 @@ function displayMembers(data: MemberInfo[], orgName: string, silent: boolean) {
   }
 
   const t = new Table()
-  t.headers = ['Email', 'Role', 'Status', '2FA Enabled']
+  t.headers = options.hasPasswordPolicy
+    ? ['Email', 'Role', 'Status', '2FA Enabled', 'Password Policy']
+    : ['Email', 'Role', 'Status', '2FA Enabled']
   t.rows = []
 
   for (const row of data) {
     const status = row.is_tmp ? 'Invited' : 'Active'
     const has2FA = row.has_2fa ? '✓ Yes' : '✗ No'
+    const passwordCompliant = row.password_policy_compliant ? '✓ Compliant' : '✗ Non-compliant'
 
-    t.rows.push([
+    const rowData = [
       row.email,
       row.role,
       status,
       has2FA,
-    ])
+    ]
+
+    if (options.hasPasswordPolicy) {
+      rowData.push(passwordCompliant)
+    }
+
+    t.rows.push(rowData)
   }
 
-  log.success(`Members of "${orgName}"`)
+  log.success(`Members of "${options.orgName}"`)
   log.success(t.toString())
 }
 
@@ -78,10 +101,10 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
   await verifyUser(supabase, enrichedOptions.apikey, ['read', 'write', 'all'])
   await check2FAAccessForOrg(supabase, orgId, silent)
 
-  // Get organization name
+  // Get organization name and security settings
   const { data: orgData, error: orgError } = await supabase
     .from('orgs')
-    .select('name, enforcing_2fa')
+    .select('name, enforcing_2fa, password_policy_config, require_apikey_expiration, max_apikey_expiration_days, enforce_hashed_api_keys')
     .eq('id', orgId)
     .single()
 
@@ -90,6 +113,9 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
       log.error(`Cannot get organization details: ${formatError(orgError)}`)
     throw new Error(`Cannot get organization details: ${formatError(orgError)}`)
   }
+
+  const passwordPolicyConfig = orgData.password_policy_config as unknown as PasswordPolicyConfig | null
+  const hasPasswordPolicy = passwordPolicyConfig?.enabled ?? false
 
   if (!silent)
     log.info(`Getting members of "${orgData.name}" from Capgo`)
@@ -120,29 +146,103 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
     // Continue without 2FA status
   }
 
-  // Merge member info with 2FA status
+  // Get password policy compliance status (only if password policy is enabled)
+  let passwordPolicyStatus: Array<{ user_id: string, password_policy_compliant: boolean }> | null = null
+  if (hasPasswordPolicy) {
+    const { data: policyStatus, error: policyError } = await supabase
+      .rpc('check_org_members_password_policy', { org_id: orgId })
+
+    if (policyError) {
+      if (!silent) {
+        if (policyError.message?.includes('NO_RIGHTS')) {
+          log.warn('You need super_admin rights to view password policy compliance status')
+        }
+        else {
+          log.warn(`Cannot get password policy status: ${formatError(policyError)}`)
+        }
+      }
+      // Continue without password policy status
+    }
+    else {
+      passwordPolicyStatus = policyStatus
+    }
+  }
+
+  // Merge member info with 2FA status and password policy status
   const memberInfoList: MemberInfo[] = (members || []).map((m) => {
-    const status = membersStatus?.find(s => s.user_id === m.uid)
+    const twoFaStatus = membersStatus?.find(s => s.user_id === m.uid)
+    const pwPolicyStatus = passwordPolicyStatus?.find(s => s.user_id === m.uid)
     return {
       uid: m.uid,
       email: m.email,
       role: m.role,
       is_tmp: m.is_tmp,
-      has_2fa: status?.['2fa_enabled'] ?? false,
+      has_2fa: twoFaStatus?.['2fa_enabled'] ?? false,
+      password_policy_compliant: pwPolicyStatus?.password_policy_compliant ?? false,
     }
   })
 
   if (!silent) {
     log.info(`Members found: ${memberInfoList.length}`)
 
+    // Display security enforcement status
+    log.info('')
+    log.info('Security Settings:')
     if (orgData.enforcing_2fa) {
-      log.info(`🔐 2FA enforcement is ENABLED for this organization`)
+      log.info(`  🔐 2FA enforcement: ENABLED`)
     }
     else {
-      log.info(`2FA enforcement is disabled for this organization`)
+      log.info(`  2FA enforcement: Disabled`)
     }
 
-    displayMembers(memberInfoList, orgData.name, silent)
+    if (hasPasswordPolicy) {
+      log.info(`  🔑 Password policy: ENABLED`)
+      log.info(`     - Minimum length: ${passwordPolicyConfig!.min_length} characters`)
+      log.info(`     - Require uppercase: ${passwordPolicyConfig!.require_uppercase ? 'Yes' : 'No'}`)
+      log.info(`     - Require number: ${passwordPolicyConfig!.require_number ? 'Yes' : 'No'}`)
+      log.info(`     - Require special: ${passwordPolicyConfig!.require_special ? 'Yes' : 'No'}`)
+    }
+    else {
+      log.info(`  Password policy: Disabled`)
+    }
+
+    if (orgData.require_apikey_expiration) {
+      log.info(`  ⏰ API key expiration required: ENABLED`)
+      if (orgData.max_apikey_expiration_days) {
+        log.info(`     - Maximum expiration: ${orgData.max_apikey_expiration_days} days`)
+      }
+    }
+    else {
+      log.info(`  API key expiration required: Disabled`)
+    }
+
+    if (orgData.enforce_hashed_api_keys) {
+      log.info(`  🔒 Hashed API keys: ENABLED`)
+    }
+    else {
+      log.info(`  Hashed API keys: Disabled`)
+    }
+
+    log.info('')
+
+    // Display member summary
+    const activeMembers = memberInfoList.filter(m => !m.is_tmp)
+    const membersWithout2FA = activeMembers.filter(m => !m.has_2fa)
+
+    log.info('Member Summary:')
+    log.info(`  Total active members: ${activeMembers.length}`)
+    log.info(`  Members with 2FA: ${activeMembers.length - membersWithout2FA.length}`)
+    log.info(`  Members without 2FA: ${membersWithout2FA.length}`)
+
+    if (hasPasswordPolicy) {
+      const membersNonCompliant = activeMembers.filter(m => !m.password_policy_compliant)
+      log.info(`  Password policy compliant: ${activeMembers.length - membersNonCompliant.length}`)
+      log.info(`  Password policy non-compliant: ${membersNonCompliant.length}`)
+    }
+
+    log.info('')
+
+    displayMembers(memberInfoList, { orgName: orgData.name, hasPasswordPolicy }, silent)
     outro('Done ✅')
   }
 
