@@ -822,22 +822,56 @@ async function* getFiles(dir: string): AsyncGenerator<string> {
   }
 }
 
-export function getContentType(filename: string): string | null {
-  const imageExtensions = /\.(jpg|jpeg|png|gif|bmp|webp)$/i
-  const match = filename.match(imageExtensions)
-  if (match) {
-    const ext = match[1].toLowerCase()
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg'
-      case 'png':
-        return 'image/png'
-      case 'webp':
-        return 'image/webp'
-    }
+export function getContentType(filename: string): string {
+  // Remove .br extension if present to get the actual file type
+  const cleanFilename = filename.endsWith('.br') ? filename.slice(0, -3) : filename
+  const ext = cleanFilename.split('.').pop()?.toLowerCase() || ''
+
+  // MIME type mapping for web bundle files
+  const mimeTypes: Record<string, string> = {
+    // HTML
+    html: 'text/html',
+    htm: 'text/html',
+    // JavaScript
+    js: 'application/javascript',
+    mjs: 'application/javascript',
+    cjs: 'application/javascript',
+    // CSS
+    css: 'text/css',
+    // JSON
+    json: 'application/json',
+    // Images
+    jpg: 'image/jpeg',
+    jpeg: 'image/jpeg',
+    png: 'image/png',
+    gif: 'image/gif',
+    bmp: 'image/bmp',
+    webp: 'image/webp',
+    svg: 'image/svg+xml',
+    ico: 'image/x-icon',
+    avif: 'image/avif',
+    // Fonts
+    woff: 'font/woff',
+    woff2: 'font/woff2',
+    ttf: 'font/ttf',
+    otf: 'font/otf',
+    eot: 'application/vnd.ms-fontobject',
+    // Media
+    mp3: 'audio/mpeg',
+    wav: 'audio/wav',
+    ogg: 'audio/ogg',
+    mp4: 'video/mp4',
+    webm: 'video/webm',
+    // Other web assets
+    xml: 'application/xml',
+    txt: 'text/plain',
+    md: 'text/markdown',
+    pdf: 'application/pdf',
+    wasm: 'application/wasm',
+    map: 'application/json',
   }
-  return null
+
+  return mimeTypes[ext] || 'application/octet-stream'
 }
 
 export async function findProjectType() {

@@ -89,14 +89,12 @@
     "git-format-staged": "3.1.1",
     "husky": "^9.1.7",
     "is-wsl": "^3.1.0",
+    "micromatch": "^4.0.8",
     "open": "^11.0.0",
     "prettyjson": "^1.2.5",
     "tmp": "^0.2.5",
     "tus-js-client": "^4.3.1",
     "typescript": "^5.9.3",
     "zod": "^3.24.0"
-  },
-  "dependencies": {
-    "micromatch": "^4.0.8"
   }
 }

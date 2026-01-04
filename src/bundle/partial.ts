@@ -14,7 +14,7 @@ import { parse } from '@std/semver'
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2 } from '../api/cryptoV2'
-import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
+import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getContentType, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
 // Check if file already exists on server
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
@@ -290,6 +290,8 @@ export async function uploadPartial(
 
       return new Promise((resolve, reject) => {
         spinner.message(`Prepare upload partial file: ${filePathUnix}`)
+        // Get the MIME type for this file (based on original filename, not the R2 path)
+        const filetype = getContentType(uploadPathUnix)
         const upload = new tus.Upload(finalBuffer as any, {
           endpoint: `${localConfig.hostFilesApi}/files/upload/attachments/`,
           chunkSize: options.tusChunkSize,
@@ -297,6 +299,7 @@ export async function uploadPartial(
           removeFingerprintOnSuccess: true,
           metadata: {
             filename,
+            filetype,
           },
           headers: {
             Authorization: apikey,
