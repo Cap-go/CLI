@@ -4,9 +4,6 @@
   "workspaces": {
     "": {
       "name": "@capgo/cli",
-      "dependencies": {
-        "micromatch": "^4.0.8",
-      },
       "devDependencies": {
         "@antfu/eslint-config": "^6.1.0",
         "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.4",
@@ -26,9 +23,10 @@
         "ci-info": "^4.3.1",
         "commander": "^14.0.2",
         "eslint": "^9.38.0",
-        "git-format-staged": "3.1.1",
+        "git-format-staged": "3.1.3",
         "husky": "^9.1.7",
         "is-wsl": "^3.1.0",
+        "micromatch": "^4.0.8",
         "open": "^11.0.0",
         "prettyjson": "^1.2.5",
         "tmp": "^0.2.5",
@@ -495,7 +493,7 @@
 
     "get-tsconfig": ["get-tsconfig@4.13.0", "", { "dependencies": { "resolve-pkg-maps": "^1.0.0" } }, "sha512-1VKTZJCwBrvbd+Wn3AOgQP/2Av+TfTCOlE4AcRJE72W1ksZXbAx8PPBR9RzgTeSPzlPMHrbANMH3LbltH73wxQ=="],
 
-    "git-format-staged": ["git-format-staged@3.1.1", "", { "bin": { "git-format-staged": "git-format-staged" } }, "sha512-P749fkktaiAchFZKR7bgdvruzhvbcIDr1uRBrS9/Wdimb7wH1Twchz9gOixj8tUaHVMuXY/ckDojfOwV6AxgPA=="],
+    "git-format-staged": ["git-format-staged@3.1.3", "", { "bin": { "git-format-staged": "git-format-staged" } }, "sha512-dhRP6NoKCwsRuZ9pR0tIMPgJGeGODJs2V5oVrvmJzt7Iu55ctkRZtgE9dWKQ0UQwKPH6YMmYFV5nZ7pm18OyNg=="],
 
     "github-slugger": ["github-slugger@2.0.0", "", {}, "sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw=="],
 
