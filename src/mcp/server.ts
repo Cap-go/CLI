@@ -1,8 +1,8 @@
+import type { SDKResult } from '../sdk'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import pack from '../../package.json'
-import type { SDKResult } from '../sdk'
 import { CapgoSDK } from '../sdk'
 import { findSavedKey } from '../utils'
 

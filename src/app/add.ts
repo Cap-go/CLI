@@ -171,7 +171,9 @@ export async function addAppInternal(
   }
 
   if (!silent) {
-    log.success(`App ${appId} added to Capgo. You can upload a bundle now`)
+    log.success(`App ${appId} added to Capgo`)
+    log.info(`This app is accessible to all members of your organization based on their permissions`)
+    log.info(`Next step: upload a bundle with "npx @capgo/cli bundle upload ${appId}"`)
     outro('Done ✅')
   }
 
