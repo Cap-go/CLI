@@ -2,7 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
 import { confirm as confirmC, intro, log, outro, spinner } from '@clack/prompts'
 import { Table } from '@sauber/table'
-import { formatError } from '../utils'
+import { formatError, getOrganizationId } from '../utils'
 
 interface CheckVersionOptions {
   silent?: boolean
@@ -82,33 +82,48 @@ export async function findUnknownVersion(
   options: FindUnknownOptions = {},
 ) {
   const { silent = false } = options
-  const delays = [3000, 7000] // Wait 3 seconds after 1st failure, 7 seconds after 2nd failure
-  let lastError: any
 
-  for (let attempt = 0; attempt <= 2; attempt++) {
-    const { data, error } = await supabase
-      .from('app_versions')
-      .select('id')
-      .eq('app_id', appId)
-      .eq('name', 'unknown')
-      .single()
+  // Try to find existing unknown version
+  const { data, error: findError } = await supabase
+    .from('app_versions')
+    .select('id')
+    .eq('app_id', appId)
+    .eq('name', 'unknown')
+    .single()
 
-    if (!error) {
-      return data
-    }
-
-    lastError = error
-
-    // If this isn't the last attempt, wait before retrying
-    if (attempt < 2) {
-      await new Promise(resolve => setTimeout(resolve, delays[attempt]))
-    }
+  if (!findError) {
+    return data
   }
 
-  // All retries failed
-  if (!silent)
-    log.error(`Cannot call findUnknownVersion as it returned an error.\n${formatError(lastError)}`)
-  throw new Error(`Cannot retrieve unknown version for app ${appId}: ${formatError(lastError)}`)
+  // Not found - try to create it silently
+  try {
+    const orgId = await getOrganizationId(supabase, appId)
+    const { data: newVersion, error: createError } = await supabase
+      .from('app_versions')
+      .insert({
+        owner_org: orgId,
+        deleted: true,
+        name: 'unknown',
+        app_id: appId,
+      })
+      .select('id')
+      .single()
+
+    if (createError) {
+      // Both find and create failed - now we log
+      if (!silent)
+        log.error(`Cannot find or create unknown version for ${appId}. Find error: ${formatError(findError)}, Create error: ${formatError(createError)}`)
+      throw new Error(`Cannot find or create unknown version for app ${appId}: ${formatError(createError)}`)
+    }
+
+    return newVersion
+  }
+  catch (createErr) {
+    // Both find and create failed - now we log
+    if (!silent)
+      log.error(`Cannot find or create unknown version for ${appId}. Find error: ${formatError(findError)}, Create error: ${formatError(createErr)}`)
+    throw new Error(`Cannot retrieve or create unknown version for app ${appId}: ${formatError(createErr)}`)
+  }
 }
 
 export function createChannel(
