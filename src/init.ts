@@ -231,6 +231,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       else
         s.stop(`App add Done ✅`)
 
+      pLog.info(`This app is accessible to all members of your organization based on their permissions`)
       await markStep(organization.gid, apikey, 'add-app', currentAppId)
       return currentAppId
     }

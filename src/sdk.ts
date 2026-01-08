@@ -1787,11 +1787,11 @@ export type { CapacitorConfig } from './config'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
 export {
-  SECURITY_POLICY_ERRORS,
-  SECURITY_POLICY_MESSAGES,
+  formatApiErrorForCli,
+  getSecurityPolicyMessage,
   isSecurityPolicyError,
   parseSecurityPolicyError,
-  getSecurityPolicyMessage,
-  formatApiErrorForCli,
+  SECURITY_POLICY_ERRORS,
+  SECURITY_POLICY_MESSAGES,
 } from './utils/security_policy_errors'
-export type { SecurityPolicyErrorCode, ParsedSecurityError } from './utils/security_policy_errors'
+export type { ParsedSecurityError, SecurityPolicyErrorCode } from './utils/security_policy_errors'
