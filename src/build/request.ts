@@ -255,8 +255,8 @@ async function pollBuildStatus(
 
       const status = await response.json() as {
         status: string
-        build_time_unit?: number
-        error?: string
+        build_time_seconds?: number | null
+        error?: string | null
       }
 
       // Terminal states
