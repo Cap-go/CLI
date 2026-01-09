@@ -598,10 +598,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const requestPayload: {
       app_id: string
       platform: 'ios' | 'android'
+      build_mode?: 'debug' | 'release'
       credentials?: BuildCredentials
     } = {
       app_id: appId,
       platform: options.platform,
+      build_mode: options.buildMode,
     }
 
     // Validate required credentials for the platform
