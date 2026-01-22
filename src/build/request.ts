@@ -39,6 +39,83 @@ import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendE
 import { mergeCredentials } from './credentials'
 
 /**
+ * Fetch with retry logic for build requests
+ * Retries failed requests with exponential backoff, logging each failure
+ *
+ * @param url - The URL to fetch
+ * @param options - Fetch options
+ * @param maxRetries - Maximum number of retry attempts (default: 3)
+ * @param silent - Suppress log output
+ * @returns The fetch Response if successful
+ * @throws Error if all retries are exhausted
+ */
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  maxRetries = 3,
+  silent = false,
+): Promise<Response> {
+  const retryDelays = [1000, 3000, 5000] // 1s, 3s, 5s delays between retries
+
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options)
+
+      // If response is OK or it's a client error (4xx), don't retry
+      // Only retry on server errors (5xx) or network failures
+      if (response.ok || (response.status >= 400 && response.status < 500)) {
+        return response
+      }
+
+      // Server error (5xx) - log and retry
+      const errorText = await response.text().catch(() => 'unknown error')
+      if (!silent) {
+        log.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${response.status} - ${errorText}`)
+      }
+
+      if (attempt < maxRetries) {
+        const delay = retryDelays[attempt - 1] || 5000
+        if (!silent) {
+          log.info(`Retrying in ${delay / 1000}s...`)
+        }
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+      else {
+        // Last attempt failed, throw error
+        throw new Error(`Failed to request build after ${maxRetries} attempts: ${response.status} - ${errorText}`)
+      }
+    }
+    catch (error) {
+      // Network error or other fetch failure
+      const errorMessage = error instanceof Error ? error.message : String(error)
+
+      // Don't retry if we already threw our own error
+      if (errorMessage.startsWith('Failed to request build after')) {
+        throw error
+      }
+
+      if (!silent) {
+        log.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${errorMessage}`)
+      }
+
+      if (attempt < maxRetries) {
+        const delay = retryDelays[attempt - 1] || 5000
+        if (!silent) {
+          log.info(`Retrying in ${delay / 1000}s...`)
+        }
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+      else {
+        throw new Error(`Failed to request build after ${maxRetries} attempts: ${errorMessage}`)
+      }
+    }
+  }
+
+  // This should never be reached, but TypeScript needs it
+  throw new Error('Unexpected error in fetchWithRetry')
+}
+
+/**
  * Build credentials for iOS and Android native builds
  *
  * SECURITY: These credentials are NEVER stored on Capgo servers.
@@ -701,14 +778,20 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (!silent)
       log.info('Requesting build from Capgo...')
 
-    const response = await fetch(`${host}/build/request`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'authorization': options.apikey,
+    const maxRetries = 3
+    const response = await fetchWithRetry(
+      `${host}/build/request`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'authorization': options.apikey,
+        },
+        body: JSON.stringify(requestPayload),
       },
-      body: JSON.stringify(requestPayload),
-    })
+      maxRetries,
+      silent,
+    )
 
     if (!response.ok) {
       const errorText = await response.text()
