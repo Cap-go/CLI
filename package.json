@@ -1,6 +1,6 @@
 {
   "name": "@capgo/cli",
-  "version": "7.68.2",
+  "version": "7.69.0",
   "type": "module",
   "description": "A CLI to upload to capgo servers",
   "author": "Martin martin@capgo.app",
