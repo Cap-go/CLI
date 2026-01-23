@@ -359,6 +359,7 @@ export interface EncryptBundleOptions {
   keyPath?: string
   keyData?: string
   json?: boolean
+  packageJson?: string
 }
 
 export interface DecryptBundleOptions {
@@ -367,6 +368,7 @@ export interface DecryptBundleOptions {
   keyPath?: string
   keyData?: string
   checksum?: string
+  packageJson?: string
 }
 
 export interface ZipBundleOptions {
@@ -731,6 +733,7 @@ export class CapgoSDK {
         key: options.keyPath,
         keyData: options.keyData,
         json: options.json,
+        packageJson: options.packageJson,
       }, true)
 
       return {
@@ -749,6 +752,7 @@ export class CapgoSDK {
         key: options.keyPath,
         keyData: options.keyData,
         checksum: options.checksum,
+        packageJson: options.packageJson,
       }, true)
 
       return {

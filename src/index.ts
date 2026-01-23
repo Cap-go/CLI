@@ -225,6 +225,7 @@ Example: npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM`)
   .option('--key <key>', `Custom path for private signing key`)
   .option('--key-data <keyData>', `Private signing key`)
   .option('-j, --json', `Output in JSON`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
 
 bundle
   .command('decrypt [zipPath] [checksum]')
@@ -237,6 +238,7 @@ Example: npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM`)
   .option('--key <key>', `Custom path for private signing key`)
   .option('--key-data <keyData>', `Private signing key`)
   .option('--checksum <checksum>', `Checksum of the bundle, to verify the integrity of the bundle`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
 
 bundle
   .command('zip [appId]')
