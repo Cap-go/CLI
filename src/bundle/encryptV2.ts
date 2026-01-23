@@ -96,7 +96,7 @@ export async function encryptZipV2Internal(
     const zipFile = readFileSync(zipPath)
     const { sessionKey, ivSessionKey } = generateSessionKey(privateKey)
     const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
-    const encodedChecksum = encryptChecksumV2(checksum, privateKey)
+    const encodedChecksum = encryptChecksumV3(checksum, privateKey)
     const filenameEncrypted = `${zipPath}_encrypted.zip`
 
     writeFileSync(filenameEncrypted, encryptedData)
