@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
-import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { baseKeyV2, formatError, getConfig } from '../utils'
 
