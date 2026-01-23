@@ -1069,6 +1069,11 @@ export const BROTLI_MIN_UPDATER_VERSION_V5 = '5.10.0'
 export const BROTLI_MIN_UPDATER_VERSION_V6 = '6.25.0'
 export const BROTLI_MIN_UPDATER_VERSION_V7 = '7.0.30'
 
+// Minimum versions that support hex checksum format (V3)
+export const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
+export const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
+export const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
+
 export function isDeprecatedPluginVersion(parsedPluginVersion: SemVer, minFive = '5.10.0', minSix = '6.25.0', minSeven = '7.25.0'): boolean {
   // v5 is deprecated if < 5.10.0, v6 is deprecated if < 6.25.0, v7 is deprecated if < 7.25.0
   if (parsedPluginVersion.major === 5 && lessThan(parsedPluginVersion, parse(minFive))) {
@@ -1081,6 +1086,46 @@ export function isDeprecatedPluginVersion(parsedPluginVersion: SemVer, minFive =
     return true
   }
   return false
+}
+
+export interface V3ChecksumResult {
+  supportsV3: boolean
+  updaterVersion: string | null
+  parseWarning?: string
+}
+
+/**
+ * Determines if the installed @capgo/capacitor-updater version supports V3 checksum format (hex).
+ * V3 is supported in versions >= 5.30.0 (v5), >= 6.30.0 (v6), or >= 7.30.0 (v7).
+ */
+export async function checkV3ChecksumSupport(packageJsonPath?: string): Promise<V3ChecksumResult> {
+  const root = findRoot(cwd())
+  const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, packageJsonPath)
+
+  if (!updaterVersion) {
+    return { supportsV3: false, updaterVersion: null }
+  }
+
+  let coerced
+  try {
+    coerced = parse(updaterVersion)
+  }
+  catch {
+    return {
+      supportsV3: false,
+      updaterVersion,
+      parseWarning: `Failed to parse updater version "${updaterVersion}". Falling back to V2 checksum.`,
+    }
+  }
+
+  const supportsV3 = !isDeprecatedPluginVersion(
+    coerced,
+    HEX_CHECKSUM_MIN_VERSION_V5,
+    HEX_CHECKSUM_MIN_VERSION_V6,
+    HEX_CHECKSUM_MIN_VERSION_V7,
+  )
+
+  return { supportsV3, updaterVersion }
 }
 
 export async function generateManifest(path: string): Promise<{ file: string, hash: string }[]> {

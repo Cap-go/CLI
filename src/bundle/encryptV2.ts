@@ -1,15 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { parse } from '@std/semver'
 import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
-
-// Minimum versions that support hex checksum format (V3)
-const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
-const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
-const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
+import { baseKeyV2, checkV3ChecksumSupport, formatError, getConfig } from '../utils'
 
 interface Options {
   key?: string
@@ -106,28 +99,18 @@ export async function encryptZipV2Internal(
     const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
 
     // Determine which checksum encryption to use based on updater version
-    const root = findRoot(cwd())
-    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
-    let supportsV3Checksum = false
-    let coerced
-    try {
-      coerced = updaterVersion ? parse(updaterVersion) : undefined
-    }
-    catch {
-      coerced = undefined
+    const v3Support = await checkV3ChecksumSupport(options.packageJson)
+
+    if (v3Support.parseWarning && shouldShowPrompts) {
+      log.warning(v3Support.parseWarning)
     }
 
-    if (coerced) {
-      // Use V3 encryption for new plugin versions (5.30.0+, 6.30.0+, 7.30.0+)
-      supportsV3Checksum = !isDeprecatedPluginVersion(coerced, HEX_CHECKSUM_MIN_VERSION_V5, HEX_CHECKSUM_MIN_VERSION_V6, HEX_CHECKSUM_MIN_VERSION_V7)
-    }
-
-    const encodedChecksum = supportsV3Checksum
+    const encodedChecksum = v3Support.supportsV3
       ? encryptChecksumV3(checksum, privateKey)
       : encryptChecksumV2(checksum, privateKey)
 
     if (shouldShowPrompts) {
-      log.info(`Encrypting checksum with ${supportsV3Checksum ? 'V3' : 'V2'} (based on updater version ${updaterVersion || 'unknown'})`)
+      log.info(`Encrypting checksum with ${v3Support.supportsV3 ? 'V3' : 'V2'} (based on updater version ${v3Support.updaterVersion || 'unknown'})`)
     }
 
     const filenameEncrypted = `${zipPath}_encrypted.zip`
