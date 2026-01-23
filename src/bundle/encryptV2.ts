@@ -1,13 +1,21 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { encryptChecksumV2, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { parse } from '@std/semver'
+import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
-import { baseKeyV2, formatError, getConfig } from '../utils'
+import { baseKeyV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
+
+// Minimum versions that support hex checksum format (V3)
+const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
+const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
+const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
 
 interface Options {
   key?: string
   keyData?: string
   json?: boolean
+  packageJson?: string
 }
 
 export interface EncryptResult {
@@ -96,7 +104,32 @@ export async function encryptZipV2Internal(
     const zipFile = readFileSync(zipPath)
     const { sessionKey, ivSessionKey } = generateSessionKey(privateKey)
     const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
-    const encodedChecksum = encryptChecksumV2(checksum, privateKey)
+
+    // Determine which checksum encryption to use based on updater version
+    const root = findRoot(cwd())
+    const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
+    let supportsV3Checksum = false
+    let coerced
+    try {
+      coerced = updaterVersion ? parse(updaterVersion) : undefined
+    }
+    catch {
+      coerced = undefined
+    }
+
+    if (coerced) {
+      // Use V3 encryption for new plugin versions (5.30.0+, 6.30.0+, 7.30.0+)
+      supportsV3Checksum = !isDeprecatedPluginVersion(coerced, HEX_CHECKSUM_MIN_VERSION_V5, HEX_CHECKSUM_MIN_VERSION_V6, HEX_CHECKSUM_MIN_VERSION_V7)
+    }
+
+    const encodedChecksum = supportsV3Checksum
+      ? encryptChecksumV3(checksum, privateKey)
+      : encryptChecksumV2(checksum, privateKey)
+
+    if (shouldShowPrompts) {
+      log.info(`Encrypting checksum with ${supportsV3Checksum ? 'V3' : 'V2'} (based on updater version ${updaterVersion || 'unknown'})`)
+    }
+
     const filenameEncrypted = `${zipPath}_encrypted.zip`
 
     writeFileSync(filenameEncrypted, encryptedData)

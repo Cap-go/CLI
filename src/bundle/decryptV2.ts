@@ -1,14 +1,22 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
-import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
+import { parse } from '@std/semver'
+import { decryptChecksumV2, decryptChecksumV3, decryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
-import { baseKeyPubV2, formatError, getConfig } from '../utils'
+import { baseKeyPubV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
+
+// Minimum versions that support hex checksum format (V3)
+const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
+const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
+const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
 
 interface Options {
   key?: string
   keyData?: string
   checksum?: string
+  packageJson?: string
 }
 
 export interface DecryptResult {
@@ -80,7 +88,30 @@ export async function decryptZipV2Internal(
 
     if (options.checksum) {
       const checksum = await getChecksum(decodedZip, 'sha256')
-      const decryptedChecksum = decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
+
+      // Determine which checksum decryption to use based on updater version
+      const root = findRoot(cwd())
+      const updaterVersion = await getInstalledVersion('@capgo/capacitor-updater', root, options.packageJson)
+      let supportsV3Checksum = false
+      let coerced
+      try {
+        coerced = updaterVersion ? parse(updaterVersion) : undefined
+      }
+      catch {
+        coerced = undefined
+      }
+
+      if (coerced) {
+        // Use V3 decryption for new plugin versions (5.30.0+, 6.30.0+, 7.30.0+)
+        supportsV3Checksum = !isDeprecatedPluginVersion(coerced, HEX_CHECKSUM_MIN_VERSION_V5, HEX_CHECKSUM_MIN_VERSION_V6, HEX_CHECKSUM_MIN_VERSION_V7)
+      }
+
+      if (!silent)
+        log.info(`Decrypting checksum with ${supportsV3Checksum ? 'V3' : 'V2'} (based on updater version ${updaterVersion || 'unknown'})`)
+
+      const decryptedChecksum = supportsV3Checksum
+        ? decryptChecksumV3(options.checksum, options.keyData ?? publicKey)
+        : decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
       checksumMatches = checksum === decryptedChecksum
 
       if (!checksumMatches) {
