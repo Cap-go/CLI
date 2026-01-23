@@ -101,6 +101,18 @@ export function decryptChecksumV2(checksum: string, key: string): string {
   return checksumDecrypted
 }
 
+export function decryptChecksumV3(checksum: string, key: string): string {
+  const checksumDecrypted = publicDecrypt(
+    {
+      key,
+      padding,
+    },
+    Buffer.from(checksum, formatHex),
+  ).toString(formatHex)
+
+  return checksumDecrypted
+}
+
 export interface RSAKeys {
   publicKey: string
   privateKey: string
