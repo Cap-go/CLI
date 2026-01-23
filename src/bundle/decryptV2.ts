@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
-import { decryptChecksumV2, decryptSourceV2 } from '../api/cryptoV2'
+import { decryptChecksumV3, decryptSourceV2 } from '../api/cryptoV2'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyPubV2, formatError, getConfig } from '../utils'
@@ -80,7 +80,7 @@ export async function decryptZipV2Internal(
 
     if (options.checksum) {
       const checksum = await getChecksum(decodedZip, 'sha256')
-      const decryptedChecksum = decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
+      const decryptedChecksum = decryptChecksumV3(options.checksum, options.keyData ?? publicKey)
       checksumMatches = checksum === decryptedChecksum
 
       if (!checksumMatches) {
