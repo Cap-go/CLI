@@ -16,11 +16,17 @@ import * as tus from 'tus-js-client'
 import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2 } from '../api/cryptoV2'
 import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getContentType, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
-// Check if file already exists on server
+// Check if file already exists on server (bypass cache and force storage lookup)
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
   try {
-    const response = await fetch(`${localConfig.hostFilesApi}/files/read/attachments/${encodeURIComponent(filename)}`, {
-      method: 'HEAD',
+    const url = new URL(`${localConfig.hostFilesApi}/files/read/attachments/${encodeURIComponent(filename)}`)
+    url.searchParams.set('nocache', `${Date.now()}`)
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        range: 'bytes=0-0',
+        'cache-control': 'no-cache',
+      },
     })
     return response.ok
   }
