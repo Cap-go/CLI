@@ -29,6 +29,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 - 📦 [Bundle](#bundle)
   - [Upload](#bundle-upload)
   - [Compatibility](#bundle-compatibility)
+  - [ReleaseType](#bundle-releaseType)
   - [Delete](#bundle-delete)
   - [List](#bundle-list)
   - [Cleanup](#bundle-cleanup)
@@ -242,6 +243,31 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-c,** | <code>string</code> | Channel to check the compatibility with |
 | **--text** | <code>boolean</code> | Output text instead of emojis |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+### <a id="bundle-releaseType"></a> 🔹 **ReleaseType**
+
+```bash
+npx @capgo/cli@latest bundle releaseType
+```
+
+🧭 Print "native" or "OTA" based on compatibility with a channel's latest metadata.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest bundle releaseType com.example.app --channel production
+```
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **-c,** | <code>string</code> | Channel to compare against |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 | **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
