@@ -253,7 +253,7 @@ async function streamBuildLogs(
   let hasReceivedLogs = false
   let lastSequence = -1
   let reconnectAttempts = 0
-  const maxReconnectAttempts = 10
+  const maxReconnectAttempts = 20
   const readTimeoutMs = 30000 // 30 seconds - if no data for 30s, reconnect
   const reconnectDelayMs = 2000 // 2 seconds between reconnect attempts
 
@@ -331,9 +331,6 @@ async function streamBuildLogs(
         await new Promise(resolve => setTimeout(resolve, reconnectDelayMs))
         continue
       }
-
-      // Successfully connected - reset reconnect attempts
-      reconnectAttempts = 0
 
       const decoder = new TextDecoder()
       let buffer = '' // Buffer for incomplete lines
