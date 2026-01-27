@@ -25,6 +25,8 @@ interface Options extends OptionsBase {
 interface CompatibilityResult {
   finalCompatibility: Compatibility[]
   hasIncompatible: boolean
+  resolvedAppId: string
+  channel: string
 }
 
 export async function checkCompatibilityInternal(
@@ -40,7 +42,7 @@ export async function checkCompatibilityInternal(
     apikey: options.apikey || findSavedKey(),
   }
 
-  const extConfig = await getConfig()
+  const extConfig = appId ? undefined : await getConfig()
   const resolvedAppId = getAppId(appId, extConfig?.config)
   const channel = enrichedOptions.channel
 
@@ -52,7 +54,7 @@ export async function checkCompatibilityInternal(
 
   if (!enrichedOptions.apikey) {
     if (!silent)
-      log.error('Missing API key, you need to provide an API key to upload your bundle')
+      log.error('Missing API key, you need to provide an API key to access Capgo Cloud metadata')
     throw new Error('Missing API key')
   }
 
@@ -127,6 +129,8 @@ export async function checkCompatibilityInternal(
   return {
     finalCompatibility: compatibility.finalCompatibility,
     hasIncompatible,
+    resolvedAppId,
+    channel,
   }
 }
 
