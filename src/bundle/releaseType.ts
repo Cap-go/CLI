@@ -19,7 +19,13 @@ interface Options extends OptionsBase {
   nodeModules?: string
 }
 
-export async function getReleaseType(appId: string, options: Options): Promise<'native' | 'OTA'> {
+interface ReleaseTypeResult {
+  releaseType: 'native' | 'OTA'
+  resolvedAppId: string
+  channel: string
+}
+
+export async function getReleaseType(appId: string, options: Options): Promise<ReleaseTypeResult> {
   const enrichedOptions: Options = {
     ...options,
     apikey: options.apikey || findSavedKey(),
@@ -70,13 +76,27 @@ export async function getReleaseType(appId: string, options: Options): Promise<'
   )
 
   const hasIncompatible = compatibility.finalCompatibility.some(entry => !isCompatible(entry))
-  return hasIncompatible ? 'native' : 'OTA'
+  return {
+    releaseType: hasIncompatible ? 'native' : 'OTA',
+    resolvedAppId,
+    channel,
+  }
 }
 
 export async function printReleaseType(appId: string, options: Options) {
   try {
-    const releaseType = await getReleaseType(appId, options)
-    process.stdout.write(`${releaseType}\n`)
+    const { releaseType, resolvedAppId, channel } = await getReleaseType(appId, options)
+    const lines = releaseType === 'OTA'
+      ? [
+          'Recommendation: OTA',
+          `Run: npx @capgo/cli@latest bundle upload ${resolvedAppId} --channel ${channel}`,
+        ]
+      : [
+          'Recommendation: native',
+          `Save credentials: npx @capgo/cli@latest build credentials save --appId ${resolvedAppId} --platform <ios|android>`,
+          `Request build: npx @capgo/cli@latest build request ${resolvedAppId} --platform <ios|android> --path .`,
+        ]
+    process.stdout.write(`${lines.join('\n')}\n`)
   }
   catch (error) {
     log.error(`Error checking release type ${formatError(error)}`)
