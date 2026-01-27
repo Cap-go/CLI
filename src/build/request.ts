@@ -200,107 +200,229 @@ export interface BuildRequestResult {
 }
 
 /**
- * Stream build logs from the server via SSE
- * Returns the final status if detected from the stream, or null if stream ended without status
- * Note: Build cancellation on disconnect is handled by the proxy (Cloudflare Worker)
+ * Read with timeout - wraps reader.read() with a timeout
+ * Returns the read result or throws on timeout
  */
-async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean, _verbose = false): Promise<string | null> {
+function readWithTimeout(
+  reader: ReadableStreamDefaultReader<Uint8Array>,
+  timeoutMs: number,
+): Promise<{ done: boolean, value?: Uint8Array }> {
+  return new Promise((resolve, reject) => {
+    const timeoutId = setTimeout(() => {
+      reject(new Error(`Read timeout after ${timeoutMs}ms`))
+    }, timeoutMs)
+
+    reader.read().then(
+      (result) => {
+        clearTimeout(timeoutId)
+        resolve(result)
+      },
+      (err) => {
+        clearTimeout(timeoutId)
+        reject(err)
+      },
+    )
+  })
+}
+
+/**
+ * Stream build logs from the server via direct SSE
+ * Returns the final status if detected from the stream, or null if stream ended without status
+ * Note: Build cancellation on disconnect is handled by the builder worker
+ *
+ * @param silent - If true, don't output any logs
+ * @param _verbose - Verbose logging (currently unused)
+ * @param directLogsUrl - Direct URL to CF Worker for SSE streaming
+ * @param directLogsToken - JWT token for direct SSE authentication
+ */
+async function streamBuildLogs(
+  silent: boolean,
+  _verbose = false,
+  directLogsUrl?: string,
+  directLogsToken?: string,
+): Promise<string | null> {
   if (silent)
     return null
 
-  let finalStatus: string | null = null
-  let hasReceivedLogs = false
-
-  const logUrl = `${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`
-  // Always log the URL we're connecting to for debugging
-  log.info(`Connecting to log stream: ${logUrl}`)
-
-  try {
-    const response = await fetch(logUrl, {
-      headers: {
-        authorization: apikey,
-      },
-    })
-
-    log.info(`Log stream response: ${response.status}`)
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'unknown error')
-      log.warn(`Could not stream logs (${response.status}): ${errorText}`)
-      return null
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      log.warn('No response body for log stream')
-      return null
-    }
-
-    log.info('Reading log stream...')
-
-    const decoder = new TextDecoder()
-    let buffer = '' // Buffer for incomplete lines
-
-    // Helper to process and display a log message
-    const processLogMessage = (message: string) => {
-      if (!message.trim())
-        return
-
-      // Check for final status messages from the server
-      // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
-      const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
-      if (statusMatch) {
-        finalStatus = statusMatch[1].toLowerCase()
-        // Don't display status messages as log lines - they'll be displayed as final status
-        return
-      }
-
-      // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
-      if (finalStatus)
-        return
-
-      // Print log line directly to console (no spinner to avoid _events errors)
-      if (!hasReceivedLogs) {
-        hasReceivedLogs = true
-        log.info('') // Add blank line before first log
-      }
-      log.info(message)
-    }
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done)
-        break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      // Process complete lines (SSE format: "data: message\n\n")
-      const lines = buffer.split('\n')
-      // Keep the last incomplete line in the buffer
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const message = line.slice(6) // Remove "data: " prefix
-          processLogMessage(message)
-        }
-      }
-    }
-
-    // Process any remaining data in buffer
-    if (buffer.startsWith('data: ')) {
-      const message = buffer.slice(6)
-      processLogMessage(message)
-    }
-
-    return finalStatus
-  }
-  catch (err) {
-    // Log streaming is best-effort, don't fail the build
-    if (!silent)
-      log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
+  if (!directLogsUrl || !directLogsToken) {
+    log.warn('Missing logs_url or logs_token; direct log streaming is unavailable')
     return null
   }
+
+  let finalStatus: string | null = null
+  let hasReceivedLogs = false
+  let lastSequence = -1
+  let reconnectAttempts = 0
+  const maxReconnectAttempts = 10
+  const readTimeoutMs = 30000 // 30 seconds - if no data for 30s, reconnect
+  const reconnectDelayMs = 2000 // 2 seconds between reconnect attempts
+
+  // Helper to process and display a log message
+  const processLogMessage = (message: string): boolean => {
+    if (!message.trim())
+      return false
+
+    // Check for final status messages from the server
+    // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
+    const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
+    if (statusMatch) {
+      finalStatus = statusMatch[1].toLowerCase()
+      // Don't display status messages as log lines - they'll be displayed as final status
+      return true // Signal that we got final status
+    }
+
+    // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
+    if (finalStatus)
+      return false
+
+    // Print log line directly to console (no spinner to avoid _events errors)
+    if (!hasReceivedLogs) {
+      hasReceivedLogs = true
+      log.info('') // Add blank line before first log
+    }
+    log.info(message)
+    return false
+  }
+
+  while (reconnectAttempts < maxReconnectAttempts && !finalStatus) {
+    // Direct SSE: Connect directly to CF Worker with JWT token
+    let logUrl = `${directLogsUrl}?token=${encodeURIComponent(directLogsToken)}`
+    if (lastSequence >= 0) {
+      logUrl += `&last_sequence=${lastSequence}`
+    }
+
+    if (reconnectAttempts === 0) {
+      log.info('Connecting to log stream...')
+    }
+    else {
+      log.info(`Reconnecting to log stream (attempt ${reconnectAttempts + 1}/${maxReconnectAttempts})...`)
+    }
+
+    let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
+
+    try {
+      const controller = new AbortController()
+      const response = await fetch(logUrl, {
+        signal: controller.signal,
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'unknown error')
+
+        // If we get 404, the job might be done - don't retry
+        if (response.status === 404) {
+          log.warn(`Log stream not found (job may have completed)`)
+          return null
+        }
+        if (response.status === 401 || response.status === 403) {
+          log.warn(`Log stream authorization failed (${response.status})`)
+          return null
+        }
+        log.warn(`Could not stream logs (${response.status}): ${errorText}`)
+        reconnectAttempts++
+        await new Promise(resolve => setTimeout(resolve, reconnectDelayMs))
+        continue
+      }
+
+      reader = response.body?.getReader() ?? null
+      if (!reader) {
+        log.warn('No response body for log stream')
+        reconnectAttempts++
+        await new Promise(resolve => setTimeout(resolve, reconnectDelayMs))
+        continue
+      }
+
+      // Successfully connected - reset reconnect attempts
+      reconnectAttempts = 0
+
+      const decoder = new TextDecoder()
+      let buffer = '' // Buffer for incomplete lines
+
+      while (true) {
+        // Use timeout to detect stale connections quickly
+        const { done, value } = await readWithTimeout(reader, readTimeoutMs)
+        if (done) {
+          // Stream ended normally
+          break
+        }
+
+        buffer += decoder.decode(value, { stream: true })
+
+        // Process complete lines (SSE format: "data: message\n\n" or "id: N\ndata: message\n\n")
+        const lines = buffer.split('\n')
+        // Keep the last incomplete line in the buffer
+        buffer = lines.pop() || ''
+
+        for (const line of lines) {
+          // Track sequence ID if present (for resumption)
+          if (line.startsWith('id: ')) {
+            const seqStr = line.slice(4).trim()
+            const seq = parseInt(seqStr, 10)
+            if (!isNaN(seq)) {
+              lastSequence = seq
+            }
+          }
+          // Process data lines
+          else if (line.startsWith('data: ')) {
+            const message = line.slice(6) // Remove "data: " prefix
+            const gotFinalStatus = processLogMessage(message)
+            if (gotFinalStatus) {
+              // Got final status, we're done
+              reader.cancel().catch(() => {})
+              return finalStatus
+            }
+          }
+          // Ignore keepalive comments (lines starting with :)
+        }
+      }
+
+      // Process any remaining data in buffer
+      if (buffer.startsWith('data: ')) {
+        const message = buffer.slice(6)
+        processLogMessage(message)
+      }
+
+      // Stream ended normally - if we have final status, return it
+      if (finalStatus) {
+        return finalStatus
+      }
+
+      // Stream ended without final status - might need to reconnect
+      // But first check if this was a clean close (job might be done)
+      log.info('Log stream ended, checking if more data available...')
+      reconnectAttempts++
+      await new Promise(resolve => setTimeout(resolve, reconnectDelayMs))
+    }
+    catch (err) {
+      // Clean up reader if it exists
+      if (reader) {
+        reader.cancel().catch(() => {})
+      }
+
+      const errorMessage = err instanceof Error ? err.message : String(err)
+
+      // Timeout errors are expected when connection goes stale - reconnect silently
+      if (errorMessage.includes('timeout')) {
+        log.info('Log stream stale, reconnecting...')
+      }
+      else {
+        log.warn(`Log streaming interrupted: ${errorMessage}`)
+      }
+
+      reconnectAttempts++
+
+      // Don't wait before reconnecting on timeout (connection is already dead)
+      if (!errorMessage.includes('timeout')) {
+        await new Promise(resolve => setTimeout(resolve, reconnectDelayMs))
+      }
+    }
+  }
+
+  if (reconnectAttempts >= maxReconnectAttempts) {
+    log.warn(`Log streaming failed after ${maxReconnectAttempts} reconnection attempts`)
+  }
+
+  return finalStatus
 }
 
 async function pollBuildStatus(
@@ -964,7 +1086,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         throw new Error(`Failed to start build: ${startResponse.status} - ${errorText}`)
       }
 
-      const startResult = await startResponse.json() as { status?: string }
+      const startResult = await startResponse.json() as {
+        status?: string
+        logs_url?: string
+        logs_token?: string
+      }
 
       if (!silent) {
         log.success('Build started!')
@@ -973,7 +1099,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       let finalStatus: string
       // Stream logs from the build - returns final status if detected from stream
-      const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent, verbose)
+      const streamStatus = await streamBuildLogs(
+        silent,
+        verbose,
+        startResult.logs_url,
+        startResult.logs_token,
+      )
 
       // Only poll if we didn't get the final status from the stream
       if (streamStatus) {
