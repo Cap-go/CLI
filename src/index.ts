@@ -16,6 +16,7 @@ import { decryptZipV2 } from './bundle/decryptV2'
 import { deleteBundle } from './bundle/delete'
 import { encryptZipV2 } from './bundle/encryptV2'
 import { listBundle } from './bundle/list'
+import { printReleaseType } from './bundle/releaseType'
 import { uploadBundle } from './bundle/upload'
 import { zipBundle } from './bundle/zip'
 import { addChannel } from './channel/add'
@@ -164,6 +165,19 @@ Example: npx @capgo/cli@latest bundle compatibility com.example.app --channel pr
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-c, --channel <channel>', `Channel to check the compatibility with`)
   .option('--text', `Output text instead of emojis`)
+  .option('--package-json <packageJson>', optionDescriptions.packageJson)
+  .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
+  .option('--supa-host <supaHost>', optionDescriptions.supaHost)
+  .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+bundle
+  .command('releaseType [appId]')
+  .description(`🧭 Print "native" or "OTA" based on compatibility with a channel's latest metadata.
+
+Example: npx @capgo/cli@latest bundle releaseType com.example.app --channel production`)
+  .action(printReleaseType)
+  .option('-a, --apikey <apikey>', optionDescriptions.apikey)
+  .option('-c, --channel <channel>', `Channel to compare against`)
   .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
