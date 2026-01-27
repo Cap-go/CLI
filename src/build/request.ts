@@ -284,7 +284,10 @@ async function streamBuildLogs(
     return false
   }
 
-  while (reconnectAttempts < maxReconnectAttempts && !finalStatus) {
+  while (reconnectAttempts < maxReconnectAttempts) {
+    if (finalStatus) {
+      break
+    }
     // Direct SSE: Connect directly to CF Worker with JWT token
     let logUrl = `${directLogsUrl}?token=${encodeURIComponent(directLogsToken)}`
     if (lastSequence >= 0) {
@@ -357,8 +360,8 @@ async function streamBuildLogs(
           // Track sequence ID if present (for resumption)
           if (line.startsWith('id: ')) {
             const seqStr = line.slice(4).trim()
-            const seq = parseInt(seqStr, 10)
-            if (!isNaN(seq)) {
+            const seq = Number.parseInt(seqStr, 10)
+            if (!Number.isNaN(seq)) {
               lastSequence = seq
             }
           }
