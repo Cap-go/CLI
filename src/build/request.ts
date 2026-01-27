@@ -304,10 +304,7 @@ async function streamBuildLogs(
     let reader: ReadableStreamDefaultReader<Uint8Array> | null = null
 
     try {
-      const controller = new AbortController()
-      const response = await fetch(logUrl, {
-        signal: controller.signal,
-      })
+      const response = await fetch(logUrl)
 
       if (!response.ok) {
         const errorText = await response.text().catch(() => 'unknown error')
