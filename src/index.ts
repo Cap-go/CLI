@@ -132,6 +132,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--auto-min-update-version', `Set the min update version based on native packages`)
   .option('--ignore-metadata-check', `Ignores the metadata (node_modules) check when uploading`)
   .option('--ignore-checksum-check', `Ignores the checksum check when uploading`)
+  .option('--force-crc32-checksum', `Force CRC32 checksum for upload (override auto-detection)`)
   .option('--timeout <timeout>', `Timeout for the upload process in seconds`)
   .option('--multipart', `[DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads`)
   .option('--zip', `Upload the bundle using zip to Capgo cloud (legacy)`)

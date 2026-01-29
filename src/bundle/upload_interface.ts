@@ -25,6 +25,7 @@ export interface OptionsUpload extends OptionsBase {
   autoSetBundle?: boolean
   ignoreMetadataCheck?: boolean
   ignoreChecksumCheck?: boolean
+  forceCrc32Checksum?: boolean
   timeout?: number
   multipart?: boolean
   partial?: boolean
