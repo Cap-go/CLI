@@ -56,7 +56,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--auto-min-update-version** | <code>boolean</code> | Set the min update version based on native packages |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignores the metadata (node_modules) check when uploading |
 | **--ignore-checksum-check** | <code>boolean</code> | Ignores the checksum check when uploading |
-| **--force-crc32-checksum** | <code>boolean</code> | Force CRC32 checksum for upload when auto-detection would select SHA256, typically for older clients. Not recommended with encryption. |
+| **--force-crc32-checksum** | <code>boolean</code> | Force CRC32 checksum for upload (override auto-detection) |
 | **--timeout** | <code>string</code> | Timeout for the upload process in seconds |
 | **--multipart** | <code>boolean</code> | [DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads |
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |
@@ -283,3 +283,4 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **--no-code-check** | <code>boolean</code> | Ignore checking if notifyAppReady() is called in source code and index present in root folder |
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+
