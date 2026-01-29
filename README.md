@@ -198,7 +198,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--auto-min-update-version** | <code>boolean</code> | Set the min update version based on native packages |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignores the metadata (node_modules) check when uploading |
 | **--ignore-checksum-check** | <code>boolean</code> | Ignores the checksum check when uploading |
-| **--force-crc32-checksum** | <code>boolean</code> | Force CRC32 checksum for upload (override auto-detection) |
+| **--force-crc32-checksum** | <code>boolean</code> | Force CRC32 checksum for upload when auto-detection selects SHA256 (useful for older clients). Not recommended with encryption. |
 | **--timeout** | <code>string</code> | Timeout for the upload process in seconds |
 | **--multipart** | <code>boolean</code> | [DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads |
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |

@@ -1215,6 +1215,10 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
 }
 
 function checkValidOptions(options: OptionsUpload) {
+  const noKey = options.key === false
+  const forceCrc32 = options.forceCrc32Checksum === true
+  const hasEncryptionKey = (options.keyV2 || options.keyDataV2 || existsSync(baseKeyV2))
+
   if (options.ivSessionKey && !options.external) {
     uploadFail('You need to provide an external url if you want to use the --iv-session-key option')
   }
@@ -1252,6 +1256,9 @@ function checkValidOptions(options: OptionsUpload) {
   // cannot set min-update-version and auto-min-update-version
   if (options.minUpdateVersion && options.autoMinUpdateVersion) {
     uploadFail('You cannot set both min-update-version and auto-min-update-version, use only one of them')
+  }
+  if (forceCrc32 && hasEncryptionKey && !noKey) {
+    uploadFail('You cannot use --force-crc32-checksum when encryption is enabled. Remove the flag or disable encryption.')
   }
 }
 
