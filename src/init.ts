@@ -3,7 +3,7 @@ import type { Options } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
-import { join } from 'node:path'
+import path, { dirname, join } from 'node:path'
 import { cwd, env, exit, platform } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import { format, increment, lessThan, parse } from '@std/semver'
@@ -26,6 +26,7 @@ const codeInject = 'CapacitorUpdater.notifyAppReady()'
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
+const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -97,6 +98,64 @@ async function cancelCommand(command: boolean | symbol, orgId: string, apikey: s
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
+  }
+}
+
+function findNearestCapacitorConfig(startDir: string) {
+  let currentDir = startDir
+  const rootDir = path.parse(currentDir).root
+
+  while (true) {
+    for (const file of capacitorConfigFiles) {
+      const candidate = join(currentDir, file)
+      if (existsSync(candidate))
+        return { dir: currentDir, file: candidate }
+    }
+
+    if (currentDir === rootDir)
+      break
+
+    const parent = dirname(currentDir)
+    if (parent === currentDir)
+      break
+    currentDir = parent
+  }
+
+  return undefined
+}
+
+async function warnIfNotInCapacitorRoot() {
+  const currentDir = cwd()
+  const configHere = capacitorConfigFiles.some(file => existsSync(join(currentDir, file)))
+
+  if (configHere)
+    return
+
+  const nearest = findNearestCapacitorConfig(currentDir)
+
+  pLog.warn('Capacitor config not found in the current folder.')
+  if (nearest) {
+    pLog.info(`Found a capacitor config at: ${nearest.file}`)
+    pLog.info(`You are currently in: ${currentDir}`)
+  }
+  else {
+    pLog.info('No capacitor config was found in this folder or any parent directories.')
+  }
+
+  const pathSegments = currentDir.split(path.sep).filter(Boolean)
+  if (pathSegments.includes('ios') || pathSegments.includes('android')) {
+    pLog.info('It looks like you are inside a platform folder (ios/android).')
+    pLog.info('Try running the onboarding from the project root (the folder with capacitor.config.*).')
+  }
+
+  const continueAnyway = await pConfirm({
+    message: 'Are you sure you want to continue? If that happens, the auto-configuration will probably not work from here.',
+    initialValue: false,
+  })
+
+  if (pIsCancel(continueAnyway) || !continueAnyway) {
+    pCancel('Operation cancelled.')
+    exit(1)
   }
 }
 
@@ -1066,6 +1125,7 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
+  await warnIfNotInCapacitorRoot()
   await checkAlerts()
 
   const extConfig = (!options.supaAnon || !options.supaHost)
