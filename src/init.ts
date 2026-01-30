@@ -101,6 +101,9 @@ async function cancelCommand(command: boolean | symbol, orgId: string, apikey: s
   }
 }
 
+/**
+ * Find the nearest Capacitor config file by walking up the directory tree.
+ */
 function findNearestCapacitorConfig(startDir: string) {
   let currentDir = startDir
   const rootDir = path.parse(currentDir).root
@@ -124,6 +127,9 @@ function findNearestCapacitorConfig(startDir: string) {
   return undefined
 }
 
+/**
+ * Warn and optionally stop if onboarding is started outside the Capacitor project root.
+ */
 async function warnIfNotInCapacitorRoot() {
   const currentDir = cwd()
   const configHere = capacitorConfigFiles.some(file => existsSync(join(currentDir, file)))
@@ -142,14 +148,14 @@ async function warnIfNotInCapacitorRoot() {
     pLog.info('No capacitor config was found in this folder or any parent directories.')
   }
 
-  const pathSegments = currentDir.split(path.sep).filter(Boolean)
-  if (pathSegments.includes('ios') || pathSegments.includes('android')) {
+  const currentFolder = path.basename(currentDir)
+  if (currentFolder === 'ios' || currentFolder === 'android') {
     pLog.info('It looks like you are inside a platform folder (ios/android).')
     pLog.info('Try running the onboarding from the project root (the folder with capacitor.config.*).')
   }
 
   const continueAnyway = await pConfirm({
-    message: 'Are you sure you want to continue? If that happens, the auto-configuration will probably not work from here.',
+    message: 'Are you sure you want to continue? If you do, the auto-configuration will probably not work from here.',
     initialValue: false,
   })
 
