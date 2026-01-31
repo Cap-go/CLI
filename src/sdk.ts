@@ -1,8 +1,8 @@
 import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
 import type { BuildCredentials, BuildRequestOptions } from './build/request'
-import type { DecryptResult } from './bundle/decryptV2'
-import type { EncryptResult } from './bundle/encryptV2'
+import type { DecryptResult } from './bundle/decrypt'
+import type { EncryptResult } from './bundle/encrypt'
 import type { UploadBundleResult } from './bundle/upload'
 import type { OptionsUpload } from './bundle/upload_interface'
 import type { ZipResult } from './bundle/zip'
@@ -18,9 +18,9 @@ import { setSettingInternal } from './app/setting'
 import { requestBuildInternal } from './build/request'
 import { cleanupBundleInternal } from './bundle/cleanup'
 import { checkCompatibilityInternal } from './bundle/compatibility'
-import { decryptZipV2Internal } from './bundle/decryptV2'
+import { decryptZipInternal } from './bundle/decrypt'
 import { deleteBundleInternal } from './bundle/delete'
-import { encryptZipV2Internal } from './bundle/encryptV2'
+import { encryptZipInternal } from './bundle/encrypt'
 import { uploadBundleInternal } from './bundle/upload'
 import { zipBundleInternal } from './bundle/zip'
 import { addChannelInternal } from './channel/add'
@@ -28,7 +28,7 @@ import { currentBundleInternal } from './channel/currentBundle'
 import { deleteChannelInternal } from './channel/delete'
 import { listChannelsInternal } from './channel/list'
 import { setChannelInternal } from './channel/set'
-import { createKeyV2Internal, deleteOldPrivateKeyInternal, saveKeyV2Internal } from './keyV2'
+import { createKeyInternal, deleteOldPrivateKeyInternal, saveKeyInternal } from './key'
 import { loginInternal } from './login'
 import { addOrganizationInternal } from './organization/add'
 import { deleteOrganizationInternal } from './organization/delete'
@@ -729,7 +729,7 @@ export class CapgoSDK {
 
   async encryptBundle(options: EncryptBundleOptions): Promise<SDKResult<EncryptResult>> {
     try {
-      const result = await encryptZipV2Internal(options.zipPath, options.checksum, {
+      const result = await encryptZipInternal(options.zipPath, options.checksum, {
         key: options.keyPath,
         keyData: options.keyData,
         json: options.json,
@@ -748,7 +748,7 @@ export class CapgoSDK {
 
   async decryptBundle(options: DecryptBundleOptions): Promise<SDKResult<DecryptResult>> {
     try {
-      const result = await decryptZipV2Internal(options.zipPath, options.ivSessionKey, {
+      const result = await decryptZipInternal(options.zipPath, options.ivSessionKey, {
         key: options.keyPath,
         keyData: options.keyData,
         checksum: options.checksum,
@@ -1200,7 +1200,7 @@ export class CapgoSDK {
    */
   async generateEncryptionKeys(options?: GenerateKeyOptions): Promise<SDKResult> {
     try {
-      await createKeyV2Internal({
+      await createKeyInternal({
         force: options?.force,
         setupChannel: options?.setupChannel,
       }, true)
@@ -1217,7 +1217,7 @@ export class CapgoSDK {
    */
   async saveEncryptionKey(options?: SaveKeyOptions): Promise<SDKResult> {
     try {
-      await saveKeyV2Internal({
+      await saveKeyInternal({
         key: options?.keyPath,
         keyData: options?.keyData,
         setupChannel: options?.setupChannel,

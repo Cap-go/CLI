@@ -13,7 +13,7 @@ import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
 import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
-import { createKeyV2Internal } from './keyV2'
+import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
 
@@ -732,7 +732,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
     const s = pSpinner()
     s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKeyV2Internal({ force: true }, false)
+    const keyRes = await createKeyInternal({ force: true }, false)
     if (!keyRes) {
       s.stop('Error')
       pLog.warn(`Cannot create key ❌`)

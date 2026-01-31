@@ -32,7 +32,7 @@ export function generateSessionKey(key: string): { sessionKey: Buffer, ivSession
   }
 }
 
-export function encryptSourceV2(source: Buffer, sessionKey: Buffer, ivSessionKey: string): Buffer {
+export function encryptSource(source: Buffer, sessionKey: Buffer, ivSessionKey: string): Buffer {
   const [ivB64] = ivSessionKey.split(':')
   const initVector = Buffer.from(ivB64, formatB64)
   const cipher = createCipheriv(algorithm, sessionKey, initVector)
@@ -41,7 +41,7 @@ export function encryptSourceV2(source: Buffer, sessionKey: Buffer, ivSessionKey
   return encryptedData
 }
 
-export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: string): Buffer {
+export function decryptSource(source: Buffer, ivSessionKey: string, key: string): Buffer {
   const [ivB64, sessionb64Encrypted] = ivSessionKey.split(':')
   const sessionKey: Buffer = publicDecrypt(
     {
@@ -62,9 +62,9 @@ export function decryptSourceV2(source: Buffer, ivSessionKey: string, key: strin
   return decryptedData
 }
 
-export function encryptChecksumV2(checksum: string, key: string): string {
+export function encryptChecksum(checksum: string, key: string): string {
   // Note: This function incorrectly treats hex checksum as base64, but is kept for backwards compatibility
-  // with older plugin versions. Use encryptChecksumV2Hex for new plugin versions.
+  // with older plugin versions. Use encryptChecksumV3 for new plugin versions.
   const checksumEncrypted = privateEncrypt(
     {
       key,
@@ -89,7 +89,7 @@ export function encryptChecksumV3(checksum: string, key: string): string {
   return checksumEncrypted
 }
 
-export function decryptChecksumV2(checksum: string, key: string): string {
+export function decryptChecksum(checksum: string, key: string): string {
   const checksumDecrypted = publicDecrypt(
     {
       key,

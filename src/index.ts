@@ -12,9 +12,9 @@ import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
-import { decryptZipV2 } from './bundle/decryptV2'
+import { decryptZip } from './bundle/decrypt'
 import { deleteBundle } from './bundle/delete'
-import { encryptZipV2 } from './bundle/encryptV2'
+import { encryptZip } from './bundle/encrypt'
 import { listBundle } from './bundle/list'
 import { printReleaseType } from './bundle/releaseType'
 import { uploadBundle } from './bundle/upload'
@@ -26,7 +26,7 @@ import { listChannels } from './channel/list'
 import { setChannel } from './channel/set'
 import { generateDocs } from './docs'
 import { initApp } from './init'
-import { createKeyV2, deleteOldKeyV2, saveKeyCommandV2 } from './keyV2'
+import { createKey, deleteOldKey, saveKeyCommand } from './key'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
 import { addOrganization, deleteOrganization, listMembers, listOrganizations, setOrganization } from './organization'
@@ -236,7 +236,7 @@ bundle
 Returns ivSessionKey for upload/decryption. Get checksum using 'bundle zip --json'.
 
 Example: npx @capgo/cli@latest bundle encrypt ./myapp.zip CHECKSUM`)
-  .action(encryptZipV2)
+  .action(encryptZip)
   .option('--key <key>', `Custom path for private signing key`)
   .option('--key-data <keyData>', `Private signing key`)
   .option('-j, --json', `Output in JSON`)
@@ -249,7 +249,7 @@ bundle
 Prints base64 session key for verification.
 
 Example: npx @capgo/cli@latest bundle decrypt ./myapp_encrypted.zip CHECKSUM`)
-  .action(decryptZipV2)
+  .action(decryptZip)
   .option('--key <key>', `Custom path for private signing key`)
   .option('--key-data <keyData>', `Private signing key`)
   .option('--checksum <checksum>', `Checksum of the bundle, to verify the integrity of the bundle`)
@@ -455,23 +455,23 @@ Example: npx @capgo/cli@latest channel set production com.example.app --bundle 1
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
-const keyV2 = program
+const key = program
   .command('key')
   .description(`🔐 Manage encryption keys for secure bundle distribution in Capgo Cloud, supporting end-to-end encryption with RSA and AES combination.`)
 
-keyV2
+key
   .command('save')
   .description(`💾 Save the public key in the Capacitor config, useful for CI environments.
 
 Recommended not to commit the key for security.
 
 Example: npx @capgo/cli@latest key save --key ./path/to/key.pub`)
-  .action(saveKeyCommandV2)
+  .action(saveKeyCommand)
   .option('-f, --force', `Force generate a new one`)
   .option('--key <key>', `Key path to save in Capacitor config`)
   .option('--key-data <keyData>', `Key data to save in Capacitor config`)
 
-keyV2
+key
   .command('create')
   .description(`🔨 Create RSA key pair for end-to-end encryption.
 
@@ -480,15 +480,15 @@ Public key is saved to capacitor.config for mobile app decryption.
 NEVER commit the private key - store it securely!
 
 Example: npx @capgo/cli@latest key create`)
-  .action(createKeyV2)
+  .action(createKey)
   .option('-f, --force', `Force generate a new one`)
 
-keyV2
+key
   .command('delete_old')
   .description(`🧹 Delete the old encryption key from the Capacitor config to ensure only the current key is used.
 
 Example: npx @capgo/cli@latest key delete_old`)
-  .action(deleteOldKeyV2)
+  .action(deleteOldKey)
 
 const account = program
   .command('account')
