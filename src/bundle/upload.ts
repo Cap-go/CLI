@@ -5,7 +5,7 @@ import type { Compatibility, manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { cwd } from 'node:process'
+import { cwd, stdin, stdout } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, confirm as pConfirm, isCancel as pIsCancel, select as pSelect, spinner as spinnerC } from '@clack/prompts'
 import { Table } from '@sauber/table'
@@ -814,8 +814,8 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Checking if version ${bundle} already exists...`)
 
-  // Enable interactive mode if not in silent mode (prompts will handle TTY detection)
-  const interactive = !silent
+  // Enable interactive mode only when TTY is available
+  const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
   const versionExistsResult = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk, interactive)
 
   if (options.verbose)
@@ -1282,8 +1282,9 @@ export async function uploadBundle(appid: string, options: OptionsUpload) {
     // Check if this is a checksum error - offer specific retry option
     const isChecksumError = simpleMessage.includes('Cannot upload the same bundle content')
 
-    // Interactive retry for errors (prompts will handle TTY detection)
-    if (!options.versionExistsOk) {
+    const interactive = !!stdin.isTTY && !!stdout.isTTY
+    // Interactive retry for errors when running in an interactive environment
+    if (!options.versionExistsOk && interactive) {
       try {
         if (isChecksumError) {
           // For checksum errors, offer to retry with --ignore-checksum-check
