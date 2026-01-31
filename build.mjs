@@ -357,7 +357,7 @@ Promise.all([buildCLI, buildSDK]).then(async (results) => {
   writeFileSync('meta.json', JSON.stringify(metafile))
 
   copyFileSync('package.json', 'dist/package.json')
-  console.log('✅ Built CLI and SDK successfully')
+  console.warn('✅ Built CLI and SDK successfully')
 }).catch((err) => {
   console.error('Build failed:', err)
   exit(1)
