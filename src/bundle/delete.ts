@@ -2,7 +2,7 @@ import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { deleteSpecificVersion } from '../api/versions'
-import { createSupabaseClient, findSavedKey, getAppId, getConfig, OrganizationPerm, verifyUser } from '../utils'
+import { createSupabaseClient, findSavedKey, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
 interface Options extends OptionsBase {
   bundle: string
@@ -45,6 +45,17 @@ export async function deleteBundleInternal(bundleId: string, appId: string, opti
   }
 
   await deleteSpecificVersion(supabase, appId, bundleId)
+
+  const orgId = await getOrganizationId(supabase, appId)
+  await sendEvent(options.apikey, {
+    channel: 'app',
+    event: 'Bundle Deleted',
+    icon: '🗑️',
+    user_id: orgId,
+    tags: { 'app-id': appId, 'bundle': bundleId },
+    notify: false,
+    notifyConsole: true,
+  }).catch(() => {})
 
   if (!silent) {
     log.success(`Bundle ${appId}@${bundleId} deleted in Capgo`)

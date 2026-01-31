@@ -368,7 +368,7 @@ export async function setChannelInternal(channel: string, appId: string, options
     tags: {
       'app-id': appId,
     },
-    notify: false,
+    notify: true,
   }).catch(() => {})
 
   if (!silent)

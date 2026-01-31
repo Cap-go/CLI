@@ -99,7 +99,7 @@ export async function deleteChannelInternal(channelId: string, appId: string, op
       'app-id': appId,
       'channel': channelId,
     },
-    notify: false,
+    notify: true,
   }).catch(() => {})
 
   if (!silent) {

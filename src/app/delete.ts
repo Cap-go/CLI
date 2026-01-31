@@ -112,7 +112,7 @@ export async function deleteAppInternal(
     icon: '🗑️',
     user_id: orgId,
     tags: { 'app-id': appId },
-    notify: false,
+    notify: true,
   }).catch(() => {})
 
   if (!silent) {

@@ -1285,7 +1285,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?: boolean): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions & { notifyConsole?: boolean }, verbose?: boolean): Promise<void> {
   try {
     if (verbose) {
       log.info(`Get remove config: for ${payload.event}`)

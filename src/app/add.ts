@@ -15,6 +15,7 @@ import {
   getConfig,
   getContentType,
   getOrganization,
+  sendEvent,
   verifyUser,
 } from '../utils'
 
@@ -169,6 +170,16 @@ export async function addAppInternal(
       log.error(`Could not add app ${formatError(dbError)}`)
     throw new Error(`Could not add app ${formatError(dbError)}`)
   }
+
+  await sendEvent(options.apikey!, {
+    channel: 'app',
+    event: 'App Created',
+    icon: '🆕',
+    user_id: organizationUid,
+    tags: { 'app-id': appId },
+    notify: false,
+    notifyConsole: true,
+  }).catch(() => {})
 
   if (!silent) {
     log.success(`App ${appId} added to Capgo`)
