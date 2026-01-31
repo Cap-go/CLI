@@ -322,13 +322,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')
     useSha256 = true
   }
-  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
-    checksum = await getChecksum(zipped, 'sha256')
-  }
-  else {
-    checksum = await getChecksum(zipped, 'crc32')
-  }
-  s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
+  const forceCrc32 = options.forceCrc32Checksum === true
+  const shouldUseSha256 = !forceCrc32 && (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256)
+  checksum = await getChecksum(zipped, shouldUseSha256 ? 'sha256' : 'crc32')
+  s.stop(`Checksum ${shouldUseSha256 ? 'SHA256' : 'CRC32'}${forceCrc32 ? ' (forced)' : ''}: ${checksum}`)
   // key should be undefined or a string if false it should ignore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
@@ -1218,6 +1215,10 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
 }
 
 function checkValidOptions(options: OptionsUpload) {
+  const noKey = options.key === false
+  const forceCrc32 = options.forceCrc32Checksum === true
+  const hasEncryptionKey = (options.keyV2 || options.keyDataV2 || existsSync(baseKeyV2))
+
   if (options.ivSessionKey && !options.external) {
     uploadFail('You need to provide an external url if you want to use the --iv-session-key option')
   }
@@ -1255,6 +1256,9 @@ function checkValidOptions(options: OptionsUpload) {
   // cannot set min-update-version and auto-min-update-version
   if (options.minUpdateVersion && options.autoMinUpdateVersion) {
     uploadFail('You cannot set both min-update-version and auto-min-update-version, use only one of them')
+  }
+  if (forceCrc32 && hasEncryptionKey && !noKey) {
+    uploadFail('You cannot use --force-crc32-checksum when encryption is enabled. Remove the flag or disable encryption.')
   }
 }
 
