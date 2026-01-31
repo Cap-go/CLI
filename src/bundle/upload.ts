@@ -13,7 +13,7 @@ import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { calcKeyId, encryptChecksum, encryptChecksumV3, encryptSource, generateSessionKey } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
@@ -353,10 +353,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     const supportsV3Checksum = coerced && !isDeprecatedPluginVersion(coerced, '5.30.0', '6.30.0', '7.30.0')
     log.info(`Encrypting your bundle with ${supportsV3Checksum ? 'V3' : 'V2'}`)
     const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
-    const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
+    const encryptedData = encryptSource(zipped, sKey, ivKey)
     checksum = supportsV3Checksum
       ? encryptChecksumV3(checksum, keyDataV2)
-      : encryptChecksumV2(checksum, keyDataV2)
+      : encryptChecksum(checksum, keyDataV2)
     ivSessionKey = ivKey
     sessionKey = sKey
     encryptionMethod = 'v2'

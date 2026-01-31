@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { parse } from '@std/semver'
-import { decryptChecksumV2, decryptChecksumV3, decryptSourceV2 } from '../api/cryptoV2'
+import { decryptChecksum, decryptChecksumV3, decryptSource } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyPubV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
@@ -38,7 +38,7 @@ function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof
   return { publicKey, fallbackKeyPath }
 }
 
-export async function decryptZipV2Internal(
+export async function decryptZipInternal(
   zipPath: string,
   ivsessionKey: string,
   options: Options,
@@ -77,7 +77,7 @@ export async function decryptZipV2Internal(
 
     const zipFile = readFileSync(zipPath)
 
-    const decodedZip = decryptSourceV2(zipFile, ivsessionKey, options.keyData ?? publicKey)
+    const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? publicKey)
     const outputPath = `${zipPath}_decrypted.zip`
     writeFileSync(outputPath, decodedZip)
 
@@ -111,7 +111,7 @@ export async function decryptZipV2Internal(
 
       const decryptedChecksum = supportsV3Checksum
         ? decryptChecksumV3(options.checksum, options.keyData ?? publicKey)
-        : decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
+        : decryptChecksum(options.checksum, options.keyData ?? publicKey)
       checksumMatches = checksum === decryptedChecksum
 
       if (!checksumMatches) {
@@ -137,6 +137,6 @@ export async function decryptZipV2Internal(
   }
 }
 
-export async function decryptZipV2(zipPath: string, ivsessionKey: string, options: Options) {
-  await decryptZipV2Internal(zipPath, ivsessionKey, options, false)
+export async function decryptZip(zipPath: string, ivsessionKey: string, options: Options) {
+  await decryptZipInternal(zipPath, ivsessionKey, options, false)
 }

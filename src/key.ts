@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, unlinkSync, writeFileSync } from 'node:fs'
 import { intro, log, outro, confirm as pConfirm } from '@clack/prompts'
-import { createRSA } from './api/cryptoV2'
+import { createRSA } from './api/crypto'
 import { checkAlerts } from './api/update'
 import { writeConfigUpdater } from './config'
 import { baseKey, baseKeyPub, baseKeyPubV2, baseKeyV2, getConfig, promptAndSyncCapacitor } from './utils'
@@ -23,7 +23,7 @@ function ensureCapacitorUpdaterConfig(config: any) {
   return config.plugins.CapacitorUpdater
 }
 
-export async function saveKeyV2Internal(options: SaveOptions, silent = false) {
+export async function saveKeyInternal(options: SaveOptions, silent = false) {
   if (!silent)
     intro('Save keys 🔑')
 
@@ -76,8 +76,8 @@ export async function saveKeyV2Internal(options: SaveOptions, silent = false) {
   return true
 }
 
-export async function saveKeyV2(options: SaveOptions) {
-  await saveKeyV2Internal(options, false)
+export async function saveKey(options: SaveOptions) {
+  await saveKeyInternal(options, false)
 }
 
 export async function deleteOldPrivateKeyInternal(options: Options, silent = false): Promise<boolean> {
@@ -132,12 +132,12 @@ export async function deleteOldPrivateKey(options: Options, logg = true): Promis
   return deleteOldPrivateKeyInternal(options, !logg)
 }
 
-export async function saveKeyCommandV2(options: SaveOptions) {
+export async function saveKeyCommand(options: SaveOptions) {
   await checkAlerts()
-  await saveKeyV2Internal(options, false)
+  await saveKeyInternal(options, false)
 }
 
-export async function createKeyV2Internal(options: Options, silent = false) {
+export async function createKeyInternal(options: Options, silent = false) {
   if (!silent)
     intro('Create keys 🔑')
 
@@ -213,12 +213,12 @@ export async function createKeyV2Internal(options: Options, silent = false) {
   return true
 }
 
-export async function createKeyV2(options: Options) {
+export async function createKey(options: Options) {
   await checkAlerts()
-  await createKeyV2Internal(options, false)
+  await createKeyInternal(options, false)
 }
 
-export async function deleteOldKeyV2(options: Options) {
+export async function deleteOldKey(options: Options) {
   await checkAlerts()
   await deleteOldPrivateKeyInternal(options, false)
 }

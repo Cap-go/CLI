@@ -2,7 +2,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { parse } from '@std/semver'
-import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { encryptChecksum, encryptChecksumV3, encryptSource, generateSessionKey } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { baseKeyV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
 
@@ -28,7 +28,7 @@ function emitJsonError(error: unknown) {
   console.error(formatError(error))
 }
 
-export async function encryptZipV2Internal(
+export async function encryptZipInternal(
   zipPath: string,
   checksum: string,
   options: Options,
@@ -103,7 +103,7 @@ export async function encryptZipV2Internal(
 
     const zipFile = readFileSync(zipPath)
     const { sessionKey, ivSessionKey } = generateSessionKey(privateKey)
-    const encryptedData = encryptSourceV2(zipFile, sessionKey, ivSessionKey)
+    const encryptedData = encryptSource(zipFile, sessionKey, ivSessionKey)
 
     // Determine which checksum encryption to use based on updater version
     const root = findRoot(cwd())
@@ -124,7 +124,7 @@ export async function encryptZipV2Internal(
 
     const encodedChecksum = supportsV3Checksum
       ? encryptChecksumV3(checksum, privateKey)
-      : encryptChecksumV2(checksum, privateKey)
+      : encryptChecksum(checksum, privateKey)
 
     if (shouldShowPrompts) {
       log.info(`Encrypting checksum with ${supportsV3Checksum ? 'V3' : 'V2'} (based on updater version ${updaterVersion || 'unknown'})`)
@@ -168,6 +168,6 @@ export async function encryptZipV2Internal(
   }
 }
 
-export async function encryptZipV2(zipPath: string, checksum: string, options: Options) {
-  await encryptZipV2Internal(zipPath, checksum, options, false)
+export async function encryptZip(zipPath: string, checksum: string, options: Options) {
+  await encryptZipInternal(zipPath, checksum, options, false)
 }
