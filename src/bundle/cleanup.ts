@@ -19,9 +19,7 @@ import {
   getAppId,
   getConfig,
   getHumanDate,
-  getOrganizationId,
   OrganizationPerm,
-  sendEvent,
   verifyUser,
 } from '../utils'
 
@@ -163,17 +161,6 @@ export async function cleanupBundleInternal(appId: string, options: Options, sil
     log.success('You have confirmed removal, removing versions now')
 
   await removeVersions(toRemove, supabase, appId, silent)
-
-  const orgId = await getOrganizationId(supabase, appId)
-  await sendEvent(options.apikey, {
-    channel: 'app',
-    event: 'Bundles Cleaned',
-    icon: '🧹',
-    user_id: orgId,
-    tags: { 'app-id': appId },
-    notify: false,
-    notifyConsole: true,
-  }).catch(() => {})
 
   if (!silent)
     outro('Done ✅')

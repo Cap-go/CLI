@@ -1190,6 +1190,18 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     notify: false,
   }, options.verbose)
 
+  await sendEvent(apikey, {
+    channel: 'app',
+    event: 'App Uploaded',
+    icon: '⏫',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+    },
+    notify: false,
+    notifyConsole: true,
+  }).catch(() => {})
+
   const result: UploadBundleResult = {
     success: true,
     bundle,

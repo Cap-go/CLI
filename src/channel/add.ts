@@ -82,7 +82,7 @@ export async function addChannelInternal(channelId: string, appId: string, optio
       'app-id': appId,
       'channel': channelId,
     },
-    notify: true,
+    notify: false,
   }).catch(() => {})
 
   if (!silent) {
