@@ -1186,17 +1186,19 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     user_id: orgId,
     tags: {
       'app-id': appid,
+      'bundle': bundle,
     },
     notify: false,
   }, options.verbose)
 
   await sendEvent(apikey, {
     channel: 'app',
-    event: 'App Uploaded',
+    event: 'Bundle Uploaded',
     icon: '⏫',
     user_id: orgId,
     tags: {
       'app-id': appid,
+      'bundle': bundle,
     },
     notify: false,
     notifyConsole: true,
