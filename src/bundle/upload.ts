@@ -725,6 +725,33 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Capacitor config loaded successfully`)
 
+  // Check if directUpdate is enabled and auto-enable delta updates
+  const directUpdateEnabled = extConfig?.config?.plugins?.CapacitorUpdater?.directUpdate === 'always'
+ const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
+  if (directUpdateEnabled && options.delta === undefined) {
+    if (interactive) {
+      log.info('💡 Direct Update (instant updates) is enabled in your config')
+      log.info('   Delta updates send only changed files instead of the full bundle')
+      const enableDelta = await pConfirm({ 
+        message: 'Enable delta updates for this upload? (Recommended with Direct Update)',
+        initialValue: true,
+      })
+      if (!pIsCancel(enableDelta) && enableDelta) {
+        options.delta = true
+        if (options.verbose)
+          log.info(`[Verbose] Delta updates auto-enabled due to Direct Update configuration`)
+      }
+    }
+    else if (!silent) {
+      // Non-interactive mode (CI/CD): auto-enable unless explicitly disabled
+      if (options.delta !== false) {
+        options.delta = true
+        if (options.verbose)
+          log.info(`[Verbose] Delta updates auto-enabled in CI/CD mode due to Direct Update configuration`)
+      }
+    }
+  }
+
   const fileConfig = await getRemoteFileConfig()
   if (options.verbose) {
     log.info(`[Verbose] Remote file config retrieved:`)
@@ -815,7 +842,6 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     log.info(`[Verbose] Checking if version ${bundle} already exists...`)
 
   // Enable interactive mode only when TTY is available
-  const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
   const versionExistsResult = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk, interactive)
 
   if (options.verbose)

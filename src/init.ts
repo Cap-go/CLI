@@ -389,6 +389,9 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
 
 async function addChannelStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
+  pLog.info(`💡 Don't worry! This is just for local testing during onboarding.`)
+  pLog.info(`   Creating a "production" channel doesn't mean updates go live to customers immediately.`)
+  pLog.info(`   You have full control over when updates are deployed. Select Yes unless you have specific channel requirements.`)
   const doChannel = await pConfirm({ message: `Create default channel ${defaultChannel} for ${appId} in Capgo?` })
   await cancelCommand(doChannel, orgId, apikey)
   if (doChannel) {
@@ -406,6 +409,10 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
+    pLog.info(`Alternatively, you can:`)
+    pLog.info(`  • Set the channel in your capacitor.config.ts file`)
+    pLog.info(`  • Use the JavaScript setChannel() method to dynamically set the channel`)
+    pLog.info(`  • Configure channels later from the Capgo web console`)
   }
   await markStep(orgId, apikey, 'add-channel', appId)
 }
@@ -1131,6 +1138,8 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
+  pLog.info(`📖 See the complete onboarding guide: https://capgo.app/docs/getting-started/onboarding/`)
+  pLog.info(`⏱️  Estimated time: 10-20 minutes`)
   await warnIfNotInCapacitorRoot()
   await checkAlerts()
 
@@ -1179,23 +1188,33 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let currentVersion = pkgVersion
   let platform: 'ios' | 'android' = 'ios' // default
 
+  const totalSteps = 13
+  
+  if (stepToSkip > 0) {
+    pLog.info(`\n🔄 Resuming onboarding from step ${stepToSkip + 1}/${totalSteps}`)
+  }
+  
   try {
     if (stepToSkip < 1) {
+      pLog.info(`\n📍 Step 1/${totalSteps}: Check Prerequisites`)
       await checkPrerequisitesStep(orgId, options.apikey)
       markStepDone(1)
     }
 
     if (stepToSkip < 2) {
+      pLog.info(`\n📍 Step 2/${totalSteps}: Add Your App`)
       appId = await addAppStep(organization, options.apikey, appId, options)
       markStepDone(2)
     }
 
     if (stepToSkip < 3) {
+      pLog.info(`\n📍 Step 3/${totalSteps}: Create Production Channel`)
       await addChannelStep(orgId, options.apikey, appId)
       markStepDone(3)
     }
 
     if (stepToSkip < 4) {
+      pLog.info(`\n📍 Step 4/${totalSteps}: Install Updater Plugin`)
       const res = await addUpdaterStep(orgId, options.apikey, appId)
       pkgVersion = res.pkgVersion
       currentVersion = pkgVersion
@@ -1204,46 +1223,55 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
 
     if (stepToSkip < 5) {
+      pLog.info(`\n📍 Step 5/${totalSteps}: Add Integration Code`)
       await addCodeStep(orgId, options.apikey, appId)
       markStepDone(5)
     }
 
     if (stepToSkip < 6) {
+      pLog.info(`\n📍 Step 6/${totalSteps}: Setup Encryption (Optional)`)
       await addEncryptionStep(orgId, options.apikey, appId)
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
+      pLog.info(`\n📍 Step 7/${totalSteps}: Select Platform`)
       platform = await selectPlatformStep(orgId, options.apikey)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
+      pLog.info(`\n📍 Step 8/${totalSteps}: Build Your Project`)
       await buildProjectStep(orgId, options.apikey, appId, platform)
       markStepDone(8)
     }
 
     if (stepToSkip < 9) {
+      pLog.info(`\n📍 Step 9/${totalSteps}: Run on Device`)
       await runDeviceStep(orgId, options.apikey, appId, platform)
       markStepDone(9)
     }
 
     if (stepToSkip < 10) {
+      pLog.info(`\n📍 Step 10/${totalSteps}: Make a Test Change`)
       currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
       markStepDone(10)
     }
 
     if (stepToSkip < 11) {
+      pLog.info(`\n📍 Step 11/${totalSteps}: Upload Bundle`)
       await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
       markStepDone(11)
     }
 
     if (stepToSkip < 12) {
+      pLog.info(`\n📍 Step 12/${totalSteps}: Test Update on Device`)
       await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(12)
     }
 
     if (stepToSkip < 13) {
+      pLog.info(`\n📍 Step 13/${totalSteps}: Completion`)
       markStepDone(13)
     }
 
