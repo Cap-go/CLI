@@ -323,6 +323,7 @@ const buildSDK = Bun.build({
     'process.env.SUPA_DB': '"production"',
   },
   plugins: [
+    fixCapacitorCliDirname,
     ignorePunycode,
     noopSupabaseNodeFetch,
   ],
