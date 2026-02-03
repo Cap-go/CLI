@@ -305,6 +305,9 @@ jobs:
       - name: Install Capgo dependencies
         working-directory: capgo
         run: bun install
+      - name: Install local @capgo/cli package
+        working-directory: capgo
+        run: bun add -d file:..
       - name: Run CLI tests
         working-directory: capgo
         run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli
