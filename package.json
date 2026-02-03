@@ -97,5 +97,8 @@
     "tus-js-client": "^4.3.1",
     "typescript": "^5.9.3",
     "zod": "^3.24.0"
+  },
+  "dependencies": {
+    "partysocket": "^1.1.11"
   }
 }
