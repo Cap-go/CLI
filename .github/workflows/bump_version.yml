@@ -65,12 +65,12 @@ jobs:
         env:
           API_TOKEN_GITHUB: ${{ secrets.PERSONAL_ACCESS_TOKEN }}
         with:
-          source-files: webdocs/*
-          destination-username: Cap-go
-          destination-repository: website
-          destination-directory: src/content/docs/docs/cli/reference
-          destination-branch: main
-          commit-email: martindonadieu@gmail.com
+          source-directory: webdocs
+          destination-repository-username: Cap-go
+          destination-repository-name: website
+          target-directory: src/content/docs/docs/cli/reference
+          target-branch: main
+          user-email: martindonadieu@gmail.com
   create-cache:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
