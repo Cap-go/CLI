@@ -1160,6 +1160,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         if (cancelRequested)
           return
         cancelRequested = true
+        const cancelAbort = new AbortController()
+        const timeout = setTimeout(() => cancelAbort.abort(), 4000)
         try {
           await fetch(`${host}/build/cancel/${buildRequest.job_id}`, {
             method: 'POST',
@@ -1168,16 +1170,23 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
               'authorization': options.apikey,
             },
             body: JSON.stringify({ app_id: appId }),
+            signal: cancelAbort.signal,
           })
         }
         catch {
           // ignore cancellation errors
         }
+        finally {
+          clearTimeout(timeout)
+        }
       }
 
       const onSigint = async () => {
+        if (cancelRequested) {
+          process.exit(1)
+        }
         if (!silent)
-          log.warn('Canceling build...')
+          log.warn('Canceling build... (press Ctrl+C again to force quit)')
         await cancelBuild()
         abortController.abort()
       }
