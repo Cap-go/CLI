@@ -345,13 +345,15 @@ Promise.all([buildCLI, buildSDK]).then(async (results) => {
   const sdkPath = 'dist/src/sdk.js'
   try {
     let sdkOutput = readFileSync(sdkPath, 'utf-8')
-    if (/\bmodule\.exports\b/.test(sdkOutput) && !/\bvar\s+module\b/.test(sdkOutput)) {
+    const hasModuleBinding = /\b(?:var|let|const)\s+module(?![$\w])/.test(sdkOutput)
+    if (/\bmodule\.exports\b/.test(sdkOutput) && !hasModuleBinding) {
       const importBlock = sdkOutput.match(/^(?:\s*import[^;]+;)+/)
       const insertAt = importBlock ? importBlock[0].length : 0
       sdkOutput = `${sdkOutput.slice(0, insertAt)}var module={exports:{}};${sdkOutput.slice(insertAt)}`
       writeFileSync(sdkPath, sdkOutput)
     }
-  } catch (err) {
+  }
+  catch (err) {
     console.warn('⚠️  Could not inspect SDK bundle for module shim:', err)
   }
 
