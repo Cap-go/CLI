@@ -262,14 +262,15 @@ const noopSupabaseNodeFetch = {
 const fixCapacitorCliDirname = {
   name: 'fix-capacitor-cli-dirname',
   setup(build) {
+    // Allow matching when @capacitor/cli is hoisted, linked, or vendored.
     build.onLoad({ filter: /@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
       const contents = readFileSync(args.path, 'utf-8')
 
       // Replace any __dirname usage (CJS) with runtime-safe import.meta.url resolution.
       // Keep this broad so it survives upstream refactors.
       let patched = contents.replace(
-        /__dirname/g,
-        "require('url').fileURLToPath(import.meta.url)"
+        /\b__dirname\b/g,
+        "require('path').dirname(require('url').fileURLToPath(import.meta.url))"
       )
 
       // Make CLI package.json read resilient in bundled runtime.
