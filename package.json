@@ -79,7 +79,7 @@
     "@std/semver": "npm:@jsr/std__semver@1.0.6",
     "@supabase/supabase-js": "^2.79.0",
     "@types/adm-zip": "^0.5.7",
-    "@types/node": "^24",
+    "@types/node": "^25.0.0",
     "@types/prettyjson": "^0.0.33",
     "@types/tmp": "^0.2.6",
     "@vercel/ncc": "^0.38.4",
