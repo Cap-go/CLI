@@ -35,6 +35,7 @@ import { cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
+import { WebSocket as PartySocket } from 'partysocket'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
 
@@ -200,107 +201,231 @@ export interface BuildRequestResult {
 }
 
 /**
- * Stream build logs from the server via SSE
- * Returns the final status if detected from the stream, or null if stream ended without status
- * Note: Build cancellation on disconnect is handled by the proxy (Cloudflare Worker)
+ * Stream build logs from the server via WebSocket.
+ * Returns the final status if detected from the stream, or null if stream ended without status.
  */
-async function streamBuildLogs(host: string, jobId: string, appId: string, apikey: string, silent: boolean, _verbose = false): Promise<string | null> {
+type StatusCheckFn = () => Promise<string | null>
+
+async function streamBuildLogs(
+  silent: boolean,
+  _verbose = false,
+  logsUrl?: string,
+  logsToken?: string,
+  statusCheck?: StatusCheckFn,
+  abortSignal?: AbortSignal,
+): Promise<string | null> {
   if (silent)
     return null
 
   let finalStatus: string | null = null
   let hasReceivedLogs = false
+  const processLogMessage = (message: string) => {
+    if (!message.trim())
+      return
 
-  const logUrl = `${host}/build/logs/${jobId}?app_id=${encodeURIComponent(appId)}`
-  // Always log the URL we're connecting to for debugging
-  log.info(`Connecting to log stream: ${logUrl}`)
+    // Check for final status messages from the server
+    // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
+    const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
+    if (statusMatch) {
+      finalStatus = statusMatch[1].toLowerCase()
+      // Don't display status messages as log lines - they'll be displayed as final status
+      return
+    }
+
+    // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
+    if (finalStatus)
+      return
+
+    // Print log line directly to console (no spinner to avoid _events errors)
+    if (!hasReceivedLogs) {
+      hasReceivedLogs = true
+      console.log('') // Add blank line before first log
+    }
+    console.log(message)
+  }
+
+  const streamViaLogsWorker = async (): Promise<string | null> => {
+    if (!logsUrl || !logsToken)
+      return null
+
+    const baseUrl = logsUrl.replace(/\/+$/, '')
+    const startUrl = `${baseUrl}/start?token=${encodeURIComponent(logsToken)}`
+    const streamUrl = `${baseUrl}/stream?token=${encodeURIComponent(logsToken)}`
+    const websocketUrl = streamUrl
+      .replace(/^https:/, 'wss:')
+      .replace(/^http:/, 'ws:')
+
+    if (!silent)
+      console.log('Connecting to log streaming...')
+
+    const startResponse = await fetch(startUrl, { method: 'POST' })
+    if (!startResponse.ok) {
+      const errorText = await startResponse.text().catch(() => 'unknown error')
+      if (!silent)
+        console.warn(`Could not start log session (${startResponse.status}): ${errorText}`)
+      return null
+    }
+
+    return await new Promise((resolve) => {
+      let settled = false
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          settled = true
+          resolve(null)
+        }
+      }, 3 * 60 * 60 * 1000)
+
+      const ws = new PartySocket(websocketUrl, undefined, { maxRetries: Number.POSITIVE_INFINITY })
+      let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+      let lastConfirmedId = 0
+      let lastMessageAt = Date.now()
+      let statusCheckInFlight = false
+      const HEARTBEAT_INTERVAL_MS = 2000
+      const HEARTBEAT_MISSES_BEFORE_STATUS = 4
+      const terminalStatuses = new Set(['succeeded', 'failed', 'expired', 'released', 'cancelled'])
+      let abortListener: (() => void) | null = null
+
+      const finish = (status: string | null) => {
+        if (settled)
+          return
+        settled = true
+        clearTimeout(timeout)
+        if (heartbeatTimer) {
+          clearInterval(heartbeatTimer)
+          heartbeatTimer = null
+        }
+        if (abortSignal && abortListener) {
+          abortSignal.removeEventListener('abort', abortListener)
+          abortListener = null
+        }
+        try {
+          ws.close()
+        }
+        catch {
+          // ignore
+        }
+        resolve(status)
+      }
+
+      const startHeartbeat = () => {
+        if (heartbeatTimer)
+          return
+        heartbeatTimer = setInterval(async () => {
+        if (ws.readyState === ws.OPEN) {
+          ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
+          }
+          const now = Date.now()
+          if (
+            statusCheck
+            && !statusCheckInFlight
+            && (now - lastMessageAt) >= HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES_BEFORE_STATUS
+          ) {
+            statusCheckInFlight = true
+            try {
+              const status = await statusCheck()
+              if (status && terminalStatuses.has(status)) {
+                finalStatus = status
+                finish(finalStatus)
+              }
+            }
+            finally {
+              statusCheckInFlight = false
+            }
+          }
+        }, HEARTBEAT_INTERVAL_MS)
+      }
+
+      startHeartbeat()
+
+      if (abortSignal) {
+        abortListener = () => {
+          if (!settled)
+            finish('cancelled')
+        }
+        if (abortSignal.aborted) {
+          finish('cancelled')
+          return
+        }
+        abortSignal.addEventListener('abort', abortListener)
+      }
+
+      ws.addEventListener('message', (event) => {
+        let raw = ''
+        if (typeof event.data === 'string') {
+          raw = event.data
+        }
+        else if (event.data instanceof ArrayBuffer) {
+          raw = new TextDecoder().decode(event.data)
+        }
+        else if (ArrayBuffer.isView(event.data)) {
+          const view = event.data as ArrayBufferView
+          raw = new TextDecoder().decode(new Uint8Array(view.buffer, view.byteOffset, view.byteLength))
+        }
+        else if (event.data && typeof (event.data as { toString?: () => string }).toString === 'function') {
+          raw = (event.data as { toString: () => string }).toString()
+        }
+
+        let parsed: { id?: number; message?: string; type?: string; status?: string } | null = null
+        try {
+          parsed = JSON.parse(raw)
+        }
+        catch {
+          parsed = null
+        }
+
+        if (parsed?.type === 'heartbeat_response') {
+          return
+        }
+
+        if (parsed?.type === 'status' && typeof parsed.status === 'string') {
+          const status = parsed.status.toLowerCase()
+          lastMessageAt = Date.now()
+          if (terminalStatuses.has(status)) {
+            finalStatus = status
+            finish(finalStatus)
+          }
+        }
+        else if (parsed?.type === 'log' && typeof parsed.message === 'string') {
+          lastMessageAt = Date.now()
+          processLogMessage(parsed.message)
+        }
+        else if (parsed && typeof parsed.message === 'string') {
+          lastMessageAt = Date.now()
+          processLogMessage(parsed.message)
+        }
+        else if (raw) {
+          lastMessageAt = Date.now()
+          processLogMessage(raw)
+        }
+
+        if (parsed && typeof parsed.id === 'number') {
+          lastConfirmedId = parsed.id
+          ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
+        }
+
+        if (finalStatus) {
+          finish(finalStatus)
+        }
+      })
+
+      ws.addEventListener('error', () => {
+        if (!silent)
+          console.warn('Log stream encountered an error, retrying...')
+      })
+    })
+  }
 
   try {
-    const response = await fetch(logUrl, {
-      headers: {
-        authorization: apikey,
-      },
-    })
-
-    log.info(`Log stream response: ${response.status}`)
-
-    if (!response.ok) {
-      const errorText = await response.text().catch(() => 'unknown error')
-      log.warn(`Could not stream logs (${response.status}): ${errorText}`)
-      return null
-    }
-
-    const reader = response.body?.getReader()
-    if (!reader) {
-      log.warn('No response body for log stream')
-      return null
-    }
-
-    log.info('Reading log stream...')
-
-    const decoder = new TextDecoder()
-    let buffer = '' // Buffer for incomplete lines
-
-    // Helper to process and display a log message
-    const processLogMessage = (message: string) => {
-      if (!message.trim())
-        return
-
-      // Check for final status messages from the server
-      // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
-      const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
-      if (statusMatch) {
-        finalStatus = statusMatch[1].toLowerCase()
-        // Don't display status messages as log lines - they'll be displayed as final status
-        return
-      }
-
-      // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
-      if (finalStatus)
-        return
-
-      // Print log line directly to console (no spinner to avoid _events errors)
-      if (!hasReceivedLogs) {
-        hasReceivedLogs = true
-        log.info('') // Add blank line before first log
-      }
-      log.info(message)
-    }
-
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done)
-        break
-
-      buffer += decoder.decode(value, { stream: true })
-
-      // Process complete lines (SSE format: "data: message\n\n")
-      const lines = buffer.split('\n')
-      // Keep the last incomplete line in the buffer
-      buffer = lines.pop() || ''
-
-      for (const line of lines) {
-        if (line.startsWith('data: ')) {
-          const message = line.slice(6) // Remove "data: " prefix
-          processLogMessage(message)
-        }
-      }
-    }
-
-    // Process any remaining data in buffer
-    if (buffer.startsWith('data: ')) {
-      const message = buffer.slice(6)
-      processLogMessage(message)
-    }
-
-    return finalStatus
+    const directStatus = await streamViaLogsWorker()
+    if (directStatus || finalStatus)
+      return directStatus || finalStatus
   }
   catch (err) {
-    // Log streaming is best-effort, don't fail the build
     if (!silent)
-      log.warn(`Log streaming interrupted${err instanceof Error ? `: ${err.message}` : ''}`)
-    return null
+      log.warn(`Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ''}`)
   }
+
+  return finalStatus
 }
 
 async function pollBuildStatus(
@@ -360,11 +485,92 @@ async function pollBuildStatus(
 
 /**
  * Extract native node_modules dependencies from iOS Podfile or Android settings.gradle
- * Returns paths to ONLY the platform-specific subfolder (e.g., node_modules/@capacitor/app/ios)
+ * Returns package paths so we can include the FULL module contents.
  */
 interface NativeDependencies {
   packages: Set<string> // Package paths like @capacitor/app
   usesSPM: boolean // true = SPM (Package.swift), false = CocoaPods (podspec)
+  includeRoots: Set<string> // node_modules paths that contain ios/ or android/ subfolders
+}
+
+function getPackageRootFromRelative(relativePath: string): string | null {
+  const normalized = relativePath.replace(/\\/g, '/')
+  const marker = 'node_modules/'
+  const idx = normalized.lastIndexOf(marker)
+  if (idx === -1)
+    return null
+  const after = normalized.slice(idx + marker.length)
+  if (!after)
+    return null
+  const segments = after.split('/').filter(Boolean)
+  if (!segments.length)
+    return null
+  const first = segments[0]
+  if (first.startsWith('@')) {
+    const second = segments[1]
+    if (!second)
+      return `node_modules/${first}`
+    return `node_modules/${first}/${second}`
+  }
+  return `node_modules/${first}`
+}
+
+function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
+  const roots = new Set<string>()
+  const nodeModulesPath = join(projectDir, 'node_modules')
+  if (!existsSync(nodeModulesPath))
+    return roots
+
+  const stack: string[] = [nodeModulesPath]
+  while (stack.length) {
+    const current = stack.pop()
+    if (!current)
+      continue
+    let entries: string[] = []
+    try {
+      entries = readdirSync(current)
+    }
+    catch {
+      continue
+    }
+    let hasPlatformFolder = false
+    for (const entry of entries) {
+      if (entry !== 'ios' && entry !== 'android')
+        continue
+      const entryPath = join(current, entry)
+      try {
+        if (statSync(entryPath).isDirectory()) {
+          hasPlatformFolder = true
+          break
+        }
+      }
+      catch {
+        // ignore
+      }
+    }
+    if (hasPlatformFolder) {
+      const relative = current.replace(projectDir, '').replace(/\\/g, '/').replace(/^\/+/, '')
+      const packageRoot = getPackageRootFromRelative(relative)
+      if (packageRoot) {
+        roots.add(packageRoot)
+      }
+    }
+    for (const entry of entries) {
+      const entryPath = join(current, entry)
+      try {
+        if (statSync(entryPath).isDirectory()) {
+          if (entry === '.bin')
+            continue
+          stack.push(entryPath)
+        }
+      }
+      catch {
+        // ignore
+      }
+    }
+  }
+
+  return roots
 }
 
 async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<NativeDependencies> {
@@ -414,7 +620,8 @@ async function extractNativeDependencies(projectDir: string, platform: 'ios' | '
     }
   }
 
-  return { packages, usesSPM }
+  const includeRoots = findNodeModulesPlatformFolders(projectDir)
+  return { packages, usesSPM, includeRoots }
 }
 
 /**
@@ -436,37 +643,13 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
   if (normalizedPath.startsWith('resources/'))
     return true
 
-  // Include @capacitor core for the platform
-  if (platform === 'ios' && normalizedPath.startsWith('node_modules/@capacitor/ios/'))
-    return true
-  if (platform === 'android' && normalizedPath.startsWith('node_modules/@capacitor/android/'))
-    return true
-
-  // Check if file is in one of the native dependencies
-  for (const packagePath of nativeDeps.packages) {
-    const packagePrefix = `node_modules/${packagePath}/`
-
-    if (platform === 'android') {
-      // For Android, only include the android/ subfolder
-      if (normalizedPath.startsWith(`${packagePrefix}android/`))
+  if (normalizedPath.startsWith('node_modules/')) {
+    for (const root of nativeDeps.includeRoots) {
+      const prefix = `${root}/`
+      if (normalizedPath.startsWith(prefix) || normalizedPath === root)
         return true
     }
-    else if (platform === 'ios') {
-      // For iOS, include ios/ folder and either Package.swift (SPM) or *.podspec (CocoaPods)
-      if (normalizedPath.startsWith(`${packagePrefix}ios/`))
-        return true
-
-      if (nativeDeps.usesSPM) {
-        // SPM: include Package.swift
-        if (normalizedPath === `${packagePrefix}Package.swift`)
-          return true
-      }
-      else {
-        // CocoaPods: include *.podspec files
-        if (normalizedPath.startsWith(packagePrefix) && normalizedPath.endsWith('.podspec'))
-          return true
-      }
-    }
+    return false
   }
 
   return false
@@ -489,7 +672,7 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       // dist, build, .angular, .vite: build output directories
       // .gradle, .idea: Android build cache and IDE settings
       // .swiftpm: Swift Package Manager cache
-      if (item === '.git' || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite' || item === '.gradle' || item === '.idea' || item === '.swiftpm')
+      if (item.startsWith('.') || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite' || item === '.gradle' || item === '.idea' || item === '.swiftpm')
         continue
 
       // Always recurse into the platform folder (ios/ or android/)
@@ -516,9 +699,8 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
       const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
       const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps)
-        || Array.from(nativeDeps.packages).some((pkg) => {
-          const depPath = `node_modules/${pkg}/`
-          return depPath.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`node_modules/${pkg}`)
+        || Array.from(nativeDeps.includeRoots).some((root) => {
+          return root.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`${root}/`)
         })
 
       if (shouldRecurse) {
@@ -527,7 +709,7 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
     }
     else if (stats.isFile()) {
       // Skip excluded files
-      if (item === '.DS_Store' || item.endsWith('.log'))
+      if (item.startsWith('.') || item === '.DS_Store' || item.endsWith('.log'))
         continue
 
       // Check if we should include this file
@@ -964,16 +1146,81 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         throw new Error(`Failed to start build: ${startResponse.status} - ${errorText}`)
       }
 
-      const startResult = await startResponse.json() as { status?: string }
+      const startResult = await startResponse.json() as { status?: string; logs_url?: string; logs_token?: string }
 
       if (!silent) {
         log.success('Build started!')
         log.info('Streaming build logs...')
       }
 
+      const abortController = new AbortController()
+      let cancelRequested = false
+      const cancelBuild = async () => {
+        if (cancelRequested)
+          return
+        cancelRequested = true
+        try {
+          await fetch(`${host}/build/cancel/${buildRequest.job_id}`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'authorization': options.apikey,
+            },
+            body: JSON.stringify({ app_id: appId }),
+          })
+        }
+        catch {
+          // ignore cancellation errors
+        }
+      }
+
+      const onSigint = async () => {
+        if (!silent)
+          log.warn('Canceling build...')
+        await cancelBuild()
+        abortController.abort()
+      }
+
+      process.on('SIGINT', onSigint)
+
       let finalStatus: string
       // Stream logs from the build - returns final status if detected from stream
-      const streamStatus = await streamBuildLogs(host, buildRequest.job_id, appId, options.apikey, silent, verbose)
+      const statusCheck = async (): Promise<string | null> => {
+        try {
+          const response = await fetch(`${host}/build/status?job_id=${encodeURIComponent(buildRequest.job_id)}&app_id=${encodeURIComponent(appId)}&platform=${options.platform}`, {
+            headers: {
+              authorization: options.apikey,
+            },
+          })
+          if (!response.ok) {
+            return null
+          }
+          const status = await response.json() as { status: string }
+          const normalized = status.status?.toLowerCase?.() ?? ''
+          if (normalized === 'succeeded' || normalized === 'failed' || normalized === 'expired' || normalized === 'released' || normalized === 'cancelled') {
+            return normalized
+          }
+          return null
+        }
+        catch {
+          return null
+        }
+      }
+
+      let streamStatus: string | null = null
+      try {
+        streamStatus = await streamBuildLogs(
+          silent,
+          verbose,
+          startResult.logs_url,
+          startResult.logs_token,
+          statusCheck,
+          abortController.signal,
+        )
+      }
+      finally {
+        process.removeListener('SIGINT', onSigint)
+      }
 
       // Only poll if we didn't get the final status from the stream
       if (streamStatus) {
