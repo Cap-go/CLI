@@ -274,6 +274,8 @@ async function streamBuildLogs(
       let settled = false
       const timeout = setTimeout(() => {
         if (!settled) {
+          if (!silent)
+            console.warn('Log streaming timed out after 3 hours')
           settled = true
           resolve(null)
         }
