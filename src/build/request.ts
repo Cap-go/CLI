@@ -30,7 +30,7 @@ import type { OptionsBase } from '../utils'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, join, resolve } from 'node:path'
+import { basename, join, relative, resolve } from 'node:path'
 import process, { cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
@@ -553,8 +553,8 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
       }
     }
     if (hasPlatformFolder) {
-      const relative = current.replace(projectDir, '').replace(/\\/g, '/').replace(/^\/+/, '')
-      const packageRoot = getPackageRootFromRelative(relative)
+      const rel = relative(projectDir, current).replace(/\\/g, '/')
+      const packageRoot = getPackageRootFromRelative(rel)
       if (packageRoot) {
         roots.add(packageRoot)
       }
