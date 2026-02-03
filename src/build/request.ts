@@ -419,6 +419,12 @@ async function streamBuildLogs(
         if (!silent)
           console.warn('Log stream encountered an error, retrying...')
       })
+
+      ws.addEventListener('close', () => {
+        if (!settled) {
+          finish(finalStatus)
+        }
+      })
     })
   }
 
