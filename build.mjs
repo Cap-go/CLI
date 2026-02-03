@@ -262,20 +262,25 @@ const noopSupabaseNodeFetch = {
 const fixCapacitorCliDirname = {
   name: 'fix-capacitor-cli-dirname',
   setup(build) {
-    build.onLoad({ filter: /node_modules[\\/]@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
+    build.onLoad({ filter: /@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
       const contents = readFileSync(args.path, 'utf-8')
-      // Replace __dirname with import.meta.url based resolution
-      // Original: const cliRootDir = (0, path_1.dirname)(__dirname);
-      const patchedDirname = contents.replace(
-        /const cliRootDir = \(0, path_1\.dirname\)\(__dirname\);/g,
-        `const cliRootDir = (0, path_1.dirname)(require('url').fileURLToPath(import.meta.url));`
+
+      // Replace any __dirname usage (CJS) with runtime-safe import.meta.url resolution.
+      // Keep this broad so it survives upstream refactors.
+      let patched = contents.replace(
+        /__dirname/g,
+        "require('url').fileURLToPath(import.meta.url)"
       )
-      // Make CLI package.json read resilient in bundled runtime
-      const patchedPackageRead = patchedDirname.replace(
-        /package: await \(0, fs_extra_1\.readJSON\)\(\(0, path_1\.resolve\)\(rootDir, 'package\.json'\)\),/g,
-        "package: await (0, fs_extra_1.readJSON)((0, path_1.resolve)(rootDir, 'package.json')).catch(() => ({ name: '@capacitor/cli', version: '0.0.0' })),"
+
+      // Make CLI package.json read resilient in bundled runtime.
+      // Capture module alias names to avoid breaking if upstream renames them.
+      patched = patched.replace(
+        /package:\s*await\s*\(0,\s*([\w$]+)\.readJSON\)\(\(0,\s*([\w$]+)\.resolve\)\(rootDir,\s*'package\.json'\)\)\s*,/g,
+        (_match, fsAlias, pathAlias) =>
+          `package: await (0, ${fsAlias}.readJSON)((0, ${pathAlias}.resolve)(rootDir, 'package.json')).catch(() => ({ name: '@capacitor/cli', version: '0.0.0' })),`
       )
-      return { contents: patchedPackageRead, loader: 'js' }
+
+      return { contents: patched, loader: 'js' }
     })
   },
 }
