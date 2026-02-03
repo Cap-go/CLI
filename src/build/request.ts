@@ -387,6 +387,7 @@ async function streamBuildLogs(
           if (terminalStatuses.has(status)) {
             finalStatus = status
             finish(finalStatus)
+            return
           }
         }
         else if (parsed?.type === 'log' && typeof parsed.message === 'string') {
