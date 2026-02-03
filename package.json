@@ -65,9 +65,10 @@
     "test:credentials-validation": "bun test/test-credentials-validation.mjs",
     "test:checksum": "bun test/test-checksum-algorithm.mjs",
     "test:esm-sdk": "node test/test-sdk-esm.mjs",
+    "test:mcp": "node test/test-mcp.mjs",
     "test:version-detection": "node test/test-get-installed-version.mjs",
     "test:version-detection:setup": "./test/fixtures/setup-test-projects.sh",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:version-detection"
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.0.0",

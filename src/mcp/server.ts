@@ -36,7 +36,13 @@ export async function startMcpServer(): Promise<void> {
   })
 
   // Initialize SDK - will use saved API key or require it per-call
-  const savedApiKey = findSavedKey(true)
+  let savedApiKey: string | undefined
+  try {
+    savedApiKey = findSavedKey(true)
+  }
+  catch {
+    savedApiKey = undefined
+  }
   const sdk = new CapgoSDK({ apikey: savedApiKey })
 
   // ============================================================================
