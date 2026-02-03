@@ -355,7 +355,7 @@ async function streamBuildLogs(
         abortSignal.addEventListener('abort', abortListener)
       }
 
-      ws.addEventListener('message', (event) => {
+      ws.addEventListener('message', (event: MessageEvent) => {
         let raw = ''
         if (typeof event.data === 'string') {
           raw = event.data
