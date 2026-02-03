@@ -1,5 +1,6 @@
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig } from '../config'
+import type { UploadBundleResult } from '../schemas/bundle'
 import type { Database } from '../types/supabase.types'
 import type { Compatibility, manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
@@ -25,17 +26,7 @@ type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
 
-export interface UploadBundleResult {
-  success: boolean
-  bundle: string
-  checksum?: string | null
-  encryptionMethod: 'none' | 'v1' | 'v2'
-  sessionKey?: string
-  ivSessionKey?: string | null
-  storageProvider?: string
-  skipped?: boolean
-  reason?: string
-}
+export type { UploadBundleResult }
 
 function uploadFail(message: string): never {
   log.error(message)

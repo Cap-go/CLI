@@ -1,14 +1,10 @@
-import type { OptionsBase } from '../utils'
+import type { BundleDeleteOptions } from '../schemas/bundle'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { deleteSpecificVersion } from '../api/versions'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, getOrganizationId, OrganizationPerm, sendEvent, verifyUser } from '../utils'
 
-interface Options extends OptionsBase {
-  bundle: string
-}
-
-export async function deleteBundleInternal(bundleId: string, appId: string, options: Options, silent = false) {
+export async function deleteBundleInternal(bundleId: string, appId: string, options: BundleDeleteOptions, silent = false) {
   if (!silent)
     intro('Delete bundle')
 
@@ -65,6 +61,6 @@ export async function deleteBundleInternal(bundleId: string, appId: string, opti
   return true
 }
 
-export async function deleteBundle(bundleId: string, appId: string, options: Options) {
+export async function deleteBundle(bundleId: string, appId: string, options: BundleDeleteOptions) {
   return deleteBundleInternal(bundleId, appId, options)
 }

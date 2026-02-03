@@ -24,7 +24,7 @@ async function fileExists(localConfig: any, filename: string): Promise<boolean> 
     const response = await fetch(url.toString(), {
       method: 'GET',
       headers: {
-        range: 'bytes=0-0',
+        'range': 'bytes=0-0',
         'cache-control': 'no-cache',
       },
     })

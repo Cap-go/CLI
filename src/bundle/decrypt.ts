@@ -1,3 +1,4 @@
+import type { BundleDecryptOptions, DecryptResult } from '../schemas/bundle'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
@@ -7,24 +8,14 @@ import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyPubV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
 
+export type { DecryptResult } from '../schemas/bundle'
+
 // Minimum versions that support hex checksum format (V3)
 const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
 
-interface Options {
-  key?: string
-  keyData?: string
-  checksum?: string
-  packageJson?: string
-}
-
-export interface DecryptResult {
-  outputPath: string
-  checksumMatches?: boolean
-}
-
-function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof getConfig>>) {
+function resolvePublicKey(options: BundleDecryptOptions, extConfig: Awaited<ReturnType<typeof getConfig>>) {
   const fallbackKeyPath = options.key || baseKeyPubV2
   let publicKey = extConfig.config.plugins?.CapacitorUpdater?.publicKey
 
@@ -41,7 +32,7 @@ function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof
 export async function decryptZipInternal(
   zipPath: string,
   ivsessionKey: string,
-  options: Options,
+  options: BundleDecryptOptions,
   silent = false,
 ): Promise<DecryptResult> {
   if (!silent)
@@ -137,6 +128,6 @@ export async function decryptZipInternal(
   }
 }
 
-export async function decryptZip(zipPath: string, ivsessionKey: string, options: Options) {
+export async function decryptZip(zipPath: string, ivsessionKey: string, options: BundleDecryptOptions) {
   await decryptZipInternal(zipPath, ivsessionKey, options, false)
 }

@@ -1,3 +1,4 @@
+import type { BundleEncryptOptions, EncryptResult } from '../schemas/bundle'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
@@ -6,23 +7,12 @@ import { encryptChecksum, encryptChecksumV3, encryptSource, generateSessionKey }
 import { checkAlerts } from '../api/update'
 import { baseKeyV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
 
+export type { EncryptResult } from '../schemas/bundle'
+
 // Minimum versions that support hex checksum format (V3)
 const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
-
-interface Options {
-  key?: string
-  keyData?: string
-  json?: boolean
-  packageJson?: string
-}
-
-export interface EncryptResult {
-  checksum: string
-  filename: string
-  ivSessionKey: string
-}
 
 function emitJsonError(error: unknown) {
   console.error(formatError(error))
@@ -31,7 +21,7 @@ function emitJsonError(error: unknown) {
 export async function encryptZipInternal(
   zipPath: string,
   checksum: string,
-  options: Options,
+  options: BundleEncryptOptions,
   silent = false,
 ): Promise<EncryptResult> {
   const { json } = options
@@ -168,6 +158,6 @@ export async function encryptZipInternal(
   }
 }
 
-export async function encryptZip(zipPath: string, checksum: string, options: Options) {
+export async function encryptZip(zipPath: string, checksum: string, options: BundleEncryptOptions) {
   await encryptZipInternal(zipPath, checksum, options, false)
 }

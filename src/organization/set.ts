@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OrganizationSetOptions, PasswordPolicyConfig } from '../schemas/organization'
 import { confirm as confirmC, intro, isCancel, log, outro, text } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
@@ -10,33 +10,9 @@ import {
   verifyUser,
 } from '../utils'
 
-interface PasswordPolicyConfig {
-  enabled: boolean
-  min_length: number
-  require_uppercase: boolean
-  require_number: boolean
-  require_special: boolean
-}
-
-interface OptionsOrganization extends OptionsBase {
-  name?: string
-  email?: string
-  enforce2fa?: boolean
-  // Password policy options
-  passwordPolicy?: boolean
-  minLength?: number
-  requireUppercase?: boolean
-  requireNumber?: boolean
-  requireSpecial?: boolean
-  // API key security options
-  requireApikeyExpiration?: boolean
-  maxApikeyExpirationDays?: number | null
-  enforceHashedApiKeys?: boolean
-}
-
 export async function setOrganizationInternal(
   orgId: string,
-  options: OptionsOrganization,
+  options: OrganizationSetOptions,
   silent = false,
 ) {
   if (!silent)
@@ -44,7 +20,7 @@ export async function setOrganizationInternal(
 
   await checkAlerts()
 
-  const enrichedOptions: OptionsOrganization = {
+  const enrichedOptions: OrganizationSetOptions = {
     ...options,
     apikey: options.apikey || findSavedKey(),
   }
@@ -455,6 +431,6 @@ export async function setOrganizationInternal(
   return { orgId, name, email, enforce2fa: enforce2fa ?? orgData.enforcing_2fa }
 }
 
-export async function setOrganization(orgId: string, options: OptionsOrganization) {
+export async function setOrganization(orgId: string, options: OrganizationSetOptions) {
   await setOrganizationInternal(orgId, options, false)
 }

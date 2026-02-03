@@ -1,7 +1,7 @@
 import type { SemVer } from '@std/semver'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { BundleCleanupOptions } from '../schemas/bundle'
 import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
 import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
 import {
   format,
@@ -22,14 +22,6 @@ import {
   OrganizationPerm,
   verifyUser,
 } from '../utils'
-
-interface Options extends OptionsBase {
-  version: string
-  bundle: string
-  keep: number
-  force: boolean
-  ignoreChannel: boolean
-}
 
 async function removeVersions(
   toRemove: Database['public']['Tables']['app_versions']['Row'][],
@@ -60,7 +52,7 @@ function getRemovableVersionsInSemverRange(
   return toRemove
 }
 
-export async function cleanupBundleInternal(appId: string, options: Options, silent = false) {
+export async function cleanupBundleInternal(appId: string, options: BundleCleanupOptions, silent = false) {
   if (!silent)
     intro('Cleanup versions in Capgo')
 
@@ -168,6 +160,6 @@ export async function cleanupBundleInternal(appId: string, options: Options, sil
   return { removed: toRemove.length, kept }
 }
 
-export async function cleanupBundle(appId: string, options: Options) {
+export async function cleanupBundle(appId: string, options: BundleCleanupOptions) {
   return cleanupBundleInternal(appId, options)
 }

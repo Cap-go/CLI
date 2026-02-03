@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OptionsBase } from '../schemas/base'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'

@@ -1,8 +1,9 @@
-import type { SDKResult } from '../sdk'
+import type { SDKResult } from '../schemas/sdk'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import pack from '../../package.json'
+import { addAppOptionsSchema, cleanupOptionsSchema, getStatsOptionsSchema, updateAppOptionsSchema, updateChannelOptionsSchema, uploadOptionsSchema } from '../schemas/sdk'
 import { CapgoSDK } from '../sdk'
 import { findSavedKey } from '../utils'
 
@@ -63,11 +64,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_add_app',
     'Register a new app in Capgo Cloud',
-    {
-      appId: z.string().describe('App ID in reverse domain format (e.g., com.example.app)'),
-      name: z.string().optional().describe('Display name for the app'),
-      icon: z.string().optional().describe('Path to app icon file'),
-    },
+    addAppOptionsSchema.pick({ appId: true, name: true, icon: true }).shape,
     async ({ appId, name, icon }) => {
       const result = await sdk.addApp({ appId, name, icon })
       if (!result.success) {
@@ -82,12 +79,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_update_app',
     'Update settings for an existing app in Capgo Cloud',
-    {
-      appId: z.string().describe('App ID to update'),
-      name: z.string().optional().describe('New display name'),
-      icon: z.string().optional().describe('New icon path'),
-      retention: z.number().optional().describe('Days to keep old bundles (0 = infinite)'),
-    },
+    updateAppOptionsSchema.pick({ appId: true, name: true, icon: true, retention: true }).shape,
     async ({ appId, name, icon, retention }) => {
       const result = await sdk.updateApp({ appId, name, icon, retention })
       if (!result.success) {
@@ -123,16 +115,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_upload_bundle',
     'Upload a new app bundle to Capgo Cloud for distribution',
-    {
-      appId: z.string().describe('App ID to upload bundle for'),
-      path: z.string().describe('Path to the build folder to upload'),
-      bundle: z.string().optional().describe('Bundle version number'),
-      channel: z.string().optional().describe('Channel to link the bundle to'),
-      comment: z.string().optional().describe('Comment or release notes for this version'),
-      minUpdateVersion: z.string().optional().describe('Minimum version required to update to this version'),
-      autoMinUpdateVersion: z.boolean().optional().describe('Automatically set min update version based on native packages'),
-      encrypt: z.boolean().optional().describe('Enable encryption for the bundle'),
-    },
+    uploadOptionsSchema.pick({ appId: true, path: true, bundle: true, channel: true, comment: true, minUpdateVersion: true, autoMinUpdateVersion: true, encrypt: true }).shape,
     async ({ appId, path, bundle, channel, comment, minUpdateVersion, autoMinUpdateVersion, encrypt }) => {
       const result = await sdk.uploadBundle({
         appId,
@@ -203,13 +186,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_cleanup_bundles',
     'Delete old bundles, keeping only recent versions',
-    {
-      appId: z.string().describe('App ID to cleanup bundles for'),
-      keep: z.number().optional().describe('Number of versions to keep (default: 4)'),
-      bundle: z.string().optional().describe('Bundle version pattern to cleanup'),
-      force: z.boolean().optional().describe('Force removal without confirmation'),
-      ignoreChannel: z.boolean().optional().describe('Delete bundles even if linked to channels'),
-    },
+    cleanupOptionsSchema.pick({ appId: true, keep: true, bundle: true, force: true, ignoreChannel: true }).shape,
     async ({ appId, keep, bundle, force, ignoreChannel }) => {
       const result = await sdk.cleanupBundles({
         appId,
@@ -312,21 +289,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_update_channel',
     'Update channel settings including linked bundle and targeting options',
-    {
-      appId: z.string().describe('App ID'),
-      channelId: z.string().describe('Channel name/ID to update'),
-      bundle: z.string().optional().describe('Bundle version to link to this channel'),
-      state: z.string().optional().describe('Channel state: "default" or "normal"'),
-      downgrade: z.boolean().optional().describe('Allow downgrading to versions below native'),
-      ios: z.boolean().optional().describe('Enable updates for iOS devices'),
-      android: z.boolean().optional().describe('Enable updates for Android devices'),
-      selfAssign: z.boolean().optional().describe('Allow device self-assignment'),
-      disableAutoUpdate: z.string().optional().describe('Block updates by type: major, minor, metadata, patch, or none'),
-      dev: z.boolean().optional().describe('Enable updates for development builds'),
-      emulator: z.boolean().optional().describe('Enable updates for emulators'),
-      device: z.boolean().optional().describe('Enable updates for physical devices'),
-      prod: z.boolean().optional().describe('Enable updates for production builds'),
-    },
+    updateChannelOptionsSchema.pick({ appId: true, channelId: true, bundle: true, state: true, downgrade: true, ios: true, android: true, selfAssign: true, disableAutoUpdate: true, dev: true, emulator: true, device: true, prod: true }).shape,
     async ({ appId, channelId, bundle, state, downgrade, ios, android, selfAssign, disableAutoUpdate, dev, emulator, device, prod }) => {
       const result = await sdk.updateChannel({
         appId,
@@ -483,13 +446,7 @@ export async function startMcpServer(): Promise<void> {
   server.tool(
     'capgo_get_stats',
     'Get device statistics and logs from Capgo backend for debugging',
-    {
-      appId: z.string().describe('App ID to get stats for'),
-      deviceIds: z.array(z.string()).optional().describe('Filter by specific device IDs'),
-      limit: z.number().optional().describe('Maximum number of results to return'),
-      rangeStart: z.string().optional().describe('Start date/time for range filter (ISO string)'),
-      rangeEnd: z.string().optional().describe('End date/time for range filter (ISO string)'),
-    },
+    getStatsOptionsSchema.pick({ appId: true, deviceIds: true, limit: true, rangeStart: true, rangeEnd: true }).shape,
     async ({ appId, deviceIds, limit, rangeStart, rangeEnd }) => {
       const result = await sdk.getStats({
         appId,

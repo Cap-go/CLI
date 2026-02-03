@@ -1,4 +1,5 @@
-import type { Compatibility, OptionsBase } from '../utils'
+import type { BundleCompatibilityOptions } from '../schemas/bundle'
+import type { Compatibility } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
@@ -15,13 +16,6 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  channel?: string
-  text?: boolean
-  packageJson?: string
-  nodeModules?: string
-}
-
 interface CompatibilityResult {
   finalCompatibility: Compatibility[]
   hasIncompatible: boolean
@@ -31,13 +25,13 @@ interface CompatibilityResult {
 
 export async function checkCompatibilityInternal(
   appId: string,
-  options: Options,
+  options: BundleCompatibilityOptions,
   silent = false,
 ): Promise<CompatibilityResult> {
   if (!silent)
     intro('Check compatibility')
 
-  const enrichedOptions: Options = {
+  const enrichedOptions: BundleCompatibilityOptions = {
     ...options,
     apikey: options.apikey || findSavedKey(),
   }
@@ -134,7 +128,7 @@ export async function checkCompatibilityInternal(
   }
 }
 
-export async function checkCompatibility(appId: string, options: Options) {
+export async function checkCompatibility(appId: string, options: BundleCompatibilityOptions) {
   try {
     await checkCompatibilityInternal(appId, options, false)
   }

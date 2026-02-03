@@ -1,12 +1,43 @@
-import type { Options as AppOptions } from './api/app'
 import type { Channel } from './api/channels'
-import type { BuildCredentials, BuildRequestOptions } from './build/request'
+import type { BuildRequestOptions as InternalBuildRequestOptions } from './build/request'
 import type { DecryptResult } from './bundle/decrypt'
 import type { EncryptResult } from './bundle/encrypt'
-import type { UploadBundleResult } from './bundle/upload'
-import type { OptionsUpload } from './bundle/upload_interface'
 import type { ZipResult } from './bundle/zip'
-import type { OptionsSetChannel } from './channel/set'
+import type { AppOptions } from './schemas/app'
+import type { OptionsUpload } from './schemas/bundle'
+import type { OptionsSetChannel } from './schemas/channel'
+import type {
+  AccountIdOptions,
+  AddAppOptions,
+  AddChannelOptions,
+  AddOrganizationOptions,
+  AppInfo,
+  BundleCompatibilityOptions,
+  BundleInfo,
+  CleanupOptions,
+  CurrentBundleOptions,
+  DecryptBundleOptions,
+  DeleteOldKeyOptions,
+  DeleteOrganizationOptions,
+  DeviceStats,
+  DoctorOptions,
+  EncryptBundleOptions,
+  GenerateKeyOptions,
+  GetStatsOptions,
+  ListOrganizationsOptions,
+  LoginOptions,
+  OrganizationInfo,
+  RequestBuildOptions,
+  SaveKeyOptions,
+  SDKResult,
+  SetSettingOptions,
+  UpdateAppOptions,
+  UpdateChannelOptions,
+  UpdateOrganizationOptions,
+  UploadOptions,
+  UploadResult,
+  ZipBundleOptions,
+} from './schemas/sdk'
 import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
@@ -43,20 +74,10 @@ type CompatibilityReport = Awaited<ReturnType<typeof checkCompatibilityInternal>
 export type BundleCompatibilityEntry = CompatibilityReport[number]
 
 // ============================================================================
-// Base Types
+// Re-export all SDK types from schemas
 // ============================================================================
 
-/** Common result wrapper for all SDK operations */
-export interface SDKResult<T = void> {
-  success: boolean
-  data?: T
-  error?: string
-  /** Human-readable message for security policy errors (2FA, password policy, API key requirements) */
-  securityPolicyMessage?: string
-  /** Whether this error is due to a security policy (2FA, password policy, hashed API key requirement, etc.) */
-  isSecurityPolicyError?: boolean
-  warnings?: string[]
-}
+export type { BuildCredentials } from './build/request'
 
 /**
  * Create an SDK error result from an error, with security policy awareness.
@@ -73,393 +94,6 @@ function createErrorResult<T = void>(error: unknown): SDKResult<T> {
     isSecurityPolicyError: parsed.isSecurityPolicyError,
     securityPolicyMessage: parsed.isSecurityPolicyError ? parsed.message : undefined,
   }
-}
-
-// ============================================================================
-// App Management Types
-// ============================================================================
-
-export interface AddAppOptions {
-  /** App ID (e.g., com.example.app) */
-  appId: string
-  /** App name for display in Capgo Cloud */
-  name?: string
-  /** App icon path for display in Capgo Cloud */
-  icon?: string
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface UpdateAppOptions {
-  /** App ID (e.g., com.example.app) */
-  appId: string
-  /** Updated app name */
-  name?: string
-  /** Updated app icon path */
-  icon?: string
-  /** Days to keep old bundles (0 = infinite) */
-  retention?: number
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface AppInfo {
-  appId: string
-  name: string
-  iconUrl?: string
-  createdAt: Date
-}
-
-// ============================================================================
-// Bundle Management Types
-// ============================================================================
-
-export interface UploadOptions {
-  /** App ID (e.g., com.example.app) */
-  appId: string
-  /** Path to build folder */
-  path: string
-  /** Bundle version */
-  bundle?: string
-  /** Channel name */
-  channel?: string
-  /** API key for authentication */
-  apikey?: string
-  /** External URL instead of upload */
-  external?: string
-  /** Enable encryption */
-  encrypt?: boolean
-  /** Private key for encryption */
-  encryptionKey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-  /** Timeout in seconds */
-  timeout?: number
-  /** Use TUS protocol for upload */
-  useTus?: boolean
-  /** Comment for this version */
-  comment?: string
-  /** Minimum update version required */
-  minUpdateVersion?: string
-  /** Automatically set min-update-version when compatibility fails */
-  autoMinUpdateVersion?: boolean
-  /** Allow self-assignment to channel */
-  selfAssign?: boolean
-  /** Package.json paths for monorepos */
-  packageJsonPaths?: string
-  /** Ignore compatibility checks */
-  ignoreCompatibilityCheck?: boolean
-  /** Disable code check for notifyAppReady() */
-  disableCodeCheck?: boolean
-  /** Use legacy zip upload instead of TUS */
-  useZip?: boolean
-}
-
-export interface UploadResult {
-  success: boolean
-  bundleId?: string
-  bundleUrl?: string
-  checksum?: string | null
-  encryptionMethod?: UploadBundleResult['encryptionMethod']
-  sessionKey?: string
-  ivSessionKey?: string | null
-  storageProvider?: string
-  skipped?: boolean
-  reason?: string
-  error?: string
-  warnings?: string[]
-}
-
-export interface BundleInfo {
-  id: string
-  version: string
-  channel?: string
-  uploadedAt: Date
-  size: number
-  encrypted: boolean
-}
-
-export interface CleanupOptions {
-  /** App ID */
-  appId: string
-  /** Number of versions to keep */
-  keep?: number
-  /** Bundle version pattern */
-  bundle?: string
-  /** Force removal without confirmation */
-  force?: boolean
-  /** Delete bundles even if linked to channels */
-  ignoreChannel?: boolean
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface GenerateKeyOptions {
-  /** Overwrite existing keys if they already exist */
-  force?: boolean
-  /** Automatically configure the default encryption channel instead of prompting */
-  setupChannel?: boolean
-}
-
-export interface SaveKeyOptions {
-  /** Path to the public key file (.pub) */
-  keyPath?: string
-  /** Public key contents as string (used if keyPath not provided) */
-  keyData?: string
-  /** Automatically configure the default encryption channel instead of prompting */
-  setupChannel?: boolean
-}
-
-export interface DeleteOldKeyOptions {
-  /** Force deletion if legacy files are present */
-  force?: boolean
-  /** Automatically configure the default encryption channel instead of prompting */
-  setupChannel?: boolean
-}
-
-// ============================================================================
-// Channel Management Types
-// ============================================================================
-
-export interface AddChannelOptions {
-  /** Channel ID/name */
-  channelId: string
-  /** App ID */
-  appId: string
-  /** Set as default channel */
-  default?: boolean
-  /** Allow device self-assignment */
-  selfAssign?: boolean
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface UpdateChannelOptions {
-  /** Channel ID/name */
-  channelId: string
-  /** App ID */
-  appId: string
-  /** Bundle version to link */
-  bundle?: string
-  /** Channel state (default or normal) */
-  state?: string
-  /** Allow downgrade */
-  downgrade?: boolean
-  /** Enable for iOS */
-  ios?: boolean
-  /** Enable for Android */
-  android?: boolean
-  /** Allow device self-assignment */
-  selfAssign?: boolean
-  /** Disable auto update strategy */
-  disableAutoUpdate?: string
-  /** Enable for dev builds */
-  dev?: boolean
-  /** Enable for emulators */
-  emulator?: boolean
-  /** Enable for physical devices */
-  device?: boolean
-  /** Enable for production builds */
-  prod?: boolean
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-// ============================================================================
-// Organization Management Types
-// ============================================================================
-
-export interface AccountIdOptions {
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface ListOrganizationsOptions extends AccountIdOptions {}
-
-export interface AddOrganizationOptions extends AccountIdOptions {
-  /** Organization name */
-  name: string
-  /** Management email */
-  email: string
-}
-
-export interface UpdateOrganizationOptions extends AccountIdOptions {
-  /** Organization ID */
-  orgId: string
-  /** Updated name */
-  name?: string
-  /** Updated management email */
-  email?: string
-}
-
-export interface OrganizationInfo {
-  id: string
-  name: string
-  role?: string
-  appCount?: number
-  email?: string
-  createdAt?: Date
-}
-
-export interface DeleteOrganizationOptions extends AccountIdOptions {
-  autoConfirm?: boolean
-}
-
-export interface LoginOptions {
-  apikey: string
-  local?: boolean
-  supaHost?: string
-  supaAnon?: string
-}
-
-export interface DoctorOptions {
-  packageJson?: string
-}
-
-export interface BundleCompatibilityOptions {
-  appId: string
-  channel: string
-  packageJson?: string
-  nodeModules?: string
-  textOutput?: boolean
-  apikey?: string
-  supaHost?: string
-  supaAnon?: string
-}
-
-export interface EncryptBundleOptions {
-  zipPath: string
-  checksum: string
-  keyPath?: string
-  keyData?: string
-  json?: boolean
-  packageJson?: string
-}
-
-export interface DecryptBundleOptions {
-  zipPath: string
-  ivSessionKey: string
-  keyPath?: string
-  keyData?: string
-  checksum?: string
-  packageJson?: string
-}
-
-export interface ZipBundleOptions {
-  appId: string
-  path: string
-  bundle?: string
-  name?: string
-  codeCheck?: boolean
-  json?: boolean
-  keyV2?: boolean
-  packageJson?: string
-}
-
-export interface RequestBuildOptions {
-  /** App ID (e.g., com.example.app) */
-  appId: string
-  /** Path to project directory */
-  path?: string
-  /** Fastlane lane - must be exactly "ios" or "android" */
-  platform: 'ios' | 'android'
-  /**
-   * Credentials for signing and publishing to stores
-   *
-   * SECURITY GUARANTEE:
-   * These credentials are NEVER stored on Capgo servers.
-   * They are:
-   * - Transmitted securely over HTTPS
-   * - Used ONLY during the active build process
-   * - Automatically deleted after build completion
-   * - Builds sent directly to app stores - Capgo keeps nothing
-   */
-  credentials?: BuildCredentials
-  /** User ID for the build job (optional, will be auto-detected if not provided) */
-  userId?: string
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface CurrentBundleOptions extends AccountIdOptions {}
-
-export interface SetSettingOptions {
-  apikey?: string
-  bool?: string
-  string?: string
-}
-
-// ============================================================================
-// Device Stats Types
-// ============================================================================
-
-export interface StatsOrder {
-  key: string
-  sortable?: 'asc' | 'desc'
-}
-
-export interface GetStatsOptions {
-  /** App ID */
-  appId: string
-  /** Filter by specific device IDs */
-  deviceIds?: string[]
-  /** Search query */
-  search?: string
-  /** Sort order */
-  order?: StatsOrder[]
-  /** Start date/time for range filter (ISO string) */
-  rangeStart?: string
-  /** End date/time for range filter (ISO string) */
-  rangeEnd?: string
-  /** Limit number of results */
-  limit?: number
-  /** Get only stats after this timestamp (for polling) */
-  after?: string | null
-  /** API key for authentication */
-  apikey?: string
-  /** Custom Supabase host */
-  supaHost?: string
-  /** Custom Supabase anon key */
-  supaAnon?: string
-}
-
-export interface DeviceStats {
-  appId: string
-  deviceId: string
-  action: string
-  versionId: number
-  version?: number
-  createdAt: string
 }
 
 // ============================================================================
@@ -985,7 +619,7 @@ export class CapgoSDK {
     try {
       // Convert BuildCredentials object to flattened CLI-compatible format
       const creds = options.credentials
-      const internalOptions: BuildRequestOptions = {
+      const internalOptions: InternalBuildRequestOptions = {
         apikey: options.apikey || this.apikey || findSavedKey(true),
         supaHost: options.supaHost || this.supaHost,
         supaAnon: options.supaAnon || this.supaAnon,
@@ -1786,8 +1420,40 @@ export async function getCapacitorConfig() {
 // Re-export useful types
 // ============================================================================
 
-export type { BuildCredentials } from './build/request'
 export type { CapacitorConfig } from './config'
+export type {
+  AccountIdOptions,
+  AddAppOptions,
+  AddChannelOptions,
+  AddOrganizationOptions,
+  AppInfo,
+  BundleCompatibilityOptions,
+  BundleInfo,
+  CleanupOptions,
+  CurrentBundleOptions,
+  DecryptBundleOptions,
+  DeleteOldKeyOptions,
+  DeleteOrganizationOptions,
+  DeviceStats,
+  DoctorOptions,
+  EncryptBundleOptions,
+  GenerateKeyOptions,
+  GetStatsOptions,
+  ListOrganizationsOptions,
+  LoginOptions,
+  OrganizationInfo,
+  RequestBuildOptions,
+  SaveKeyOptions,
+  SDKResult,
+  SetSettingOptions,
+  StatsOrder,
+  UpdateAppOptions,
+  UpdateChannelOptions,
+  UpdateOrganizationOptions,
+  UploadOptions,
+  UploadResult,
+  ZipBundleOptions,
+} from './schemas/sdk'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
 export {

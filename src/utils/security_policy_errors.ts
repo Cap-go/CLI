@@ -41,11 +41,8 @@ export const SECURITY_POLICY_MESSAGES: Record<string, string> = {
 // Security Policy Error Interface
 // ============================================================================
 
-export interface ParsedSecurityError {
-  isSecurityPolicyError: boolean
-  errorCode: string
-  message: string
-}
+export type { ParsedSecurityError } from '../schemas/common'
+type ParsedSecurityError = import('../schemas/common').ParsedSecurityError
 
 // ============================================================================
 // Main Parsing Functions

@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OrganizationAddOptions } from '../schemas/organization'
 import { intro, isCancel, log, outro, text } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
@@ -9,18 +9,13 @@ import {
   verifyUser,
 } from '../utils'
 
-interface OptionsOrganization extends OptionsBase {
-  name?: string
-  email?: string
-}
-
-export async function addOrganizationInternal(options: OptionsOrganization, silent = false) {
+export async function addOrganizationInternal(options: OrganizationAddOptions, silent = false) {
   if (!silent)
     intro('Adding organization')
 
   await checkAlerts()
 
-  const enrichedOptions: OptionsOrganization = {
+  const enrichedOptions: OrganizationAddOptions = {
     ...options,
     apikey: options.apikey || findSavedKey(),
   }
@@ -110,6 +105,6 @@ export async function addOrganizationInternal(options: OptionsOrganization, sile
   return orgData
 }
 
-export async function addOrganization(options: OptionsOrganization) {
+export async function addOrganization(options: OrganizationAddOptions) {
   await addOrganizationInternal(options, false)
 }

@@ -114,10 +114,8 @@ export function decryptChecksumV3(checksum: string, key: string): string {
   return checksumDecrypted
 }
 
-export interface RSAKeys {
-  publicKey: string
-  privateKey: string
-}
+export type { RSAKeys } from '../schemas/crypto'
+type RSAKeys = import('../schemas/crypto').RSAKeys
 export function createRSA(): RSAKeys {
   const { publicKey, privateKey } = generateKeyPairSync('rsa', {
     modulusLength: 2048,

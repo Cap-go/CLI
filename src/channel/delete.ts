@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { ChannelDeleteOptions } from '../schemas/channel'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { delChannel, delChannelDevices, findBundleIdByChannelName, findChannel } from '../api/channels'
@@ -15,12 +15,7 @@ import {
   verifyUser,
 } from '../utils'
 
-interface DeleteChannelOptions extends OptionsBase {
-  deleteBundle: boolean
-  successIfNotFound: boolean
-}
-
-export async function deleteChannelInternal(channelId: string, appId: string, options: DeleteChannelOptions, silent = false) {
+export async function deleteChannelInternal(channelId: string, appId: string, options: ChannelDeleteOptions, silent = false) {
   if (!silent)
     intro('Delete channel')
 
@@ -110,6 +105,6 @@ export async function deleteChannelInternal(channelId: string, appId: string, op
   return true
 }
 
-export async function deleteChannel(channelId: string, appId: string, options: DeleteChannelOptions) {
+export async function deleteChannel(channelId: string, appId: string, options: ChannelDeleteOptions) {
   return deleteChannelInternal(channelId, appId, options, false)
 }

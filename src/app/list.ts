@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
+import type { OptionsBase } from '../schemas/base'
 import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'

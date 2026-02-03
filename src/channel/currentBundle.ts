@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { ChannelCurrentBundleOptions } from '../schemas/channel'
 import { intro, log } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {
@@ -10,18 +10,13 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  channel?: string
-  quiet?: boolean
-}
-
 interface Channel {
   version: {
     name: string
   }
 }
 
-export async function currentBundleInternal(channel: string, appId: string, options: Options, silent = false) {
+export async function currentBundleInternal(channel: string, appId: string, options: ChannelCurrentBundleOptions, silent = false) {
   const { quiet } = options
 
   if (!quiet && !silent)
@@ -84,6 +79,6 @@ export async function currentBundleInternal(channel: string, appId: string, opti
   return version.name
 }
 
-export async function currentBundle(channel: string, appId: string, options: Options) {
+export async function currentBundle(channel: string, appId: string, options: ChannelCurrentBundleOptions) {
   return currentBundleInternal(channel, appId, options)
 }

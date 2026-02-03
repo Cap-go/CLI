@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OrganizationDeleteOptions } from '../schemas/organization'
 import { confirm as confirmC, intro, isCancel, log, outro, select } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
@@ -10,13 +10,9 @@ import {
   verifyUser,
 } from '../utils'
 
-interface DeleteOrganizationOptions extends OptionsBase {
-  autoConfirm?: boolean
-}
-
 export async function deleteOrganizationInternal(
   orgId: string,
-  options: DeleteOrganizationOptions,
+  options: OrganizationDeleteOptions,
   silent = false,
 ) {
   if (!silent)
@@ -24,7 +20,7 @@ export async function deleteOrganizationInternal(
 
   await checkAlerts()
 
-  const enrichedOptions: DeleteOrganizationOptions = {
+  const enrichedOptions: OrganizationDeleteOptions = {
     ...options,
     apikey: options.apikey || findSavedKey(),
   }
@@ -128,6 +124,6 @@ export async function deleteOrganizationInternal(
   return true
 }
 
-export async function deleteOrganization(orgId: string, options: DeleteOrganizationOptions) {
+export async function deleteOrganization(orgId: string, options: OrganizationDeleteOptions) {
   await deleteOrganizationInternal(orgId, options, false)
 }

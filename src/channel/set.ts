@@ -1,5 +1,6 @@
+import type { OptionsSetChannel } from '../schemas/channel'
 import type { Database } from '../types/supabase.types'
-import type { Compatibility, OptionsBase } from '../utils'
+import type { Compatibility } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
@@ -45,23 +46,7 @@ function displayCompatibilityTable(packages: Compatibility[]) {
   log.info(table.toString())
 }
 
-export interface OptionsSetChannel extends OptionsBase {
-  bundle?: string
-  state?: string
-  downgrade?: boolean
-  latest?: boolean
-  latestRemote?: boolean
-  ios?: boolean
-  android?: boolean
-  selfAssign?: boolean
-  disableAutoUpdate?: string
-  dev?: boolean
-  emulator?: boolean
-  device?: boolean
-  prod?: boolean
-  packageJson?: string
-  ignoreMetadataCheck?: boolean
-}
+export type { OptionsSetChannel } from '../schemas/channel'
 
 const disableAutoUpdatesPossibleOptions = ['major', 'minor', 'metadata', 'patch', 'none']
 

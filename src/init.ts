@@ -1189,11 +1189,11 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let platform: 'ios' | 'android' = 'ios' // default
 
   const totalSteps = 13
-  
+
   if (stepToSkip > 0) {
     pLog.info(`\n🔄 Resuming onboarding from step ${stepToSkip + 1}/${totalSteps}`)
   }
-  
+
   try {
     if (stepToSkip < 1) {
       pLog.info(`\n📍 Step 1/${totalSteps}: Check Prerequisites`)

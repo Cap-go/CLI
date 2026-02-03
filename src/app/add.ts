@@ -1,6 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
-import type { Options } from '../api/app'
+import type { AppOptions } from '../schemas/app'
 import type { Database } from '../types/supabase.types'
 import type { Organization } from '../utils'
 import { existsSync, readFileSync } from 'node:fs'
@@ -21,7 +21,7 @@ import {
 
 export const reverseDomainRegex = /^[a-z0-9]+(\.[\w-]+)+$/i
 
-function ensureOptions(appId: string, options: Options, silent: boolean) {
+function ensureOptions(appId: string, options: AppOptions, silent: boolean) {
   if (!options.apikey) {
     if (!silent)
       log.error('Missing API key, you need to provide an API key to upload your bundle')
@@ -73,7 +73,7 @@ async function ensureAppDoesNotExist(
 
 export async function addAppInternal(
   initialAppId: string,
-  options: Options,
+  options: AppOptions,
   organization?: Organization,
   silent = false,
 ) {
@@ -197,6 +197,6 @@ export async function addAppInternal(
   }
 }
 
-export async function addApp(appId: string, options: Options) {
+export async function addApp(appId: string, options: AppOptions) {
   await addAppInternal(appId, options, undefined)
 }

@@ -1,18 +1,7 @@
+import type { ExtConfigPairs } from '../schemas/config'
 import { loadConfig as loadConfigCap, writeConfig as writeConfigCap } from '@capacitor/cli/dist/config'
 
-export interface CapacitorConfig {
-  appId: string
-  appName: string
-  webDir: string
-  plugins?: Record<string, any>
-  android?: Record<string, any>
-  [key: string]: any
-}
-
-export interface ExtConfigPairs {
-  config: CapacitorConfig
-  path: string
-}
+export type { CapacitorConfig, ExtConfigPairs } from '../schemas/config'
 
 export async function loadConfig(): Promise<ExtConfigPairs | undefined> {
   const config = await loadConfigCap()
