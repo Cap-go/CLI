@@ -271,6 +271,9 @@ jobs:
       - name: Build
         id: build_code
         run: bun run build
+      - name: Quick ESM SDK check
+        id: esm_sdk_check
+        run: bun run test:esm-sdk
       - name: Run
         id: run_cli
         run: node dist/index.js --help

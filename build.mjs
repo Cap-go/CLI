@@ -340,6 +340,21 @@ Promise.all([buildCLI, buildSDK]).then(async (results) => {
   const cliOutput = await Bun.file('dist/index.js').text()
   await Bun.write('dist/index.js', `#!/usr/bin/env node\n${cliOutput}`)
 
+  // Bun has occasionally emitted `module.exports` in ESM bundles.
+  // Ensure the SDK bundle doesn't crash in ESM by providing a shim when needed.
+  const sdkPath = 'dist/src/sdk.js'
+  try {
+    let sdkOutput = readFileSync(sdkPath, 'utf-8')
+    if (/\bmodule\.exports\b/.test(sdkOutput) && !/\bvar\s+module\b/.test(sdkOutput)) {
+      const importBlock = sdkOutput.match(/^(?:\s*import[^;]+;)+/)
+      const insertAt = importBlock ? importBlock[0].length : 0
+      sdkOutput = `${sdkOutput.slice(0, insertAt)}var module={exports:{}};${sdkOutput.slice(insertAt)}`
+      writeFileSync(sdkPath, sdkOutput)
+    }
+  } catch (err) {
+    console.warn('⚠️  Could not inspect SDK bundle for module shim:', err)
+  }
+
   // Write metafile for bundle analysis (similar to esbuild's metafile)
   // Use relative paths to match esbuild's format
   const metafile = {
