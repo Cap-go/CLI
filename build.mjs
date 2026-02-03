@@ -306,7 +306,7 @@ const buildSDK = Bun.build({
   naming: 'sdk.js',
   sourcemap: env.NODE_ENV === 'development' ? 'linked' : 'none',
   minify: true,
-  format: 'cjs',
+  format: 'esm',
   define: {
     'process.env.SUPA_DB': '"production"',
   },
