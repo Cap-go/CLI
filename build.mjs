@@ -254,9 +254,10 @@ const noopSupabaseNodeFetch = {
   },
 }
 
-// Fix for @capacitor/cli __dirname issue
-// When bundled, __dirname gets baked in as the build machine path
-// We use import.meta.url for runtime resolution instead
+// Fix for @capacitor/cli path assumptions in bundled builds
+// - __dirname gets baked in as the build machine path
+// - loadCLIConfig reads package.json from cliRootDir
+// We replace __dirname with import.meta.url and make package.json read resilient
 // See: https://github.com/oven-sh/bun/issues/4216
 const fixCapacitorCliDirname = {
   name: 'fix-capacitor-cli-dirname',
@@ -265,11 +266,16 @@ const fixCapacitorCliDirname = {
       const contents = readFileSync(args.path, 'utf-8')
       // Replace __dirname with import.meta.url based resolution
       // Original: const cliRootDir = (0, path_1.dirname)(__dirname);
-      const patched = contents.replace(
+      const patchedDirname = contents.replace(
         /const cliRootDir = \(0, path_1\.dirname\)\(__dirname\);/g,
         `const cliRootDir = (0, path_1.dirname)(require('url').fileURLToPath(import.meta.url));`
       )
-      return { contents: patched, loader: 'js' }
+      // Make CLI package.json read resilient in bundled runtime
+      const patchedPackageRead = patchedDirname.replace(
+        /package: await \(0, fs_extra_1\.readJSON\)\(\(0, path_1\.resolve\)\(rootDir, 'package\.json'\)\),/g,
+        "package: await (0, fs_extra_1.readJSON)((0, path_1.resolve)(rootDir, 'package.json')).catch(() => ({ name: '@capacitor/cli', version: '0.0.0' })),"
+      )
+      return { contents: patchedPackageRead, loader: 'js' }
     })
   },
 }
