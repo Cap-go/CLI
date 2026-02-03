@@ -279,7 +279,7 @@ async function streamBuildLogs(
         }
       }, 3 * 60 * 60 * 1000)
 
-      const ws = new PartySocket(websocketUrl, undefined, { maxRetries: Number.POSITIVE_INFINITY })
+      const ws = new PartySocket(websocketUrl, undefined, { maxRetries: 10 })
       let heartbeatTimer: ReturnType<typeof setInterval> | null = null
       let lastConfirmedId = 0
       let lastMessageAt = Date.now()
