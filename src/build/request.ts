@@ -671,12 +671,8 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
     const stats = statSync(itemPath)
 
     if (stats.isDirectory()) {
-      // Skip excluded directories
-      // .git: version control
-      // dist, build, .angular, .vite: build output directories
-      // .gradle, .idea: Android build cache and IDE settings
-      // .swiftpm: Swift Package Manager cache
-      if (item.startsWith('.') || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite' || item === '.gradle' || item === '.idea' || item === '.swiftpm')
+      // Skip hidden directories (e.g. .git, .gradle, .idea, .swiftpm) and build output directories
+      if (item.startsWith('.') || item === 'dist' || item === 'build')
         continue
 
       // Always recurse into the platform folder (ios/ or android/)
@@ -712,8 +708,8 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       }
     }
     else if (stats.isFile()) {
-      // Skip excluded files
-      if (item.startsWith('.') || item === '.DS_Store' || item.endsWith('.log'))
+      // Skip hidden files and log files
+      if (item.startsWith('.') || item.endsWith('.log'))
         continue
 
       // Check if we should include this file
