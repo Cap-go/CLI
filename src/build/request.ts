@@ -542,17 +542,23 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
     }
     let hasPlatformFolder = false
     for (const entry of entries) {
-      if (entry !== 'ios' && entry !== 'android')
+      if (entry === '.bin')
         continue
       const entryPath = join(current, entry)
+      let isDir: boolean
       try {
-        if (statSync(entryPath).isDirectory()) {
-          hasPlatformFolder = true
-          break
-        }
+        isDir = statSync(entryPath).isDirectory()
       }
       catch {
-        // ignore
+        continue
+      }
+      if (!isDir)
+        continue
+      if (entry === 'ios' || entry === 'android') {
+        hasPlatformFolder = true
+      }
+      else {
+        stack.push(entryPath)
       }
     }
     if (hasPlatformFolder) {
@@ -560,19 +566,6 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
       const packageRoot = getPackageRootFromRelative(rel)
       if (packageRoot) {
         roots.add(packageRoot)
-      }
-    }
-    for (const entry of entries) {
-      const entryPath = join(current, entry)
-      try {
-        if (statSync(entryPath).isDirectory()) {
-          if (entry === '.bin')
-            continue
-          stack.push(entryPath)
-        }
-      }
-      catch {
-        // ignore
       }
     }
   }
