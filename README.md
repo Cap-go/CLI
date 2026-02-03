@@ -206,8 +206,9 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--tus-chunk-size** | <code>string</code> | Chunk size in bytes for TUS resumable uploads (default: auto) |
 | **--partial** | <code>boolean</code> | [DEPRECATED] Use --delta instead. Upload incremental updates |
 | **--partial-only** | <code>boolean</code> | [DEPRECATED] Use --delta-only instead. Upload only incremental updates, skip full bundle |
-| **--delta** | <code>boolean</code> | Upload incremental/differential updates to reduce bandwidth |
-| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle (useful for large apps) |
+| **--delta** | <code>boolean</code> | Upload delta updates (only changed files) for instant, super fast updates instead of big zip downloads |
+| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle for maximum speed (useful for large apps) |
+| **--no-delta** | <code>boolean</code> | Disable delta updates even if Direct Update is enabled |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
