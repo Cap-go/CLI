@@ -31,11 +31,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { cwd, exit } from 'node:process'
+import process, { cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
-import * as tus from 'tus-js-client'
 import { WebSocket as PartySocket } from 'partysocket'
+import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
 
@@ -239,8 +239,10 @@ async function streamBuildLogs(
     // Print log line directly to console (no spinner to avoid _events errors)
     if (!hasReceivedLogs) {
       hasReceivedLogs = true
+      // eslint-disable-next-line no-console
       console.log('') // Add blank line before first log
     }
+    // eslint-disable-next-line no-console
     console.log(message)
   }
 
@@ -255,8 +257,10 @@ async function streamBuildLogs(
       .replace(/^https:/, 'wss:')
       .replace(/^http:/, 'ws:')
 
-    if (!silent)
+    if (!silent) {
+      // eslint-disable-next-line no-console
       console.log('Connecting to log streaming...')
+    }
 
     const startResponse = await fetch(startUrl, { method: 'POST' })
     if (!startResponse.ok) {
@@ -311,8 +315,8 @@ async function streamBuildLogs(
         if (heartbeatTimer)
           return
         heartbeatTimer = setInterval(async () => {
-        if (ws.readyState === ws.OPEN) {
-          ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
+          if (ws.readyState === ws.OPEN) {
+            ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
           }
           const now = Date.now()
           if (
@@ -365,7 +369,7 @@ async function streamBuildLogs(
           raw = (event.data as { toString: () => string }).toString()
         }
 
-        let parsed: { id?: number; message?: string; type?: string; status?: string } | null = null
+        let parsed: { id?: number, message?: string, type?: string, status?: string } | null = null
         try {
           parsed = JSON.parse(raw)
         }
@@ -1146,7 +1150,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         throw new Error(`Failed to start build: ${startResponse.status} - ${errorText}`)
       }
 
-      const startResult = await startResponse.json() as { status?: string; logs_url?: string; logs_token?: string }
+      const startResult = await startResponse.json() as { status?: string, logs_url?: string, logs_token?: string }
 
       if (!silent) {
         log.success('Build started!')
