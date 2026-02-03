@@ -400,7 +400,7 @@ export async function uploadPartial(
   catch (error) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
+    spinner.error(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
 
     if (userRequestedDelta) {
       // User explicitly requested delta/partial updates, so we should fail

@@ -158,7 +158,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     // Check if any package is incompatible
     const incompatiblePackages = finalCompatibility.filter(x => !isCompatible(x))
     if (incompatiblePackages.length > 0) {
-      spinner.stop(`Bundle NOT compatible with ${channel} channel`)
+      spinner.error(`Bundle NOT compatible with ${channel} channel`)
       log.warn('')
       displayCompatibilityTable(finalCompatibility)
       log.warn('')
@@ -527,7 +527,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   catch (errorUpload: any) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+    spinner.error(`Failed to upload bundle ( after ${uploadTime} seconds)`)
 
     if (options.verbose) {
       log.info(`[Verbose] Upload failed after ${uploadTime} seconds`)
@@ -727,12 +727,12 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
 
   // Check if directUpdate is enabled and auto-enable delta updates
   const directUpdateEnabled = extConfig?.config?.plugins?.CapacitorUpdater?.directUpdate === 'always'
- const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
+  const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
   if (directUpdateEnabled && options.delta === undefined) {
     if (interactive) {
       log.info('💡 Direct Update (instant updates) is enabled in your config')
       log.info('   Delta updates send only changed files instead of the full bundle')
-      const enableDelta = await pConfirm({ 
+      const enableDelta = await pConfirm({
         message: 'Enable delta updates for this upload? (Recommended with Direct Update)',
         initialValue: true,
       })

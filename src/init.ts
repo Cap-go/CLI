@@ -655,7 +655,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         const userProvidedPath = await pText({
           message: `Provide the correct relative path to your main file (JS or TS):`,
           validate: (value) => {
-            if (!existsSync(value))
+            if (!value || !existsSync(value))
               return 'File does not exist. Please provide a valid path.'
           },
         })
@@ -1004,7 +1004,7 @@ ${content}`
     const userVersion = await pText({
       message: `Current version is ${pkgVersion}. Enter new version:`,
       validate: (value) => {
-        if (!value.match(/^\d+\.\d+\.\d+/))
+        if (!value?.match(/^\d+\.\d+\.\d+/))
           return 'Please enter a valid version (x.y.z)'
       },
     })

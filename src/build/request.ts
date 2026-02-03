@@ -894,7 +894,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           // Callback for errors which cannot be fixed using retries
           onError(error) {
             if (!silent) {
-              spinner.stop('Upload failed')
+              spinner.error('Upload failed')
               log.error(`Upload error: ${error.message}`)
             }
             if (error instanceof tus.DetailedError) {
