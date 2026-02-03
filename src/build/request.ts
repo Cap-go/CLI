@@ -1177,13 +1177,18 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
 
       const onSigint = async () => {
-        if (cancelRequested) {
-          process.exit(1)
+        try {
+          if (cancelRequested) {
+            process.exit(1)
+          }
+          if (!silent)
+            log.warn('Canceling build... (press Ctrl+C again to force quit)')
+          await cancelBuild()
+          abortController.abort()
         }
-        if (!silent)
-          log.warn('Canceling build... (press Ctrl+C again to force quit)')
-        await cancelBuild()
-        abortController.abort()
+        catch {
+          // Prevent unhandled rejection from crashing the process
+        }
       }
 
       process.on('SIGINT', onSigint)
