@@ -213,6 +213,7 @@ async function streamBuildLogs(
   logsToken?: string,
   statusCheck?: StatusCheckFn,
   abortSignal?: AbortSignal,
+  onStreamingGiveUp?: () => void,
 ): Promise<string | null> {
   if (silent)
     return null
@@ -281,7 +282,10 @@ async function streamBuildLogs(
         }
       }, 3 * 60 * 60 * 1000)
 
-      const ws = new PartySocket(websocketUrl, undefined, { maxRetries: 10 })
+      const maxRetries = 10
+      let retryCount = 0
+      let gaveUp = false
+      const ws = new PartySocket(websocketUrl, undefined, { maxRetries })
       let heartbeatTimer: ReturnType<typeof setInterval> | null = null
       let lastConfirmedId = 0
       let lastMessageAt = Date.now()
@@ -464,8 +468,17 @@ async function streamBuildLogs(
       })
 
       ws.addEventListener('error', () => {
+        retryCount += 1
         if (!silent)
-          console.warn('Log stream encountered an error, retrying...')
+          console.warn(`Log stream encountered an error, retrying (${retryCount}/${maxRetries})...`)
+        if (!gaveUp && retryCount >= maxRetries) {
+          gaveUp = true
+          if (!silent)
+            log.warn('Log stream retry limit reached. Falling back to status checks.')
+          if (onStreamingGiveUp)
+            onStreamingGiveUp()
+          finish(null)
+        }
       })
 
       ws.addEventListener('close', () => {
@@ -501,16 +514,21 @@ async function pollBuildStatus(
   platform: 'ios' | 'android',
   apikey: string,
   silent: boolean,
+  showStatusChecks = false,
+  abortSignal?: AbortSignal,
 ): Promise<string> {
   const maxAttempts = 120 // 10 minutes max (5 second intervals)
   let attempts = 0
 
   while (attempts < maxAttempts) {
+    if (abortSignal?.aborted)
+      return 'cancelled'
     try {
       const response = await fetch(`${host}/build/status?job_id=${encodeURIComponent(jobId)}&app_id=${encodeURIComponent(appId)}&platform=${platform}`, {
         headers: {
           authorization: apikey,
         },
+        signal: abortSignal,
       })
 
       if (!response.ok) {
@@ -527,9 +545,13 @@ async function pollBuildStatus(
         error?: string | null
       }
 
-      // Terminal states
-      if (status.status === 'succeeded' || status.status === 'failed') {
-        return status.status
+      const normalized = status.status?.toLowerCase?.() ?? ''
+
+      if (!silent && showStatusChecks)
+        log.info(`Build status: ${normalized || status.status}`)
+
+      if (['succeeded', 'failed', 'expired', 'released', 'cancelled'].includes(normalized)) {
+        return normalized
       }
 
       // Still running, wait and retry
@@ -537,6 +559,8 @@ async function pollBuildStatus(
       attempts++
     }
     catch (error) {
+      if (abortSignal?.aborted)
+        return 'cancelled'
       if (!silent)
         log.warn(`Status check error: ${error}`)
       await new Promise(resolve => setTimeout(resolve, 5000))
@@ -1205,6 +1229,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       let finalStatus: string
       // Stream logs from the build - returns final status if detected from stream
+      let showStatusChecks = false
       const statusCheck = async (): Promise<string | null> => {
         try {
           const response = await fetch(`${host}/build/status?job_id=${encodeURIComponent(buildRequest.job_id)}&app_id=${encodeURIComponent(appId)}&platform=${options.platform}`, {
@@ -1217,6 +1242,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           }
           const status = await response.json() as { status: string }
           const normalized = status.status?.toLowerCase?.() ?? ''
+          if (!silent && showStatusChecks)
+            log.info(`Build status: ${normalized || status.status}`)
           if (normalized === 'succeeded' || normalized === 'failed' || normalized === 'expired' || normalized === 'released' || normalized === 'cancelled') {
             return normalized
           }
@@ -1236,6 +1263,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           startResult.logs_token,
           statusCheck,
           abortController.signal,
+          () => {
+            showStatusChecks = true
+          },
         )
       }
       finally {
@@ -1248,7 +1278,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
       else {
         // Fall back to polling if stream ended without final status
-        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent)
+        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent, showStatusChecks, abortController.signal)
       }
 
       if (!silent) {
