@@ -317,7 +317,7 @@ async function streamBuildLogs(
         if (heartbeatTimer)
           return
         heartbeatTimer = setInterval(async () => {
-          if (ws.readyState === ws.OPEN) {
+          if (ws.readyState === PartySocket.OPEN) {
             ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
           }
           const now = Date.now()
