@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { BundleUnlinkOptions } from '../schemas/bundle'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkVersionNotUsedInChannel } from '../api/channels'
@@ -17,22 +17,17 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  bundle?: string
-  packageJson?: string
-}
-
 export async function unlinkDeviceInternal(
   channel: string,
   appId: string,
-  options: Options,
+  options: BundleUnlinkOptions,
   silent = false,
 ) {
   if (!silent)
     intro('Unlink bundle')
 
   try {
-    const enrichedOptions: Options = {
+    const enrichedOptions: BundleUnlinkOptions = {
       ...options,
       apikey: options.apikey || findSavedKey(),
     }
@@ -115,6 +110,6 @@ export async function unlinkDeviceInternal(
   }
 }
 
-export async function unlinkDevice(channel: string, appId: string, options: Options) {
+export async function unlinkDevice(channel: string, appId: string, options: BundleUnlinkOptions) {
   await unlinkDeviceInternal(channel, appId, options, false)
 }

@@ -1,4 +1,5 @@
-import type { Compatibility, OptionsBase } from '../utils'
+import type { BundleCompatibilityOptions } from '../schemas/bundle'
+import type { Compatibility } from '../utils'
 import { intro, log } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
@@ -15,32 +16,27 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  channel?: string
-  text?: boolean
-  packageJson?: string
-  nodeModules?: string
-}
-
 interface CompatibilityResult {
   finalCompatibility: Compatibility[]
   hasIncompatible: boolean
+  resolvedAppId: string
+  channel: string
 }
 
 export async function checkCompatibilityInternal(
   appId: string,
-  options: Options,
+  options: BundleCompatibilityOptions,
   silent = false,
 ): Promise<CompatibilityResult> {
   if (!silent)
     intro('Check compatibility')
 
-  const enrichedOptions: Options = {
+  const enrichedOptions: BundleCompatibilityOptions = {
     ...options,
     apikey: options.apikey || findSavedKey(),
   }
 
-  const extConfig = await getConfig()
+  const extConfig = appId ? undefined : await getConfig()
   const resolvedAppId = getAppId(appId, extConfig?.config)
   const channel = enrichedOptions.channel
 
@@ -52,7 +48,7 @@ export async function checkCompatibilityInternal(
 
   if (!enrichedOptions.apikey) {
     if (!silent)
-      log.error('Missing API key, you need to provide an API key to upload your bundle')
+      log.error('Missing API key, you need to provide an API key to access Capgo Cloud metadata')
     throw new Error('Missing API key')
   }
 
@@ -127,10 +123,12 @@ export async function checkCompatibilityInternal(
   return {
     finalCompatibility: compatibility.finalCompatibility,
     hasIncompatible,
+    resolvedAppId,
+    channel,
   }
 }
 
-export async function checkCompatibility(appId: string, options: Options) {
+export async function checkCompatibility(appId: string, options: BundleCompatibilityOptions) {
   try {
     await checkCompatibilityInternal(appId, options, false)
   }

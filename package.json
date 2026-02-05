@@ -1,7 +1,7 @@
 {
   "name": "@capgo/cli",
-  "version": "7.70.0",
   "type": "module",
+  "version": "7.72.3",
   "description": "A CLI to upload to capgo servers",
   "author": "Martin martin@capgo.app",
   "license": "Apache 2.0",
@@ -32,8 +32,7 @@
     },
     "./sdk": {
       "types": "./dist/src/sdk.d.ts",
-      "import": "./dist/src/sdk.js",
-      "require": "./dist/src/sdk.js"
+      "import": "./dist/src/sdk.js"
     }
   },
   "main": "dist/index.js",
@@ -64,22 +63,25 @@
     "test:upload": "bun test/test-upload-validation.mjs",
     "test:credentials": "bun test/test-credentials.mjs",
     "test:credentials-validation": "bun test/test-credentials-validation.mjs",
+    "test:checksum": "bun test/test-checksum-algorithm.mjs",
+    "test:esm-sdk": "node test/test-sdk-esm.mjs",
+    "test:mcp": "node test/test-mcp.mjs",
     "test:version-detection": "node test/test-get-installed-version.mjs",
     "test:version-detection:setup": "./test/fixtures/setup-test-projects.sh",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:version-detection"
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^6.1.0",
+    "@antfu/eslint-config": "^7.0.0",
     "@bradenmacdonald/s3-lite-client": "npm:@jsr/bradenmacdonald__s3-lite-client@0.9.4",
     "@capacitor/cli": "^8.0.0",
     "@capgo/find-package-manager": "^0.0.18",
-    "@clack/prompts": "^0.11.0",
-    "@modelcontextprotocol/sdk": "^1.0.0",
+    "@clack/prompts": "^1.0.0",
+    "@modelcontextprotocol/sdk": "^1.25.3",
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver@1.0.6",
     "@supabase/supabase-js": "^2.79.0",
     "@types/adm-zip": "^0.5.7",
-    "@types/node": "^24",
+    "@types/node": "^25.0.0",
     "@types/prettyjson": "^0.0.33",
     "@types/tmp": "^0.2.6",
     "@vercel/ncc": "^0.38.4",
@@ -87,7 +89,7 @@
     "ci-info": "^4.3.1",
     "commander": "^14.0.2",
     "eslint": "^9.38.0",
-    "git-format-staged": "3.1.3",
+    "git-format-staged": "4.0.1",
     "husky": "^9.1.7",
     "is-wsl": "^3.1.0",
     "micromatch": "^4.0.8",
@@ -97,6 +99,6 @@
     "tus-js-client": "^4.3.1",
     "typescript": "^5.9.3",
     "partysocket": "^1.1.11",
-    "zod": "^3.24.0"
+    "zod": "^4.3.6"
   }
 }

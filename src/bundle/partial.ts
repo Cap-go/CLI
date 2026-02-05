@@ -13,14 +13,20 @@ import { parse } from '@std/semver'
 // @ts-expect-error - No type definitions available for micromatch
 import * as micromatch from 'micromatch'
 import * as tus from 'tus-js-client'
-import { encryptChecksumV2, encryptChecksumV3, encryptSourceV2 } from '../api/cryptoV2'
+import { encryptChecksum, encryptChecksumV3, encryptSource } from '../api/crypto'
 import { BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, findRoot, generateManifest, getContentType, getInstalledVersion, getLocalConfig, isDeprecatedPluginVersion, sendEvent } from '../utils'
 
-// Check if file already exists on server
+// Check if file already exists on server (bypass cache and force storage lookup)
 async function fileExists(localConfig: any, filename: string): Promise<boolean> {
   try {
-    const response = await fetch(`${localConfig.hostFilesApi}/files/read/attachments/${encodeURIComponent(filename)}`, {
-      method: 'HEAD',
+    const url = new URL(`${localConfig.hostFilesApi}/files/read/attachments/${encodeURIComponent(filename)}`)
+    url.searchParams.set('nocache', `${Date.now()}`)
+    const response = await fetch(url.toString(), {
+      method: 'GET',
+      headers: {
+        'range': 'bytes=0-0',
+        'cache-control': 'no-cache',
+      },
     })
     return response.ok
   }
@@ -131,7 +137,7 @@ export async function prepareBundlePartialFiles(
       // Use V3 for new plugin versions, V2 for old versions
       file.hash = supportsHexChecksum
         ? encryptChecksumV3(file.hash, finalKeyData)
-        : encryptChecksumV2(file.hash, finalKeyData)
+        : encryptChecksum(file.hash, finalKeyData)
     }
   }
 
@@ -247,7 +253,7 @@ export async function uploadPartial(
 
       let finalBuffer = fileBuffer
       if (encryptionOptions) {
-        finalBuffer = encryptSourceV2(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
+        finalBuffer = encryptSource(fileBuffer, encryptionOptions.sessionKey, encryptionOptions.ivSessionKey)
       }
 
       // Determine the upload path (with or without .br extension)
@@ -394,7 +400,7 @@ export async function uploadPartial(
   catch (error) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
+    spinner.error(`Failed to upload Partial bundle (after ${uploadTime} seconds)`)
 
     if (userRequestedDelta) {
       // User explicitly requested delta/partial updates, so we should fail

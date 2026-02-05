@@ -254,21 +254,33 @@ const noopSupabaseNodeFetch = {
   },
 }
 
-// Fix for @capacitor/cli __dirname issue
-// When bundled, __dirname gets baked in as the build machine path
-// We use import.meta.url for runtime resolution instead
+// Fix for @capacitor/cli path assumptions in bundled builds
+// - __dirname gets baked in as the build machine path
+// - loadCLIConfig reads package.json from cliRootDir
+// We replace __dirname with import.meta.url and make package.json read resilient
 // See: https://github.com/oven-sh/bun/issues/4216
 const fixCapacitorCliDirname = {
   name: 'fix-capacitor-cli-dirname',
   setup(build) {
-    build.onLoad({ filter: /node_modules[\\/]@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
+    // Allow matching when @capacitor/cli is hoisted, linked, or vendored.
+    build.onLoad({ filter: /@capacitor[\\/]cli[\\/]dist[\\/]config\.js$/ }, async (args) => {
       const contents = readFileSync(args.path, 'utf-8')
-      // Replace __dirname with import.meta.url based resolution
-      // Original: const cliRootDir = (0, path_1.dirname)(__dirname);
-      const patched = contents.replace(
-        /const cliRootDir = \(0, path_1\.dirname\)\(__dirname\);/g,
-        `const cliRootDir = (0, path_1.dirname)(require('url').fileURLToPath(import.meta.url));`
+
+      // Replace any __dirname usage (CJS) with runtime-safe import.meta.url resolution.
+      // Keep this broad so it survives upstream refactors.
+      let patched = contents.replace(
+        /\b__dirname\b/g,
+        "require('path').dirname(require('url').fileURLToPath(import.meta.url))"
       )
+
+      // Make CLI package.json read resilient in bundled runtime.
+      // Capture module alias names to avoid breaking if upstream renames them.
+      patched = patched.replace(
+        /package:\s*await\s*\(0,\s*([\w$]+)\.readJSON\)\(\(0,\s*([\w$]+)\.resolve\)\(rootDir,\s*'package\.json'\)\)\s*,/g,
+        (_match, fsAlias, pathAlias) =>
+          `package: await (0, ${fsAlias}.readJSON)((0, ${pathAlias}.resolve)(rootDir, 'package.json')).catch(() => ({ name: '@capacitor/cli', version: '0.0.0' })),`
+      )
+
       return { contents: patched, loader: 'js' }
     })
   },
@@ -306,11 +318,12 @@ const buildSDK = Bun.build({
   naming: 'sdk.js',
   sourcemap: env.NODE_ENV === 'development' ? 'linked' : 'none',
   minify: true,
-  format: 'cjs',
+  format: 'esm',
   define: {
     'process.env.SUPA_DB': '"production"',
   },
   plugins: [
+    fixCapacitorCliDirname,
     ignorePunycode,
     noopSupabaseNodeFetch,
   ],
@@ -340,6 +353,23 @@ Promise.all([buildCLI, buildSDK]).then(async (results) => {
   const cliOutput = await Bun.file('dist/index.js').text()
   await Bun.write('dist/index.js', `#!/usr/bin/env node\n${cliOutput}`)
 
+  // Bun has occasionally emitted `module.exports` in ESM bundles.
+  // Ensure the SDK bundle doesn't crash in ESM by providing a shim when needed.
+  const sdkPath = 'dist/src/sdk.js'
+  try {
+    let sdkOutput = readFileSync(sdkPath, 'utf-8')
+    const hasModuleBinding = /\b(?:var|let|const)\s+module(?![$\w])/.test(sdkOutput)
+    if (/\bmodule\.exports\b/.test(sdkOutput) && !hasModuleBinding) {
+      const importBlock = sdkOutput.match(/^(?:\s*import[^;]+;)+/)
+      const insertAt = importBlock ? importBlock[0].length : 0
+      sdkOutput = `${sdkOutput.slice(0, insertAt)}var module={exports:{}};${sdkOutput.slice(insertAt)}`
+      writeFileSync(sdkPath, sdkOutput)
+    }
+  }
+  catch (err) {
+    console.warn('⚠️  Could not inspect SDK bundle for module shim:', err)
+  }
+
   // Write metafile for bundle analysis (similar to esbuild's metafile)
   // Use relative paths to match esbuild's format
   const metafile = {
@@ -357,7 +387,7 @@ Promise.all([buildCLI, buildSDK]).then(async (results) => {
   writeFileSync('meta.json', JSON.stringify(metafile))
 
   copyFileSync('package.json', 'dist/package.json')
-  console.error('✅ Built CLI and SDK successfully')
+  console.warn('✅ Built CLI and SDK successfully')
 }).catch((err) => {
   console.error('Build failed:', err)
   exit(1)

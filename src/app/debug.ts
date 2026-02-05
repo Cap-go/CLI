@@ -1,5 +1,5 @@
+import type { AppDebugOptions } from '../schemas/app'
 import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
 import { confirm as confirmC, intro, isCancel, log, outro, spinner } from '@clack/prompts'
 import { Table } from '@sauber/table'
 // Native fetch is available in Node.js >= 18
@@ -18,9 +18,7 @@ function formatTimeOnly(createdAt: string) {
   return d.toLocaleTimeString()
 }
 
-export interface OptionsBaseDebug extends OptionsBase {
-  device?: string
-}
+export type { AppDebugOptions as OptionsBaseDebug } from '../schemas/app'
 
 export async function markSnag(channel: string, orgId: string, apikey: string, event: string, appId?: string, icon = '✅') {
   await sendEvent(apikey, {
@@ -231,7 +229,7 @@ export async function waitLog(channel: string, apikey: string, appId: string, or
   return Promise.resolve()
 }
 
-export async function debugApp(appId: string, options: OptionsBaseDebug) {
+export async function debugApp(appId: string, options: AppDebugOptions) {
   intro('Debug Live update in Capgo')
 
   await checkAlerts()

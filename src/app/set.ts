@@ -13,6 +13,7 @@ import {
   getContentType,
   getOrganization,
   OrganizationPerm,
+  sendEvent,
   verifyUser,
 } from '../utils'
 
@@ -119,6 +120,16 @@ export async function setAppInternal(appId: string, options: Options, silent = f
       log.error(`Could not set app ${formatError(dbError)}`)
     throw new Error(`Could not set app: ${formatError(dbError)}`)
   }
+
+  await sendEvent(options.apikey, {
+    channel: 'app',
+    event: 'App Updated',
+    icon: '📝',
+    user_id: organizationUid,
+    tags: { 'app-id': appId },
+    notify: false,
+    notifyConsole: true,
+  }).catch(() => {})
 
   if (!silent)
     outro('Done ✅')

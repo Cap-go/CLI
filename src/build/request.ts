@@ -26,7 +26,7 @@
  * - Use `build credentials clear` to remove saved credentials
  */
 
-import type { OptionsBase } from '../utils'
+import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
@@ -116,89 +116,7 @@ async function fetchWithRetry(
   throw new Error('Unexpected error in fetchWithRetry')
 }
 
-/**
- * Build credentials for iOS and Android native builds
- *
- * SECURITY: These credentials are NEVER stored on Capgo servers.
- * They are used only during the build process and are automatically
- * deleted after the build completes (maximum 24 hours retention).
- * Builds are sent directly to app stores - Capgo keeps nothing.
- */
-export interface BuildCredentials {
-  // iOS credentials (standard environment variable names from API)
-  BUILD_CERTIFICATE_BASE64?: string
-  BUILD_PROVISION_PROFILE_BASE64?: string
-  BUILD_PROVISION_PROFILE_BASE64_PROD?: string
-  P12_PASSWORD?: string
-  APPLE_KEY_ID?: string
-  APPLE_ISSUER_ID?: string
-  APPLE_KEY_CONTENT?: string
-  APPLE_PROFILE_NAME?: string
-  APP_STORE_CONNECT_TEAM_ID?: string
-
-  // Android credentials (standard environment variable names from API)
-  ANDROID_KEYSTORE_FILE?: string
-  KEYSTORE_KEY_ALIAS?: string
-  KEYSTORE_KEY_PASSWORD?: string
-  KEYSTORE_STORE_PASSWORD?: string
-  PLAY_CONFIG_JSON?: string
-
-  // Allow any additional environment variables
-  [key: string]: string | undefined
-}
-
-/**
- * CLI options for build request command
- * All BuildCredentials fields are flattened as individual CLI options
- */
-export interface BuildRequestOptions extends OptionsBase {
-  path?: string
-  platform: 'ios' | 'android' // Required: must be exactly "ios" or "android"
-  buildMode?: 'debug' | 'release' // Build mode (default: release)
-  userId?: string // User ID for the build job
-
-  // iOS credential options (flattened from BuildCredentials)
-  buildCertificateBase64?: string
-  buildProvisionProfileBase64?: string
-  buildProvisionProfileBase64Prod?: string
-  p12Password?: string
-  appleKeyId?: string
-  appleIssuerId?: string
-  appleKeyContent?: string
-  appleProfileName?: string
-  appStoreConnectTeamId?: string
-
-  // Android credential options (flattened from BuildCredentials)
-  androidKeystoreFile?: string
-  keystoreKeyAlias?: string
-  keystoreKeyPassword?: string
-  keystoreStorePassword?: string
-  playConfigJson?: string
-
-  // Output control options
-  verbose?: boolean // Enable verbose output with detailed logging
-}
-
-export interface BuildRequestResponse {
-  jobId: string
-  folder: string
-  status: 'queued' | 'reserved'
-  artifactKey: string
-  uploadUrl: string
-  machine?: {
-    id: string
-    ip: string
-    [key: string]: unknown
-  } | null
-}
-
-export interface BuildRequestResult {
-  success: boolean
-  jobId?: string
-  uploadUrl?: string
-  status?: string
-  error?: string
-}
+export type { BuildCredentials, BuildRequestOptions, BuildRequestResponse, BuildRequestResult } from '../schemas/build'
 
 /**
  * Stream build logs from the server via WebSocket.
@@ -1108,7 +1026,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           // Callback for errors which cannot be fixed using retries
           onError(error) {
             if (!silent) {
-              spinner.stop('Upload failed')
+              spinner.error('Upload failed')
               log.error(`Upload error: ${error.message}`)
             }
             if (error instanceof tus.DetailedError) {

@@ -5,6 +5,7 @@ import type {
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig, ExtConfigPairs } from './config'
+import type { Compatibility, CompatibilityDetails, IncompatibilityReason, NativePackage } from './schemas/common'
 import type { Database } from './types/supabase.types'
 import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
@@ -23,6 +24,7 @@ import * as tus from 'tus-js-client'
 import { markSnag } from './app/debug'
 import { getChecksum } from './checksum'
 import { loadConfig, writeConfig } from './config'
+import { nativePackageSchema } from './schemas/common'
 import { formatApiErrorForCli, parseSecurityPolicyError } from './utils/security_policy_errors'
 
 export const baseKey = '.capgo_key'
@@ -131,11 +133,7 @@ interface TrackOptions {
   timestamp?: number | Date
 }
 
-export interface OptionsBase {
-  apikey: string
-  supaHost?: string
-  supaAnon?: string
-}
+export type { OptionsBase } from './schemas/base'
 
 export function wait(ms: number) {
   return new Promise((resolve) => {
@@ -1109,12 +1107,7 @@ export async function generateManifest(path: string): Promise<{ file: string, ha
 }
 
 export type manifestType = Awaited<ReturnType<typeof generateManifest>>
-export interface uploadUrlsType {
-  path: string
-  hash: string
-  uploadLink: string
-  finalPath: string
-}
+export type { uploadUrlsType } from './schemas/common'
 
 export async function zipFile(filePath: string): Promise<Buffer> {
   if (osPlatform() === 'win32') {
@@ -1285,7 +1278,7 @@ export async function updateOrCreateChannel(supabase: SupabaseClient<Database>, 
     .single()
 }
 
-export async function sendEvent(capgkey: string, payload: TrackOptions, verbose?: boolean): Promise<void> {
+export async function sendEvent(capgkey: string, payload: TrackOptions & { notifyConsole?: boolean }, verbose?: boolean): Promise<void> {
   try {
     if (verbose) {
       log.info(`Get remove config: for ${payload.event}`)
@@ -1745,12 +1738,7 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   return channelData.version.checksum
 }
 
-export interface NativePackage {
-  name: string
-  version: string
-  ios_checksum?: string
-  android_checksum?: string
-}
+export type { NativePackage } from './schemas/common'
 
 export function convertNativePackages(nativePackages: NativePackage[]): Map<string, NativePackage> {
   if (!nativePackages) {
@@ -1758,22 +1746,13 @@ export function convertNativePackages(nativePackages: NativePackage[]): Map<stri
     throw new Error('Error parsing native packages')
   }
 
-  // Check types
+  // Validate each package using Zod schema
   for (const data of nativePackages) {
-    if (typeof data !== 'object') {
-      log.error(`Invalid remote native package data: ${data}, expected object, got ${typeof data}`)
-      throw new Error('Invalid remote native package data')
-    }
-
-    const { name, version } = data
-    if (!name || typeof name !== 'string') {
-      log.error(`Invalid remote native package name: ${name}, expected string, got ${typeof name}`)
-      throw new Error('Invalid remote native package name')
-    }
-
-    if (!version || typeof version !== 'string') {
-      log.error(`Invalid remote native package version: ${version}, expected string, got ${typeof version}`)
-      throw new Error('Invalid remote native package version')
+    const result = nativePackageSchema.safeParse(data)
+    if (!result.success) {
+      const errorMsg = result.error.issues.map(i => `${i.path.join('.')}: ${i.message}`).join(', ')
+      log.error(`Invalid remote native package data: ${errorMsg}`)
+      throw new Error(`Invalid remote native package data: ${errorMsg}`)
     }
   }
 
@@ -1818,30 +1797,7 @@ export async function checkChecksum(supabase: SupabaseClient<Database>, appId: s
   s.stop(`Checksum compatible with ${channel} channel`)
 }
 
-export interface Compatibility {
-  name: string
-  localVersion: string | undefined
-  remoteVersion: string | undefined
-  // Platform checksums for detailed change detection
-  localIosChecksum?: string
-  remoteIosChecksum?: string
-  localAndroidChecksum?: string
-  remoteAndroidChecksum?: string
-}
-
-export type IncompatibilityReason
-  = | 'new_plugin' // Plugin exists locally but not on remote
-    | 'removed_plugin' // Plugin exists on remote but not locally
-    | 'version_mismatch' // Versions don't intersect
-    | 'ios_code_changed' // iOS native code changed (same version but different checksum)
-    | 'android_code_changed' // Android native code changed (same version but different checksum)
-    | 'both_platforms_changed' // Both iOS and Android native code changed
-
-export interface CompatibilityDetails {
-  compatible: boolean
-  reasons: IncompatibilityReason[]
-  message: string
-}
+export type { Compatibility, CompatibilityDetails, IncompatibilityReason } from './schemas/common'
 
 export function getAppId(appId: string | undefined, config: CapacitorConfig | undefined) {
   const finalAppId = appId || config?.plugins?.CapacitorUpdater?.appId || config?.appId

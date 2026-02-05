@@ -1,14 +1,9 @@
-import type { OptionsBase } from '../utils'
+import type { AppSettingOptions } from '../schemas/app'
 import { intro, log, outro } from '@clack/prompts'
 import { writeConfigUpdater } from '../config'
 import { formatError, getConfig } from '../utils'
 
-interface Options extends OptionsBase {
-  bool?: string
-  string?: string
-}
-
-export async function setSettingInternal(setting: string, options: Options, silent = false) {
+export async function setSettingInternal(setting: string, options: AppSettingOptions, silent = false) {
   if (!silent)
     intro('Set a specific setting in capacitor config')
 
@@ -65,6 +60,6 @@ export async function setSettingInternal(setting: string, options: Options, sile
     outro('Done ✅')
 }
 
-export async function setSetting(setting: string, options: Options) {
+export async function setSetting(setting: string, options: AppSettingOptions) {
   return setSettingInternal(setting, options)
 }

@@ -29,6 +29,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 - 📦 [Bundle](#bundle)
   - [Upload](#bundle-upload)
   - [Compatibility](#bundle-compatibility)
+  - [ReleaseType](#bundle-releaseType)
   - [Delete](#bundle-delete)
   - [List](#bundle-list)
   - [Cleanup](#bundle-cleanup)
@@ -197,6 +198,7 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--auto-min-update-version** | <code>boolean</code> | Set the min update version based on native packages |
 | **--ignore-metadata-check** | <code>boolean</code> | Ignores the metadata (node_modules) check when uploading |
 | **--ignore-checksum-check** | <code>boolean</code> | Ignores the checksum check when uploading |
+| **--force-crc32-checksum** | <code>boolean</code> | Force CRC32 checksum for upload (override auto-detection) |
 | **--timeout** | <code>string</code> | Timeout for the upload process in seconds |
 | **--multipart** | <code>boolean</code> | [DEPRECATED] Use --tus instead. Uses multipart protocol for S3 uploads |
 | **--zip** | <code>boolean</code> | Upload the bundle using zip to Capgo cloud (legacy) |
@@ -204,8 +206,9 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--tus-chunk-size** | <code>string</code> | Chunk size in bytes for TUS resumable uploads (default: auto) |
 | **--partial** | <code>boolean</code> | [DEPRECATED] Use --delta instead. Upload incremental updates |
 | **--partial-only** | <code>boolean</code> | [DEPRECATED] Use --delta-only instead. Upload only incremental updates, skip full bundle |
-| **--delta** | <code>boolean</code> | Upload incremental/differential updates to reduce bandwidth |
-| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle (useful for large apps) |
+| **--delta** | <code>boolean</code> | Upload delta updates (only changed files) for instant, super fast updates instead of big zip downloads |
+| **--delta-only** | <code>boolean</code> | Upload only delta updates without full bundle for maximum speed (useful for large apps) |
+| **--no-delta** | <code>boolean</code> | Disable delta updates even if Direct Update is enabled |
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
@@ -242,6 +245,31 @@ npx @capgo/cli@latest bundle compatibility com.example.app --channel production
 | **-a,** | <code>string</code> | API key to link to your account |
 | **-c,** | <code>string</code> | Channel to check the compatibility with |
 | **--text** | <code>boolean</code> | Output text instead of emojis |
+| **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+| **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
+| **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
+| **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+### <a id="bundle-releaseType"></a> 🔹 **ReleaseType**
+
+```bash
+npx @capgo/cli@latest bundle releaseType
+```
+
+🧭 Print "native" or "OTA" based on compatibility with a channel's latest metadata.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest bundle releaseType com.example.app --channel production
+```
+
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+| **-c,** | <code>string</code> | Channel to compare against |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 | **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |

@@ -1,11 +1,12 @@
 import type { Buffer } from 'node:buffer'
 import type { CapacitorConfig } from '../config'
+import type { UploadBundleResult } from '../schemas/bundle'
 import type { Database } from '../types/supabase.types'
 import type { Compatibility, manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { cwd } from 'node:process'
+import { cwd, stdin, stdout } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, confirm as pConfirm, isCancel as pIsCancel, select as pSelect, spinner as spinnerC } from '@clack/prompts'
 import { Table } from '@sauber/table'
@@ -13,10 +14,10 @@ import { greaterOrEqual, parse } from '@std/semver'
 // Native fetch is available in Node.js >= 18
 import pack from '../../package.json'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
-import { calcKeyId, encryptChecksumV2, encryptChecksumV3, encryptSourceV2, generateSessionKey } from '../api/cryptoV2'
+import { calcKeyId, encryptChecksum, encryptChecksumV3, encryptSource, generateSessionKey } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
-import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
@@ -25,17 +26,7 @@ type SupabaseType = Awaited<ReturnType<typeof createSupabaseClient>>
 type pmType = ReturnType<typeof getPMAndCommand>
 type localConfigType = Awaited<ReturnType<typeof getLocalConfig>>
 
-export interface UploadBundleResult {
-  success: boolean
-  bundle: string
-  checksum?: string | null
-  encryptionMethod: 'none' | 'v1' | 'v2'
-  sessionKey?: string
-  ivSessionKey?: string | null
-  storageProvider?: string
-  skipped?: boolean
-  reason?: string
-}
+export type { UploadBundleResult }
 
 function uploadFail(message: string): never {
   log.error(message)
@@ -158,7 +149,7 @@ async function verifyCompatibility(supabase: SupabaseType, pm: pmType, options: 
     // Check if any package is incompatible
     const incompatiblePackages = finalCompatibility.filter(x => !isCompatible(x))
     if (incompatiblePackages.length > 0) {
-      spinner.stop(`Bundle NOT compatible with ${channel} channel`)
+      spinner.error(`Bundle NOT compatible with ${channel} channel`)
       log.warn('')
       displayCompatibilityTable(finalCompatibility)
       log.warn('')
@@ -315,20 +306,17 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     uploadFail('Cannot find @capgo/capacitor-updater in node_modules, please install it first with your package manager')
   }
   else if (coerced) {
-    // Use SHA256 for v5.10.0+, v6.25.0+ and v7.0.35+
-    useSha256 = !isDeprecatedPluginVersion(coerced, BROTLI_MIN_UPDATER_VERSION_V7)
+    // Use SHA256 for v5.10.0+, v6.25.0+ and v7.0.30+
+    useSha256 = !isDeprecatedPluginVersion(coerced, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7)
   }
   else if (updaterVersion === 'link:@capgo/capacitor-updater' || updaterVersion === 'file:..' || updaterVersion === 'file:../') {
     log.warn('Using local @capgo/capacitor-updater. Assuming latest version for checksum calculation.')
     useSha256 = true
   }
-  if (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256) {
-    checksum = await getChecksum(zipped, 'sha256')
-  }
-  else {
-    checksum = await getChecksum(zipped, 'crc32')
-  }
-  s.stop(`Checksum ${useSha256 ? 'SHA256' : 'CRC32'}: ${checksum}`)
+  const forceCrc32 = options.forceCrc32Checksum === true
+  const shouldUseSha256 = !forceCrc32 && (((keyV2 || options.keyDataV2 || existsSync(baseKeyV2)) && !noKey) || useSha256)
+  checksum = await getChecksum(zipped, shouldUseSha256 ? 'sha256' : 'crc32')
+  s.stop(`Checksum ${shouldUseSha256 ? 'SHA256' : 'CRC32'}${forceCrc32 ? ' (forced)' : ''}: ${checksum}`)
   // key should be undefined or a string if false it should ignore encryption DO NOT REPLACE key === false With !key it will not work
   if (noKey) {
     log.info(`Encryption ignored`)
@@ -356,10 +344,10 @@ async function prepareBundleFile(path: string, options: OptionsUpload, apikey: s
     const supportsV3Checksum = coerced && !isDeprecatedPluginVersion(coerced, '5.30.0', '6.30.0', '7.30.0')
     log.info(`Encrypting your bundle with ${supportsV3Checksum ? 'V3' : 'V2'}`)
     const { sessionKey: sKey, ivSessionKey: ivKey } = generateSessionKey(keyDataV2)
-    const encryptedData = encryptSourceV2(zipped, sKey, ivKey)
+    const encryptedData = encryptSource(zipped, sKey, ivKey)
     checksum = supportsV3Checksum
       ? encryptChecksumV3(checksum, keyDataV2)
-      : encryptChecksumV2(checksum, keyDataV2)
+      : encryptChecksum(checksum, keyDataV2)
     ivSessionKey = ivKey
     sessionKey = sKey
     encryptionMethod = 'v2'
@@ -530,7 +518,7 @@ async function uploadBundleToCapgoCloud(apikey: string, supabase: SupabaseType, 
   catch (errorUpload: any) {
     const endTime = performance.now()
     const uploadTime = ((endTime - startTime) / 1000).toFixed(2)
-    spinner.stop(`Failed to upload bundle ( after ${uploadTime} seconds)`)
+    spinner.error(`Failed to upload bundle ( after ${uploadTime} seconds)`)
 
     if (options.verbose) {
       log.info(`[Verbose] Upload failed after ${uploadTime} seconds`)
@@ -728,6 +716,33 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Capacitor config loaded successfully`)
 
+  // Check if directUpdate is enabled and auto-enable delta updates
+  const directUpdateEnabled = extConfig?.config?.plugins?.CapacitorUpdater?.directUpdate === 'always'
+  const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
+  if (directUpdateEnabled && options.delta === undefined) {
+    if (interactive) {
+      log.info('💡 Direct Update (instant updates) is enabled in your config')
+      log.info('   Delta updates send only changed files instead of the full bundle')
+      const enableDelta = await pConfirm({
+        message: 'Enable delta updates for this upload? (Recommended with Direct Update)',
+        initialValue: true,
+      })
+      if (!pIsCancel(enableDelta) && enableDelta) {
+        options.delta = true
+        if (options.verbose)
+          log.info(`[Verbose] Delta updates auto-enabled due to Direct Update configuration`)
+      }
+    }
+    else if (!silent) {
+      // Non-interactive mode (CI/CD): auto-enable unless explicitly disabled
+      if (options.delta !== false) {
+        options.delta = true
+        if (options.verbose)
+          log.info(`[Verbose] Delta updates auto-enabled in CI/CD mode due to Direct Update configuration`)
+      }
+    }
+  }
+
   const fileConfig = await getRemoteFileConfig()
   if (options.verbose) {
     log.info(`[Verbose] Remote file config retrieved:`)
@@ -817,8 +832,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Checking if version ${bundle} already exists...`)
 
-  // Enable interactive mode if not in silent mode (prompts will handle TTY detection)
-  const interactive = !silent
+  // Enable interactive mode only when TTY is available
   const versionExistsResult = await checkVersionExists(supabase, appid, bundle, options.versionExistsOk, interactive)
 
   if (options.verbose)
@@ -1189,9 +1203,23 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     user_id: orgId,
     tags: {
       'app-id': appid,
+      'bundle': bundle,
     },
     notify: false,
   }, options.verbose)
+
+  await sendEvent(apikey, {
+    channel: 'app',
+    event: 'Bundle Uploaded',
+    icon: '⏫',
+    user_id: orgId,
+    tags: {
+      'app-id': appid,
+      'bundle': bundle,
+    },
+    notify: false,
+    notifyConsole: true,
+  }).catch(() => {})
 
   const result: UploadBundleResult = {
     success: true,
@@ -1218,6 +1246,10 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
 }
 
 function checkValidOptions(options: OptionsUpload) {
+  const noKey = options.key === false
+  const forceCrc32 = options.forceCrc32Checksum === true
+  const hasEncryptionKey = (options.keyV2 || options.keyDataV2 || existsSync(baseKeyV2))
+
   if (options.ivSessionKey && !options.external) {
     uploadFail('You need to provide an external url if you want to use the --iv-session-key option')
   }
@@ -1256,6 +1288,9 @@ function checkValidOptions(options: OptionsUpload) {
   if (options.minUpdateVersion && options.autoMinUpdateVersion) {
     uploadFail('You cannot set both min-update-version and auto-min-update-version, use only one of them')
   }
+  if (forceCrc32 && hasEncryptionKey && !noKey) {
+    uploadFail('You cannot use --force-crc32-checksum when encryption is enabled. Remove the flag or disable encryption.')
+  }
 }
 
 export async function uploadBundle(appid: string, options: OptionsUpload) {
@@ -1278,8 +1313,9 @@ export async function uploadBundle(appid: string, options: OptionsUpload) {
     // Check if this is a checksum error - offer specific retry option
     const isChecksumError = simpleMessage.includes('Cannot upload the same bundle content')
 
-    // Interactive retry for errors (prompts will handle TTY detection)
-    if (!options.versionExistsOk) {
+    const interactive = !!stdin.isTTY && !!stdout.isTTY
+    // Interactive retry for errors when running in an interactive environment
+    if (!options.versionExistsOk && interactive) {
       try {
         if (isChecksumError) {
           // For checksum errors, offer to retry with --ignore-checksum-check

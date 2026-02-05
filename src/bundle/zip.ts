@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { BundleZipOptions, ZipResult } from '../schemas/bundle'
 import { randomUUID } from 'node:crypto'
 import { existsSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
@@ -20,23 +20,9 @@ import {
 } from '../utils'
 import { checkIndexPosition, searchInDirectory } from './check'
 
+export type { ZipResult } from '../schemas/bundle'
+
 const alertMb = 20
-
-interface Options extends OptionsBase {
-  bundle?: string
-  path?: string
-  codeCheck?: boolean
-  name?: string
-  json?: boolean
-  keyV2?: boolean
-  packageJson?: string
-}
-
-export interface ZipResult {
-  bundle: string
-  filename: string
-  checksum: string
-}
 
 function emitJson(value: unknown) {
   // eslint-disable-next-line no-console
@@ -47,7 +33,7 @@ function emitJsonError(error: unknown) {
   console.error(formatError(error))
 }
 
-export async function zipBundleInternal(appId: string, options: Options, silent = false): Promise<ZipResult> {
+export async function zipBundleInternal(appId: string, options: BundleZipOptions, silent = false): Promise<ZipResult> {
   const { json } = options
   let { bundle, path } = options
 
@@ -211,6 +197,6 @@ export async function zipBundleInternal(appId: string, options: Options, silent 
   }
 }
 
-export async function zipBundle(appId: string, options: Options) {
+export async function zipBundle(appId: string, options: BundleZipOptions) {
   await zipBundleInternal(appId, options, false)
 }

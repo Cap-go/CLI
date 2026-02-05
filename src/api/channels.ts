@@ -185,26 +185,8 @@ export function findBundleIdByChannelName(supabase: SupabaseClient<Database>, ap
     .then(({ data }) => data?.version)
 }
 
-interface Version {
-  id: string | number
-  name: string
-}
-
-export interface Channel {
-  id: number
-  name: string
-  public: boolean
-  ios: boolean
-  android: boolean
-  disable_auto_update: string
-  disable_auto_update_under_native: boolean
-  allow_device_self_set: boolean
-  allow_emulator: boolean
-  allow_device: boolean
-  allow_dev: boolean
-  allow_prod: boolean
-  version?: Version
-}
+export type { Channel } from '../schemas/channel'
+type Channel = import('../schemas/channel').Channel
 
 export function displayChannels(data: Channel[], silent = false) {
   if (silent)

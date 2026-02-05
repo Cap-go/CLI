@@ -1,30 +1,21 @@
+import type { BundleDecryptOptions, DecryptResult } from '../schemas/bundle'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { cwd } from 'node:process'
 import { intro, log, outro } from '@clack/prompts'
 import { parse } from '@std/semver'
-import { decryptChecksumV2, decryptChecksumV3, decryptSourceV2 } from '../api/cryptoV2'
+import { decryptChecksum, decryptChecksumV3, decryptSource } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { baseKeyPubV2, findRoot, formatError, getConfig, getInstalledVersion, isDeprecatedPluginVersion } from '../utils'
+
+export type { DecryptResult } from '../schemas/bundle'
 
 // Minimum versions that support hex checksum format (V3)
 const HEX_CHECKSUM_MIN_VERSION_V5 = '5.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V6 = '6.30.0'
 const HEX_CHECKSUM_MIN_VERSION_V7 = '7.30.0'
 
-interface Options {
-  key?: string
-  keyData?: string
-  checksum?: string
-  packageJson?: string
-}
-
-export interface DecryptResult {
-  outputPath: string
-  checksumMatches?: boolean
-}
-
-function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof getConfig>>) {
+function resolvePublicKey(options: BundleDecryptOptions, extConfig: Awaited<ReturnType<typeof getConfig>>) {
   const fallbackKeyPath = options.key || baseKeyPubV2
   let publicKey = extConfig.config.plugins?.CapacitorUpdater?.publicKey
 
@@ -38,10 +29,10 @@ function resolvePublicKey(options: Options, extConfig: Awaited<ReturnType<typeof
   return { publicKey, fallbackKeyPath }
 }
 
-export async function decryptZipV2Internal(
+export async function decryptZipInternal(
   zipPath: string,
   ivsessionKey: string,
-  options: Options,
+  options: BundleDecryptOptions,
   silent = false,
 ): Promise<DecryptResult> {
   if (!silent)
@@ -77,7 +68,7 @@ export async function decryptZipV2Internal(
 
     const zipFile = readFileSync(zipPath)
 
-    const decodedZip = decryptSourceV2(zipFile, ivsessionKey, options.keyData ?? publicKey)
+    const decodedZip = decryptSource(zipFile, ivsessionKey, options.keyData ?? publicKey)
     const outputPath = `${zipPath}_decrypted.zip`
     writeFileSync(outputPath, decodedZip)
 
@@ -111,7 +102,7 @@ export async function decryptZipV2Internal(
 
       const decryptedChecksum = supportsV3Checksum
         ? decryptChecksumV3(options.checksum, options.keyData ?? publicKey)
-        : decryptChecksumV2(options.checksum, options.keyData ?? publicKey)
+        : decryptChecksum(options.checksum, options.keyData ?? publicKey)
       checksumMatches = checksum === decryptedChecksum
 
       if (!checksumMatches) {
@@ -137,6 +128,6 @@ export async function decryptZipV2Internal(
   }
 }
 
-export async function decryptZipV2(zipPath: string, ivsessionKey: string, options: Options) {
-  await decryptZipV2Internal(zipPath, ivsessionKey, options, false)
+export async function decryptZip(zipPath: string, ivsessionKey: string, options: BundleDecryptOptions) {
+  await decryptZipInternal(zipPath, ivsessionKey, options, false)
 }

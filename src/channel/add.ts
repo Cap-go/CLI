@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { ChannelAddOptions } from '../schemas/channel'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { createChannel, findUnknownVersion } from '../api/channels'
@@ -14,12 +14,7 @@ import {
   verifyUser,
 } from '../utils'
 
-interface Options extends OptionsBase {
-  default?: boolean
-  selfAssign?: boolean
-}
-
-export async function addChannelInternal(channelId: string, appId: string, options: Options, silent = false) {
+export async function addChannelInternal(channelId: string, appId: string, options: ChannelAddOptions, silent = false) {
   if (!silent)
     intro('Create channel')
 
@@ -93,6 +88,6 @@ export async function addChannelInternal(channelId: string, appId: string, optio
   return res.data ?? true
 }
 
-export async function addChannel(channelId: string, appId: string, options: Options) {
+export async function addChannel(channelId: string, appId: string, options: ChannelAddOptions) {
   await addChannelInternal(channelId, appId, options, false)
 }

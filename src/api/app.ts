@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js'
 import type { Database } from '../types/supabase.types'
-import type { OptionsBase } from '../utils'
 import { log } from '@clack/prompts'
 import { getPMAndCommand, isAllowedAppOrg, OrganizationPerm, show2FADeniedError } from '../utils'
 
@@ -86,11 +85,6 @@ export async function checkAppExistsAndHasPermissionOrgErr(
   return permissions.data
 }
 
-export interface Options extends OptionsBase {
-  name?: string
-  icon?: string
-  retention?: number
-  exposeMetadata?: boolean
-}
+export type { AppOptions as Options } from '../schemas/app'
 
 export const newIconPath = 'assets/icon.png'

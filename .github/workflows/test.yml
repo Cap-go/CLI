@@ -33,7 +33,7 @@ jobs:
           bun-version: latest
 
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
 
@@ -60,7 +60,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Check spelling with typos
-        uses: crate-ci/typos@v1.42.0
+        uses: crate-ci/typos@v1.42.3
 
   # POSIX path checks
   create-valid-zip-linux:
@@ -271,6 +271,9 @@ jobs:
       - name: Build
         id: build_code
         run: bun run build
+      - name: Quick ESM SDK check
+        id: esm_sdk_check
+        run: bun run test:esm-sdk
       - name: Run
         id: run_cli
         run: node dist/index.js --help
@@ -302,6 +305,9 @@ jobs:
       - name: Install Capgo dependencies
         working-directory: capgo
         run: bun install
+      - name: Install local @capgo/cli package
+        working-directory: capgo
+        run: bun add -d file:..
       - name: Run CLI tests
         working-directory: capgo
         run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli

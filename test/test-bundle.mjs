@@ -14,6 +14,7 @@ if (!existsSync(bundlePath)) {
 }
 
 const bundleContent = readFileSync(bundlePath, 'utf-8')
+const sdkContent = existsSync(sdkPath) ? readFileSync(sdkPath, 'utf-8') : null
 const metaPath = './meta.json'
 const meta = existsSync(metaPath) ? JSON.parse(readFileSync(metaPath, 'utf-8')) : null
 
@@ -111,22 +112,31 @@ const ciPathPatterns = [
   /\/github\/workspace\//g, // GitHub container actions
 ]
 
-let foundHardcodedPaths = false
-for (const pattern of ciPathPatterns) {
-  const matches = bundleContent.match(pattern)
-  if (matches) {
-    console.error(`❌ CRITICAL: Found hardcoded CI path in bundle: ${matches[0]}`)
-    console.error('   This will cause "ENOENT: no such file or directory" errors for users!')
-    console.error('   The __dirname fix in build.mjs is not working correctly.')
-    foundHardcodedPaths = true
+const checkHardcodedPaths = (label, content) => {
+  let found = false
+  for (const pattern of ciPathPatterns) {
+    const matches = content.match(pattern)
+    if (matches) {
+      console.error(`❌ CRITICAL: Found hardcoded CI path in ${label}: ${matches[0]}`)
+      console.error('   This will cause "ENOENT: no such file or directory" errors for users!')
+      console.error('   The __dirname fix in build.mjs is not working correctly.')
+      found = true
+    }
   }
+  return found
+}
+
+let foundHardcodedPaths = false
+foundHardcodedPaths = checkHardcodedPaths('CLI bundle', bundleContent) || foundHardcodedPaths
+if (sdkContent) {
+  foundHardcodedPaths = checkHardcodedPaths('SDK bundle', sdkContent) || foundHardcodedPaths
 }
 
 if (foundHardcodedPaths) {
   process.exit(1)
 }
 else {
-  console.log('✅ No hardcoded CI paths found in bundle')
+  console.log('✅ No hardcoded CI paths found in bundles')
 }
 
 // Test 8: Verify import.meta.url is used for runtime path resolution

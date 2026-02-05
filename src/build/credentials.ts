@@ -19,6 +19,7 @@
  * - Rotate credentials regularly
  */
 
+import type { AllCredentials, CredentialFile, SavedCredentials } from '../schemas/build'
 import type { BuildCredentials } from './request'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
@@ -43,34 +44,7 @@ function getCredentialsDir(local?: boolean): string | null {
   return local ? null : CREDENTIALS_DIR
 }
 
-export interface CredentialFile {
-  // iOS file paths
-  BUILD_CERTIFICATE_FILE?: string
-  BUILD_PROVISION_PROFILE_FILE?: string
-  BUILD_PROVISION_PROFILE_FILE_PROD?: string
-  APPLE_KEY_FILE?: string
-
-  // Android file paths
-  ANDROID_KEYSTORE_PATH?: string
-  PLAY_CONFIG_JSON_PATH?: string
-}
-
-/**
- * Per-app credentials structure
- * Each app can have its own iOS and Android credentials
- */
-export interface SavedCredentials {
-  ios?: Partial<BuildCredentials>
-  android?: Partial<BuildCredentials>
-}
-
-/**
- * All credentials file structure
- * Maps appId -> credentials for that app
- */
-export interface AllCredentials {
-  [appId: string]: SavedCredentials
-}
+export type { AllCredentials, CredentialFile, SavedCredentials } from '../schemas/build'
 
 /**
  * Convert a file to base64 string

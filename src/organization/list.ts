@@ -1,4 +1,5 @@
-import type { OptionsBase, Organization } from '../utils'
+import type { OptionsBase } from '../schemas/base'
+import type { Organization } from '../utils'
 import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'

@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OptionsBase } from '../schemas/base'
 import { intro, isCancel, log, outro, select } from '@clack/prompts'
 import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import {

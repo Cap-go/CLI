@@ -1,4 +1,4 @@
-import type { OptionsBase } from '../utils'
+import type { OptionsBase } from '../schemas/base'
 import { intro, log, outro } from '@clack/prompts'
 import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '../api/app'
 import { checkAlerts } from '../api/update'
