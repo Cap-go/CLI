@@ -377,7 +377,13 @@ async function streamBuildLogs(
           raw = (event.data as { toString: () => string }).toString()
         }
 
-        let parsed: { id?: number, message?: string, type?: string, status?: string } | null = null
+        let parsed: {
+          id?: number
+          message?: string
+          type?: string
+          status?: string
+          messages?: Array<{ id?: number; message?: string; type?: string; status?: string }>
+        } | null = null
         try {
           parsed = JSON.parse(raw)
         }
@@ -385,41 +391,69 @@ async function streamBuildLogs(
           parsed = null
         }
 
+        const handleEntry = (entry: { id?: number; message?: string; type?: string; status?: string }) => {
+          if (entry.type === 'status' && typeof entry.status === 'string') {
+            const status = entry.status.toLowerCase()
+            lastMessageAt = Date.now()
+            if (terminalStatuses.has(status)) {
+              finalStatus = status
+            }
+            return
+          }
+          if (entry.type === 'log' && typeof entry.message === 'string') {
+            lastMessageAt = Date.now()
+            processLogMessage(entry.message)
+            return
+          }
+          if (typeof entry.message === 'string') {
+            lastMessageAt = Date.now()
+            processLogMessage(entry.message)
+          }
+        }
+
         if (parsed?.type === 'heartbeat_response') {
           return
         }
 
-        if (parsed?.type === 'status' && typeof parsed.status === 'string') {
-          const status = parsed.status.toLowerCase()
-          lastMessageAt = Date.now()
-          if (terminalStatuses.has(status)) {
-            finalStatus = status
-            finish(finalStatus)
-            return
+        if (parsed?.type === 'batch_messages' && Array.isArray(parsed.messages)) {
+          let maxId = lastConfirmedId
+          for (const entry of parsed.messages) {
+            handleEntry(entry)
+            if (typeof entry.id === 'number')
+              maxId = Math.max(maxId, entry.id)
+          }
+          if (maxId > lastConfirmedId) {
+            lastConfirmedId = maxId
+            if (ws.readyState === PartySocket.OPEN) {
+              try {
+                ws.send(JSON.stringify({ type: 'confirmed_received', lastId: maxId }))
+              }
+              catch (error) {
+                if (!silent)
+                  log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+              }
+            }
           }
         }
-        else if (parsed?.type === 'log' && typeof parsed.message === 'string') {
-          lastMessageAt = Date.now()
-          processLogMessage(parsed.message)
-        }
-        else if (parsed && typeof parsed.message === 'string') {
-          lastMessageAt = Date.now()
-          processLogMessage(parsed.message)
-        }
-        else if (raw) {
-          lastMessageAt = Date.now()
-          processLogMessage(raw)
-        }
+        else {
+          if (parsed) {
+            handleEntry(parsed)
+          }
+          else if (raw) {
+            lastMessageAt = Date.now()
+            processLogMessage(raw)
+          }
 
-        if (parsed && typeof parsed.id === 'number') {
-          lastConfirmedId = parsed.id
-          if (ws.readyState === PartySocket.OPEN) {
-            try {
-              ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
-            }
-            catch (error) {
-              if (!silent)
-                log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+          if (parsed && typeof parsed.id === 'number') {
+            lastConfirmedId = parsed.id
+            if (ws.readyState === PartySocket.OPEN) {
+              try {
+                ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
+              }
+              catch (error) {
+                if (!silent)
+                  log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+              }
             }
           }
         }
@@ -435,9 +469,14 @@ async function streamBuildLogs(
       })
 
       ws.addEventListener('close', () => {
-        if (!settled) {
+        if (settled)
+          return
+        if (finalStatus) {
           finish(finalStatus)
+          return
         }
+        if (!silent)
+          log.warn('Log stream closed, waiting for reconnect...')
       })
     })
   }
