@@ -206,6 +206,9 @@ export interface BuildRequestResult {
  */
 type StatusCheckFn = () => Promise<string | null>
 
+const TERMINAL_STATUSES = ['succeeded', 'failed', 'expired', 'released', 'cancelled'] as const
+const TERMINAL_STATUS_SET = new Set<string>(TERMINAL_STATUSES)
+
 async function streamBuildLogs(
   silent: boolean,
   _verbose = false,
@@ -291,7 +294,7 @@ async function streamBuildLogs(
       let statusCheckInFlight = false
       const HEARTBEAT_INTERVAL_MS = 2000
       const HEARTBEAT_MISSES_BEFORE_STATUS = 4
-      const terminalStatuses = new Set(['succeeded', 'failed', 'expired', 'released', 'cancelled'])
+      const terminalStatuses = TERMINAL_STATUS_SET
       let abortListener: (() => void) | null = null
 
       const finish = (status: string | null) => {
@@ -549,7 +552,7 @@ async function pollBuildStatus(
       if (!silent && showStatusChecks)
         log.info(`Build status: ${normalized || status.status}`)
 
-      if (['succeeded', 'failed', 'expired', 'released', 'cancelled'].includes(normalized)) {
+      if (TERMINAL_STATUS_SET.has(normalized)) {
         return normalized
       }
 
@@ -1243,7 +1246,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           const normalized = status.status?.toLowerCase?.() ?? ''
           if (!silent && showStatusChecks)
             log.info(`Build status: ${normalized || status.status}`)
-          if (normalized === 'succeeded' || normalized === 'failed' || normalized === 'expired' || normalized === 'released' || normalized === 'cancelled') {
+          if (TERMINAL_STATUS_SET.has(normalized)) {
             return normalized
           }
           return null
