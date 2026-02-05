@@ -276,14 +276,6 @@ async function streamBuildLogs(
 
     return await new Promise((resolve) => {
       let settled = false
-      const timeout = setTimeout(() => {
-        if (!settled) {
-          if (!silent)
-            console.warn('Log streaming timed out after 3 hours')
-          finish(null)
-        }
-      }, 3 * 60 * 60 * 1000)
-
       const maxRetries = 10
       let retryCount = 0
       let gaveUp = false
@@ -318,6 +310,14 @@ async function streamBuildLogs(
         }
         resolve(status)
       }
+
+      const timeout = setTimeout(() => {
+        if (!settled) {
+          if (!silent)
+            console.warn('Log streaming timed out after 3 hours')
+          finish(null)
+        }
+      }, 3 * 60 * 60 * 1000)
 
       const startHeartbeat = () => {
         if (heartbeatTimer)
