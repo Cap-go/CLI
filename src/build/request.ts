@@ -317,26 +317,32 @@ async function streamBuildLogs(
         if (heartbeatTimer)
           return
         heartbeatTimer = setInterval(async () => {
-          if (ws.readyState === PartySocket.OPEN) {
-            ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
-          }
-          const now = Date.now()
-          if (
-            statusCheck
-            && !statusCheckInFlight
-            && (now - lastMessageAt) >= HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES_BEFORE_STATUS
-          ) {
-            statusCheckInFlight = true
-            try {
-              const status = await statusCheck()
-              if (status && terminalStatuses.has(status)) {
-                finalStatus = status
-                finish(finalStatus)
+          try {
+            if (ws.readyState === PartySocket.OPEN) {
+              ws.send(JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }))
+            }
+            const now = Date.now()
+            if (
+              statusCheck
+              && !statusCheckInFlight
+              && (now - lastMessageAt) >= HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES_BEFORE_STATUS
+            ) {
+              statusCheckInFlight = true
+              try {
+                const status = await statusCheck()
+                if (status && terminalStatuses.has(status)) {
+                  finalStatus = status
+                  finish(finalStatus)
+                }
+              }
+              finally {
+                statusCheckInFlight = false
               }
             }
-            finally {
-              statusCheckInFlight = false
-            }
+          }
+          catch (error) {
+            if (!silent)
+              log.warn(`Heartbeat encountered an error, continuing... ${String(error)}`)
           }
         }, HEARTBEAT_INTERVAL_MS)
       }
