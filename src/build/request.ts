@@ -27,16 +27,54 @@
  */
 
 import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
+import { Buffer } from 'node:buffer'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { cwd, exit } from 'node:process'
+import { chdir, cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
+import { getPlatformDirFromCapacitorConfig } from './platform-paths'
+
+let cwdQueue: Promise<unknown> = Promise.resolve()
+
+/**
+ * Run an async function with the process working directory temporarily set to `dir`.
+ *
+ * NOTE: `process.chdir()` is global, so this uses a simple in-process queue to avoid
+ * concurrent calls interfering with each other.
+ */
+async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
+  const run = async () => {
+    const previous = cwd()
+    try {
+      chdir(dir)
+    }
+    catch (error) {
+      throw new Error(`Failed to change working directory to "${dir}": ${(error as Error).message}`)
+    }
+
+    try {
+      return await fn()
+    }
+    finally {
+      try {
+        chdir(previous)
+      }
+      catch {
+        // Best-effort restore; ignore to avoid masking original errors.
+      }
+    }
+  }
+
+  const p = cwdQueue.then(run, run)
+  cwdQueue = p.then(() => undefined, () => undefined)
+  return p
+}
 
 /**
  * Fetch with retry logic for build requests
@@ -285,14 +323,18 @@ interface NativeDependencies {
   usesSPM: boolean // true = SPM (Package.swift), false = CocoaPods (podspec)
 }
 
-async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<NativeDependencies> {
+async function extractNativeDependencies(
+  projectDir: string,
+  platform: 'ios' | 'android',
+  platformDir: string,
+): Promise<NativeDependencies> {
   const packages = new Set<string>()
   let usesSPM = false
 
   if (platform === 'ios') {
     // Check for Swift Package Manager first (Capacitor 7+)
     // SPM takes precedence over CocoaPods
-    const spmPackagePath = join(projectDir, 'ios/App/CapApp-SPM/Package.swift')
+    const spmPackagePath = join(projectDir, platformDir, 'App', 'CapApp-SPM', 'Package.swift')
     if (existsSync(spmPackagePath)) {
       usesSPM = true
       const spmContent = await readFileAsync(spmPackagePath, 'utf-8')
@@ -305,7 +347,7 @@ async function extractNativeDependencies(projectDir: string, platform: 'ios' | '
     }
     else {
       // Fall back to CocoaPods (legacy, pre-Capacitor 7)
-      const podfilePath = join(projectDir, 'ios/App/Podfile')
+      const podfilePath = join(projectDir, platformDir, 'App', 'Podfile')
       if (existsSync(podfilePath)) {
         const podfileContent = await readFileAsync(podfilePath, 'utf-8')
         // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
@@ -318,7 +360,7 @@ async function extractNativeDependencies(projectDir: string, platform: 'ios' | '
   }
   else if (platform === 'android') {
     // Parse Android capacitor.settings.gradle
-    const settingsGradlePath = join(projectDir, 'android/capacitor.settings.gradle')
+    const settingsGradlePath = join(projectDir, platformDir, 'capacitor.settings.gradle')
     if (existsSync(settingsGradlePath)) {
       const settingsContent = await readFileAsync(settingsGradlePath, 'utf-8')
       // Match lines like: project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
@@ -338,12 +380,12 @@ async function extractNativeDependencies(projectDir: string, platform: 'ios' | '
 /**
  * Check if a file path should be included in the zip
  */
-function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies): boolean {
+function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies, platformDir: string): boolean {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
 
   // Always include platform folder
-  if (normalizedPath.startsWith(`${platform}/`))
+  if (normalizedPath.startsWith(`${platformDir}/`))
     return true
 
   // Always include config files at root
@@ -393,7 +435,14 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
 /**
  * Recursively add directory to zip with filtering
  */
-function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies) {
+function addDirectoryToZip(
+  zip: AdmZip,
+  dirPath: string,
+  zipPath: string,
+  platform: 'ios' | 'android',
+  nativeDeps: NativeDependencies,
+  platformDir: string,
+) {
   const items = readdirSync(dirPath)
 
   for (const item of items) {
@@ -410,21 +459,15 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       if (item === '.git' || item === 'dist' || item === 'build' || item === '.angular' || item === '.vite' || item === '.gradle' || item === '.idea' || item === '.swiftpm')
         continue
 
-      // Always recurse into the platform folder (ios/ or android/)
-      if (item === platform) {
-        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
-        continue
-      }
-
       // Always recurse into node_modules (we filter inside)
       if (item === 'node_modules') {
-        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps, platformDir)
         continue
       }
 
       // For resources folder, always recurse
       if (item === 'resources') {
-        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps, platformDir)
         continue
       }
 
@@ -433,14 +476,17 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
       // 1. This directory itself should be included (matches a pattern)
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
       const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
-      const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps)
+      const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)
+        // Ensure we can reach nested platform directories like projects/app/android.
+        || platformDir === normalizedItemPath
+        || platformDir.startsWith(`${normalizedItemPath}/`)
         || Array.from(nativeDeps.packages).some((pkg) => {
           const depPath = `node_modules/${pkg}/`
           return depPath.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`node_modules/${pkg}`)
         })
 
       if (shouldRecurse) {
-        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps)
+        addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps, platformDir)
       }
     }
     else if (stats.isFile()) {
@@ -449,7 +495,7 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
         continue
 
       // Check if we should include this file
-      if (shouldIncludeFile(itemZipPath, platform, nativeDeps)) {
+      if (shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)) {
         zip.addLocalFile(itemPath, zipPath || undefined)
       }
     }
@@ -462,14 +508,24 @@ function addDirectoryToZip(zip: AdmZip, dirPath: string, zipPath: string, platfo
  * - node_modules with native code (from Podfile/settings.gradle)
  * - capacitor.config.*, package.json, package-lock.json
  */
-async function zipDirectory(projectDir: string, outputPath: string, platform: 'ios' | 'android'): Promise<void> {
+async function zipDirectory(projectDir: string, outputPath: string, platform: 'ios' | 'android', capConfig: any): Promise<void> {
+  const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
+
   // Extract which node_modules have native code for this platform
-  const nativeDeps = await extractNativeDependencies(projectDir, platform)
+  const nativeDeps = await extractNativeDependencies(projectDir, platform, platformDir)
 
   const zip = new AdmZip()
 
   // Add files with filtering
-  addDirectoryToZip(zip, projectDir, '', platform, nativeDeps)
+  addDirectoryToZip(zip, projectDir, '', platform, nativeDeps, platformDir)
+
+  // Cloud builders may only parse JSON configs. Ensure a resolved JSON exists even if the project
+  // uses capacitor.config.ts/js, so android.path/ios.path is visible remotely.
+  const configJsonPath = join(projectDir, 'capacitor.config.json')
+  if (capConfig && !existsSync(configJsonPath)) {
+    const json = `${JSON.stringify(capConfig, null, 2)}\n`
+    zip.addFile('capacitor.config.json', Buffer.from(json, 'utf-8'))
+  }
 
   // Write zip to file
   await writeFile(outputPath, zip.toBuffer())
@@ -499,8 +555,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
   try {
     options.apikey = options.apikey || findSavedKey(silent)
-    const config = await getConfig()
-    appId = appId || config?.config.appId
+    const projectDir = resolve(options.path || cwd())
+
+    // @capacitor/cli loadConfig() is cwd-based; honor --path for monorepos/workspaces.
+    const config = await withCwd(projectDir, () => getConfig())
+    appId = appId || config?.config?.appId
 
     if (!appId) {
       throw new Error('Missing argument, you need to provide a appId, or be in a capacitor project')
@@ -514,7 +573,6 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       throw new Error(`Invalid platform "${options.platform}". Must be "ios" or "android"`)
     }
 
-    const projectDir = resolve(options.path || cwd())
     const host = options.supaHost || 'https://api.capgo.app'
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
@@ -755,7 +813,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       if (!silent)
         log.info(`Zipping ${options.platform} project from ${projectDir}...`)
 
-      await zipDirectory(projectDir, zipPath, options.platform)
+      await zipDirectory(projectDir, zipPath, options.platform, config?.config)
 
       const zipStats = await stat(zipPath)
       const sizeMB = (zipStats.size / 1024 / 1024).toFixed(2)
