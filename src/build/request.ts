@@ -413,7 +413,15 @@ async function streamBuildLogs(
 
         if (parsed && typeof parsed.id === 'number') {
           lastConfirmedId = parsed.id
-          ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
+          if (ws.readyState === PartySocket.OPEN) {
+            try {
+              ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
+            }
+            catch (error) {
+              if (!silent)
+                log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+            }
+          }
         }
 
         if (finalStatus) {
