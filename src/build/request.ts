@@ -497,12 +497,9 @@ async function pollBuildStatus(
 }
 
 /**
- * Extract native node_modules dependencies from iOS Podfile or Android settings.gradle
- * Returns package paths so we can include the FULL module contents.
+ * Extract native node_modules roots that contain platform folders.
  */
 interface NativeDependencies {
-  packages: Set<string> // Package paths like @capacitor/app
-  usesSPM: boolean // true = SPM (Package.swift), false = CocoaPods (podspec)
   includeRoots: Set<string> // node_modules paths that contain ios/ or android/ subfolders
 }
 
@@ -579,55 +576,9 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
   return roots
 }
 
-async function extractNativeDependencies(projectDir: string, platform: 'ios' | 'android'): Promise<NativeDependencies> {
-  const packages = new Set<string>()
-  let usesSPM = false
-
-  if (platform === 'ios') {
-    // Check for Swift Package Manager first (Capacitor 7+)
-    // SPM takes precedence over CocoaPods
-    const spmPackagePath = join(projectDir, 'ios/App/CapApp-SPM/Package.swift')
-    if (existsSync(spmPackagePath)) {
-      usesSPM = true
-      const spmContent = await readFileAsync(spmPackagePath, 'utf-8')
-      // Match lines like: .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app")
-      // The path can have varying numbers of ../ depending on project structure
-      const spmMatches = spmContent.matchAll(/\.package\s*\([^)]*path:\s*["'](?:\.\.\/)*node_modules\/([^"']+)["']\s*\)/g)
-      for (const match of spmMatches) {
-        packages.add(match[1])
-      }
-    }
-    else {
-      // Fall back to CocoaPods (legacy, pre-Capacitor 7)
-      const podfilePath = join(projectDir, 'ios/App/Podfile')
-      if (existsSync(podfilePath)) {
-        const podfileContent = await readFileAsync(podfilePath, 'utf-8')
-        // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
-        const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
-        for (const match of podMatches) {
-          packages.add(match[1])
-        }
-      }
-    }
-  }
-  else if (platform === 'android') {
-    // Parse Android capacitor.settings.gradle
-    const settingsGradlePath = join(projectDir, 'android/capacitor.settings.gradle')
-    if (existsSync(settingsGradlePath)) {
-      const settingsContent = await readFileAsync(settingsGradlePath, 'utf-8')
-      // Match lines like: project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
-      const gradleMatches = settingsContent.matchAll(/new\s+File\s*\(\s*['"]\.\.\/node_modules\/([^'"]+)['"]\s*\)/g)
-      for (const match of gradleMatches) {
-        // Extract the full path which already includes /android
-        const fullPath = match[1]
-        const packagePath = fullPath.replace(/\/android$/, '')
-        packages.add(packagePath)
-      }
-    }
-  }
-
+async function extractNativeDependencies(projectDir: string, _platform: 'ios' | 'android'): Promise<NativeDependencies> {
   const includeRoots = findNodeModulesPlatformFolders(projectDir)
-  return { packages, usesSPM, includeRoots }
+  return { includeRoots }
 }
 
 /**
