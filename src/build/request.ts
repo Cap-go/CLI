@@ -38,32 +38,42 @@ import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
+import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
-function normalizeRelPath(p: string): string {
-  // Zip entry paths are always forward-slash and relative.
-  let s = p.trim().replace(/\\/g, '/')
-  s = s.replace(/^\.\/+/, '')
-  s = s.replace(/\/+$/, '')
-  return s
-}
+let cwdQueue: Promise<unknown> = Promise.resolve()
 
-function getPlatformDirFromCapacitorConfig(capConfig: any, platform: 'ios' | 'android'): string {
-  const key = platform === 'ios' ? 'ios' : 'android'
-  const configured = capConfig?.[key]?.path
-  if (typeof configured === 'string' && configured.trim())
-    return normalizeRelPath(configured)
-  return platform
-}
-
+/**
+ * Run an async function with the process working directory temporarily set to `dir`.
+ *
+ * NOTE: `process.chdir()` is global, so this uses a simple in-process queue to avoid
+ * concurrent calls interfering with each other.
+ */
 async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
-  const previous = cwd()
-  chdir(dir)
-  try {
-    return await fn()
+  const run = async () => {
+    const previous = cwd()
+    try {
+      chdir(dir)
+    }
+    catch (error) {
+      throw new Error(`Failed to change working directory to "${dir}": ${(error as Error).message}`)
+    }
+
+    try {
+      return await fn()
+    }
+    finally {
+      try {
+        chdir(previous)
+      }
+      catch {
+        // Best-effort restore; ignore to avoid masking original errors.
+      }
+    }
   }
-  finally {
-    chdir(previous)
-  }
+
+  const p = cwdQueue.then(run, run)
+  cwdQueue = p.then(() => undefined, () => undefined)
+  return p
 }
 
 /**
