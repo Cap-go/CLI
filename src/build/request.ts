@@ -584,23 +584,22 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
   if (!existsSync(nodeModulesPath))
     return roots
 
-  const stack: string[] = [nodeModulesPath]
-  while (stack.length) {
-    const current = stack.pop()
-    if (!current)
-      continue
+  const packageRoots: string[] = []
+
+  const enqueuePackagesFromNodeModules = (nodeModulesDir: string) => {
     let entries: string[] = []
     try {
-      entries = readdirSync(current)
+      entries = readdirSync(nodeModulesDir)
     }
     catch {
-      continue
+      return
     }
-    let hasPlatformFolder = false
+
     for (const entry of entries) {
       if (entry === '.bin')
         continue
-      const entryPath = join(current, entry)
+
+      const entryPath = join(nodeModulesDir, entry)
       let isDir: boolean
       try {
         isDir = statSync(entryPath).isDirectory()
@@ -608,17 +607,65 @@ function findNodeModulesPlatformFolders(projectDir: string): Set<string> {
       catch {
         continue
       }
+
       if (!isDir)
         continue
+
+      if (entry.startsWith('@')) {
+        let scopedEntries: string[] = []
+        try {
+          scopedEntries = readdirSync(entryPath)
+        }
+        catch {
+          continue
+        }
+
+        for (const scopedEntry of scopedEntries) {
+          const scopedPackagePath = join(entryPath, scopedEntry)
+          try {
+            if (statSync(scopedPackagePath).isDirectory()) {
+              packageRoots.push(scopedPackagePath)
+            }
+          }
+          catch {
+            continue
+          }
+        }
+        continue
+      }
+
+      packageRoots.push(entryPath)
+    }
+  }
+
+  enqueuePackagesFromNodeModules(nodeModulesPath)
+
+  while (packageRoots.length) {
+    const packageDir = packageRoots.pop()
+    if (!packageDir)
+      continue
+
+    let entries: string[] = []
+    try {
+      entries = readdirSync(packageDir)
+    }
+    catch {
+      continue
+    }
+
+    let hasPlatformFolder = false
+    for (const entry of entries) {
+
       if (entry === 'ios' || entry === 'android') {
         hasPlatformFolder = true
       }
-      else {
-        stack.push(entryPath)
+      else if (entry === 'node_modules') {
+        enqueuePackagesFromNodeModules(join(packageDir, entry))
       }
     }
+
     if (hasPlatformFolder) {
-      const rel = relative(projectDir, current).replace(/\\/g, '/')
+      const rel = relative(projectDir, packageDir).replace(/\\/g, '/')
       const packageRoot = getPackageRootFromRelative(rel)
       if (packageRoot) {
         roots.add(packageRoot)
