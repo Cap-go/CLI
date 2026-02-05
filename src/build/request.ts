@@ -27,11 +27,12 @@
  */
 
 import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
+import { Buffer } from 'node:buffer'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
-import { cwd, exit } from 'node:process'
+import { chdir, cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import * as tus from 'tus-js-client'
@@ -56,12 +57,12 @@ function getPlatformDirFromCapacitorConfig(capConfig: any, platform: 'ios' | 'an
 
 async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
   const previous = cwd()
-  process.chdir(dir)
+  chdir(dir)
   try {
     return await fn()
   }
   finally {
-    process.chdir(previous)
+    chdir(previous)
   }
 }
 
