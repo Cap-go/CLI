@@ -381,11 +381,11 @@ async function streamBuildLogs(
         }
 
         let parsed: {
-          id?: number
-          message?: string
-          type?: string
-          status?: string
-          messages?: Array<{ id?: number; message?: string; type?: string; status?: string }>
+          id?: number;
+          message?: string;
+          type?: string;
+          status?: string;
+          messages?: Array<{ id?: number; message?: string; type?: string; status?: string }>;
         } | null = null
         try {
           parsed = JSON.parse(raw)
