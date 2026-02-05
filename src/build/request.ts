@@ -173,7 +173,7 @@ async function streamBuildLogs(
       return null
 
     const baseUrl = logsUrl.replace(/\/+$/, '')
-    const startUrl = `${baseUrl}/start?token=${encodeURIComponent(logsToken)}`
+    const startUrl = `${baseUrl}/start`
     const streamUrl = `${baseUrl}/stream?token=${encodeURIComponent(logsToken)}`
     const websocketUrl = streamUrl
       .replace(/^https:/, 'wss:')
@@ -184,7 +184,12 @@ async function streamBuildLogs(
       console.log('Connecting to log streaming...')
     }
 
-    const startResponse = await fetch(startUrl, { method: 'POST' })
+    const startResponse = await fetch(startUrl, {
+      method: 'POST',
+      headers: {
+        'x-capgo-log-token': logsToken,
+      },
+    })
     if (!startResponse.ok) {
       const errorText = await startResponse.text().catch(() => 'unknown error')
       if (!silent)
@@ -1026,7 +1031,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           // Callback for errors which cannot be fixed using retries
           onError(error) {
             if (!silent) {
-              spinner.error('Upload failed')
+              spinner.stop('Upload failed')
               log.error(`Upload error: ${error.message}`)
             }
             if (error instanceof tus.DetailedError) {
