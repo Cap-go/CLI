@@ -1,7 +1,7 @@
 {
   "name": "@capgo/cli",
   "type": "module",
-  "version": "7.72.3",
+  "version": "7.72.5",
   "description": "A CLI to upload to capgo servers",
   "author": "Martin martin@capgo.app",
   "license": "Apache 2.0",
@@ -68,7 +68,8 @@
     "test:mcp": "node test/test-mcp.mjs",
     "test:version-detection": "node test/test-get-installed-version.mjs",
     "test:version-detection:setup": "./test/fixtures/setup-test-projects.sh",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection"
+    "test:platform-paths": "bun test/test-platform-paths.mjs",
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection && bun run test:platform-paths"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.0.0",
