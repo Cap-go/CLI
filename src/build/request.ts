@@ -249,12 +249,16 @@ async function streamBuildLogs(
       const HEARTBEAT_MISSES_BEFORE_STATUS = 4
       const terminalStatuses = TERMINAL_STATUS_SET
       let abortListener: (() => void) | null = null
+      let timeout: ReturnType<typeof setTimeout> | null = null
 
       const finish = (status: string | null) => {
         if (settled)
           return
         settled = true
-        clearTimeout(timeout)
+        if (timeout) {
+          clearTimeout(timeout)
+          timeout = null
+        }
         if (heartbeatTimer) {
           clearInterval(heartbeatTimer)
           heartbeatTimer = null
@@ -272,7 +276,7 @@ async function streamBuildLogs(
         resolve(status)
       }
 
-      const timeout = setTimeout(() => {
+      timeout = setTimeout(() => {
         if (!settled) {
           if (!silent)
             console.warn('Log streaming timed out after 3 hours')
@@ -345,11 +349,11 @@ async function streamBuildLogs(
         }
 
         let parsed: {
-          id?: number;
-          message?: string;
-          type?: string;
-          status?: string;
-          messages?: Array<{ id?: number; message?: string; type?: string; status?: string }>;
+          id?: number
+          message?: string
+          type?: string
+          status?: string
+          messages?: Array<{ id?: number, message?: string, type?: string, status?: string }>
         } | null = null
         try {
           parsed = JSON.parse(raw)
@@ -358,7 +362,7 @@ async function streamBuildLogs(
           parsed = null
         }
 
-        const handleEntry = (entry: { id?: number; message?: string; type?: string; status?: string }) => {
+        const handleEntry = (entry: { id?: number, message?: string, type?: string, status?: string }) => {
           if (entry.type === 'status' && typeof entry.status === 'string') {
             const status = entry.status.toLowerCase()
             lastMessageAt = Date.now()
