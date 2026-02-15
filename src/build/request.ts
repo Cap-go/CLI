@@ -36,6 +36,7 @@ import process, { chdir, cwd, exit } from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
+import WS from 'ws'
 import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials } from './credentials'
@@ -240,7 +241,10 @@ async function streamBuildLogs(
       const maxRetries = 10
       let retryCount = 0
       let gaveUp = false
-      const ws = new PartySocket(websocketUrl, undefined, { maxRetries })
+      const ws = new PartySocket(websocketUrl, undefined, {
+        maxRetries,
+        WebSocket: WS,
+      })
       let heartbeatTimer: ReturnType<typeof setInterval> | null = null
       let lastConfirmedId = 0
       let lastMessageAt = Date.now()
