@@ -12,7 +12,7 @@
  * ✓ Automatically deleted from Capgo servers after build completion
  * ✓ Retained for a MAXIMUM of 24 hours (even if build fails)
  * ✓ Builds sent DIRECTLY to app stores (Apple/Google)
- * ✓ Capgo does NOT keep any build artifacts or credentials
+ * ✓ Build outputs may optionally be uploaded for time-limited download links
  *
  * Credentials are transmitted securely over HTTPS and used only in ephemeral
  * build environments that are destroyed after each build completes.
@@ -771,7 +771,7 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
  * - Used ONLY during the active build process
  * - Automatically deleted after build completion
  * - NEVER stored permanently on Capgo servers
- * - Builds sent directly to app stores - Capgo keeps nothing
+ * - Build outputs may optionally be uploaded for time-limited download links
  */
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
   // Track build time
@@ -812,7 +812,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       log.info(`Project: ${projectDir}`)
       log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
       log.info(`   They are used only during build and deleted after`)
-      log.info(`   Builds sent directly to app stores - Capgo keeps nothing\n`)
+      log.info(`   Build outputs can optionally be uploaded for time-limited download links\n`)
     }
     if (verbose) {
       log.info(`API host: ${host}`)

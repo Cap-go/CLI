@@ -10,7 +10,7 @@
  * - Credentials are used only during the build process and are automatically deleted
  *   from Capgo servers after the build completes (maximum 24 hours)
  * - Builds are sent DIRECTLY to app stores (Apple App Store / Google Play Store)
- * - Capgo does NOT keep any build artifacts - everything goes directly to the stores
+ * - Build outputs may optionally be uploaded for time-limited download links
  *
  * Security best practices:
  * - Ensure ~/.capgo-credentials/ directory has restricted file permissions

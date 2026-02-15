@@ -590,8 +590,8 @@ export class CapgoSDK {
    * SECURITY GUARANTEE:
    * Credentials provided to this method are NEVER stored on Capgo servers.
    * They are used only during the build process and automatically deleted
-   * after completion (maximum 24 hours retention). Builds are sent directly
-   * to app stores - Capgo keeps nothing.
+   * after completion (maximum 24 hours retention). Build outputs may optionally
+   * be uploaded for time-limited download links.
    *
    * @example
    * ```typescript
@@ -1319,7 +1319,7 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
  * SECURITY GUARANTEE:
  * Credentials are NEVER stored on Capgo servers. They are used only during
  * the build process and automatically deleted after completion.
- * Builds are sent directly to app stores - Capgo keeps nothing.
+ * Build outputs may optionally be uploaded for time-limited download links.
  *
  * @example
  * ```typescript
