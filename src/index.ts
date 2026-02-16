@@ -737,6 +737,9 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')
   .option('--play-config-json <json>', 'Android: Base64-encoded Google Play service account JSON')
+  .option('--output-upload', 'Override output upload behavior for this build only (enable). Precedence: CLI > env > saved credentials')
+  .option('--no-output-upload', 'Override output upload behavior for this build only (disable). Precedence: CLI > env > saved credentials')
+  .option('--output-retention <duration>', 'Override output link TTL for this build only (1h to 7d). Examples: 1h, 6h, 2d. Precedence: CLI > env > saved credentials')
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -812,7 +815,8 @@ Local storage (per-project):
   .option('--play-config <path>', 'Android: Path to Play Store service account JSON')
   // Storage option
   .option('--local', 'Save to .capgo-credentials.json in project root instead of global ~/.capgo-credentials/')
-  .option('--output-upload [enabled]', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links (default: true)')
+  .option('--output-upload', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
+  .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d (default: 1h). Examples: 1h, 6h, 2d')
 
 buildCredentials
@@ -874,7 +878,8 @@ Examples:
   .option('--keystore-key-password <password>', 'Keystore key password')
   .option('--keystore-store-password <password>', 'Keystore store password')
   .option('--play-config <path>', 'Path to Google Play service account JSON')
-  .option('--output-upload [enabled]', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
+  .option('--output-upload', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
+  .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
 
 program
