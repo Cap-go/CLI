@@ -23,7 +23,7 @@ interface SaveCredentialsOptions {
   appId?: string
   local?: boolean
 
-  outputUpload?: boolean | string
+  outputUpload?: boolean
   outputRetention?: string
 
   // iOS options
