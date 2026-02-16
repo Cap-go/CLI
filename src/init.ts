@@ -15,7 +15,7 @@ import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -167,6 +167,20 @@ async function warnIfNotInCapacitorRoot() {
 
 async function markStep(orgId: string, apikey: string, step: string, appId: string) {
   return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
+}
+
+function stopForBrokenIosSync(platformRunner: string, details: string[]): never {
+  pLog.error('Capgo iOS dependency sync verification failed.')
+  for (const detail of details) {
+    pLog.error(detail)
+  }
+  pLog.error('Stop here to avoid testing on a broken native iOS project.')
+  pLog.warn('Best fix: reset the iOS folder, then run sync again.')
+  pLog.info(`1. ${platformRunner} cap rm ios`)
+  pLog.info(`2. ${platformRunner} cap add ios`)
+  pLog.info(`3. ${platformRunner} cap sync ios`)
+  pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
+  exit(1)
 }
 
 async function checkPrerequisitesStep(orgId: string, apikey: string) {
@@ -754,7 +768,10 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     // Pass true for isInit flag to track cancellation during onboarding flow
     // orgId and apikey are needed to mark snag if user cancels
     try {
-      await promptAndSyncCapacitor(true, orgId, apikey)
+      await promptAndSyncCapacitor(true, orgId, apikey, {
+        validateIosUpdater: true,
+        packageJsonPath: globalPathToPackageJson,
+      })
       markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
     }
     catch (error) {
@@ -805,6 +822,15 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
       exit()
     }
     execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`, execOption as ExecSyncOptions)
+
+    if (platform === 'ios') {
+      const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
+      if (syncValidation.shouldCheck && !syncValidation.valid) {
+        s.stop('iOS sync check failed ❌')
+        stopForBrokenIosSync(pm.runner, syncValidation.details)
+      }
+    }
+
     s.stop(`Build & Sync Done ✅`)
   }
   else {
@@ -973,6 +999,8 @@ ${content}`
   catch {
     nextVersion = '1.0.1'
   }
+  pLog.info(`🔢 OTA update versioning:`)
+  pLog.info(`   Each upload must use a new version (for example ${pkgVersion} → ${nextVersion})`)
   const versionChoice = await pSelect({
     message: 'How do you want to handle the version for this update?',
     options: [
@@ -1015,22 +1043,34 @@ ${content}`
     }
     newVersion = userVersion as string
   }
+  pLog.info(`🧭 This OTA upload will use version ${newVersion}. For the next test, increment it again.`)
+
   // Build after modifications
   const pm = getPMAndCommand()
-  const doBuild = await pConfirm({ message: `Build ${appId} with changes before uploading? If you need to build yourself please do it now in other terminal, and then select no` })
+  const projectType = await findProjectType()
+  const buildCommand = await findBuildCommandForProjectType(projectType)
+  const printManualOtaBuildInstructions = () => {
+    pLog.info(`Build web assets manually with: ${pm.pm} run ${buildCommand}`)
+    pLog.warn(`Do NOT run "${pm.runner} cap sync ${platform}" for this OTA test.`)
+    pLog.warn(`Why: "${pm.runner} cap sync ${platform}" copies the current web build into the native project and regenerates native plugin files.`)
+    pLog.warn('If you sync now, the native app already contains your new change before Capgo download, so you cannot verify OTA behavior.')
+    pLog.info('Sync is safe again only after you confirmed the OTA update on device, or when preparing a new native/App Store build.')
+  }
+
+  const doBuild = await pConfirm({
+    message: `Build ${appId} web assets before uploading with "${pm.pm} run ${buildCommand}"? (no cap sync)`,
+  })
   await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
     const s = pSpinner()
-    s.start(`Checking project type`)
-    const projectType = await findProjectType()
-    const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
+    s.start(`Running: ${pm.pm} run ${buildCommand}`)
     const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
       s.stop('Missing build script')
       pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
       pLog.info(`💡 Build manually in another terminal, then come back and continue`)
+      printManualOtaBuildInstructions()
 
       const builtManually = await pConfirm({
         message: `Have you built the app manually? (If not, we'll skip the build)`,
@@ -1039,20 +1079,42 @@ ${content}`
 
       if (!builtManually) {
         pLog.warn(`⚠️  Continuing without build - upload may fail if app isn't built`)
-        pLog.info(`💡 Build with: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
+        printManualOtaBuildInstructions()
       }
       else {
         pLog.info(`✅ Great! Continuing with your manual build`)
       }
     }
     else {
-      execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`, execOption as ExecSyncOptions)
-      s.stop(`✅ Build with changes completed`)
-      pLog.info(`📦 Your modifications have been built and synced`)
+      try {
+        const buildResult = spawnSync(pm.pm, ['run', buildCommand], { stdio: 'pipe' })
+        if (buildResult.error) {
+          throw buildResult.error
+        }
+        if (buildResult.status !== 0) {
+          throw new Error(`Build command "${pm.pm} run ${buildCommand}" failed with exit code ${buildResult.status ?? 'unknown'}`)
+        }
+        s.stop(`✅ Build with changes completed`)
+        pLog.info(`📦 Your modifications are built and ready for OTA upload`)
+      }
+      catch {
+        s.stop('Build failed ❌')
+        pLog.warn('Automatic build failed.')
+        printManualOtaBuildInstructions()
+
+        const builtManually = await pConfirm({
+          message: 'Have you built the app manually now? (If not, we will continue without build)',
+        })
+        await cancelCommand(builtManually, orgId, apikey)
+
+        if (!builtManually) {
+          pLog.warn(`⚠️  Continuing without build - upload may fail if app isn't built`)
+        }
+      }
     }
   }
   else {
-    pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
+    printManualOtaBuildInstructions()
   }
 
   await markStep(orgId, apikey, 'add-code-change', appId)
@@ -1096,6 +1158,12 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
     else {
       s.stop(`✅ Update v${newVersion} uploaded successfully!`)
       pLog.info(`🎉 Your updated bundle is now available on Capgo`)
+      pLog.info(`For your next self-test:`)
+      pLog.info(`1. Make a new visible change`)
+      pLog.info(`2. Build web assets only: ${pm.pm} run build`)
+      pLog.info(`3. Upload with a new version: ${pm.runner} @capgo/cli@latest bundle upload --bundle <new-version> --channel ${defaultChannel}`)
+      pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
+      pLog.warn('Reason: sync puts your local build directly in the native app, which bypasses the Capgo OTA path you are trying to test.')
     }
   }
   else {
