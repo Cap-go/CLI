@@ -44,6 +44,8 @@ function clearCredentialEnvVars() {
     'KEYSTORE_KEY_PASSWORD',
     'KEYSTORE_STORE_PASSWORD',
     'PLAY_CONFIG_JSON',
+    'BUILD_OUTPUT_UPLOAD_ENABLED',
+    'BUILD_OUTPUT_RETENTION_SECONDS',
   ]
   for (const key of credKeys) {
     delete process.env[key]
@@ -263,6 +265,52 @@ await test('CLI args override both env vars and saved credentials', async () => 
   const merged = await mergeCredentials('com.test.app', 'ios', cliArgs)
 
   assertEquals(merged.APPLE_KEY_ID, 'CLI12345678', 'CLI args must override everything')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 7: Output options follow CLI > Env > Saved precedence
+await test('Output options follow CLI > Env > Saved precedence', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { updateSavedCredentials, mergeCredentials } = await importCredentials()
+
+  // Saved credentials (lowest priority)
+  await updateSavedCredentials('com.test.app', 'ios', {
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+    BUILD_OUTPUT_RETENTION_SECONDS: '3600',
+  })
+
+  // Env vars (middle priority)
+  process.env.BUILD_OUTPUT_UPLOAD_ENABLED = 'true'
+  process.env.BUILD_OUTPUT_RETENTION_SECONDS = '2h'
+
+  // CLI args (highest priority)
+  const merged = await mergeCredentials('com.test.app', 'ios', {
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+    BUILD_OUTPUT_RETENTION_SECONDS: '14400',
+  })
+
+  assertEquals(merged.BUILD_OUTPUT_UPLOAD_ENABLED, 'false', 'CLI output upload should override env and saved')
+  assertEquals(merged.BUILD_OUTPUT_RETENTION_SECONDS, '14400', 'CLI output retention should override env and saved')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 8: Env output retention accepts unit durations and normalizes to seconds
+await test('Environment output retention with unit is normalized to seconds', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+
+  process.env.BUILD_OUTPUT_RETENTION_SECONDS = '3h'
+  const creds = loadCredentialsFromEnv()
+
+  assertEquals(creds.BUILD_OUTPUT_RETENTION_SECONDS, '10800', 'Env output retention should be normalized to seconds')
 
   clearCredentialEnvVars()
   await cleanupTestEnv()

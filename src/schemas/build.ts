@@ -22,6 +22,8 @@ export const buildCredentialsSchema = z.object({
   KEYSTORE_KEY_PASSWORD: z.string().optional(),
   KEYSTORE_STORE_PASSWORD: z.string().optional(),
   PLAY_CONFIG_JSON: z.string().optional(),
+  BUILD_OUTPUT_UPLOAD_ENABLED: z.string().optional(),
+  BUILD_OUTPUT_RETENTION_SECONDS: z.string().optional(),
 }).catchall(z.string().optional())
 
 export type BuildCredentials = z.infer<typeof buildCredentialsSchema>
@@ -52,6 +54,8 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   keystoreStorePassword: z.string().optional(),
   playConfigJson: z.string().optional(),
   // Output control
+  outputUpload: z.union([z.boolean(), z.string()]).optional(),
+  outputRetention: z.string().optional(),
   verbose: z.boolean().optional(),
 })
 
