@@ -195,7 +195,7 @@ export async function createKeyInternal(options: Options, silent = false) {
     // Ask user if they want to sync with Capacitor
     // No parameters needed - not part of onboarding flow, so no need to track cancellation
     try {
-      await promptAndSyncCapacitor()
+      await promptAndSyncCapacitor(undefined, undefined, undefined, { validateIosUpdater: true })
       outro('Done ✅')
     }
     catch (error) {
