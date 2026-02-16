@@ -20,6 +20,9 @@ interface SaveCredentialsOptions {
   appId?: string
   local?: boolean
 
+  outputUpload?: boolean | string
+  outputRetention?: string
+
   // iOS options
   certificate?: string
   provisioningProfile?: string
@@ -37,6 +40,50 @@ interface SaveCredentialsOptions {
   keystoreKeyPassword?: string
   keystoreStorePassword?: string
   playConfig?: string
+}
+
+const MIN_OUTPUT_RETENTION_SECONDS = 60 * 60
+const MAX_OUTPUT_RETENTION_SECONDS = 7 * 24 * 60 * 60
+
+function parseOutputRetentionSeconds(raw: string): number {
+  const trimmed = raw.trim()
+  const match = trimmed.match(/^(\d+)\s*([smhd])?$/i)
+  if (!match)
+    throw new Error('output-retention must be a number with optional unit: s, m, h, d (examples: 1h, 3600s, 2d)')
+
+  const value = Number.parseInt(match[1]!, 10)
+  const unit = (match[2] || 's').toLowerCase() as 's' | 'm' | 'h' | 'd'
+
+  const multiplier = unit === 's'
+    ? 1
+    : unit === 'm'
+      ? 60
+      : unit === 'h'
+        ? 60 * 60
+        : 24 * 60 * 60
+
+  const seconds = value * multiplier
+  if (seconds < MIN_OUTPUT_RETENTION_SECONDS)
+    throw new Error(`output-retention must be at least ${MIN_OUTPUT_RETENTION_SECONDS} seconds (1h)`)
+  if (seconds > MAX_OUTPUT_RETENTION_SECONDS)
+    throw new Error(`output-retention must be at most ${MAX_OUTPUT_RETENTION_SECONDS} seconds (7d)`)
+
+  return seconds
+}
+
+function parseOptionalBoolean(value: boolean | string | undefined): boolean {
+  if (value === undefined)
+    return true
+  if (typeof value === 'boolean')
+    return value
+
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes')
+    return true
+  if (normalized === 'false' || normalized === '0' || normalized === 'no')
+    return false
+
+  throw new Error('output-upload must be true/false (examples: --output-upload, --output-upload false)')
 }
 
 /**
@@ -77,10 +124,21 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     log.info('  - When building, credentials are sent to Capgo servers')
     log.info('  - Credentials are NEVER stored on Capgo servers')
     log.info('  - Auto-deleted after build')
-    log.info('  - Builds sent directly to app stores - Capgo keeps nothing\n')
+    log.info('  - Builds sent directly to app stores')
+    log.info('  - Build outputs can optionally be uploaded for time-limited download links\n')
 
     const credentials: Partial<BuildCredentials> = {}
     const files: any = {}
+
+    const outputUploadEnabled = options.outputUpload === undefined
+      ? true
+      : parseOptionalBoolean(options.outputUpload)
+    const outputRetentionSeconds = options.outputRetention
+      ? parseOutputRetentionSeconds(options.outputRetention)
+      : MIN_OUTPUT_RETENTION_SECONDS
+
+    credentials.BUILD_OUTPUT_UPLOAD_ENABLED = outputUploadEnabled ? 'true' : 'false'
+    credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(outputRetentionSeconds)
 
     if (platform === 'ios') {
       // Handle iOS credentials
@@ -450,6 +508,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       || options.appleProfileName || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
+    const hasOutputOptions = options.outputUpload !== undefined || options.outputRetention !== undefined
 
     let platform = options.platform
     if (!platform) {
@@ -461,6 +520,10 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       }
       else if (hasIosOptions && hasAndroidOptions) {
         log.error('Cannot mix iOS and Android options. Please use --platform to specify which platform.')
+        exit(1)
+      }
+      else if (hasOutputOptions) {
+        log.error('Output options require --platform to be set (ios or android).')
         exit(1)
       }
       else {
@@ -498,6 +561,16 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
 
     const credentials: Partial<BuildCredentials> = {}
     const files: any = {}
+
+    if (options.outputUpload !== undefined) {
+      const outputUploadEnabled = parseOptionalBoolean(options.outputUpload)
+      credentials.BUILD_OUTPUT_UPLOAD_ENABLED = outputUploadEnabled ? 'true' : 'false'
+    }
+
+    if (options.outputRetention) {
+      const outputRetentionSeconds = parseOutputRetentionSeconds(options.outputRetention)
+      credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(outputRetentionSeconds)
+    }
 
     if (platform === 'ios') {
       // Handle iOS credentials
