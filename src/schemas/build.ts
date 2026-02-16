@@ -51,6 +51,9 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   keystoreKeyPassword: z.string().optional(),
   keystoreStorePassword: z.string().optional(),
   playConfigJson: z.string().optional(),
+  // Build output options
+  outputUpload: z.union([z.boolean(), z.string()]).optional(),
+  outputRetention: z.string().optional(),
   // Output control
   verbose: z.boolean().optional(),
 })

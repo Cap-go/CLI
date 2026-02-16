@@ -38,7 +38,7 @@ import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
-import { mergeCredentials } from './credentials'
+import { MIN_OUTPUT_RETENTION_SECONDS, mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -861,6 +861,15 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     if (options.playConfigJson)
       cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
+
+    if (options.outputUpload !== undefined) {
+      const enabled = parseOptionalBoolean(options.outputUpload)
+      cliCredentials.BUILD_OUTPUT_UPLOAD_ENABLED = enabled ? 'true' : 'false'
+    }
+    if (options.outputRetention !== undefined) {
+      const seconds = parseOutputRetentionSeconds(options.outputRetention)
+      cliCredentials.BUILD_OUTPUT_RETENTION_SECONDS = String(seconds)
+    }
 
     // Merge credentials from all three sources:
     // 1. CLI args (highest priority)

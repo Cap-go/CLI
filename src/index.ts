@@ -737,6 +737,8 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')
   .option('--play-config-json <json>', 'Android: Base64-encoded Google Play service account JSON')
+  .option('--output-upload [enabled]', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links (overrides saved credential setting)')
+  .option('--output-retention <duration>', 'Output link TTL: 1h to 7d (overrides saved credential setting). Examples: 1h, 6h, 2d')
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
