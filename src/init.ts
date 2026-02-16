@@ -1087,7 +1087,13 @@ ${content}`
     }
     else {
       try {
-        execSync(`${pm.pm} run ${buildCommand}`, execOption as ExecSyncOptions)
+        const buildResult = spawnSync(pm.pm, ['run', buildCommand], { stdio: 'pipe' })
+        if (buildResult.error) {
+          throw buildResult.error
+        }
+        if (buildResult.status !== 0) {
+          throw new Error(`Build command "${pm.pm} run ${buildCommand}" failed with exit code ${buildResult.status ?? 'unknown'}`)
+        }
         s.stop(`✅ Build with changes completed`)
         pLog.info(`📦 Your modifications are built and ready for OTA upload`)
       }
