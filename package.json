@@ -68,8 +68,9 @@
     "test:mcp": "node test/test-mcp.mjs",
     "test:version-detection": "node test/test-get-installed-version.mjs",
     "test:version-detection:setup": "./test/fixtures/setup-test-projects.sh",
+    "test:ios-sync-validation": "bun test/test-ios-sync-validation.mjs",
     "test:platform-paths": "bun test/test-platform-paths.mjs",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection && bun run test:platform-paths"
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection && bun run test:ios-sync-validation && bun run test:platform-paths"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.0.0",
