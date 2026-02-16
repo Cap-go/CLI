@@ -70,6 +70,7 @@ jobs:
           destination-repository-name: website
           target-directory: src/content/docs/docs/cli/reference
           target-branch: main
+          user-name: github-actions[bot]
           user-email: martindonadieu@gmail.com
   create-cache:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
