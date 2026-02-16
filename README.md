@@ -1076,10 +1076,10 @@ npx @capgo/cli@latest organisation delete
 
 🏗️  Manage native iOS/Android builds through Capgo Cloud.
 ⚠️ This feature is currently in PUBLIC BETA and cannot be used by anyone at this time.
-🔒 SECURITY GUARANTEE:
-   Build credentials are NEVER stored on Capgo servers.
-   They are used only during the build and auto-deleted after.
-   Builds sent directly to app stores - Capgo keeps nothing.
+ 🔒 SECURITY GUARANTEE:
+    Build credentials are NEVER stored on Capgo servers.
+    They are used only during the build and auto-deleted after.
+    Build outputs may optionally be uploaded for time-limited download links.
 📋 BEFORE BUILDING:
    Save your credentials first:
    npx @capgo/cli build credentials save --appId <your-app-id> --platform ios
@@ -1094,8 +1094,8 @@ npx @capgo/cli@latest build request
 Request a native build from Capgo Cloud.
 This command will zip your project directory and upload it to Capgo for building.
 The build will be processed and sent directly to app stores.
-🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
-   after build completion. Builds sent directly to stores - Capgo keeps nothing.
+ 🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
+    after build completion. Build outputs may optionally be uploaded for time-limited download links.
 📋 PREREQUISITE: Save credentials first with:
    npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
 
@@ -1145,7 +1145,7 @@ Manage build credentials stored locally on your machine.
    - Credentials saved to ~/.capgo-credentials/credentials.json (global) or .capgo-credentials.json (local)
    - When building, sent to Capgo but NEVER stored permanently
    - Deleted from Capgo immediately after build
-   - Builds sent directly to app stores - Capgo keeps nothing
+   - Build outputs may optionally be uploaded for time-limited download links
 📚 DOCUMENTATION:
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
