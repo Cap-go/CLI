@@ -1268,6 +1268,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       // Only poll if we didn't get the final status from the stream
       if (streamStatus) {
         finalStatus = streamStatus
+        // Persist terminal status to the database via /build/status.
+        // The WebSocket only delivers status to the CLI — calling the API
+        // endpoint triggers the backend to write status + last_error into build_requests.
+        if (TERMINAL_STATUS_SET.has(streamStatus))
+          await statusCheck().catch(() => {})
       }
       else {
         // Fall back to polling if stream ended without final status
