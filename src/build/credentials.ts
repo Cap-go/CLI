@@ -329,3 +329,47 @@ export function getLocalCredentialsPath(): string {
 export function getGlobalCredentialsPath(): string {
   return CREDENTIALS_FILE
 }
+
+export const MIN_OUTPUT_RETENTION_SECONDS = 60 * 60
+export const MAX_OUTPUT_RETENTION_SECONDS = 7 * 24 * 60 * 60
+
+export function parseOutputRetentionSeconds(raw: string): number {
+  const trimmed = raw.trim()
+  const match = trimmed.match(/^(\d+)\s*([smhd])?$/i)
+  if (!match)
+    throw new Error('output-retention must be a number with optional unit: s, m, h, d (examples: 1h, 3600s, 2d)')
+
+  const value = Number.parseInt(match[1]!, 10)
+  const unit = (match[2] || 's').toLowerCase() as 's' | 'm' | 'h' | 'd'
+
+  const multiplier = unit === 's'
+    ? 1
+    : unit === 'm'
+      ? 60
+      : unit === 'h'
+        ? 60 * 60
+        : 24 * 60 * 60
+
+  const seconds = value * multiplier
+  if (seconds < MIN_OUTPUT_RETENTION_SECONDS)
+    throw new Error(`output-retention must be at least ${MIN_OUTPUT_RETENTION_SECONDS} seconds (1h)`)
+  if (seconds > MAX_OUTPUT_RETENTION_SECONDS)
+    throw new Error(`output-retention must be at most ${MAX_OUTPUT_RETENTION_SECONDS} seconds (7d)`)
+
+  return seconds
+}
+
+export function parseOptionalBoolean(value: boolean | string | undefined): boolean {
+  if (value === undefined)
+    return true
+  if (typeof value === 'boolean')
+    return value
+
+  const normalized = value.trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes')
+    return true
+  if (normalized === 'false' || normalized === '0' || normalized === 'no')
+    return false
+
+  throw new Error('output-upload must be true/false (examples: --output-upload, --output-upload false)')
+}
