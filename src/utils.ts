@@ -2001,10 +2001,107 @@ export async function checkCompatibilityNativePackages(supabase: SupabaseClient<
   }
 }
 
+export interface IosUpdaterSyncValidationResult {
+  shouldCheck: boolean
+  valid: boolean
+  details: string[]
+}
+
+function readJsonFileSafely(filePath: string): Record<string, unknown> | null {
+  if (!existsSync(filePath))
+    return null
+
+  try {
+    return JSON.parse(readFileSync(filePath, 'utf-8'))
+  }
+  catch {
+    return null
+  }
+}
+
+function hasUpdaterInText(content: string | undefined): boolean {
+  if (!content)
+    return false
+  return /@capgo\/capacitor-updater|CapgoCapacitorUpdater|CapacitorUpdaterPlugin/.test(content)
+}
+
+export function validateIosUpdaterSync(
+  rootDir: string = cwd(),
+  packageJsonPath?: string,
+): IosUpdaterSyncValidationResult {
+  const iosAppPath = join(rootDir, 'ios', 'App')
+  if (!existsSync(iosAppPath)) {
+    return {
+      shouldCheck: false,
+      valid: true,
+      details: [],
+    }
+  }
+
+  const packageJsonLocation = packageJsonPath ?? join(rootDir, PACKNAME)
+  const packageJson = readJsonFileSafely(packageJsonLocation)
+  const dependencies = {
+    ...(packageJson?.dependencies as Record<string, unknown> | undefined),
+    ...(packageJson?.devDependencies as Record<string, unknown> | undefined),
+    ...(packageJson?.optionalDependencies as Record<string, unknown> | undefined),
+  }
+  const updaterDeclaredInPackageJson = Object.prototype.hasOwnProperty.call(dependencies, '@capgo/capacitor-updater')
+  const updaterPresentInNodeModules = existsSync(join(rootDir, 'node_modules', '@capgo', 'capacitor-updater'))
+
+  const podfilePath = join(iosAppPath, 'Podfile')
+  const spmPackagePath = join(iosAppPath, 'CapApp-SPM', 'Package.swift')
+  const podfileContent = existsSync(podfilePath) ? readFileSync(podfilePath, 'utf-8') : undefined
+  const spmPackageContent = existsSync(spmPackagePath) ? readFileSync(spmPackagePath, 'utf-8') : undefined
+  const hasDependencyEntry = hasUpdaterInText(podfileContent) || hasUpdaterInText(spmPackageContent)
+
+  const podfileLockPath = join(iosAppPath, 'Podfile.lock')
+  const packageResolvedPath = join(iosAppPath, 'App.xcworkspace', 'xcshareddata', 'swiftpm', 'Package.resolved')
+  const capacitorPluginsPath = join(iosAppPath, 'App', 'capacitor.plugins.json')
+  const podfileLockContent = existsSync(podfileLockPath) ? readFileSync(podfileLockPath, 'utf-8') : undefined
+  const packageResolvedContent = existsSync(packageResolvedPath) ? readFileSync(packageResolvedPath, 'utf-8') : undefined
+  const capacitorPluginsContent = existsSync(capacitorPluginsPath) ? readFileSync(capacitorPluginsPath, 'utf-8') : undefined
+  const hasNativeProjectEntry = hasUpdaterInText(podfileLockContent)
+    || hasUpdaterInText(packageResolvedContent)
+    || hasUpdaterInText(capacitorPluginsContent)
+
+  const shouldCheck = updaterDeclaredInPackageJson
+    || updaterPresentInNodeModules
+    || hasDependencyEntry
+    || hasNativeProjectEntry
+
+  if (!shouldCheck) {
+    return {
+      shouldCheck: false,
+      valid: true,
+      details: [],
+    }
+  }
+
+  const details: string[] = []
+  if (!hasDependencyEntry) {
+    details.push(`Missing @capgo/capacitor-updater in iOS dependency files (${podfilePath} or ${spmPackagePath})`)
+  }
+  if (!hasNativeProjectEntry) {
+    details.push(`Missing @capgo/capacitor-updater in iOS native project outputs (${podfileLockPath}, ${packageResolvedPath}, or ${capacitorPluginsPath})`)
+  }
+
+  return {
+    shouldCheck: true,
+    valid: hasDependencyEntry && hasNativeProjectEntry,
+    details,
+  }
+}
+
+interface PromptAndSyncOptions {
+  validateIosUpdater?: boolean
+  packageJsonPath?: string
+}
+
 export async function promptAndSyncCapacitor(
   isInit?: boolean,
   orgId?: string,
   apikey?: string,
+  options?: PromptAndSyncOptions,
 ): Promise<void> {
   // Ask user if they want to sync with Capacitor
   const shouldSync = await confirmC({
@@ -2043,14 +2140,30 @@ export async function promptAndSyncCapacitor(
           reject(error)
         })
       })
-
-      s.stop('Capacitor sync completed ✅')
     }
     catch (error) {
       s.stop('Error')
       log.error(`Failed to run Capacitor sync: ${error}`)
       log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
+      return
     }
+
+    if (options?.validateIosUpdater) {
+      const syncValidation = validateIosUpdaterSync(cwd(), options.packageJsonPath)
+      if (syncValidation.shouldCheck && !syncValidation.valid) {
+        s.stop('iOS sync check failed ❌')
+        log.error('Capgo iOS dependency sync verification failed.')
+        syncValidation.details.forEach(detail => log.error(detail))
+        log.error('Stop here to avoid testing on a broken native iOS project.')
+        log.warn('Best fix: reset the iOS folder, then run sync again.')
+        log.info(`1. ${pm.runner} cap rm ios`)
+        log.info(`2. ${pm.runner} cap add ios`)
+        log.info(`3. ${pm.runner} cap sync ios`)
+        throw new Error('iOS sync validation failed. Reset your iOS folder and retry.')
+      }
+    }
+
+    s.stop('Capacitor sync completed ✅')
   }
   else {
     const pm = getPMAndCommand()
