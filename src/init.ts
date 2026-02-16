@@ -171,14 +171,14 @@ async function markStep(orgId: string, apikey: string, step: string, appId: stri
 
 function stopForBrokenIosSync(platformRunner: string, details: string[]): never {
   pLog.error('Capgo iOS dependency sync verification failed.')
-  details.forEach(detail => pLog.error(detail))
+  for (const detail of details) {
+    pLog.error(detail)
+  }
   pLog.error('Stop here to avoid testing on a broken native iOS project.')
   pLog.warn('Best fix: reset the iOS folder, then run sync again.')
   pLog.info(`1. ${platformRunner} cap rm ios`)
   pLog.info(`2. ${platformRunner} cap add ios`)
   pLog.info(`3. ${platformRunner} cap sync ios`)
-  pLog.info('Then run the exact same `capgo init ...` command you used before.')
-  pLog.info('Onboarding will resume from the step where it stopped, so you do not need to redo previous steps.')
   pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
   exit(1)
 }

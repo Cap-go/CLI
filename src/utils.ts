@@ -2025,12 +2025,31 @@ function hasUpdaterInText(content: string | undefined): boolean {
   return /@capgo\/capacitor-updater|CapgoCapacitorUpdater|CapacitorUpdaterPlugin/.test(content)
 }
 
+function resolvePackageJsonLocation(rootDir: string, packageJsonPath?: string): string {
+  if (!packageJsonPath)
+    return join(rootDir, PACKNAME)
+  return path.isAbsolute(packageJsonPath) ? packageJsonPath : resolve(rootDir, packageJsonPath)
+}
+
+/**
+ * Validate whether the iOS native project is correctly synced for capacitor-updater.
+ *
+ * `shouldCheck` is `false` when no iOS project is present or no updater signals are detected
+ * (no dependency declaration, installed package, or native references). `shouldCheck` is `true`
+ * as soon as any signal indicates updater should be wired, then both dependency definitions
+ * (`Podfile` or SPM `Package.swift`) and generated native outputs (`Podfile.lock`,
+ * `Package.resolved`, or `capacitor.plugins.json`) must include updater markers for `valid` to be `true`.
+ */
 export function validateIosUpdaterSync(
   rootDir: string = cwd(),
   packageJsonPath?: string,
 ): IosUpdaterSyncValidationResult {
-  const iosAppPath = join(rootDir, 'ios', 'App')
-  if (!existsSync(iosAppPath)) {
+  const packageJsonLocation = resolvePackageJsonLocation(rootDir, packageJsonPath)
+  const projectRoot = path.basename(packageJsonLocation) === PACKNAME ? dirname(packageJsonLocation) : packageJsonLocation
+  const iosAppPath = [join(projectRoot, 'ios', 'App'), join(rootDir, 'ios', 'App')]
+    .find(candidate => existsSync(candidate))
+
+  if (!iosAppPath) {
     return {
       shouldCheck: false,
       valid: true,
@@ -2038,7 +2057,6 @@ export function validateIosUpdaterSync(
     }
   }
 
-  const packageJsonLocation = packageJsonPath ?? join(rootDir, PACKNAME)
   const packageJson = readJsonFileSafely(packageJsonLocation)
   const dependencies = {
     ...(packageJson?.dependencies as Record<string, unknown> | undefined),
@@ -2046,7 +2064,8 @@ export function validateIosUpdaterSync(
     ...(packageJson?.optionalDependencies as Record<string, unknown> | undefined),
   }
   const updaterDeclaredInPackageJson = Object.prototype.hasOwnProperty.call(dependencies, '@capgo/capacitor-updater')
-  const updaterPresentInNodeModules = existsSync(join(rootDir, 'node_modules', '@capgo', 'capacitor-updater'))
+  const updaterPresentInNodeModules = [projectRoot, rootDir]
+    .some(baseDir => existsSync(join(baseDir, 'node_modules', '@capgo', 'capacitor-updater')))
 
   const podfilePath = join(iosAppPath, 'Podfile')
   const spmPackagePath = join(iosAppPath, 'CapApp-SPM', 'Package.swift')
@@ -2122,6 +2141,7 @@ export async function promptAndSyncCapacitor(
     const pm = getPMAndCommand()
     const s = spinnerC()
     s.start('Running the command...')
+    let syncError: unknown
 
     try {
       await new Promise<void>((resolve, reject) => {
@@ -2142,10 +2162,9 @@ export async function promptAndSyncCapacitor(
       })
     }
     catch (error) {
-      s.stop('Error')
+      syncError = error
       log.error(`Failed to run Capacitor sync: ${error}`)
       log.warn(`Please run "${pm.runner} cap sync" manually to ensure encrypted updates work properly`)
-      return
     }
 
     if (options?.validateIosUpdater) {
@@ -2153,7 +2172,9 @@ export async function promptAndSyncCapacitor(
       if (syncValidation.shouldCheck && !syncValidation.valid) {
         s.stop('iOS sync check failed ❌')
         log.error('Capgo iOS dependency sync verification failed.')
-        syncValidation.details.forEach(detail => log.error(detail))
+        for (const detail of syncValidation.details) {
+          log.error(detail)
+        }
         log.error('Stop here to avoid testing on a broken native iOS project.')
         log.warn('Best fix: reset the iOS folder, then run sync again.')
         log.info(`1. ${pm.runner} cap rm ios`)
@@ -2161,6 +2182,11 @@ export async function promptAndSyncCapacitor(
         log.info(`3. ${pm.runner} cap sync ios`)
         throw new Error('iOS sync validation failed. Reset your iOS folder and retry.')
       }
+    }
+
+    if (syncError) {
+      s.stop('Error')
+      return
     }
 
     s.stop('Capacitor sync completed ✅')
