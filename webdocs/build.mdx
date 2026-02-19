@@ -20,7 +20,10 @@ The build will be processed and sent directly to app stores.
  🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
     after build completion. Build outputs may optionally be uploaded for time-limited download links.
 📋 PREREQUISITE: Save credentials first with:
-   npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
+
+```bash
+npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
+```
 
 **Example:**
 
@@ -75,4 +78,3 @@ Manage build credentials stored locally on your machine.
 📚 DOCUMENTATION:
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
-
