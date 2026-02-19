@@ -24,7 +24,7 @@ import type { BuildCredentials } from './request'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { cwd, env } from 'node:process'
+import { cwd } from 'node:process'
 
 const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
@@ -165,49 +165,70 @@ async function saveAllCredentials(credentials: AllCredentials, local?: boolean):
   await writeFile(filePath, JSON.stringify(credentials, null, 2), 'utf-8')
 }
 
+function readRuntimeEnv(name: string): string | undefined {
+  // Use runtime key lookup to avoid bundler static replacement.
+  return process.env[name]
+}
+
 /**
  * Load credentials from environment variables
  * Only returns credentials that are actually set in env
  */
 export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const credentials: Partial<BuildCredentials> = {}
+  const buildCertificateBase64 = readRuntimeEnv('BUILD_CERTIFICATE_BASE64')
+  const buildProvisionProfileBase64 = readRuntimeEnv('BUILD_PROVISION_PROFILE_BASE64')
+  const buildProvisionProfileBase64Prod = readRuntimeEnv('BUILD_PROVISION_PROFILE_BASE64_PROD')
+  const p12Password = readRuntimeEnv('P12_PASSWORD')
+  const appleKeyId = readRuntimeEnv('APPLE_KEY_ID')
+  const appleIssuerId = readRuntimeEnv('APPLE_ISSUER_ID')
+  const appleKeyContent = readRuntimeEnv('APPLE_KEY_CONTENT')
+  const appleProfileName = readRuntimeEnv('APPLE_PROFILE_NAME')
+  const appStoreConnectTeamId = readRuntimeEnv('APP_STORE_CONNECT_TEAM_ID')
+  const androidKeystoreFile = readRuntimeEnv('ANDROID_KEYSTORE_FILE')
+  const keystoreKeyAlias = readRuntimeEnv('KEYSTORE_KEY_ALIAS')
+  const keystoreKeyPassword = readRuntimeEnv('KEYSTORE_KEY_PASSWORD')
+  const keystoreStorePassword = readRuntimeEnv('KEYSTORE_STORE_PASSWORD')
+  const playConfigJson = readRuntimeEnv('PLAY_CONFIG_JSON')
+  const buildOutputUploadEnabled = readRuntimeEnv('BUILD_OUTPUT_UPLOAD_ENABLED')
+  const buildOutputRetentionSeconds = readRuntimeEnv('BUILD_OUTPUT_RETENTION_SECONDS')
 
   // iOS credentials
-  if (env.BUILD_CERTIFICATE_BASE64)
-    credentials.BUILD_CERTIFICATE_BASE64 = env.BUILD_CERTIFICATE_BASE64
-  if (env.BUILD_PROVISION_PROFILE_BASE64)
-    credentials.BUILD_PROVISION_PROFILE_BASE64 = env.BUILD_PROVISION_PROFILE_BASE64
-  if (env.BUILD_PROVISION_PROFILE_BASE64_PROD)
-    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = env.BUILD_PROVISION_PROFILE_BASE64_PROD
-  if (env.P12_PASSWORD)
-    credentials.P12_PASSWORD = env.P12_PASSWORD
-  if (env.APPLE_KEY_ID)
-    credentials.APPLE_KEY_ID = env.APPLE_KEY_ID
-  if (env.APPLE_ISSUER_ID)
-    credentials.APPLE_ISSUER_ID = env.APPLE_ISSUER_ID
-  if (env.APPLE_KEY_CONTENT)
-    credentials.APPLE_KEY_CONTENT = env.APPLE_KEY_CONTENT
-  if (env.APPLE_PROFILE_NAME)
-    credentials.APPLE_PROFILE_NAME = env.APPLE_PROFILE_NAME
-  if (env.APP_STORE_CONNECT_TEAM_ID)
-    credentials.APP_STORE_CONNECT_TEAM_ID = env.APP_STORE_CONNECT_TEAM_ID
+  if (buildCertificateBase64)
+    credentials.BUILD_CERTIFICATE_BASE64 = buildCertificateBase64
+  if (buildProvisionProfileBase64)
+    credentials.BUILD_PROVISION_PROFILE_BASE64 = buildProvisionProfileBase64
+  if (buildProvisionProfileBase64Prod)
+    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = buildProvisionProfileBase64Prod
+  if (p12Password)
+    credentials.P12_PASSWORD = p12Password
+  if (appleKeyId)
+    credentials.APPLE_KEY_ID = appleKeyId
+  if (appleIssuerId)
+    credentials.APPLE_ISSUER_ID = appleIssuerId
+  if (appleKeyContent)
+    credentials.APPLE_KEY_CONTENT = appleKeyContent
+  if (appleProfileName)
+    credentials.APPLE_PROFILE_NAME = appleProfileName
+  if (appStoreConnectTeamId)
+    credentials.APP_STORE_CONNECT_TEAM_ID = appStoreConnectTeamId
 
   // Android credentials
-  if (env.ANDROID_KEYSTORE_FILE)
-    credentials.ANDROID_KEYSTORE_FILE = env.ANDROID_KEYSTORE_FILE
-  if (env.KEYSTORE_KEY_ALIAS)
-    credentials.KEYSTORE_KEY_ALIAS = env.KEYSTORE_KEY_ALIAS
-  if (env.KEYSTORE_KEY_PASSWORD)
-    credentials.KEYSTORE_KEY_PASSWORD = env.KEYSTORE_KEY_PASSWORD
-  if (env.KEYSTORE_STORE_PASSWORD)
-    credentials.KEYSTORE_STORE_PASSWORD = env.KEYSTORE_STORE_PASSWORD
-  if (env.PLAY_CONFIG_JSON)
-    credentials.PLAY_CONFIG_JSON = env.PLAY_CONFIG_JSON
-  if (env.BUILD_OUTPUT_UPLOAD_ENABLED) {
-    credentials.BUILD_OUTPUT_UPLOAD_ENABLED = parseOptionalBoolean(env.BUILD_OUTPUT_UPLOAD_ENABLED) ? 'true' : 'false'
+  if (androidKeystoreFile)
+    credentials.ANDROID_KEYSTORE_FILE = androidKeystoreFile
+  if (keystoreKeyAlias)
+    credentials.KEYSTORE_KEY_ALIAS = keystoreKeyAlias
+  if (keystoreKeyPassword)
+    credentials.KEYSTORE_KEY_PASSWORD = keystoreKeyPassword
+  if (keystoreStorePassword)
+    credentials.KEYSTORE_STORE_PASSWORD = keystoreStorePassword
+  if (playConfigJson)
+    credentials.PLAY_CONFIG_JSON = playConfigJson
+  if (buildOutputUploadEnabled) {
+    credentials.BUILD_OUTPUT_UPLOAD_ENABLED = parseOptionalBoolean(buildOutputUploadEnabled) ? 'true' : 'false'
   }
-  if (env.BUILD_OUTPUT_RETENTION_SECONDS) {
-    credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(env.BUILD_OUTPUT_RETENTION_SECONDS))
+  if (buildOutputRetentionSeconds) {
+    credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(buildOutputRetentionSeconds))
   }
 
   return credentials

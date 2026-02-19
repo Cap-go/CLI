@@ -294,6 +294,8 @@ const buildCLI = Bun.build({
   naming: 'index.js',
   sourcemap: env.NODE_ENV === 'development' ? 'linked' : 'none',
   minify: true,
+  // Keep env access runtime-only unless explicitly defined below.
+  env: 'disable',
   define: {
     'process.env.SUPA_DB': '"production"',
   },
@@ -319,6 +321,8 @@ const buildSDK = Bun.build({
   sourcemap: env.NODE_ENV === 'development' ? 'linked' : 'none',
   minify: true,
   format: 'esm',
+  // Keep env access runtime-only unless explicitly defined below.
+  env: 'disable',
   define: {
     'process.env.SUPA_DB': '"production"',
   },
