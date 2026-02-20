@@ -225,7 +225,7 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
   }
 
   const normalized = rawValue.replace(/\s+/g, '')
-  if (!normalized || normalized.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+  if (!normalized || normalized.length % 4 !== 0 || !/^[a-z0-9+/]+={0,2}$/i.test(normalized)) {
     throw new Error(`${credentialName} is not valid base64`)
   }
 
@@ -243,13 +243,50 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
   return decoded
 }
 
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-}
-
 function extractPlistString(xml: string, key: string): string | undefined {
-  const re = new RegExp(`<key>\\s*${escapeRegex(key)}\\s*<\\/key>\\s*<string>([^<]+)<\\/string>`, 'i')
-  return re.exec(xml)?.[1]?.trim()
+  const keyOpenTag = '<key>'
+  const keyCloseTag = '</key>'
+  let searchFrom = 0
+
+  while (searchFrom >= 0 && searchFrom < xml.length) {
+    const keyStart = xml.indexOf(keyOpenTag, searchFrom)
+    if (keyStart < 0) {
+      return undefined
+    }
+
+    const keyEnd = xml.indexOf(keyCloseTag, keyStart + keyOpenTag.length)
+    if (keyEnd < 0) {
+      return undefined
+    }
+
+    const candidateKey = xml.slice(keyStart + keyOpenTag.length, keyEnd).trim()
+    searchFrom = keyEnd + keyCloseTag.length
+
+    if (candidateKey !== key) {
+      continue
+    }
+
+    const valueSource = xml.slice(searchFrom).trimStart()
+    for (const tag of ['string', 'date'] as const) {
+      const openTag = `<${tag}>`
+      const closeTag = `</${tag}>`
+      if (!valueSource.startsWith(openTag)) {
+        continue
+      }
+      const valueEnd = valueSource.indexOf(closeTag, openTag.length)
+      if (valueEnd < 0) {
+        return undefined
+      }
+      const value = valueSource.slice(openTag.length, valueEnd).trim()
+      if (value) {
+        return value
+      }
+      break
+    }
+    return undefined
+  }
+
+  return undefined
 }
 
 function summarizeProvisioningProfile(base64Profile: string, credentialName: string): ProvisioningProfileSummary {
@@ -1100,6 +1137,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       appId,
       options.platform,
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
+      { envCredentials, savedCredentials },
     )
     const sourceOf = (key: keyof BuildCredentials): CredentialSource =>
       resolveCredentialSource(key, cliCredentials, envCredentials, savedPlatformCredentials)
@@ -1232,7 +1270,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         }
       }
 
-      // Validate APPLE_KEY_CONTENT is base64 and non-empty
+      // Validate APPLE_KEY_CONTENT base64; result is intentionally discarded and used only for validation side effects.
       toStrictBase64Buffer(appleKeyContent, 'APPLE_KEY_CONTENT')
 
       if (!silent) {

@@ -98,7 +98,7 @@ await test('iOS validation accepts App Store Connect API key', () => {
 })
 
 
-// Test 4: Android requires minimum credentials
+// Test 3: Android requires minimum credentials
 await test('Android validation requires keystore and passwords', () => {
   const credentials = {
     ANDROID_KEYSTORE_FILE: 'keystore',
@@ -121,7 +121,7 @@ await test('Android validation requires keystore and passwords', () => {
   assert(missingCreds.length === 0, 'Should have no missing credentials')
 })
 
-// Test 5: Android fails without keystore
+// Test 4: Android fails without keystore
 await test('Android validation fails without keystore file', () => {
   const credentials = {
     // Missing ANDROID_KEYSTORE_FILE
@@ -145,7 +145,7 @@ await test('Android validation fails without keystore file', () => {
   assert(missingCreds[0] === 'ANDROID_KEYSTORE_FILE', 'Should require keystore file')
 })
 
-// Test 6: Android PLAY_CONFIG_JSON is optional for build
+// Test 5: Android PLAY_CONFIG_JSON is optional for build
 await test('Android validation allows missing PLAY_CONFIG_JSON', () => {
   const credentials = {
     ANDROID_KEYSTORE_FILE: 'keystore',
@@ -172,7 +172,7 @@ await test('Android validation allows missing PLAY_CONFIG_JSON', () => {
   assert(!credentials.PLAY_CONFIG_JSON, 'PLAY_CONFIG_JSON should be optional')
 })
 
-// Test 7: iOS fails with partial API key
+// Test 6: iOS fails with partial API key
 await test('iOS validation fails with incomplete API key credentials', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',

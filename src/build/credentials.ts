@@ -244,10 +244,14 @@ export async function mergeCredentials(
   appId: string,
   platform: 'ios' | 'android',
   cliArgs?: Partial<BuildCredentials>,
+  preloaded?: {
+    envCredentials?: Partial<BuildCredentials>
+    savedCredentials?: SavedCredentials | null
+  },
 ): Promise<BuildCredentials | undefined> {
   // Load from all three sources
-  const saved = await loadSavedCredentials(appId)
-  const envCreds = loadCredentialsFromEnv()
+  const saved = preloaded?.savedCredentials ?? await loadSavedCredentials(appId)
+  const envCreds = preloaded?.envCredentials ?? loadCredentialsFromEnv()
 
   // Start with saved credentials (lowest priority)
   const merged: Partial<BuildCredentials> = { ...(saved?.[platform] || {}) }
