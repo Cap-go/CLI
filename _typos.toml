@@ -2,3 +2,6 @@
 extend-exclude = [
   "test/data.ts"
 ]
+
+[default.extend-words]
+passin = "passin"

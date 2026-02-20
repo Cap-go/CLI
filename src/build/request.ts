@@ -224,7 +224,7 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
     throw new Error(`${credentialName} is empty`)
   }
 
-  const normalized = rawValue.replace(/\s+/g, '')
+  const normalized = rawValue.replaceAll(/\s+/g, '')
   if (!normalized || normalized.length % 4 !== 0 || !/^[a-z0-9+/]+={0,2}$/i.test(normalized)) {
     throw new Error(`${credentialName} is not valid base64`)
   }
@@ -234,8 +234,16 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
     throw new Error(`${credentialName} decoded to an empty payload`)
   }
 
-  const reEncoded = decoded.toString('base64').replace(/=+$/g, '')
-  const comparableInput = normalized.replace(/=+$/g, '')
+  const stripBase64Padding = (value: string): string => {
+    let end = value.length
+    while (end > 0 && value[end - 1] === '=') {
+      end--
+    }
+    return value.slice(0, end)
+  }
+
+  const reEncoded = stripBase64Padding(decoded.toString('base64'))
+  const comparableInput = stripBase64Padding(normalized)
   if (reEncoded !== comparableInput) {
     throw new Error(`${credentialName} is not valid base64`)
   }
@@ -243,20 +251,36 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
   return decoded
 }
 
+function extractTagValue(valueSource: string, tag: 'string' | 'date'): string | undefined {
+  const openTag = `<${tag}>`
+  if (!valueSource.startsWith(openTag)) {
+    return undefined
+  }
+
+  const closeTag = `</${tag}>`
+  const valueEnd = valueSource.indexOf(closeTag, openTag.length)
+  if (valueEnd < 0) {
+    return undefined
+  }
+
+  const value = valueSource.slice(openTag.length, valueEnd).trim()
+  return value || undefined
+}
+
 function extractPlistString(xml: string, key: string): string | undefined {
   const keyOpenTag = '<key>'
   const keyCloseTag = '</key>'
   let searchFrom = 0
 
-  while (searchFrom >= 0 && searchFrom < xml.length) {
+  while (searchFrom < xml.length) {
     const keyStart = xml.indexOf(keyOpenTag, searchFrom)
     if (keyStart < 0) {
-      return undefined
+      break
     }
 
     const keyEnd = xml.indexOf(keyCloseTag, keyStart + keyOpenTag.length)
     if (keyEnd < 0) {
-      return undefined
+      break
     }
 
     const candidateKey = xml.slice(keyStart + keyOpenTag.length, keyEnd).trim()
@@ -267,23 +291,7 @@ function extractPlistString(xml: string, key: string): string | undefined {
     }
 
     const valueSource = xml.slice(searchFrom).trimStart()
-    for (const tag of ['string', 'date'] as const) {
-      const openTag = `<${tag}>`
-      const closeTag = `</${tag}>`
-      if (!valueSource.startsWith(openTag)) {
-        continue
-      }
-      const valueEnd = valueSource.indexOf(closeTag, openTag.length)
-      if (valueEnd < 0) {
-        return undefined
-      }
-      const value = valueSource.slice(openTag.length, valueEnd).trim()
-      if (value) {
-        return value
-      }
-      break
-    }
-    return undefined
+    return extractTagValue(valueSource, 'string') || extractTagValue(valueSource, 'date')
   }
 
   return undefined
@@ -328,12 +336,13 @@ function extractOpenSslError(error: unknown): string {
     return 'OpenSSL is not available in this environment'
   }
 
-  const stderr = execError.stderr
-    ? typeof execError.stderr === 'string'
+  let stderr = ''
+  if (execError.stderr) {
+    stderr = typeof execError.stderr === 'string'
       ? execError.stderr
       : execError.stderr.toString('utf8')
-    : ''
-  return `${error.message} ${stderr}`.replace(/\s+/g, ' ').trim()
+  }
+  return `${error.message} ${stderr}`.replaceAll(/\s+/g, ' ').trim()
 }
 
 async function summarizeCertificate(base64Certificate: string, p12Password: string | undefined): Promise<CertificateSummary> {
@@ -343,12 +352,22 @@ async function summarizeCertificate(base64Certificate: string, p12Password: stri
 
   const tempDir = await mkdtemp(join(tmpdir(), 'capgo-cert-'))
   const certPath = join(tempDir, 'build_certificate.p12')
+  const opensslBinaryCandidates = [
+    '/usr/bin/openssl',
+    '/opt/homebrew/opt/openssl@3/bin/openssl',
+    '/opt/homebrew/bin/openssl',
+    '/usr/local/bin/openssl',
+  ]
 
   try {
     await writeFile(certPath, certificateBuffer)
+    const opensslBinary = opensslBinaryCandidates.find(path => existsSync(path))
+    if (!opensslBinary) {
+      throw new Error('OpenSSL is not available in this environment')
+    }
 
     const pem = execFileSync(
-      'openssl',
+      opensslBinary,
       ['pkcs12', '-in', certPath, '-clcerts', '-nokeys', '-passin', 'env:CAPGO_P12_PASS'],
       {
         encoding: 'utf8',
@@ -361,7 +380,7 @@ async function summarizeCertificate(base64Certificate: string, p12Password: stri
     )
 
     const x509Info = execFileSync(
-      'openssl',
+      opensslBinary,
       ['x509', '-noout', '-subject', '-issuer', '-enddate'],
       {
         encoding: 'utf8',
@@ -1230,7 +1249,10 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.error(`  3. Saved credentials: bunx @capgo/cli build credentials save --platform ${options.platform} ...`)
         log.error('')
         log.error('Documentation:')
-        log.error(`  ${options.platform === 'ios' ? IOS_DOC_URL : `https://capgo.app/docs/cli/cloud-build/${options.platform}/`}`)
+        const documentationUrl = options.platform === 'ios'
+          ? IOS_DOC_URL
+          : `https://capgo.app/docs/cli/cloud-build/${options.platform}/`
+        log.error(`  ${documentationUrl}`)
       }
       throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
     }
