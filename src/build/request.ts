@@ -28,8 +28,10 @@
 
 import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
 import { Buffer } from 'node:buffer'
+import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
+import { mkdir, mkdtemp, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process, { chdir, cwd, exit } from 'node:process'
@@ -39,7 +41,7 @@ import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
 import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
-import { mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { loadCredentialsFromEnv, loadSavedCredentials, mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -153,6 +155,220 @@ async function fetchWithRetry(
 
   // This should never be reached, but TypeScript needs it
   throw new Error('Unexpected error in fetchWithRetry')
+}
+
+const IOS_DOC_URL = 'https://capgo.app/docs/cli/cloud-build/ios/'
+
+const IOS_REQUIRED_CREDENTIALS: Array<{ key: keyof BuildCredentials, hint: string }> = [
+  { key: 'BUILD_CERTIFICATE_BASE64', hint: '--build-certificate-base64' },
+  { key: 'BUILD_PROVISION_PROFILE_BASE64', hint: '--build-provision-profile-base64' },
+  { key: 'APPLE_KEY_ID', hint: '--apple-key-id' },
+  { key: 'APPLE_ISSUER_ID', hint: '--apple-issuer-id' },
+  { key: 'APPLE_KEY_CONTENT', hint: '--apple-key-content' },
+  { key: 'APP_STORE_CONNECT_TEAM_ID', hint: '--apple-team-id' },
+  { key: 'APPLE_PROFILE_NAME', hint: '--apple-profile-name' },
+]
+
+type CredentialSource = 'cli' | 'env' | 'saved' | 'missing'
+
+interface ProvisioningProfileSummary {
+  name?: string
+  uuid?: string
+  teamId?: string
+  appIdentifier?: string
+  bundleId?: string
+  expirationDate?: string
+}
+
+interface CertificateSummary {
+  fingerprint: string
+  subject?: string
+  issuer?: string
+  expirationDate?: string
+  parseError?: string
+  opensslUnavailable?: boolean
+  invalidPassword?: boolean
+}
+
+function hasCredentialValue(value: unknown): value is string {
+  return typeof value === 'string' && value.trim().length > 0
+}
+
+function credentialSourceLabel(source: CredentialSource): string {
+  if (source === 'cli')
+    return 'CLI argument'
+  if (source === 'env')
+    return 'environment variable'
+  if (source === 'saved')
+    return 'saved credentials'
+  return 'missing'
+}
+
+function resolveCredentialSource(
+  key: keyof BuildCredentials,
+  cliCredentials: Partial<BuildCredentials>,
+  envCredentials: Partial<BuildCredentials>,
+  savedCredentials: Partial<BuildCredentials> | undefined,
+): CredentialSource {
+  if (hasCredentialValue(cliCredentials[key]))
+    return 'cli'
+  if (hasCredentialValue(envCredentials[key]))
+    return 'env'
+  if (savedCredentials && hasCredentialValue(savedCredentials[key]))
+    return 'saved'
+  return 'missing'
+}
+
+function toStrictBase64Buffer(rawValue: string | undefined, credentialName: string): Buffer {
+  if (!hasCredentialValue(rawValue)) {
+    throw new Error(`${credentialName} is empty`)
+  }
+
+  const normalized = rawValue.replace(/\s+/g, '')
+  if (!normalized || normalized.length % 4 !== 0 || !/^[A-Za-z0-9+/]+={0,2}$/.test(normalized)) {
+    throw new Error(`${credentialName} is not valid base64`)
+  }
+
+  const decoded = Buffer.from(normalized, 'base64')
+  if (!decoded.length) {
+    throw new Error(`${credentialName} decoded to an empty payload`)
+  }
+
+  const reEncoded = decoded.toString('base64').replace(/=+$/g, '')
+  const comparableInput = normalized.replace(/=+$/g, '')
+  if (reEncoded !== comparableInput) {
+    throw new Error(`${credentialName} is not valid base64`)
+  }
+
+  return decoded
+}
+
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+}
+
+function extractPlistString(xml: string, key: string): string | undefined {
+  const re = new RegExp(`<key>\\s*${escapeRegex(key)}\\s*<\\/key>\\s*<string>([^<]+)<\\/string>`, 'i')
+  return re.exec(xml)?.[1]?.trim()
+}
+
+function summarizeProvisioningProfile(base64Profile: string, credentialName: string): ProvisioningProfileSummary {
+  const profileBuffer = toStrictBase64Buffer(base64Profile, credentialName)
+  const profileContent = profileBuffer.toString('utf8')
+
+  const xmlStart = profileContent.indexOf('<?xml')
+  const plistEndIndex = profileContent.indexOf('</plist>')
+  if (xmlStart < 0 || plistEndIndex < 0) {
+    throw new Error(`${credentialName} does not look like a valid provisioning profile`)
+  }
+
+  const plistXml = profileContent.slice(xmlStart, plistEndIndex + '</plist>'.length)
+
+  const teamId = /<key>\s*TeamIdentifier\s*<\/key>\s*<array>\s*<string>([^<]+)<\/string>/i.exec(plistXml)?.[1]?.trim()
+  const appIdentifier = /<key>\s*Entitlements\s*<\/key>\s*<dict>[\s\S]*?<key>\s*application-identifier\s*<\/key>\s*<string>([^<]+)<\/string>/i.exec(plistXml)?.[1]?.trim()
+
+  let bundleId: string | undefined
+  if (appIdentifier?.includes('.')) {
+    bundleId = appIdentifier.slice(appIdentifier.indexOf('.') + 1)
+  }
+
+  return {
+    name: extractPlistString(plistXml, 'Name'),
+    uuid: extractPlistString(plistXml, 'UUID'),
+    teamId,
+    appIdentifier,
+    bundleId,
+    expirationDate: extractPlistString(plistXml, 'ExpirationDate'),
+  }
+}
+
+function extractOpenSslError(error: unknown): string {
+  if (!(error instanceof Error))
+    return String(error)
+
+  const execError = error as Error & { stderr?: Buffer | string, code?: string }
+  if (execError.code === 'ENOENT') {
+    return 'OpenSSL is not available in this environment'
+  }
+
+  const stderr = execError.stderr
+    ? typeof execError.stderr === 'string'
+      ? execError.stderr
+      : execError.stderr.toString('utf8')
+    : ''
+  return `${error.message} ${stderr}`.replace(/\s+/g, ' ').trim()
+}
+
+async function summarizeCertificate(base64Certificate: string, p12Password: string | undefined): Promise<CertificateSummary> {
+  const certificateBuffer = toStrictBase64Buffer(base64Certificate, 'BUILD_CERTIFICATE_BASE64')
+  const fingerprint = createHash('sha256').update(certificateBuffer).digest('hex').slice(0, 16)
+  const summary: CertificateSummary = { fingerprint }
+
+  const tempDir = await mkdtemp(join(tmpdir(), 'capgo-cert-'))
+  const certPath = join(tempDir, 'build_certificate.p12')
+
+  try {
+    await writeFile(certPath, certificateBuffer)
+
+    const pem = execFileSync(
+      'openssl',
+      ['pkcs12', '-in', certPath, '-clcerts', '-nokeys', '-passin', 'env:CAPGO_P12_PASS'],
+      {
+        encoding: 'utf8',
+        stdio: ['ignore', 'pipe', 'pipe'],
+        env: {
+          ...process.env,
+          CAPGO_P12_PASS: p12Password || '',
+        },
+      },
+    )
+
+    const x509Info = execFileSync(
+      'openssl',
+      ['x509', '-noout', '-subject', '-issuer', '-enddate'],
+      {
+        encoding: 'utf8',
+        stdio: ['pipe', 'pipe', 'pipe'],
+        input: pem,
+      },
+    )
+
+    for (const rawLine of x509Info.split('\n')) {
+      const line = rawLine.trim()
+      if (!line)
+        continue
+      if (line.startsWith('subject=')) {
+        summary.subject = line.slice('subject='.length).trim()
+      }
+      else if (line.startsWith('issuer=')) {
+        summary.issuer = line.slice('issuer='.length).trim()
+      }
+      else if (line.startsWith('notAfter=')) {
+        summary.expirationDate = line.slice('notAfter='.length).trim()
+      }
+    }
+  }
+  catch (error) {
+    const parsedError = extractOpenSslError(error)
+    summary.parseError = parsedError
+    const normalized = parsedError.toLowerCase()
+    summary.opensslUnavailable = normalized.includes('openssl is not available')
+    summary.invalidPassword = normalized.includes('invalid password') || normalized.includes('mac verify error') || normalized.includes('mac verify failure')
+  }
+  finally {
+    await rm(tempDir, { recursive: true, force: true })
+  }
+
+  return summary
+}
+
+function isExpired(dateValue: string | undefined): boolean {
+  if (!hasCredentialValue(dateValue))
+    return false
+  const parsed = new Date(dateValue)
+  if (Number.isNaN(parsed.getTime()))
+    return false
+  return parsed.getTime() <= Date.now()
 }
 
 export type { BuildCredentials, BuildRequestOptions, BuildRequestResponse, BuildRequestResult } from '../schemas/build'
@@ -876,11 +1092,17 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     // 1. CLI args (highest priority)
     // 2. Environment variables (middle priority)
     // 3. Saved credentials file (lowest priority)
+    const envCredentials = loadCredentialsFromEnv()
+    const savedCredentials = await loadSavedCredentials(appId)
+    const savedPlatformCredentials = savedCredentials?.[options.platform]
+
     const mergedCredentials = await mergeCredentials(
       appId,
       options.platform,
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
     )
+    const sourceOf = (key: keyof BuildCredentials): CredentialSource =>
+      resolveCredentialSource(key, cliCredentials, envCredentials, savedPlatformCredentials)
 
     // Prepare request payload for Capgo backend
     const requestPayload: {
@@ -903,7 +1125,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.error('  1. CLI arguments (--apple-key-id, --p12-password, etc.)')
         log.error('  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)')
         log.error('  3. Saved credentials file:')
-        log.error(`     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
+        log.error(`     bunx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
         log.error('')
         log.error('Documentation:')
         log.error('  https://capgo.app/docs/cli/cloud-build/credentials/')
@@ -915,27 +1137,15 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const missingCreds: string[] = []
 
     if (options.platform === 'ios') {
-      // iOS minimum requirements
-      if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
-        missingCreds.push('BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)')
-      // Note: P12_PASSWORD is optional - certificates can have no password
-      // But we warn if it's missing in case the user forgot
-      if (!mergedCredentials.P12_PASSWORD && !silent) {
+      for (const requirement of IOS_REQUIRED_CREDENTIALS) {
+        if (!hasCredentialValue(mergedCredentials[requirement.key])) {
+          missingCreds.push(`${requirement.key} (or ${requirement.hint})`)
+        }
+      }
+      if (!hasCredentialValue(mergedCredentials.P12_PASSWORD) && !silent) {
         log.warn('⚠️  P12_PASSWORD not provided - assuming certificate has no password')
         log.warn('   If your certificate requires a password, provide it with --p12-password')
       }
-      if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
-        missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
-
-      // App Store Connect API key credentials required
-      if (!mergedCredentials.APPLE_KEY_ID)
-        missingCreds.push('APPLE_KEY_ID (or --apple-key-id)')
-      if (!mergedCredentials.APPLE_ISSUER_ID)
-        missingCreds.push('APPLE_ISSUER_ID (or --apple-issuer-id)')
-      if (!mergedCredentials.APPLE_KEY_CONTENT)
-        missingCreds.push('APPLE_KEY_CONTENT (or --apple-key-content)')
-      if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
-        missingCreds.push('APP_STORE_CONNECT_TEAM_ID (or --apple-team-id)')
     }
     else if (options.platform === 'android') {
       // Android minimum requirements
@@ -963,16 +1173,114 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         for (const cred of missingCreds) {
           log.error(`  • ${cred}`)
         }
+        if (options.platform === 'ios') {
+          log.error('')
+          log.error('Detected iOS credential sources:')
+          for (const requirement of IOS_REQUIRED_CREDENTIALS) {
+            const source = sourceOf(requirement.key)
+            const valueStatus = source === 'missing' ? 'missing' : `set via ${credentialSourceLabel(source)}`
+            log.error(`  • ${requirement.key}: ${valueStatus}`)
+          }
+          log.error('')
+          log.error('Note: iOS cloud build currently uploads to TestFlight.')
+          log.error('      App Store Connect credentials are required even if you want the IPA artifact output.')
+        }
         log.error('')
         log.error('Provide credentials via:')
-        log.error('  1. CLI arguments: npx @capgo/cli build request --platform ios --apple-id "..." --p12-password "..."')
-        log.error('  2. Environment variables: export APPLE_ID="..." P12_PASSWORD="..."')
-        log.error('  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...')
+        log.error(`  1. CLI arguments: bunx @capgo/cli build request --platform ${options.platform} ...`)
+        log.error('  2. Environment variables: export APPLE_KEY_ID="..." APPLE_PROFILE_NAME="..."')
+        log.error(`  3. Saved credentials: bunx @capgo/cli build credentials save --platform ${options.platform} ...`)
         log.error('')
         log.error('Documentation:')
-        log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
+        log.error(`  ${options.platform === 'ios' ? IOS_DOC_URL : `https://capgo.app/docs/cli/cloud-build/${options.platform}/`}`)
       }
       throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
+    }
+
+    if (options.platform === 'ios') {
+      const certificateBase64 = mergedCredentials.BUILD_CERTIFICATE_BASE64
+      const provisioningProfileBase64 = mergedCredentials.BUILD_PROVISION_PROFILE_BASE64
+      const profileName = mergedCredentials.APPLE_PROFILE_NAME
+      const teamId = mergedCredentials.APP_STORE_CONNECT_TEAM_ID
+      const keyId = mergedCredentials.APPLE_KEY_ID
+      const issuerId = mergedCredentials.APPLE_ISSUER_ID
+      const appleKeyContent = mergedCredentials.APPLE_KEY_CONTENT
+
+      if (!hasCredentialValue(certificateBase64) || !hasCredentialValue(provisioningProfileBase64) || !hasCredentialValue(profileName)
+        || !hasCredentialValue(teamId) || !hasCredentialValue(keyId) || !hasCredentialValue(issuerId) || !hasCredentialValue(appleKeyContent)) {
+        throw new Error('Internal validation error: iOS credentials are incomplete after preflight checks.')
+      }
+
+      const certSummary = await summarizeCertificate(certificateBase64, mergedCredentials.P12_PASSWORD)
+      if (certSummary.invalidPassword) {
+        throw new Error('Invalid P12 certificate password. BUILD_CERTIFICATE_BASE64 cannot be decrypted with the provided P12_PASSWORD.')
+      }
+
+      const profileSummary = summarizeProvisioningProfile(provisioningProfileBase64, 'BUILD_PROVISION_PROFILE_BASE64')
+      if (isExpired(profileSummary.expirationDate)) {
+        throw new Error(`Provisioning profile is expired (${profileSummary.expirationDate}). Regenerate the profile and save credentials again.`)
+      }
+      if (isExpired(certSummary.expirationDate)) {
+        throw new Error(`Signing certificate is expired (${certSummary.expirationDate}). Generate a new certificate and update BUILD_CERTIFICATE_BASE64.`)
+      }
+
+      let profileSummaryProd: ProvisioningProfileSummary | undefined
+      if (hasCredentialValue(mergedCredentials.BUILD_PROVISION_PROFILE_BASE64_PROD)) {
+        profileSummaryProd = summarizeProvisioningProfile(mergedCredentials.BUILD_PROVISION_PROFILE_BASE64_PROD, 'BUILD_PROVISION_PROFILE_BASE64_PROD')
+        if (isExpired(profileSummaryProd.expirationDate)) {
+          throw new Error(`Production provisioning profile is expired (${profileSummaryProd.expirationDate}). Regenerate BUILD_PROVISION_PROFILE_BASE64_PROD.`)
+        }
+      }
+
+      // Validate APPLE_KEY_CONTENT is base64 and non-empty
+      toStrictBase64Buffer(appleKeyContent, 'APPLE_KEY_CONTENT')
+
+      if (!silent) {
+        log.info('✓ iOS credential preflight passed')
+        log.info(`  Profile name: ${profileName} (${credentialSourceLabel(sourceOf('APPLE_PROFILE_NAME'))})`)
+        log.info(`  Team ID: ${teamId} (${credentialSourceLabel(sourceOf('APP_STORE_CONNECT_TEAM_ID'))})`)
+        log.info(`  Apple Key ID: ${keyId} (${credentialSourceLabel(sourceOf('APPLE_KEY_ID'))})`)
+        log.info(`  Apple Issuer ID: ${issuerId} (${credentialSourceLabel(sourceOf('APPLE_ISSUER_ID'))})`)
+        log.info(`  Certificate fingerprint: ${certSummary.fingerprint} (${credentialSourceLabel(sourceOf('BUILD_CERTIFICATE_BASE64'))})`)
+        if (certSummary.subject) {
+          log.info(`  Certificate subject: ${certSummary.subject}`)
+        }
+        if (certSummary.expirationDate) {
+          log.info(`  Certificate expires: ${certSummary.expirationDate}`)
+        }
+        if (certSummary.parseError && !certSummary.opensslUnavailable) {
+          log.warn(`⚠️  Could not fully inspect the P12 certificate locally: ${certSummary.parseError}`)
+        }
+        if (certSummary.opensslUnavailable) {
+          log.warn('⚠️  OpenSSL not available locally; certificate metadata inspection skipped.')
+        }
+        log.info(`  Provisioning profile: ${profileSummary.name || '(name not found)'} (${credentialSourceLabel(sourceOf('BUILD_PROVISION_PROFILE_BASE64'))})`)
+        if (profileSummary.uuid) {
+          log.info(`  Provisioning profile UUID: ${profileSummary.uuid}`)
+        }
+        if (profileSummary.bundleId) {
+          log.info(`  Provisioning profile bundle ID: ${profileSummary.bundleId}`)
+        }
+        if (profileSummary.teamId) {
+          log.info(`  Provisioning profile team ID: ${profileSummary.teamId}`)
+        }
+        if (profileSummary.expirationDate) {
+          log.info(`  Provisioning profile expires: ${profileSummary.expirationDate}`)
+        }
+        if (profileSummaryProd) {
+          log.info(`  Production profile: ${profileSummaryProd.name || '(name not found)'} (${credentialSourceLabel(sourceOf('BUILD_PROVISION_PROFILE_BASE64_PROD'))})`)
+          if (profileSummaryProd.expirationDate) {
+            log.info(`  Production profile expires: ${profileSummaryProd.expirationDate}`)
+          }
+        }
+      }
+
+      if (profileSummary.name && profileSummary.name !== profileName && !silent) {
+        log.warn(`⚠️  APPLE_PROFILE_NAME (${profileName}) differs from profile Name (${profileSummary.name}).`)
+      }
+      if (profileSummary.teamId && profileSummary.teamId !== teamId && !silent) {
+        log.warn(`⚠️  APP_STORE_CONNECT_TEAM_ID (${teamId}) differs from provisioning profile team (${profileSummary.teamId}).`)
+      }
     }
 
     // Add credentials to request payload

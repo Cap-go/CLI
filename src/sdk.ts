@@ -606,7 +606,8 @@ export class CapgoSDK {
    *     APPLE_KEY_ID: 'KEY123',
    *     APPLE_ISSUER_ID: 'issuer-uuid',
    *     APPLE_KEY_CONTENT: 'base64-p8...',
-   *     APP_STORE_CONNECT_TEAM_ID: 'team-id'
+   *     APP_STORE_CONNECT_TEAM_ID: 'team-id',
+   *     APPLE_PROFILE_NAME: 'match AppStore com.example.app'
    *   }
    * })
    *
@@ -634,6 +635,7 @@ export class CapgoSDK {
         appleKeyId: creds?.APPLE_KEY_ID,
         appleIssuerId: creds?.APPLE_ISSUER_ID,
         appleKeyContent: creds?.APPLE_KEY_CONTENT,
+        appleProfileName: creds?.APPLE_PROFILE_NAME,
         appStoreConnectTeamId: creds?.APP_STORE_CONNECT_TEAM_ID,
         androidKeystoreFile: creds?.ANDROID_KEYSTORE_FILE,
         keystoreKeyAlias: creds?.KEYSTORE_KEY_ALIAS,
@@ -1336,6 +1338,7 @@ export async function addChannel(options: AddChannelOptions): Promise<SDKResult>
  *     APPLE_ISSUER_ID: 'issuer-uuid',
  *     APPLE_KEY_CONTENT: 'base64-encoded-p8',
  *     APP_STORE_CONNECT_TEAM_ID: 'team-id',
+ *     APPLE_PROFILE_NAME: 'match AppStore com.example.app',
  *     // Android credentials (use standard environment variable names)
  *     ANDROID_KEYSTORE_FILE: 'base64-encoded-keystore',
  *     KEYSTORE_KEY_ALIAS: 'my-key-alias',

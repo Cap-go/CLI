@@ -30,10 +30,9 @@ function assert(condition, message) {
 }
 
 // Test 1: iOS requires minimum credentials
-await test('iOS validation requires certificate, password, and provisioning profile', () => {
+await test('iOS validation requires certificate and provisioning profile with App Store Connect metadata', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
     BUILD_PROVISION_PROFILE_BASE64: 'profile',
     // Missing auth - should fail
   }
@@ -42,8 +41,6 @@ await test('iOS validation requires certificate, password, and provisioning prof
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
@@ -56,32 +53,33 @@ await test('iOS validation requires certificate, password, and provisioning prof
     missingCreds.push('APPLE_KEY_CONTENT')
   if (!credentials.APP_STORE_CONNECT_TEAM_ID)
     missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
+  if (!credentials.APPLE_PROFILE_NAME)
+    missingCreds.push('APPLE_PROFILE_NAME')
 
-  assert(missingCreds.length === 4, 'Should have 4 missing API key credentials')
+  assert(missingCreds.length === 5, 'Should have 5 missing iOS credentials')
   assert(missingCreds.includes('APPLE_KEY_ID'), 'Should require APPLE_KEY_ID')
   assert(missingCreds.includes('APPLE_ISSUER_ID'), 'Should require APPLE_ISSUER_ID')
   assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
   assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
+  assert(missingCreds.includes('APPLE_PROFILE_NAME'), 'Should require APPLE_PROFILE_NAME')
 })
 
 // Test 2: iOS accepts App Store Connect API key
 await test('iOS validation accepts App Store Connect API key', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
     BUILD_PROVISION_PROFILE_BASE64: 'profile',
     APPLE_KEY_ID: 'keyid',
     APPLE_ISSUER_ID: 'issuerid',
     APPLE_KEY_CONTENT: 'keycontent',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    APPLE_PROFILE_NAME: 'match AppStore com.example.app',
   }
 
   const missingCreds = []
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
@@ -93,6 +91,8 @@ await test('iOS validation accepts App Store Connect API key', () => {
     missingCreds.push('APPLE_KEY_CONTENT')
   if (!credentials.APP_STORE_CONNECT_TEAM_ID)
     missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
+  if (!credentials.APPLE_PROFILE_NAME)
+    missingCreds.push('APPLE_PROFILE_NAME')
 
   assert(missingCreds.length === 0, 'Should have no missing credentials with API key')
 })
@@ -176,19 +176,16 @@ await test('Android validation allows missing PLAY_CONFIG_JSON', () => {
 await test('iOS validation fails with incomplete API key credentials', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
     BUILD_PROVISION_PROFILE_BASE64: 'profile',
     APPLE_KEY_ID: 'keyid',
     APPLE_ISSUER_ID: 'issuerid',
-    // Missing APPLE_KEY_CONTENT and APP_STORE_CONNECT_TEAM_ID
+    // Missing APPLE_KEY_CONTENT, APP_STORE_CONNECT_TEAM_ID and APPLE_PROFILE_NAME
   }
 
   const missingCreds = []
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
@@ -200,10 +197,13 @@ await test('iOS validation fails with incomplete API key credentials', () => {
     missingCreds.push('APPLE_KEY_CONTENT')
   if (!credentials.APP_STORE_CONNECT_TEAM_ID)
     missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
+  if (!credentials.APPLE_PROFILE_NAME)
+    missingCreds.push('APPLE_PROFILE_NAME')
 
-  assert(missingCreds.length === 2, 'Should have 2 missing credentials (APPLE_KEY_CONTENT and APP_STORE_CONNECT_TEAM_ID)')
+  assert(missingCreds.length === 3, 'Should have 3 missing credentials (APPLE_KEY_CONTENT, APP_STORE_CONNECT_TEAM_ID, APPLE_PROFILE_NAME)')
   assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
   assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
+  assert(missingCreds.includes('APPLE_PROFILE_NAME'), 'Should require APPLE_PROFILE_NAME')
 })
 
 
