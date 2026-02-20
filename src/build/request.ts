@@ -225,11 +225,21 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
   }
 
   const normalized = rawValue.replaceAll(/\s+/g, '')
-  if (!normalized || normalized.length % 4 !== 0 || !/^[a-z0-9+/]+={0,2}$/i.test(normalized)) {
+  if (!normalized) {
     throw new Error(`${credentialName} is not valid base64`)
   }
 
-  const decoded = Buffer.from(normalized, 'base64')
+  // Some secret managers strip trailing '=' padding; normalize before validation.
+  const paddingRemainder = normalized.length % 4
+  const paddedNormalized = paddingRemainder === 0
+    ? normalized
+    : normalized + '='.repeat(4 - paddingRemainder)
+
+  if (!/^[a-z0-9+/]+={0,2}$/i.test(paddedNormalized)) {
+    throw new Error(`${credentialName} is not valid base64`)
+  }
+
+  const decoded = Buffer.from(paddedNormalized, 'base64')
   if (!decoded.length) {
     throw new Error(`${credentialName} decoded to an empty payload`)
   }
@@ -243,7 +253,7 @@ function toStrictBase64Buffer(rawValue: string | undefined, credentialName: stri
   }
 
   const reEncoded = stripBase64Padding(decoded.toString('base64'))
-  const comparableInput = stripBase64Padding(normalized)
+  const comparableInput = stripBase64Padding(paddedNormalized)
   if (reEncoded !== comparableInput) {
     throw new Error(`${credentialName} is not valid base64`)
   }
@@ -368,6 +378,7 @@ async function summarizeCertificate(base64Certificate: string, p12Password: stri
 
     const pem = execFileSync(
       opensslBinary,
+      // `-passin` is a valid OpenSSL option used by `openssl pkcs12`.
       ['pkcs12', '-in', certPath, '-clcerts', '-nokeys', '-passin', 'env:CAPGO_P12_PASS'],
       {
         encoding: 'utf8',
@@ -1301,7 +1312,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.info(`  Team ID: ${teamId} (${credentialSourceLabel(sourceOf('APP_STORE_CONNECT_TEAM_ID'))})`)
         log.info(`  Apple Key ID: ${keyId} (${credentialSourceLabel(sourceOf('APPLE_KEY_ID'))})`)
         log.info(`  Apple Issuer ID: ${issuerId} (${credentialSourceLabel(sourceOf('APPLE_ISSUER_ID'))})`)
-        log.info(`  Certificate fingerprint: ${certSummary.fingerprint} (${credentialSourceLabel(sourceOf('BUILD_CERTIFICATE_BASE64'))})`)
+        log.info(`  PKCS#12 checksum: ${certSummary.fingerprint} (${credentialSourceLabel(sourceOf('BUILD_CERTIFICATE_BASE64'))})`)
         if (certSummary.subject) {
           log.info(`  Certificate subject: ${certSummary.subject}`)
         }
