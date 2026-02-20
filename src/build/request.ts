@@ -40,6 +40,7 @@ import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
 import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
+import pack from '../../package.json'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { loadCredentialsFromEnv, loadSavedCredentials, mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
@@ -1355,7 +1356,10 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     }
 
     // Add credentials to request payload
-    requestPayload.credentials = mergedCredentials
+    requestPayload.credentials = {
+      ...mergedCredentials,
+      CAPGO_CLI_VERSION: pack.version,
+    }
     if (!silent) {
       log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
     }
