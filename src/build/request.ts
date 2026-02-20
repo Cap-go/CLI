@@ -420,7 +420,7 @@ async function summarizeCertificate(base64Certificate: string, p12Password: stri
     summary.parseError = parsedError
     const normalized = parsedError.toLowerCase()
     summary.opensslUnavailable = normalized.includes('openssl is not available')
-    summary.invalidPassword = normalized.includes('invalid password') || normalized.includes('mac verify error') || normalized.includes('mac verify failure')
+    summary.invalidPassword = normalized.includes('invalid password')
   }
   finally {
     await rm(tempDir, { recursive: true, force: true })
