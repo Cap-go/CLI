@@ -24,7 +24,7 @@ import type { BuildCredentials } from './request'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { cwd } from 'node:process'
+import { cwd, env } from 'node:process'
 
 const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
@@ -167,7 +167,7 @@ async function saveAllCredentials(credentials: AllCredentials, local?: boolean):
 
 function readRuntimeEnv(name: string): string | undefined {
   // Use runtime key lookup to avoid bundler static replacement.
-  return process.env[name]
+  return env[name]
 }
 
 /**

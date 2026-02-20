@@ -1730,8 +1730,7 @@ export async function getRemoteChecksums(supabase: SupabaseClient<Database>, app
   if (error
     || channelData === null
     || !channelData.version
-    || !channelData.version.checksum
-  ) {
+    || !channelData.version.checksum) {
     return null
   }
 
