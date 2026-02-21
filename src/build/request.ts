@@ -765,25 +765,38 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
   addDirectoryToZip(zip, projectDir, '', platform, nativeDeps, platformDir)
 
   // Rewrite pnpm store paths (node_modules/.pnpm/…/node_modules/@scope/pkg)
-  // to standard flat paths (node_modules/@scope/pkg) in build config files.
+  // to standard flat paths (node_modules/@scope/pkg).
+  // Scan all text-based entries because pnpm paths leak into Podfile, Podfile.lock,
+  // Pods.xcodeproj/project.pbxproj, .xcconfig files, Manifest.lock, settings.gradle, etc.
   const pnpmPathPattern = /node_modules\/\.pnpm\/[^/\n\r]+(?:\/[^/\n\r]+)*\/node_modules\//g
-  const rewriteFileInZip = (zipEntryPath: string) => {
-    const entry = zip.getEntry(zipEntryPath)
-    if (!entry)
-      return
+  const textExtensions = new Set([
+    '', '.gradle', '.swift', '.json', '.lock', '.xml', '.properties',
+    '.pbxproj', '.xcconfig', '.plist', '.podspec', '.rb', '.yaml', '.yml',
+  ])
+  for (const entry of zip.getEntries()) {
+    if (entry.isDirectory)
+      continue
+    const ext = entry.entryName.includes('.') ? `.${entry.entryName.split('.').pop()}` : ''
+    const basename = entry.entryName.split('/').pop() || ''
+    if (!textExtensions.has(ext) && basename !== 'Podfile')
+      continue
     const original = entry.getData().toString('utf-8')
-    const rewritten = original.replace(pnpmPathPattern, 'node_modules/')
-    if (rewritten !== original) {
-      zip.updateFile(zipEntryPath, Buffer.from(rewritten, 'utf-8'))
-    }
-  }
+    let rewritten = original.replace(pnpmPathPattern, 'node_modules/')
 
-  if (platform === 'android') {
-    rewriteFileInZip(`${platformDir}/capacitor.settings.gradle`)
-  }
-  else if (platform === 'ios') {
-    rewriteFileInZip(`${platformDir}/App/Podfile`)
-    rewriteFileInZip(`${platformDir}/App/CapApp-SPM/Package.swift`)
+    // pod install with pnpm resolves symlinks, producing deep relative paths
+    // like ../../../../../../ios/App/Pods/ (6 levels) instead of ../../../ios/App/Pods/ (3 levels).
+    // Collapse any excessive ../ before the platform directory back to 3 levels
+    // (node_modules/@scope/pkg → 3 levels up to project root).
+    if (platform === 'ios') {
+      rewritten = rewritten.replace(
+        /(?:\.\.\/){4,}(ios\/)/g,
+        '../../../$1',
+      )
+    }
+
+    if (rewritten !== original) {
+      zip.updateFile(entry.entryName, Buffer.from(rewritten, 'utf-8'))
+    }
   }
 
   // Cloud builders may only parse JSON configs. Ensure a resolved JSON exists even if the project
