@@ -571,7 +571,11 @@ async function extractNativeDependencies(
       // The path can have varying numbers of ../ depending on project structure
       const spmMatches = spmContent.matchAll(/\.package\s*\([^)]*path:\s*["'](?:\.\.\/)*node_modules\/([^"']+)["']\s*\)/g)
       for (const match of spmMatches) {
-        packages.add(match[1])
+        let pkgPath = match[1]
+        const lastNmIdx = pkgPath.lastIndexOf('node_modules/')
+        if (lastNmIdx !== -1)
+          pkgPath = pkgPath.substring(lastNmIdx + 'node_modules/'.length)
+        packages.add(pkgPath)
       }
     }
     else {
@@ -582,7 +586,11 @@ async function extractNativeDependencies(
         // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
         const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
         for (const match of podMatches) {
-          packages.add(match[1])
+          let pkgPath = match[1]
+          const lastNmIdx = pkgPath.lastIndexOf('node_modules/')
+          if (lastNmIdx !== -1)
+            pkgPath = pkgPath.substring(lastNmIdx + 'node_modules/'.length)
+          packages.add(pkgPath)
         }
       }
     }
@@ -593,11 +601,19 @@ async function extractNativeDependencies(
     if (existsSync(settingsGradlePath)) {
       const settingsContent = await readFileAsync(settingsGradlePath, 'utf-8')
       // Match lines like: project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
+      // Also matches pnpm paths: new File('../node_modules/.pnpm/@pkg@ver/node_modules/@scope/pkg/android')
       const gradleMatches = settingsContent.matchAll(/new\s+File\s*\(\s*['"]\.\.\/node_modules\/([^'"]+)['"]\s*\)/g)
       for (const match of gradleMatches) {
-        // Extract the full path which already includes /android
-        const fullPath = match[1]
-        const packagePath = fullPath.replace(/\/android$/, '')
+        let fullPath = match[1]
+
+        // Normalize pnpm paths: .pnpm/@pkg+name@ver/node_modules/@scope/pkg/android → @scope/pkg
+        const lastNodeModulesIdx = fullPath.lastIndexOf('node_modules/')
+        if (lastNodeModulesIdx !== -1) {
+          fullPath = fullPath.substring(lastNodeModulesIdx + 'node_modules/'.length)
+        }
+
+        // Strip platform directory suffixes (android, capacitor for @capacitor/android)
+        const packagePath = fullPath.replace(/\/(android|capacitor)$/, '')
         packages.add(packagePath)
       }
     }
@@ -747,6 +763,41 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
 
   // Add files with filtering
   addDirectoryToZip(zip, projectDir, '', platform, nativeDeps, platformDir)
+
+  // Rewrite pnpm store paths (node_modules/.pnpm/…/node_modules/@scope/pkg)
+  // to standard flat paths (node_modules/@scope/pkg).
+  // Scan all text-based entries because pnpm paths leak into Podfile, Podfile.lock,
+  // Pods.xcodeproj/project.pbxproj, .xcconfig files, Manifest.lock, settings.gradle, etc.
+  const pnpmPathPattern = /node_modules\/\.pnpm\/[^/\n\r]+(?:\/[^/\n\r]+)*\/node_modules\//g
+  const textExtensions = new Set([
+    '', '.gradle', '.swift', '.json', '.lock', '.xml', '.properties',
+    '.pbxproj', '.xcconfig', '.plist', '.podspec', '.rb', '.yaml', '.yml',
+  ])
+  for (const entry of zip.getEntries()) {
+    if (entry.isDirectory)
+      continue
+    const ext = entry.entryName.includes('.') ? `.${entry.entryName.split('.').pop()}` : ''
+    const basename = entry.entryName.split('/').pop() || ''
+    if (!textExtensions.has(ext) && basename !== 'Podfile')
+      continue
+    const original = entry.getData().toString('utf-8')
+    let rewritten = original.replace(pnpmPathPattern, 'node_modules/')
+
+    // pod install with pnpm resolves symlinks, producing deep relative paths
+    // like ../../../../../../ios/App/Pods/ (6 levels) instead of ../../../ios/App/Pods/ (3 levels).
+    // Collapse any excessive ../ before the platform directory back to 3 levels
+    // (node_modules/@scope/pkg → 3 levels up to project root).
+    if (platform === 'ios') {
+      rewritten = rewritten.replace(
+        /(?:\.\.\/){4,}(ios\/)/g,
+        '../../../$1',
+      )
+    }
+
+    if (rewritten !== original) {
+      zip.updateFile(entry.entryName, Buffer.from(rewritten, 'utf-8'))
+    }
+  }
 
   // Cloud builders may only parse JSON configs. Ensure a resolved JSON exists even if the project
   // uses capacitor.config.ts/js, so android.path/ios.path is visible remotely.
