@@ -24,6 +24,10 @@ interface MappedCommand {
   isCommandGroup: boolean // Property to identify command groups
 }
 
+function formatFrontmatterString(value: string): string {
+  return JSON.stringify(value)
+}
+
 // Helper function to get an emoji for a command
 function getCommandEmoji(cmdName: string): string {
   let emoji = '🔹'
@@ -227,7 +231,7 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
       // Generate frontmatter and content for the command
       let cmdFile = `---
 title: ${emoji} ${cmd.name}
-description: ${cmd.description.split('\n')[0]}
+description: ${formatFrontmatterString(cmd.description.split('\n')[0])}
 sidebar_label: ${cmd.name}
 sidebar:
   order: ${commands.indexOf(cmd) + 1}
