@@ -16,7 +16,6 @@ import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
-import { writeConfig } from './config'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -171,16 +170,12 @@ async function markStep(orgId: string, apikey: string, step: string, appId: stri
 }
 
 /**
- * Save the app ID to the capacitor config file.
+ * Save the app ID to the CapacitorUpdater plugin config.
  */
 async function saveAppIdToCapacitorConfig(appId: string) {
   try {
-    const extConfig = await getConfig()
-    if (extConfig?.config) {
-      extConfig.config.appId = appId
-      await writeConfig('CapacitorUpdater', extConfig, true)
-      pLog.info(`💾 Saved new app ID "${appId}" to capacitor config`)
-    }
+    await updateConfigUpdater({ appId })
+    pLog.info(`💾 Saved new app ID "${appId}" to CapacitorUpdater config`)
   }
   catch (err) {
     pLog.warn(`⚠️  Could not save app ID to capacitor config: ${err}`)
