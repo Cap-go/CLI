@@ -97,7 +97,6 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-
 ## <a id="doctor"></a> 👨‍⚕️ **Doctor**
 
 ```bash
@@ -118,7 +117,6 @@ npx @capgo/cli@latest doctor
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
-
 
 ## <a id="login"></a> 🔑 **Login**
 
@@ -144,7 +142,6 @@ npx @capgo/cli@latest login YOUR_API_KEY
 | **--local** | <code>boolean</code> | Only save in local folder, git ignored for security. |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
 
 ## <a id="bundle"></a> 📦 **Bundle**
 
@@ -427,7 +424,6 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 
-
 ## <a id="app"></a> 📱 **App**
 
 📱 Manage your Capgo app settings and configurations in Capgo Cloud.
@@ -579,7 +575,6 @@ npx @capgo/cli@latest app set com.example.app --name "Updated App" --retention 3
 | **--expose-metadata** | <code>string</code> | Expose bundle metadata (link and comment) to the plugin (true/false, default: false) |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
 
 ## <a id="channel"></a> 📢 **Channel**
 
@@ -733,7 +728,6 @@ npx @capgo/cli@latest channel set production com.example.app --bundle 1.0.0 --st
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-
 ## <a id="key"></a> 🔐 **Key**
 
 🔐 Manage encryption keys for secure bundle distribution in Capgo Cloud, supporting end-to-end encryption with RSA and AES combination.
@@ -798,7 +792,6 @@ npx @capgo/cli@latest key delete_old
 npx @capgo/cli@latest key delete_old
 ```
 
-
 ## <a id="account"></a> 👤 **Account**
 
 👤 Manage your Capgo account details and retrieve information for support or collaboration.
@@ -822,7 +815,6 @@ npx @capgo/cli@latest account id
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
 | **-a,** | <code>string</code> | API key to link to your account |
-
 
 ## <a id="organization"></a> 🔹 **Organization**
 
@@ -890,7 +882,6 @@ npx @capgo/cli@latest organization members
 Shows all members of an organization with their roles and whether they have 2FA enabled.
 Useful before enabling 2FA enforcement to see which members will be affected.
 > ℹ️ Viewing 2FA status requires super_admin rights in the organization.
-
 
 **Example:**
 
@@ -973,7 +964,6 @@ npx @capgo/cli@latest organization delete ORG_ID
 | **-a,** | <code>string</code> | API key to link to your account |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
-
 
 ## <a id="organisation"></a> 🔹 **Organisation**
 
@@ -1071,7 +1061,6 @@ npx @capgo/cli@latest organisation delete
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
-
 ## <a id="build"></a> 🔹 **Build**
 
 🏗️  Manage native iOS/Android builds through Capgo Cloud.
@@ -1097,7 +1086,7 @@ The build will be processed and sent directly to app stores.
  🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
     after build completion. Build outputs may optionally be uploaded for time-limited download links.
 📋 PREREQUISITE: Save credentials first with:
-   npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>
+   `npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>`
 
 **Example:**
 
@@ -1153,7 +1142,6 @@ Manage build credentials stored locally on your machine.
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
 
-
 ## <a id="mcp"></a> 🔹 **Mcp**
 
 ```bash
@@ -1187,8 +1175,6 @@ Example usage with Claude Desktop:
 ```bash
 npx @capgo/cli mcp
 ```
-
-
 
 <!-- AUTO-GENERATED-DOCS-END -->
 
