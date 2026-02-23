@@ -323,7 +323,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       try {
         const addRes = await addAppInternal(currentAppId, options, organization, true)
         if (!addRes)
-          s.stop(`App already add ✅`)
+          s.stop(`App already added ✅`)
         else
           s.stop(`App add Done ✅`)
       }

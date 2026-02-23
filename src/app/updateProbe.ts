@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { cwd } from 'node:process'
 import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
 import { getAppId, getInstalledVersion } from '../utils'
@@ -208,7 +208,7 @@ export async function prepareUpdateProbe(
   const versionBuildSource = configuredVersion ? 'CapacitorUpdater.version from capacitor config' : `native ${platform.toUpperCase()} versionName`
 
   const packageJsonPath = packageJsonPathFromOnboarding || join(cwd(), 'package.json')
-  const projectPath = packageJsonPath.replace('/package.json', '')
+  const projectPath = dirname(packageJsonPath)
   const pluginVersion = await getInstalledVersion('@capgo/capacitor-updater', projectPath, packageJsonPath)
   if (!pluginVersion) {
     return {
@@ -298,7 +298,7 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
   let attempt = 0
   let lastReason = 'Timed out waiting for update availability'
 
-  while (Date.now() - start <= updateProbeTimeoutMs) {
+  while (Date.now() - start < updateProbeTimeoutMs) {
     attempt += 1
     try {
       const response = await fetch(endpoint, {
@@ -307,6 +307,7 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
+        signal: AbortSignal.timeout(updateProbeIntervalMs),
       })
 
       let json: any
@@ -317,7 +318,7 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
         json = { error: 'invalid_json_response', message: 'Non-JSON response from updates endpoint' }
       }
 
-      if (!response.ok && response.status !== 200) {
+      if (!response.ok) {
         // Transient server errors (5xx) are retryable during the poll window
         if (response.status >= 500) {
           lastReason = `HTTP ${response.status}: ${JSON.stringify(json)}`
