@@ -1,5 +1,6 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options } from './api/app'
+import { checkAppIdsExist } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -336,44 +337,24 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
         retryCount++
         pLog.error(`❌ App ID "${currentAppId}" is already taken`)
 
-        // Generate alternative suggestions
-        const suggestions = [
+        // Generate alternative suggestions with validation
+        const rawSuggestions = [
+          `${appId}-${Math.random().toString(36).substring(2, 6)}`,
+          `${appId}.dev`,
+          `${appId}.app`,
+          `${appId}-${Date.now().toString().slice(-4)}`,
           `${appId}2`,
           `${appId}3`,
-          `${appId}.new`,
-          `${appId}.app`,
         ]
 
-        pLog.info(`💡 Here are some suggestions:`)
-        suggestions.forEach((suggestion, idx) => {
-          pLog.info(`   ${idx + 1}. ${suggestion}`)
-        })
+        // Validate suggestions against database to only show available ones
+        const supabase = await createSupabaseClient(options.apikey!, options.supaHost, options.supaAnon)
+        const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
+        const availableSuggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
 
-        const choice = await pSelect({
-          message: 'What would you like to do?',
-          options: [
-            { value: 'suggest1', label: `Use ${suggestions[0]}` },
-            { value: 'suggest2', label: `Use ${suggestions[1]}` },
-            { value: 'suggest3', label: `Use ${suggestions[2]}` },
-            { value: 'suggest4', label: `Use ${suggestions[3]}` },
-            { value: 'custom', label: 'Enter a custom app ID' },
-            { value: 'cancel', label: 'Cancel onboarding' },
-          ],
-        })
-
-        if (pIsCancel(choice)) {
-          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
-          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-          exit()
-        }
-
-        if (choice === 'cancel') {
-          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
-          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-          exit()
-        }
-
-        if (choice === 'custom') {
+        // If no suggestions are available, ask for custom input
+        if (availableSuggestions.length === 0) {
+          pLog.warn(`No available suggestions found. Please enter a custom app ID.`)
           const customAppId = await pText({
             message: 'Enter your custom app ID (e.g., com.example.myapp):',
             validate: (value) => {
@@ -395,9 +376,63 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
           currentAppId = customAppId as string
         }
         else {
-          // Use one of the suggestions
-          const suggestionIndex = Number.parseInt(choice.replace('suggest', '')) - 1
-          currentAppId = suggestions[suggestionIndex]
+          const suggestions = availableSuggestions
+
+          pLog.info(`💡 Here are some available suggestions:`)
+          suggestions.forEach((suggestion, idx) => {
+            pLog.info(`   ${idx + 1}. ${suggestion}`)
+          })
+
+          const choice = await pSelect({
+            message: 'What would you like to do?',
+            options: [
+              { value: 'suggest1', label: `Use ${suggestions[0]}` },
+              ...(suggestions[1] ? [{ value: 'suggest2', label: `Use ${suggestions[1]}` }] : []),
+              ...(suggestions[2] ? [{ value: 'suggest3', label: `Use ${suggestions[2]}` }] : []),
+              ...(suggestions[3] ? [{ value: 'suggest4', label: `Use ${suggestions[3]}` }] : []),
+              { value: 'custom', label: 'Enter a custom app ID' },
+              { value: 'cancel', label: 'Cancel onboarding' },
+            ].filter(Boolean) as any[],
+          })
+
+          if (pIsCancel(choice)) {
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+            exit()
+          }
+
+          if (choice === 'cancel') {
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
+            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+            exit()
+          }
+
+          if (choice === 'custom') {
+            const customAppId = await pText({
+              message: 'Enter your custom app ID (e.g., com.example.myapp):',
+              validate: (value) => {
+                if (!value)
+                  return 'App ID is required'
+                if (value.includes('--'))
+                  return 'App ID cannot contain "--"'
+                if (!/^[a-z0-9]+(?:\.[\w-]+)+$/i.test(value))
+                  return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
+              },
+            })
+
+            if (pIsCancel(customAppId)) {
+              await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+              pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+              exit()
+            }
+
+            currentAppId = customAppId as string
+          }
+          else {
+            // Use one of the suggestions
+            const suggestionIndex = Number.parseInt((choice as string).replace('suggest', '')) - 1
+            currentAppId = suggestions[suggestionIndex]
+          }
         }
 
         // Save the new app ID to capacitor config
