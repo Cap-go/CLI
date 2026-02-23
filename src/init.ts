@@ -887,10 +887,33 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
   if (doRun) {
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
-    await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
-    s.stop(`App started ✅`)
-    pLog.info(`📱 Your app should now be running on your ${platform} device with Capgo integrated`)
-    pLog.info(`🔄 This is your baseline version - we'll create an update next`)
+    const runResult = spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
+    const runFailed = runResult.error || runResult.status !== 0
+
+    if (runFailed) {
+      s.stop(`App failed to start ❌`)
+      pLog.error(`The app failed to start on your ${platform} device.`)
+
+      const openIDE = await pConfirm({
+        message: `Would you like to open ${platform === 'ios' ? 'Xcode' : 'Android Studio'} to run the app manually?`,
+      })
+
+      if (!pIsCancel(openIDE) && openIDE) {
+        const s2 = pSpinner()
+        s2.start(`Opening ${platform === 'ios' ? 'Xcode' : 'Android Studio'}...`)
+        spawnSync(pm.runner, ['cap', 'open', platform], { stdio: 'inherit' })
+        s2.stop(`IDE opened ✅`)
+        pLog.info(`Please run the app manually from ${platform === 'ios' ? 'Xcode' : 'Android Studio'}`)
+      }
+      else {
+        pLog.info(`You can run the app manually with: ${pm.runner} cap run ${platform}`)
+      }
+    }
+    else {
+      s.stop(`App started ✅`)
+      pLog.info(`📱 Your app should now be running on your ${platform} device with Capgo integrated`)
+      pLog.info(`🔄 This is your baseline version - we'll create an update next`)
+    }
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run ${platform}`)
