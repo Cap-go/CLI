@@ -169,6 +169,20 @@ async function markStep(orgId: string, apikey: string, step: string, appId: stri
   return markSnag('onboarding-v2', orgId, apikey, `onboarding-step-${step}`, appId)
 }
 
+/**
+ * Save the app ID to the CapacitorUpdater plugin config.
+ */
+async function saveAppIdToCapacitorConfig(appId: string) {
+  try {
+    await updateConfigUpdater({ appId })
+    pLog.info(`💾 Saved new app ID "${appId}" to CapacitorUpdater config`)
+  }
+  catch (err) {
+    pLog.warn(`⚠️  Could not save app ID to capacitor config: ${err}`)
+    pLog.info(`   You may need to manually update your capacitor.config file with the new app ID: ${appId}`)
+  }
+}
+
 function stopForBrokenIosSync(platformRunner: string, details: string[]): never {
   pLog.error('Capgo iOS dependency sync verification failed.')
   for (const detail of details) {
@@ -385,6 +399,9 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
           const suggestionIndex = Number.parseInt(choice.replace('suggest', '')) - 1
           currentAppId = suggestions[suggestionIndex]
         }
+
+        // Save the new app ID to capacitor config
+        await saveAppIdToCapacitorConfig(currentAppId)
 
         pLog.info(`🔄 Trying with new app ID: ${currentAppId}`)
         continue
