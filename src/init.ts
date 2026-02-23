@@ -635,12 +635,12 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     // // use pm to install capgo
     // // run command pm install @capgo/capacitor-updater@latest
     //  check if capgo is already installed in node_modules
-    const installedVersion = await getInstalledVersion('@capgo/capacitor-updater', path.replace('/package.json', ''), path)
+    const installedVersion = await getInstalledVersion('@capgo/capacitor-updater', dirname(path), path)
     if (installedVersion) {
       s.stop(`Capgo already installed ✅`)
     }
     else {
-      await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: path.replace('/package.json', '') } as ExecSyncOptions)
+      await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: dirname(path) } as ExecSyncOptions)
       s.stop(`Install Done ✅`)
       pkgVersion = getBundleVersion(undefined, path) || '1.0.0'
       let doDirectInstall: boolean | symbol = false
