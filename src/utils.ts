@@ -919,7 +919,7 @@ export async function findProjectType() {
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
         if (dependencies.get('react')) {
-          log.info('Found react project test')
+          log.info('Found react project')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (dependencies.get('vue')) {
@@ -947,7 +947,14 @@ export function findMainFileForProjectType(projectType: string, isTypeScript: bo
     return isTypeScript ? 'src/main.ts' : 'src/main.js'
   }
   if (projectType === 'react-js' || projectType === 'react-ts') {
-    return isTypeScript ? 'src/index.tsx' : 'src/index.js'
+    // Vite React projects commonly use src/main.tsx, while CRA uses src/index.tsx
+    // Check for main first, then fall back to index
+    const mainExt = isTypeScript ? 'src/main.tsx' : 'src/main.js'
+    const indexExt = isTypeScript ? 'src/index.tsx' : 'src/index.js'
+    if (existsSync(resolve(cwd(), mainExt))) {
+      return mainExt
+    }
+    return indexExt
   }
   return null
 }

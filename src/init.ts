@@ -1,5 +1,6 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options } from './api/app'
+import { checkAppIdsExist } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -337,44 +338,24 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
         retryCount++
         pLog.error(`❌ App ID "${currentAppId}" is already taken`)
 
-        // Generate alternative suggestions
-        const suggestions = [
+        // Generate alternative suggestions with validation
+        const rawSuggestions = [
+          `${appId}-${Math.random().toString(36).substring(2, 6)}`,
+          `${appId}.dev`,
+          `${appId}.app`,
+          `${appId}-${Date.now().toString().slice(-4)}`,
           `${appId}2`,
           `${appId}3`,
-          `${appId}.new`,
-          `${appId}.app`,
         ]
 
-        pLog.info(`💡 Here are some suggestions:`)
-        suggestions.forEach((suggestion, idx) => {
-          pLog.info(`   ${idx + 1}. ${suggestion}`)
-        })
+        // Validate suggestions against database to only show available ones
+        const supabase = await createSupabaseClient(options.apikey!, options.supaHost, options.supaAnon)
+        const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
+        const availableSuggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
 
-        const choice = await pSelect({
-          message: 'What would you like to do?',
-          options: [
-            { value: 'suggest1', label: `Use ${suggestions[0]}` },
-            { value: 'suggest2', label: `Use ${suggestions[1]}` },
-            { value: 'suggest3', label: `Use ${suggestions[2]}` },
-            { value: 'suggest4', label: `Use ${suggestions[3]}` },
-            { value: 'custom', label: 'Enter a custom app ID' },
-            { value: 'cancel', label: 'Cancel onboarding' },
-          ],
-        })
-
-        if (pIsCancel(choice)) {
-          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
-          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-          exit()
-        }
-
-        if (choice === 'cancel') {
-          await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
-          pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-          exit()
-        }
-
-        if (choice === 'custom') {
+        // If no suggestions are available, ask for custom input
+        if (availableSuggestions.length === 0) {
+          pLog.warn(`No available suggestions found. Please enter a custom app ID.`)
           const customAppId = await pText({
             message: 'Enter your custom app ID (e.g., com.example.myapp):',
             validate: (value) => {
@@ -396,9 +377,63 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
           currentAppId = customAppId as string
         }
         else {
-          // Use one of the suggestions
-          const suggestionIndex = Number.parseInt(choice.replace('suggest', '')) - 1
-          currentAppId = suggestions[suggestionIndex]
+          const suggestions = availableSuggestions
+
+          pLog.info(`💡 Here are some available suggestions:`)
+          suggestions.forEach((suggestion, idx) => {
+            pLog.info(`   ${idx + 1}. ${suggestion}`)
+          })
+
+          const choice = await pSelect({
+            message: 'What would you like to do?',
+            options: [
+              { value: 'suggest1', label: `Use ${suggestions[0]}` },
+              ...(suggestions[1] ? [{ value: 'suggest2', label: `Use ${suggestions[1]}` }] : []),
+              ...(suggestions[2] ? [{ value: 'suggest3', label: `Use ${suggestions[2]}` }] : []),
+              ...(suggestions[3] ? [{ value: 'suggest4', label: `Use ${suggestions[3]}` }] : []),
+              { value: 'custom', label: 'Enter a custom app ID' },
+              { value: 'cancel', label: 'Cancel onboarding' },
+            ].filter(Boolean) as any[],
+          })
+
+          if (pIsCancel(choice)) {
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+            exit()
+          }
+
+          if (choice === 'cancel') {
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
+            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+            exit()
+          }
+
+          if (choice === 'custom') {
+            const customAppId = await pText({
+              message: 'Enter your custom app ID (e.g., com.example.myapp):',
+              validate: (value) => {
+                if (!value)
+                  return 'App ID is required'
+                if (value.includes('--'))
+                  return 'App ID cannot contain "--"'
+                if (!/^[a-z0-9]+(?:\.[\w-]+)+$/i.test(value))
+                  return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
+              },
+            })
+
+            if (pIsCancel(customAppId)) {
+              await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+              pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+              exit()
+            }
+
+            currentAppId = customAppId as string
+          }
+          else {
+            // Use one of the suggestions
+            const suggestionIndex = Number.parseInt((choice as string).replace('suggest', '')) - 1
+            currentAppId = suggestions[suggestionIndex]
+          }
         }
 
         // Save the new app ID to capacitor config
@@ -781,28 +816,8 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
+    await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
 
-    // Ask user if they want to sync with Capacitor after key creation
-    // Pass true for isInit flag to track cancellation during onboarding flow
-    // orgId and apikey are needed to mark snag if user cancels
-    try {
-      await promptAndSyncCapacitor(true, orgId, apikey, {
-        validateIosUpdater: true,
-        packageJsonPath: globalPathToPackageJson,
-      })
-      markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
-    }
-    catch (error) {
-      // Only handle cancellation gracefully - re-throw any other errors
-      if (error instanceof Error && error.message === 'Capacitor sync cancelled') {
-        // User cancelled the sync - cancellation is already tracked in promptAndSyncCapacitor
-        // Just continue without marking the successful completion
-      }
-      else {
-        // Re-throw any other errors (e.g., network errors, permission errors, etc.)
-        throw error
-      }
-    }
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
@@ -888,10 +903,34 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
   if (doRun) {
     const s = pSpinner()
     s.start(`Running: ${pm.runner} cap run ${platform}`)
-    await spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
-    s.stop(`App started ✅`)
-    pLog.info(`📱 Your app should now be running on your ${platform} device with Capgo integrated`)
-    pLog.info(`🔄 This is your baseline version - we'll create an update next`)
+    const runResult = spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
+    const runFailed = runResult.error || runResult.status !== 0
+
+    if (runFailed) {
+      const platformName = platform === 'ios' ? 'iOS' : 'Android'
+      s.stop(`App failed to start ❌`)
+      pLog.error(`The app failed to start on your ${platformName} device.`)
+
+      const openIDE = await pConfirm({
+        message: `Would you like to open ${platform === 'ios' ? 'Xcode' : 'Android Studio'} to run the app manually?`,
+      })
+
+      if (!pIsCancel(openIDE) && openIDE) {
+        const s2 = pSpinner()
+        s2.start(`Opening ${platform === 'ios' ? 'Xcode' : 'Android Studio'}...`)
+        spawnSync(pm.runner, ['cap', 'open', platform], { stdio: 'inherit' })
+        s2.stop(`IDE opened ✅`)
+        pLog.info(`Please run the app manually from ${platform === 'ios' ? 'Xcode' : 'Android Studio'}`)
+      }
+      else {
+        pLog.info(`You can run the app manually with: ${pm.runner} cap run ${platform}`)
+      }
+    }
+    else {
+      s.stop(`App started ✅`)
+      pLog.info(`📱 Your app should now be running on your ${platform} device with Capgo integrated`)
+      pLog.info(`🔄 This is your baseline version - we'll create an update next`)
+    }
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: ${pm.runner} cap run ${platform}`)

@@ -10,6 +10,22 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
   return !!app
 }
 
+/**
+ * Check multiple app IDs at once for batch validation (e.g., for suggestions)
+ */
+export async function checkAppIdsExist(supabase: SupabaseClient<Database>, appids: string[]) {
+  const results = await Promise.all(
+    appids.map(async (appid) => {
+      const { data: app } = await supabase
+        .rpc('exist_app_v2', { appid })
+        .single()
+      return { appid, exists: !!app }
+    })
+  )
+  return results
+}
+
+
 export async function check2FAComplianceForApp(
   supabase: SupabaseClient<Database>,
   appid: string,
