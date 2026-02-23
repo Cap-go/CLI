@@ -483,6 +483,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     catch (error) {
       s.stop(`Channel creation failed ❌`)
       throw error
+    }
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
