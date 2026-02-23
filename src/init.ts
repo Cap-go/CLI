@@ -9,6 +9,7 @@ import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pI
 import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAlerts } from './api/update'
+import { getPlatformDirFromCapacitorConfig } from './build/platform-paths'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
 import { uploadBundleInternal } from './bundle/upload'
@@ -27,6 +28,10 @@ const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
+const defaultUpdateUrl = 'https://plugin.capgo.app/updates'
+const updateProbeDeviceId = '00000000-0000-0000-0000-000000000000'
+const updateProbeTimeoutMs = 60_000
+const updateProbeIntervalMs = 5_000
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -1189,7 +1194,208 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
   await markStep(orgId, apikey, 'upload', appId)
 }
 
-async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean) {
+function readTextIfExists(filePath: string): string | undefined {
+  if (!existsSync(filePath))
+    return undefined
+  return readFileSync(filePath, 'utf-8')
+}
+
+function parseAndroidNativeVersion(platformDir: string) {
+  const candidates = [
+    join(cwd(), platformDir, 'app', 'build.gradle'),
+    join(cwd(), platformDir, 'app', 'build.gradle.kts'),
+  ]
+  for (const candidate of candidates) {
+    const content = readTextIfExists(candidate)
+    if (!content)
+      continue
+    const versionName = content.match(/versionName\s*(?:=\s*)?["']([^"']+)["']/)?.[1]
+    const versionBuild = content.match(/versionCode\s*(?:=\s*)?(\d+)/)?.[1]
+    if (versionName && versionBuild) {
+      return {
+        versionName,
+        versionBuild,
+        source: candidate,
+      }
+    }
+  }
+  return undefined
+}
+
+function parsePlistString(content: string, key: string) {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const match = content.match(new RegExp(`<key>${escapedKey}</key>\\s*<string>([^<]+)</string>`))
+  return match?.[1]?.trim()
+}
+
+function parsePbxprojSetting(content: string, setting: 'MARKETING_VERSION' | 'CURRENT_PROJECT_VERSION') {
+  const match = content.match(new RegExp(`${setting}\\s*=\\s*([^;]+);`))
+  const raw = match?.[1]?.trim()
+  if (!raw)
+    return undefined
+  return raw.replace(/"/g, '').trim()
+}
+
+function parseIosNativeVersion(platformDir: string) {
+  const appRoot = join(cwd(), platformDir, 'App')
+  const plistPath = join(appRoot, 'App', 'Info.plist')
+  const pbxprojPath = join(appRoot, 'App.xcodeproj', 'project.pbxproj')
+  const plist = readTextIfExists(plistPath)
+  const pbxproj = readTextIfExists(pbxprojPath)
+  if (!plist)
+    return undefined
+
+  let versionName = parsePlistString(plist, 'CFBundleShortVersionString')
+  let versionBuild = parsePlistString(plist, 'CFBundleVersion')
+
+  if (versionName === '$(MARKETING_VERSION)')
+    versionName = pbxproj ? parsePbxprojSetting(pbxproj, 'MARKETING_VERSION') : undefined
+  if (versionBuild === '$(CURRENT_PROJECT_VERSION)')
+    versionBuild = pbxproj ? parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION') : undefined
+
+  if (!versionName && pbxproj)
+    versionName = parsePbxprojSetting(pbxproj, 'MARKETING_VERSION')
+  if (!versionBuild && pbxproj)
+    versionBuild = parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION')
+
+  if (!versionName || !versionBuild)
+    return undefined
+
+  return {
+    versionName,
+    versionBuild,
+    source: plistPath,
+  }
+}
+
+async function resolveUpdateProbeInput(platform: 'ios' | 'android', capConfig: any) {
+  const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
+  const nativeVersion = platform === 'android'
+    ? parseAndroidNativeVersion(platformDir)
+    : parseIosNativeVersion(platformDir)
+  if (!nativeVersion) {
+    return {
+      error: `Unable to resolve native ${platform.toUpperCase()} version values from platform files in "${platformDir}".`,
+    }
+  }
+
+  const packageJsonPath = globalPathToPackageJson || join(cwd(), 'package.json')
+  const projectPath = packageJsonPath.replace('/package.json', '')
+  const pluginVersion = await getInstalledVersion('@capgo/capacitor-updater', projectPath, packageJsonPath)
+  if (!pluginVersion) {
+    return {
+      error: 'Unable to resolve installed @capgo/capacitor-updater version from this project.',
+    }
+  }
+
+  return {
+    platformDir,
+    nativeVersion,
+    pluginVersion,
+  }
+}
+
+function getUpdateUrl(capConfig: any) {
+  const configured = capConfig?.plugins?.CapacitorUpdater?.updateUrl
+  if (typeof configured === 'string' && configured.trim().length > 0)
+    return configured.trim()
+  return defaultUpdateUrl
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+function parseUpdateResponse(json: any, currentVersionName: string) {
+  const error = typeof json?.error === 'string' ? json.error : undefined
+  const message = typeof json?.message === 'string' ? json.message : undefined
+  const responseVersion = typeof json?.version === 'string' ? json.version : undefined
+
+  if (responseVersion && responseVersion !== currentVersionName) {
+    return {
+      status: 'available' as const,
+      detail: `Update ${responseVersion} is available`,
+      responseVersion,
+    }
+  }
+
+  if (error === 'no_new_version_available' || (responseVersion && responseVersion === currentVersionName)) {
+    return {
+      status: 'retry' as const,
+      detail: message || 'No new version available yet',
+    }
+  }
+
+  return {
+    status: 'failed' as const,
+    detail: error ? `${error}: ${message ?? 'Unknown backend message'}` : `Unexpected response format: ${JSON.stringify(json)}`,
+  }
+}
+
+async function pollUpdateAvailability(
+  endpoint: string,
+  payload: {
+    app_id: string
+    device_id: string
+    version_name: string
+    version_build: string
+    is_emulator: boolean
+    is_prod: boolean
+    platform: 'ios' | 'android'
+    plugin_version: string
+    defaultChannel: string
+  },
+) {
+  const start = Date.now()
+  let attempt = 0
+  let lastError = ''
+
+  while (Date.now() - start <= updateProbeTimeoutMs) {
+    attempt += 1
+    try {
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+      let json: any
+      try {
+        json = await response.json()
+      }
+      catch {
+        json = { error: 'invalid_json_response', message: 'Non-JSON response from updates endpoint' }
+      }
+
+      if (!response.ok && response.status !== 200) {
+        lastError = `HTTP ${response.status}: ${JSON.stringify(json)}`
+        return { success: false, attempt, lastError }
+      }
+
+      const parsed = parseUpdateResponse(json, payload.version_name)
+      if (parsed.status === 'available')
+        return { success: true, attempt, availableVersion: parsed.responseVersion }
+      if (parsed.status === 'failed') {
+        lastError = parsed.detail
+        return { success: false, attempt, lastError }
+      }
+      lastError = parsed.detail
+    }
+    catch (error) {
+      lastError = `Network error: ${error instanceof Error ? error.message : String(error)}`
+      return { success: false, attempt, lastError }
+    }
+
+    if (Date.now() - start >= updateProbeTimeoutMs)
+      break
+    await sleep(updateProbeIntervalMs)
+  }
+
+  return { success: false, attempt, lastError: lastError || 'Timed out waiting for update availability' }
+}
+
+async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean, platform: 'ios' | 'android', capConfig: any) {
   pLog.info(`🧪 Time to test the Capgo update system!`)
   pLog.info(`📱 Go to your device where the app is running`)
 
@@ -1205,6 +1411,47 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
   }
 
   pLog.info(`👀 You should see your changes appear in the app!`)
+
+  pLog.info('ℹ️  Capgo cache can take up to about one minute before update visibility is consistent during onboarding checks.')
+  const doWaitForAvailability = await pConfirm({ message: 'Wait in CLI and poll update availability every 5 seconds for up to 1 minute?' })
+  await cancelCommand(doWaitForAvailability, orgId, apikey)
+
+  if (doWaitForAvailability) {
+    const resolved = await resolveUpdateProbeInput(platform, capConfig)
+    if ('error' in resolved) {
+      pLog.error(`❌ CLI update-availability check failed before polling: ${resolved.error}`)
+      pLog.warn('The real app update may still work, but CLI could not resolve the contract values needed for the updates endpoint.')
+    }
+    else {
+      const endpoint = getUpdateUrl(capConfig)
+      pLog.info(`🔎 Probing updates endpoint: ${endpoint}`)
+      pLog.info(`🧩 Using platform=${platform}, native version_name=${resolved.nativeVersion.versionName}, version_build=${resolved.nativeVersion.versionBuild}, device_id=${updateProbeDeviceId}`)
+      pLog.info(`🗂️  Native values source: ${resolved.nativeVersion.source}`)
+      const spinner = pSpinner()
+      spinner.start('Waiting for update to become available (max 60s)...')
+
+      const result = await pollUpdateAvailability(endpoint, {
+        app_id: appId,
+        device_id: updateProbeDeviceId,
+        version_name: resolved.nativeVersion.versionName,
+        version_build: resolved.nativeVersion.versionBuild,
+        is_emulator: false,
+        is_prod: false,
+        platform,
+        plugin_version: resolved.pluginVersion,
+        defaultChannel,
+      })
+
+      if (result.success) {
+        spinner.stop(`✅ Update detected after ${result.attempt} check(s). Available version: ${result.availableVersion}`)
+      }
+      else {
+        spinner.stop('❌ Update was not confirmed by CLI polling')
+        pLog.warn(`CLI could not ensure update availability within one minute: ${result.lastError}`)
+        pLog.warn('Your real app may still receive the update, but CLI endpoint verification failed with the current probe values/response.')
+      }
+    }
+  }
 
   const doWaitLogs = await pConfirm({ message: `Monitor Capgo logs to verify the update worked?` })
   await cancelCommand(doWaitLogs, orgId, apikey)
@@ -1351,7 +1598,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
     if (stepToSkip < 12) {
       pLog.info(`\n📍 Step 12/${totalSteps}: Test Update on Device`)
-      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
+      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta, platform, extConfig?.config)
       markStepDone(12)
     }
 
