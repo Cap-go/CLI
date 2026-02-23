@@ -1210,11 +1210,11 @@ function parseAndroidNativeVersion(platformDir: string) {
     if (!content)
       continue
     const versionName = content.match(/versionName\s*(?:=\s*)?["']([^"']+)["']/)?.[1]
-    const versionBuild = content.match(/versionCode\s*(?:=\s*)?(\d+)/)?.[1]
-    if (versionName && versionBuild) {
+    const versionCode = content.match(/versionCode\s*(?:=\s*)?(\d+)/)?.[1]
+    if (versionName) {
       return {
         versionName,
-        versionBuild,
+        versionCode,
         source: candidate,
       }
     }
@@ -1246,24 +1246,24 @@ function parseIosNativeVersion(platformDir: string) {
     return undefined
 
   let versionName = parsePlistString(plist, 'CFBundleShortVersionString')
-  let versionBuild = parsePlistString(plist, 'CFBundleVersion')
+  let versionCode = parsePlistString(plist, 'CFBundleVersion')
 
   if (versionName === '$(MARKETING_VERSION)')
     versionName = pbxproj ? parsePbxprojSetting(pbxproj, 'MARKETING_VERSION') : undefined
-  if (versionBuild === '$(CURRENT_PROJECT_VERSION)')
-    versionBuild = pbxproj ? parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION') : undefined
+  if (versionCode === '$(CURRENT_PROJECT_VERSION)')
+    versionCode = pbxproj ? parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION') : undefined
 
   if (!versionName && pbxproj)
     versionName = parsePbxprojSetting(pbxproj, 'MARKETING_VERSION')
-  if (!versionBuild && pbxproj)
-    versionBuild = parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION')
+  if (!versionCode && pbxproj)
+    versionCode = parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION')
 
-  if (!versionName || !versionBuild)
+  if (!versionName)
     return undefined
 
   return {
     versionName,
-    versionBuild,
+    versionCode,
     source: plistPath,
   }
 }
@@ -1279,6 +1279,13 @@ async function resolveUpdateProbeInput(platform: 'ios' | 'android', capConfig: a
     }
   }
 
+  const configuredVersion = typeof capConfig?.plugins?.CapacitorUpdater?.version === 'string' && capConfig.plugins.CapacitorUpdater.version.trim().length > 0
+    ? capConfig.plugins.CapacitorUpdater.version.trim()
+    : undefined
+
+  const probeVersionBuild = configuredVersion || nativeVersion.versionName
+  const probeVersionBuildSource = configuredVersion ? 'CapacitorUpdater.version from capacitor config' : `native ${platform.toUpperCase()} versionName`
+
   const packageJsonPath = globalPathToPackageJson || join(cwd(), 'package.json')
   const projectPath = packageJsonPath.replace('/package.json', '')
   const pluginVersion = await getInstalledVersion('@capgo/capacitor-updater', projectPath, packageJsonPath)
@@ -1291,8 +1298,17 @@ async function resolveUpdateProbeInput(platform: 'ios' | 'android', capConfig: a
   return {
     platformDir,
     nativeVersion,
+    probeVersionBuild,
+    probeVersionBuildSource,
     pluginVersion,
   }
+}
+
+function getProbeDefaultChannel(capConfig: any) {
+  const configured = capConfig?.plugins?.CapacitorUpdater?.defaultChannel
+  if (typeof configured === 'string' && configured.trim().length > 0)
+    return configured.trim()
+  return ''
 }
 
 function getUpdateUrl(capConfig: any) {
@@ -1424,22 +1440,26 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
     }
     else {
       const endpoint = getUpdateUrl(capConfig)
+      const probeAppId = getAppId(undefined, capConfig) || appId
+      const probeDefaultChannel = getProbeDefaultChannel(capConfig)
       pLog.info(`🔎 Probing updates endpoint: ${endpoint}`)
-      pLog.info(`🧩 Using platform=${platform}, native version_name=${resolved.nativeVersion.versionName}, version_build=${resolved.nativeVersion.versionBuild}, device_id=${updateProbeDeviceId}`)
+      pLog.info(`🧩 Using platform=${platform}, version_name=builtin, version_build=${resolved.probeVersionBuild}, device_id=${updateProbeDeviceId}`)
+      pLog.info(`🧭 version_build source: ${resolved.probeVersionBuildSource}`)
+      pLog.info(`🧭 app_id source: ${probeAppId === appId ? 'onboarding app id' : 'CapacitorUpdater.appId from capacitor config'}`)
       pLog.info(`🗂️  Native values source: ${resolved.nativeVersion.source}`)
       const spinner = pSpinner()
       spinner.start('Waiting for update to become available (max 60s)...')
 
       const result = await pollUpdateAvailability(endpoint, {
-        app_id: appId,
+        app_id: probeAppId,
         device_id: updateProbeDeviceId,
-        version_name: resolved.nativeVersion.versionName,
-        version_build: resolved.nativeVersion.versionBuild,
+        version_name: 'builtin',
+        version_build: resolved.probeVersionBuild,
         is_emulator: false,
         is_prod: false,
         platform,
         plugin_version: resolved.pluginVersion,
-        defaultChannel,
+        defaultChannel: probeDefaultChannel,
       })
 
       if (result.success) {
