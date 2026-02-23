@@ -919,7 +919,7 @@ export async function findProjectType() {
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
         if (dependencies.get('react')) {
-          log.info('Found react project test')
+          log.info('Found react project')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (dependencies.get('vue')) {
