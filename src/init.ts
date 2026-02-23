@@ -1203,6 +1203,7 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
       nodeModules: isMonorepo ? nodeModulesPath : undefined,
       deltaOnly: delta,
       bundle: newVersion,
+      ignoreChecksumCheck: true,
     }, false)
     if (!uploadRes?.success) {
       s.stop('Error')
