@@ -9,6 +9,13 @@ export const updateProbeDeviceId = '00000000-0000-0000-0000-000000000000'
 const updateProbeTimeoutMs = 60_000
 const updateProbeIntervalMs = 5_000
 
+/**
+ * Full troubleshooting reference for common update failure codes.
+ * Maintained in the Capgo website repo (Cap-go/website) at:
+ *   src/content/docs/docs/plugins/updater/commonProblems.mdx
+ */
+const commonProblemsDocsUrl = 'https://capgo.app/docs/plugins/updater/commonproblems/'
+
 interface NativeVersionInfo {
   versionName: string
   versionCode?: string
@@ -235,6 +242,17 @@ export async function prepareUpdateProbe(
   }
 }
 
+function extractExtra(json: any): Record<string, unknown> {
+  const extra: Record<string, unknown> = {}
+  if (json && typeof json === 'object') {
+    for (const [key, value] of Object.entries(json as Record<string, unknown>)) {
+      if (key !== 'error' && key !== 'message')
+        extra[key] = value
+    }
+  }
+  return extra
+}
+
 function parseUpdateResponse(json: any, currentVersionName: string): ParsedUpdateResponse {
   const error = typeof json?.error === 'string' ? json.error : undefined
   const message = typeof json?.message === 'string' ? json.message : undefined
@@ -248,19 +266,12 @@ function parseUpdateResponse(json: any, currentVersionName: string): ParsedUpdat
   }
 
   if (error) {
-    const extra: Record<string, unknown> = {}
-    if (json && typeof json === 'object') {
-      for (const [key, value] of Object.entries(json as Record<string, unknown>)) {
-        if (key !== 'error' && key !== 'message')
-          extra[key] = value
-      }
-    }
     return {
       status: 'failed',
       detail: `${error}: ${message ?? 'Unknown backend message'}`,
       errorCode: error,
       backendMessage: message,
-      extra,
+      extra: extractExtra(json),
     }
   }
 
@@ -307,15 +318,16 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
       }
 
       if (!response.ok && response.status !== 200) {
+        // Transient server errors (5xx) are retryable during the poll window
+        if (response.status >= 500) {
+          lastReason = `HTTP ${response.status}: ${JSON.stringify(json)}`
+          if (Date.now() - start >= updateProbeTimeoutMs)
+            break
+          await sleep(updateProbeIntervalMs)
+          continue
+        }
         const errorCode = typeof json?.error === 'string' ? json.error : undefined
         const backendMessage = typeof json?.message === 'string' ? json.message : undefined
-        const extra: Record<string, unknown> = {}
-        if (json && typeof json === 'object') {
-          for (const [key, value] of Object.entries(json as Record<string, unknown>)) {
-            if (key !== 'error' && key !== 'message')
-              extra[key] = value
-          }
-        }
         return {
           success: false,
           attempt,
@@ -323,7 +335,7 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
           backendRefusal: !!errorCode,
           errorCode,
           backendMessage,
-          extra,
+          extra: extractExtra(json),
         }
       }
 
@@ -351,12 +363,8 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
       lastReason = parsed.detail
     }
     catch (error) {
-      return {
-        success: false,
-        attempt,
-        reason: `Network error: ${error instanceof Error ? error.message : String(error)}`,
-        backendRefusal: false,
-      }
+      // Network errors are transient — keep retrying within the poll window
+      lastReason = `Network error: ${error instanceof Error ? error.message : String(error)}`
     }
 
     if (Date.now() - start >= updateProbeTimeoutMs)
@@ -372,180 +380,157 @@ export async function pollUpdateAvailability(endpoint: string, payload: UpdatePr
   }
 }
 
+/**
+ * Brief CLI hints for recognized error codes.
+ * One-liner cause + quick-fix. Full remediation details live in the website
+ * docs page linked by {@link commonProblemsDocsUrl}.
+ */
+const errorHints: Record<string, { cause: string, fix: string }> = {
+  disable_auto_update_to_major: {
+    cause: 'Channel policy blocks major upgrades.',
+    fix: 'Set CapacitorUpdater.version to the installed native version (e.g. 1.0.0), run cap sync, and reinstall the native build.',
+  },
+  disable_auto_update_to_minor: {
+    cause: 'Channel policy blocks minor upgrades.',
+    fix: 'Upload a bundle within the allowed minor range or relax the channel auto-update policy.',
+  },
+  disable_auto_update_to_patch: {
+    cause: 'Channel policy blocks patch upgrades.',
+    fix: 'Upload a bundle within the allowed patch range or relax the channel auto-update policy.',
+  },
+  disable_auto_update_to_metadata: {
+    cause: 'Channel uses min_update_version metadata and this device baseline is below the minimum.',
+    fix: 'Align CapacitorUpdater.version with the installed native version or adjust min_update_version.',
+  },
+  disable_auto_update_under_native: {
+    cause: 'Channel prevents downgrades below the native app version.',
+    fix: 'Upload a bundle >= native version or disable the under-native protection.',
+  },
+  misconfigured_channel: {
+    cause: 'Channel has disable_auto_update=version_number but missing min_update_version.',
+    fix: 'Set a valid min_update_version or change the disable_auto_update mode.',
+  },
+  cannot_update_via_private_channel: {
+    cause: 'Selected channel does not allow device self-assignment.',
+    fix: 'Use a channel with self-assignment enabled, or make it public.',
+  },
+  semver_error: {
+    cause: 'version_build sent to the backend is not valid semver.',
+    fix: 'Set CapacitorUpdater.version to a valid semver (x.y.z) and rebuild native.',
+  },
+  unknown_version_build: {
+    cause: 'Backend received version_build=unknown.',
+    fix: 'Configure CapacitorUpdater.version or verify native version parsing.',
+  },
+  unsupported_plugin_version: {
+    cause: 'Plugin version is too old for this backend.',
+    fix: 'Upgrade @capgo/capacitor-updater and rebuild native.',
+  },
+  key_id_mismatch: {
+    cause: 'Bundle encryption key and device key differ.',
+    fix: 'Use the same public key across app config and bundle encryption, then republish.',
+  },
+  disabled_platform_ios: {
+    cause: 'Channel has iOS updates disabled.',
+    fix: 'Enable the iOS toggle on the target channel.',
+  },
+  disabled_platform_android: {
+    cause: 'Channel has Android updates disabled.',
+    fix: 'Enable the Android toggle on the target channel.',
+  },
+  disabled_platform_electron: {
+    cause: 'Channel has Electron updates disabled.',
+    fix: 'Enable the Electron toggle on the target channel.',
+  },
+  disable_prod_build: {
+    cause: 'Channel blocks production builds.',
+    fix: 'Adjust channel allow_prod setting or test with a dev build.',
+  },
+  disable_dev_build: {
+    cause: 'Channel blocks development builds.',
+    fix: 'Adjust channel allow_dev setting or test with a prod build.',
+  },
+  disable_device: {
+    cause: 'Channel blocks physical devices.',
+    fix: 'Adjust channel allow_device setting or test on emulator.',
+  },
+  disable_emulator: {
+    cause: 'Channel blocks emulators.',
+    fix: 'Adjust channel allow_emulator setting or test on a physical device.',
+  },
+  no_channel: {
+    cause: 'No channel was resolved for this device.',
+    fix: 'Set defaultChannel in config or ensure a channel default/override exists.',
+  },
+  null_channel_data: {
+    cause: 'No usable channel data found.',
+    fix: 'Set defaultChannel in config or ensure a channel default/override exists.',
+  },
+  missing_info: {
+    cause: 'Request missing required identifiers (app/device/version/platform).',
+    fix: 'Verify CapacitorUpdater config and request payload.',
+  },
+  no_bundle: {
+    cause: 'Backend resolved a version but no downloadable artifact exists.',
+    fix: 'Verify bundle upload integrity and channel assignment.',
+  },
+  no_bundle_url: {
+    cause: 'Bundle resolved but URL is missing.',
+    fix: 'Check storage configuration and bundle upload.',
+  },
+  no_url_or_manifest: {
+    cause: 'Bundle resolved but no URL or manifest available.',
+    fix: 'Check storage configuration and bundle upload.',
+  },
+  already_on_builtin: {
+    cause: 'Device is already on the builtin bundle.',
+    fix: 'Publish and assign a non-builtin bundle for OTA updates.',
+  },
+  revert_to_builtin_plugin_version_too_old: {
+    cause: 'Plugin version is too old for safe builtin revert.',
+    fix: 'Upgrade @capgo/capacitor-updater and rebuild native.',
+  },
+  on_premise_app: {
+    cause: 'App is flagged as on-premise; cloud endpoint is blocked.',
+    fix: 'Use your on-prem update endpoint instead of plugin.capgo.app.',
+  },
+  need_plan_upgrade: {
+    cause: 'Update checks blocked by plan limits.',
+    fix: 'Upgrade plan or contact organization admin.',
+  },
+  invalid_json_body: {
+    cause: 'Updates endpoint rejected the request body.',
+    fix: 'Verify payload contract (app_id, device_id, version_name, version_build, platform, plugin_version).',
+  },
+  invalid_query_parameters: {
+    cause: 'Updates endpoint rejected query parameters.',
+    fix: 'Verify request format matches the expected contract.',
+  },
+}
+
 export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, { success: false }>): string[] {
   if (!result.errorCode)
     return []
 
+  const hints: string[] = []
+
+  // Special context for major-block errors
   if (result.errorCode === 'disable_auto_update_to_major') {
     const blockedVersion = typeof result.extra?.version === 'string' ? result.extra.version : 'unknown'
     const oldVersion = typeof result.extra?.old === 'string' ? result.extra.old : 'unknown'
-    return [
-      'This is a backend refusal, not cache lag: the updates endpoint responded and blocked this update.',
-      `Channel policy blocks major upgrades (target ${blockedVersion}, device baseline ${oldVersion}).`,
-      'Set plugins.CapacitorUpdater.version in capacitor.config.* to the native app version installed on the device (for example 1.0.0), then run cap sync and reinstall that native build once.',
-      'Or adjust channel auto-update policy if major updates should be allowed.',
-      'Docs: https://capgo.app/docs/live-updates/version-targeting/#disable-auto-update-across-major-versions',
-      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
-    ]
+    hints.push(`Channel policy blocks major upgrades (target ${blockedVersion}, device baseline ${oldVersion}).`)
   }
 
-  if (result.errorCode === 'disable_auto_update_to_metadata') {
-    return [
-      'Channel policy uses min_update_version metadata and this device is below the required minimum.',
-      'Set CapacitorUpdater.version to the real installed native version or change channel min update constraints.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
-    ]
+  const known = errorHints[result.errorCode]
+  if (known) {
+    hints.push(known.cause)
+    hints.push(`Fix: ${known.fix}`)
+  }
+  else {
+    hints.push(`Backend returned ${result.errorCode}.`)
+    hints.push('Check channel restrictions, app/plugin configuration, and device version values.')
   }
 
-  if (result.errorCode === 'disable_auto_update_to_minor') {
-    return [
-      'Channel policy blocks minor upgrades for this device version.',
-      'Use a bundle within allowed minor range or relax the channel auto-update policy.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
-    ]
-  }
-
-  if (result.errorCode === 'disable_auto_update_to_patch') {
-    return [
-      'Channel policy blocks patch upgrades for this device version.',
-      'Use a bundle within allowed patch range or relax the channel auto-update policy.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
-    ]
-  }
-
-  if (result.errorCode === 'disable_auto_update_under_native') {
-    return [
-      'The channel disallows downgrading below the native app version.',
-      'Upload a bundle >= native version or disable the "under native" protection for this channel.',
-      'Docs: https://capgo.app/docs/live-updates/version-targeting/#strategy-4-auto-downgrade-prevention',
-    ]
-  }
-
-  if (result.errorCode === 'misconfigured_channel') {
-    return [
-      'Channel is configured with disable_auto_update=version_number but missing min_update_version metadata.',
-      'Set a valid minimum update version for this channel or change the disable_auto_update mode.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
-    ]
-  }
-
-  if (result.errorCode === 'cannot_update_via_private_channel') {
-    return [
-      'The request resolved to a private channel that does not allow device self-association.',
-      'Configure defaultChannel to a channel with device self-association enabled, or use a public channel.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#using-setchannel-from-your-app',
-    ]
-  }
-
-  if (result.errorCode === 'semver_error') {
-    return [
-      'The version_build sent to the backend is not a valid semver value.',
-      'Set CapacitorUpdater.version to a valid semver like x.y.z and rebuild the native app.',
-      'Docs: https://capgo.app/docs/live-updates/channels/#bundle-versioning-and-channels',
-    ]
-  }
-
-  if (result.errorCode === 'unknown_version_build') {
-    return [
-      'The backend received version_build=unknown and cannot evaluate update rules.',
-      'Ensure CapacitorUpdater.version is configured or native version parsing resolves correctly.',
-      'Docs: https://capgo.app/docs/getting-started/troubleshooting/#updates-not-applying',
-    ]
-  }
-
-  if (result.errorCode === 'unsupported_plugin_version') {
-    return [
-      'The backend rejects this plugin version for update checks.',
-      'Upgrade @capgo/capacitor-updater in the app and rebuild native before retrying.',
-    ]
-  }
-
-  if (result.errorCode === 'key_id_mismatch') {
-    return [
-      'Bundle encryption key and device key_id do not match.',
-      'Use the same public key/key_id in app config and bundle encryption settings, then republish.',
-    ]
-  }
-
-  if (result.errorCode === 'disabled_platform_ios' || result.errorCode === 'disabled_platform_android' || result.errorCode === 'disabled_platform_electron') {
-    return [
-      'This channel has updates disabled for the current platform.',
-      'Enable the platform toggle on the target channel.',
-    ]
-  }
-
-  if (result.errorCode === 'disable_prod_build' || result.errorCode === 'disable_dev_build') {
-    return [
-      'This channel blocks updates for this build type (prod/dev).',
-      'Adjust channel allow_prod/allow_dev settings or test with a matching build type.',
-    ]
-  }
-
-  if (result.errorCode === 'disable_device' || result.errorCode === 'disable_emulator') {
-    return [
-      'This channel blocks updates for this runtime target (device/emulator).',
-      'Adjust channel allow_device/allow_emulator settings or test on the allowed target.',
-    ]
-  }
-
-  if (result.errorCode === 'no_channel' || result.errorCode === 'null_channel_data') {
-    return [
-      'No usable channel assignment was resolved for this device.',
-      'Set a default channel in CapacitorUpdater.defaultChannel or ensure channel override/default exists for this app.',
-    ]
-  }
-
-  if (result.errorCode === 'missing_info') {
-    return [
-      'The updates request was missing required identifiers (app/device/version/platform).',
-      'Verify request payload contract and CapacitorUpdater app configuration.',
-    ]
-  }
-
-  if (result.errorCode === 'no_bundle' || result.errorCode === 'no_bundle_url' || result.errorCode === 'no_url_or_manifest') {
-    return [
-      'Backend resolved a target version but could not provide a downloadable artifact.',
-      'Verify bundle upload integrity, channel assignment, and storage URL/manifest availability.',
-    ]
-  }
-
-  if (result.errorCode === 'already_on_builtin') {
-    return [
-      'Server resolved builtin as target and device is already on builtin bundle.',
-      'Publish and assign a non-builtin target bundle if you expect an OTA update.',
-    ]
-  }
-
-  if (result.errorCode === 'revert_to_builtin_plugin_version_too_old') {
-    return [
-      'Backend requested builtin revert but plugin version is too old to handle this flow safely.',
-      'Upgrade @capgo/capacitor-updater and rebuild native app.',
-    ]
-  }
-
-  if (result.errorCode === 'on_premise_app') {
-    return [
-      'This app is flagged as on-premise and cloud updates endpoint is intentionally blocked.',
-      'Use your on-prem update endpoint/configuration instead of plugin.capgo.app.',
-    ]
-  }
-
-  if (result.errorCode === 'need_plan_upgrade') {
-    return [
-      'Update checks are blocked by current plan limits.',
-      'Upgrade plan or contact organization admin to restore OTA access.',
-    ]
-  }
-
-  if (result.errorCode === 'invalid_json_body' || result.errorCode === 'invalid_query_parameters') {
-    return [
-      'Updates endpoint rejected request shape/field types.',
-      'Verify payload contract: app_id, device_id, version_name, version_build, platform, plugin_version, is_prod, is_emulator.',
-    ]
-  }
-
-  return [
-    `Backend returned ${result.errorCode}.`,
-    'Check channel restrictions, app/plugin configuration, and device version values in the request payload.',
-  ]
+  hints.push(`Full troubleshooting guide: ${commonProblemsDocsUrl}`)
+  return hints
 }

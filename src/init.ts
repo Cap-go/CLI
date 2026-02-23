@@ -41,10 +41,10 @@ function readTmpObj() {
     ?? tmp.fileSync({ prefix: 'capgocli' }).name
 }
 
-function markStepDone(step: number, pathToPackageJson?: string) {
+function markStepDone(step: number, pathToPackageJson?: string, platformChoice?: 'ios' | 'android') {
   try {
     readTmpObj()
-    writeFileSync(tmpObject!, JSON.stringify(pathToPackageJson ? { step_done: step, pathToPackageJson } : { step_done: step, pathToPackageJson: globalPathToPackageJson }))
+    writeFileSync(tmpObject!, JSON.stringify({ step_done: step, pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson, ...(platformChoice ? { platform: platformChoice } : {}) }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
     }
@@ -55,14 +55,14 @@ function markStepDone(step: number, pathToPackageJson?: string) {
   }
 }
 
-async function readStepsDone(orgId: string, apikey: string): Promise<number | undefined> {
+async function readStepsDone(orgId: string, apikey: string): Promise<{ stepDone: number, savedPlatform?: 'ios' | 'android' } | undefined> {
   try {
     readTmpObj()
     const rawData = readFileSync(tmpObject!, 'utf-8')
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, pathToPackageJson } = JSON.parse(rawData)
+    const { step_done, pathToPackageJson, platform: savedPlatform } = JSON.parse(rawData)
     pLog.info(`You have already got to the step ${step_done}/10 in the previous session`)
     const skipSteps = await pConfirm({ message: 'Would you like to continue from where you left off?' })
     await cancelCommand(skipSteps, orgId, apikey)
@@ -70,7 +70,7 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
       if (pathToPackageJson) {
         globalPathToPackageJson = pathToPackageJson
       }
-      return step_done
+      return { stepDone: step_done as number, savedPlatform: savedPlatform as 'ios' | 'android' | undefined }
     }
 
     return undefined
@@ -1379,16 +1379,18 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
 
-  const stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
+  const resumeState = await readStepsDone(orgId, options.apikey)
+  const stepToSkip = resumeState?.stepDone ?? 0
   let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
   let delta = false
   let currentVersion = pkgVersion
-  let platform: 'ios' | 'android' = 'ios' // default
+  let platform: 'ios' | 'android' = resumeState?.savedPlatform ?? 'ios'
 
   const totalSteps = 13
-
   if (stepToSkip > 0) {
     pLog.info(`\n🔄 Resuming onboarding from step ${stepToSkip + 1}/${totalSteps}`)
+    if (resumeState?.savedPlatform)
+      pLog.info(`📱 Using previously selected platform: ${resumeState.savedPlatform.toUpperCase()}`)
   }
 
   try {
@@ -1434,7 +1436,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (stepToSkip < 7) {
       pLog.info(`\n📍 Step 7/${totalSteps}: Select Platform`)
       platform = await selectPlatformStep(orgId, options.apikey)
-      markStepDone(7)
+      markStepDone(7, undefined, platform)
     }
 
     if (stepToSkip < 8) {
@@ -1463,7 +1465,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
     if (stepToSkip < 12) {
       pLog.info(`\n📍 Step 12/${totalSteps}: Test Update on Device`)
-      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta, platform, extConfig?.config)
+      const freshConfig = await getConfig()
+      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta, platform, freshConfig?.config)
       markStepDone(12)
     }
 
