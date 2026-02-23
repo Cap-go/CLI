@@ -815,6 +815,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     else {
       s.stop(`key created 🔑`)
     }
+    await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
 
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
