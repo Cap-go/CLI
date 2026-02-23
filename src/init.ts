@@ -891,8 +891,9 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
     const runFailed = runResult.error || runResult.status !== 0
 
     if (runFailed) {
+      const platformName = platform === 'ios' ? 'iOS' : 'Android'
       s.stop(`App failed to start ❌`)
-      pLog.error(`The app failed to start on your ${platform} device.`)
+      pLog.error(`The app failed to start on your ${platformName} device.`)
 
       const openIDE = await pConfirm({
         message: `Would you like to open ${platform === 'ios' ? 'Xcode' : 'Android Studio'} to run the app manually?`,
