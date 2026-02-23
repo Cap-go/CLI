@@ -933,6 +933,22 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
     )
 
+    const nativeProjectDir = getPlatformDirFromCapacitorConfig(config?.config, options.platform)
+    if (mergedCredentials && nativeProjectDir) {
+      if (options.platform === 'ios') {
+        mergedCredentials.CAPGO_IOS_SOURCE_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_IOS_APP_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_IOS_PROJECT_DIR = nativeProjectDir
+        mergedCredentials.IOS_PROJECT_DIR = nativeProjectDir
+      }
+      else {
+        mergedCredentials.CAPGO_ANDROID_SOURCE_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_ANDROID_APP_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_ANDROID_PROJECT_DIR = nativeProjectDir
+        mergedCredentials.ANDROID_PROJECT_DIR = nativeProjectDir
+      }
+    }
+
     // Prepare request payload for Capgo backend
     const requestPayload: {
       app_id: string
