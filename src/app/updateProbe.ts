@@ -381,9 +381,11 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     const oldVersion = typeof result.extra?.old === 'string' ? result.extra.old : 'unknown'
     return [
       'This is a backend refusal, not cache lag: the updates endpoint responded and blocked this update.',
-      `Channel policy blocks major upgrades. Target bundle ${blockedVersion} is considered a major upgrade from device version_build ${oldVersion}.`,
-      'Set CapacitorUpdater.version in capacitor.config.* to the installed native app version, then rebuild/reinstall the native app.',
+      `Channel policy blocks major upgrades (target ${blockedVersion}, device baseline ${oldVersion}).`,
+      'Set plugins.CapacitorUpdater.version in capacitor.config.* to the native app version installed on the device (for example 1.0.0), then run cap sync and reinstall that native build once.',
       'Or adjust channel auto-update policy if major updates should be allowed.',
+      'Docs: https://capgo.app/docs/live-updates/version-targeting/#disable-auto-update-across-major-versions',
+      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
     ]
   }
 
@@ -391,6 +393,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'Channel policy uses min_update_version metadata and this device is below the required minimum.',
       'Set CapacitorUpdater.version to the real installed native version or change channel min update constraints.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
     ]
   }
 
@@ -398,6 +401,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'Channel policy blocks minor upgrades for this device version.',
       'Use a bundle within allowed minor range or relax the channel auto-update policy.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
     ]
   }
 
@@ -405,6 +409,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'Channel policy blocks patch upgrades for this device version.',
       'Use a bundle within allowed patch range or relax the channel auto-update policy.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
     ]
   }
 
@@ -412,6 +417,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'The channel disallows downgrading below the native app version.',
       'Upload a bundle >= native version or disable the "under native" protection for this channel.',
+      'Docs: https://capgo.app/docs/live-updates/version-targeting/#strategy-4-auto-downgrade-prevention',
     ]
   }
 
@@ -419,6 +425,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'Channel is configured with disable_auto_update=version_number but missing min_update_version metadata.',
       'Set a valid minimum update version for this channel or change the disable_auto_update mode.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#disable-auto-update-strategies',
     ]
   }
 
@@ -426,6 +433,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'The request resolved to a private channel that does not allow device self-association.',
       'Configure defaultChannel to a channel with device self-association enabled, or use a public channel.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#using-setchannel-from-your-app',
     ]
   }
 
@@ -433,6 +441,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'The version_build sent to the backend is not a valid semver value.',
       'Set CapacitorUpdater.version to a valid semver like x.y.z and rebuild the native app.',
+      'Docs: https://capgo.app/docs/live-updates/channels/#bundle-versioning-and-channels',
     ]
   }
 
@@ -440,6 +449,7 @@ export function explainCommonUpdateError(result: Extract<UpdateProbePollResult, 
     return [
       'The backend received version_build=unknown and cannot evaluate update rules.',
       'Ensure CapacitorUpdater.version is configured or native version parsing resolves correctly.',
+      'Docs: https://capgo.app/docs/getting-started/troubleshooting/#updates-not-applying',
     ]
   }
 

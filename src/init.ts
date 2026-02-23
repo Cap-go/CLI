@@ -320,11 +320,17 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
     try {
       const s = pSpinner()
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
-      const addRes = await addAppInternal(currentAppId, options, organization, true)
-      if (!addRes)
-        s.stop(`App already add ✅`)
-      else
-        s.stop(`App add Done ✅`)
+      try {
+        const addRes = await addAppInternal(currentAppId, options, organization, true)
+        if (!addRes)
+          s.stop(`App already add ✅`)
+        else
+          s.stop(`App add Done ✅`)
+      }
+      catch (innerError) {
+        s.stop(`App add failed ❌`)
+        throw innerError
+      }
 
       pLog.info(`This app is accessible to all members of your organization based on their permissions`)
       await markStep(organization.gid, apikey, 'add-app', currentAppId)
@@ -465,14 +471,20 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     // create production channel public
     s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
-    const addChannelRes = await addChannelInternal(defaultChannel, appId, {
-      default: true,
-      apikey,
-    }, true)
-    if (!addChannelRes)
-      s.stop(`Channel already added ✅`)
-    else
-      s.stop(`Channel add Done ✅`)
+    try {
+      const addChannelRes = await addChannelInternal(defaultChannel, appId, {
+        default: true,
+        apikey,
+      }, true)
+      if (!addChannelRes)
+        s.stop(`Channel already added ✅`)
+      else
+        s.stop(`Channel add Done ✅`)
+    }
+    catch (channelError) {
+      s.stop(`Channel creation failed ❌`)
+      throw channelError
+    }
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
@@ -1271,7 +1283,14 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
       const spinner = pSpinner()
       spinner.start('Waiting for update to become available (max 60s)...')
 
-      const result = await pollUpdateAvailability(probe.endpoint, probe.payload)
+      let result
+      try {
+        result = await pollUpdateAvailability(probe.endpoint, probe.payload)
+      }
+      catch (pollError) {
+        spinner.stop('❌ Update polling failed')
+        throw pollError
+      }
 
       if (result.success) {
         spinner.stop(`✅ Update detected after ${result.attempt} check(s). Available version: ${result.availableVersion}`)
@@ -1343,9 +1362,15 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
-    log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
-    await loginInternal(options.apikey, options, false)
-    log.stop('Login Done ✅')
+    try {
+      log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
+      await loginInternal(options.apikey, options, false)
+      log.stop('Login Done ✅')
+    }
+    catch (loginError) {
+      log.stop('Login failed ❌')
+      throw loginError
+    }
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
