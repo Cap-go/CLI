@@ -320,11 +320,8 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       const s = pSpinner()
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
       try {
-        const addRes = await addAppInternal(currentAppId, options, organization, true)
-        if (!addRes)
-          s.stop(`App already add ✅`)
-        else
-          s.stop(`App add Done ✅`)
+        await addAppInternal(currentAppId, options, organization, true)
+        s.stop(`App add Done ✅`)
       }
       catch (innerError) {
         s.stop(`App add failed ❌`)
