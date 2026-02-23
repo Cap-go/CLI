@@ -9,9 +9,9 @@ import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pI
 import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAlerts } from './api/update'
-import { getPlatformDirFromCapacitorConfig } from './build/platform-paths'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
+import { explainCommonUpdateError, getLikelyMajorBlockWarning, pollUpdateAvailability, prepareUpdateProbe } from './app/updateProbe'
 import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
@@ -28,10 +28,6 @@ const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
-const defaultUpdateUrl = 'https://plugin.capgo.app/updates'
-const updateProbeDeviceId = '00000000-0000-0000-0000-000000000000'
-const updateProbeTimeoutMs = 60_000
-const updateProbeIntervalMs = 5_000
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -903,7 +899,7 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
   await markStep(orgId, apikey, 'run-device', appId)
 }
 
-async function addCodeChangeStep(orgId: string, apikey: string, appId: string, pkgVersion: string, platform: 'ios' | 'android') {
+async function addCodeChangeStep(orgId: string, apikey: string, appId: string, pkgVersion: string, platform: 'ios' | 'android', capConfig: any) {
   pLog.info(`🎯 Now let's test Capgo by making a visible change and deploying an update!`)
 
   const modificationType = await pSelect({
@@ -1066,6 +1062,11 @@ ${content}`
     newVersion = userVersion as string
   }
   pLog.info(`🧭 This OTA upload will use version ${newVersion}. For the next test, increment it again.`)
+  const likelyMajorBlockWarning = getLikelyMajorBlockWarning(capConfig, newVersion)
+  if (likelyMajorBlockWarning) {
+    pLog.warn(`⚠️  ${likelyMajorBlockWarning}`)
+    pLog.warn('If this app should receive this OTA, align CapacitorUpdater.version with the installed native app version and rebuild native before retrying.')
+  }
 
   // Build after modifications
   const pm = getPMAndCommand()
@@ -1194,223 +1195,6 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
   await markStep(orgId, apikey, 'upload', appId)
 }
 
-function readTextIfExists(filePath: string): string | undefined {
-  if (!existsSync(filePath))
-    return undefined
-  return readFileSync(filePath, 'utf-8')
-}
-
-function parseAndroidNativeVersion(platformDir: string) {
-  const candidates = [
-    join(cwd(), platformDir, 'app', 'build.gradle'),
-    join(cwd(), platformDir, 'app', 'build.gradle.kts'),
-  ]
-  for (const candidate of candidates) {
-    const content = readTextIfExists(candidate)
-    if (!content)
-      continue
-    const versionName = content.match(/versionName\s*(?:=\s*)?["']([^"']+)["']/)?.[1]
-    const versionCode = content.match(/versionCode\s*(?:=\s*)?(\d+)/)?.[1]
-    if (versionName) {
-      return {
-        versionName,
-        versionCode,
-        source: candidate,
-      }
-    }
-  }
-  return undefined
-}
-
-function parsePlistString(content: string, key: string) {
-  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  const match = content.match(new RegExp(`<key>${escapedKey}</key>\\s*<string>([^<]+)</string>`))
-  return match?.[1]?.trim()
-}
-
-function parsePbxprojSetting(content: string, setting: 'MARKETING_VERSION' | 'CURRENT_PROJECT_VERSION') {
-  const match = content.match(new RegExp(`${setting}\\s*=\\s*([^;]+);`))
-  const raw = match?.[1]?.trim()
-  if (!raw)
-    return undefined
-  return raw.replace(/"/g, '').trim()
-}
-
-function parseIosNativeVersion(platformDir: string) {
-  const appRoot = join(cwd(), platformDir, 'App')
-  const plistPath = join(appRoot, 'App', 'Info.plist')
-  const pbxprojPath = join(appRoot, 'App.xcodeproj', 'project.pbxproj')
-  const plist = readTextIfExists(plistPath)
-  const pbxproj = readTextIfExists(pbxprojPath)
-  if (!plist)
-    return undefined
-
-  let versionName = parsePlistString(plist, 'CFBundleShortVersionString')
-  let versionCode = parsePlistString(plist, 'CFBundleVersion')
-
-  if (versionName === '$(MARKETING_VERSION)')
-    versionName = pbxproj ? parsePbxprojSetting(pbxproj, 'MARKETING_VERSION') : undefined
-  if (versionCode === '$(CURRENT_PROJECT_VERSION)')
-    versionCode = pbxproj ? parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION') : undefined
-
-  if (!versionName && pbxproj)
-    versionName = parsePbxprojSetting(pbxproj, 'MARKETING_VERSION')
-  if (!versionCode && pbxproj)
-    versionCode = parsePbxprojSetting(pbxproj, 'CURRENT_PROJECT_VERSION')
-
-  if (!versionName)
-    return undefined
-
-  return {
-    versionName,
-    versionCode,
-    source: plistPath,
-  }
-}
-
-async function resolveUpdateProbeInput(platform: 'ios' | 'android', capConfig: any) {
-  const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
-  const nativeVersion = platform === 'android'
-    ? parseAndroidNativeVersion(platformDir)
-    : parseIosNativeVersion(platformDir)
-  if (!nativeVersion) {
-    return {
-      error: `Unable to resolve native ${platform.toUpperCase()} version values from platform files in "${platformDir}".`,
-    }
-  }
-
-  const configuredVersion = typeof capConfig?.plugins?.CapacitorUpdater?.version === 'string' && capConfig.plugins.CapacitorUpdater.version.trim().length > 0
-    ? capConfig.plugins.CapacitorUpdater.version.trim()
-    : undefined
-
-  const probeVersionBuild = configuredVersion || nativeVersion.versionName
-  const probeVersionBuildSource = configuredVersion ? 'CapacitorUpdater.version from capacitor config' : `native ${platform.toUpperCase()} versionName`
-
-  const packageJsonPath = globalPathToPackageJson || join(cwd(), 'package.json')
-  const projectPath = packageJsonPath.replace('/package.json', '')
-  const pluginVersion = await getInstalledVersion('@capgo/capacitor-updater', projectPath, packageJsonPath)
-  if (!pluginVersion) {
-    return {
-      error: 'Unable to resolve installed @capgo/capacitor-updater version from this project.',
-    }
-  }
-
-  return {
-    platformDir,
-    nativeVersion,
-    probeVersionBuild,
-    probeVersionBuildSource,
-    pluginVersion,
-  }
-}
-
-function getProbeDefaultChannel(capConfig: any) {
-  const configured = capConfig?.plugins?.CapacitorUpdater?.defaultChannel
-  if (typeof configured === 'string' && configured.trim().length > 0)
-    return configured.trim()
-  return ''
-}
-
-function getUpdateUrl(capConfig: any) {
-  const configured = capConfig?.plugins?.CapacitorUpdater?.updateUrl
-  if (typeof configured === 'string' && configured.trim().length > 0)
-    return configured.trim()
-  return defaultUpdateUrl
-}
-
-function sleep(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
-
-function parseUpdateResponse(json: any, currentVersionName: string) {
-  const error = typeof json?.error === 'string' ? json.error : undefined
-  const message = typeof json?.message === 'string' ? json.message : undefined
-  const responseVersion = typeof json?.version === 'string' ? json.version : undefined
-
-  if (responseVersion && responseVersion !== currentVersionName) {
-    return {
-      status: 'available' as const,
-      detail: `Update ${responseVersion} is available`,
-      responseVersion,
-    }
-  }
-
-  if (error === 'no_new_version_available' || (responseVersion && responseVersion === currentVersionName)) {
-    return {
-      status: 'retry' as const,
-      detail: message || 'No new version available yet',
-    }
-  }
-
-  return {
-    status: 'failed' as const,
-    detail: error ? `${error}: ${message ?? 'Unknown backend message'}` : `Unexpected response format: ${JSON.stringify(json)}`,
-  }
-}
-
-async function pollUpdateAvailability(
-  endpoint: string,
-  payload: {
-    app_id: string
-    device_id: string
-    version_name: string
-    version_build: string
-    is_emulator: boolean
-    is_prod: boolean
-    platform: 'ios' | 'android'
-    plugin_version: string
-    defaultChannel: string
-  },
-) {
-  const start = Date.now()
-  let attempt = 0
-  let lastError = ''
-
-  while (Date.now() - start <= updateProbeTimeoutMs) {
-    attempt += 1
-    try {
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-      })
-      let json: any
-      try {
-        json = await response.json()
-      }
-      catch {
-        json = { error: 'invalid_json_response', message: 'Non-JSON response from updates endpoint' }
-      }
-
-      if (!response.ok && response.status !== 200) {
-        lastError = `HTTP ${response.status}: ${JSON.stringify(json)}`
-        return { success: false, attempt, lastError }
-      }
-
-      const parsed = parseUpdateResponse(json, payload.version_name)
-      if (parsed.status === 'available')
-        return { success: true, attempt, availableVersion: parsed.responseVersion }
-      if (parsed.status === 'failed') {
-        lastError = parsed.detail
-        return { success: false, attempt, lastError }
-      }
-      lastError = parsed.detail
-    }
-    catch (error) {
-      lastError = `Network error: ${error instanceof Error ? error.message : String(error)}`
-      return { success: false, attempt, lastError }
-    }
-
-    if (Date.now() - start >= updateProbeTimeoutMs)
-      break
-    await sleep(updateProbeIntervalMs)
-  }
-
-  return { success: false, attempt, lastError: lastError || 'Timed out waiting for update availability' }
-}
-
 async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string, hostWeb: string, delta: boolean, platform: 'ios' | 'android', capConfig: any) {
   pLog.info(`🧪 Time to test the Capgo update system!`)
   pLog.info(`📱 Go to your device where the app is running`)
@@ -1433,41 +1217,34 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
   await cancelCommand(doWaitForAvailability, orgId, apikey)
 
   if (doWaitForAvailability) {
-    const resolved = await resolveUpdateProbeInput(platform, capConfig)
-    if ('error' in resolved) {
-      pLog.error(`❌ CLI update-availability check failed before polling: ${resolved.error}`)
+    const prepared = await prepareUpdateProbe(platform, capConfig, appId, globalPathToPackageJson)
+    if (!prepared.ok) {
+      pLog.error(`❌ CLI update-availability check failed before polling: ${prepared.error}`)
       pLog.warn('The real app update may still work, but CLI could not resolve the contract values needed for the updates endpoint.')
     }
     else {
-      const endpoint = getUpdateUrl(capConfig)
-      const probeAppId = getAppId(undefined, capConfig) || appId
-      const probeDefaultChannel = getProbeDefaultChannel(capConfig)
-      pLog.info(`🔎 Probing updates endpoint: ${endpoint}`)
-      pLog.info(`🧩 Using platform=${platform}, version_name=builtin, version_build=${resolved.probeVersionBuild}, device_id=${updateProbeDeviceId}`)
-      pLog.info(`🧭 version_build source: ${resolved.probeVersionBuildSource}`)
-      pLog.info(`🧭 app_id source: ${probeAppId === appId ? 'onboarding app id' : 'CapacitorUpdater.appId from capacitor config'}`)
-      pLog.info(`🗂️  Native values source: ${resolved.nativeVersion.source}`)
+      const probe = prepared.context
+      pLog.info(`🔎 Probing updates endpoint: ${probe.endpoint}`)
+      pLog.info(`🧩 Using platform=${probe.payload.platform}, version_name=${probe.payload.version_name}, version_build=${probe.payload.version_build}, device_id=${probe.payload.device_id}`)
+      pLog.info(`🧭 version_build source: ${probe.versionBuildSource}`)
+      pLog.info(`🧭 app_id source: ${probe.appIdSource}`)
+      pLog.info(`🗂️  Native values source: ${probe.nativeSource}`)
       const spinner = pSpinner()
       spinner.start('Waiting for update to become available (max 60s)...')
 
-      const result = await pollUpdateAvailability(endpoint, {
-        app_id: probeAppId,
-        device_id: updateProbeDeviceId,
-        version_name: 'builtin',
-        version_build: resolved.probeVersionBuild,
-        is_emulator: false,
-        is_prod: false,
-        platform,
-        plugin_version: resolved.pluginVersion,
-        defaultChannel: probeDefaultChannel,
-      })
+      const result = await pollUpdateAvailability(probe.endpoint, probe.payload)
 
       if (result.success) {
         spinner.stop(`✅ Update detected after ${result.attempt} check(s). Available version: ${result.availableVersion}`)
       }
       else {
         spinner.stop('❌ Update was not confirmed by CLI polling')
-        pLog.warn(`CLI could not ensure update availability within one minute: ${result.lastError}`)
+        pLog.warn(`CLI could not ensure update availability within one minute: ${result.reason}`)
+        if (result.backendRefusal)
+          pLog.warn('The updates endpoint responded and refused the request, so this is not just cache propagation delay.')
+        const hints = explainCommonUpdateError(result)
+        for (const hint of hints)
+          pLog.warn(`   • ${hint}`)
         pLog.warn('Your real app may still receive the update, but CLI endpoint verification failed with the current probe values/response.')
       }
     }
@@ -1606,7 +1383,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
     if (stepToSkip < 10) {
       pLog.info(`\n📍 Step 10/${totalSteps}: Make a Test Change`)
-      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
+      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform, extConfig?.config)
       markStepDone(10)
     }
 
