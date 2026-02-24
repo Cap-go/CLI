@@ -243,9 +243,16 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       if (!fileCredentials.KEYSTORE_KEY_PASSWORD && !fileCredentials.KEYSTORE_STORE_PASSWORD)
         missingCreds.push('--keystore-key-password <password> OR --keystore-store-password <password> (At least one password required, will be used for both)')
 
-      // Google Play Store credentials (required for upload)
-      if (!fileCredentials.PLAY_CONFIG_JSON)
-        missingCreds.push('--play-config <path> (Google Play service account JSON - required for uploading to Play Store)')
+      // Google Play Store credentials (optional - only needed for auto-upload to Play Store)
+      if (!fileCredentials.PLAY_CONFIG_JSON) {
+        if (fileCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'false') {
+          missingCreds.push('--play-config <path> OR --output-upload (Build has no output destination - enable either Play Store upload or Capgo download link)')
+        }
+        else {
+          log.warn('⚠️  --play-config not provided - builds will succeed but cannot auto-upload to Play Store')
+          log.warn('   To enable auto-upload, add: --play-config ./play-store-service-account.json')
+        }
+      }
     }
 
     if (missingCreds.length > 0) {
@@ -271,12 +278,11 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('  npx @capgo/cli build credentials save --platform android \\')
         log.error('    --keystore ./release.keystore \\')
         log.error('    --keystore-alias "my-key-alias" \\')
-        log.error('    --keystore-key-password "password" \\')
-        log.error('    --play-config ./play-store-service-account.json')
+        log.error('    --keystore-key-password "password"')
         log.error('')
         log.error('  Note: If both key and store passwords are the same, you only need to provide one.')
         log.error('        If they differ, provide both --keystore-key-password and --keystore-store-password.')
-        log.error('        The --play-config is required for uploading to Google Play Store.')
+        log.error('        Optionally add --play-config for auto-uploading to Google Play Store.')
       }
       log.error('')
       exit(1)

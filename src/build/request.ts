@@ -1054,9 +1054,13 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         missingCreds.push('KEYSTORE_KEY_PASSWORD or KEYSTORE_STORE_PASSWORD (at least one password required)')
 
       // PLAY_CONFIG_JSON is optional for build, but required for upload to Play Store
-      // So we warn but don't fail
-      if (!mergedCredentials.PLAY_CONFIG_JSON && !silent) {
-        log.warn('⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store')
+      if (!mergedCredentials.PLAY_CONFIG_JSON) {
+        if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+          missingCreds.push('PLAY_CONFIG_JSON or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either Play Store upload or Capgo download link)')
+        }
+        else if (!silent) {
+          log.warn('⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store')
+        }
       }
     }
 
