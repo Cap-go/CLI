@@ -30,6 +30,7 @@ import { createKey, deleteOldKey, saveKeyCommand } from './key'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
 import { addOrganization, deleteOrganization, listMembers, listOrganizations, setOrganization } from './organization'
+import { probe } from './probe'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
 
@@ -41,19 +42,6 @@ const optionDescriptions = {
   packageJson: `Paths to package.json files for monorepos (comma-separated)`,
   nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
   verbose: `Enable verbose output with detailed logging`,
-}
-
-function parseBooleanOption(value?: string | boolean) {
-  if (value === undefined || value === true)
-    return true
-
-  const normalized = `${value}`.trim().toLowerCase()
-  if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'y')
-    return true
-  if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'n')
-    return false
-
-  throw new Error(`Invalid value "${value}" for --show-replication-progress. Use true, false, yes, no, 1, or 0.`)
 }
 
 program
@@ -159,7 +147,6 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--encrypted-checksum <encryptedChecksum>', `An encrypted checksum (signature). Used only when uploading an external bundle.`)
   .option('--auto-set-bundle', `Set the bundle in capacitor.config.json`)
   .option('--dry-upload', `Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing)`)
-  .option('--show-replication-progress [showReplicationProgress]', `Show Capgo global replication progress after upload (yes/false) so you can confirm rollout across all regions. If omitted, you'll be prompted interactively.`, parseBooleanOption)
   .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
   .option('--encrypt-partial', `Encrypt delta update files (auto-enabled for updater > 6.14.4)`)
@@ -895,6 +882,17 @@ Examples:
   .option('--output-upload', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
   .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
+
+program
+  .command('probe')
+  .description(`🔎 Probe the Capgo updates endpoint to check if an update is available for your app.
+
+Sends a single request to the updates endpoint using your project's capacitor config
+and reports whether an update would be delivered, or explains why not.
+
+Example: npx @capgo/cli@latest probe --platform ios`)
+  .option('--platform <platform>', 'Platform to probe: ios or android')
+  .action(probe)
 
 program
   .command('generate-docs [filePath]')

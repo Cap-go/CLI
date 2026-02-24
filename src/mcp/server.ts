@@ -531,6 +531,30 @@ export async function startMcpServer(): Promise<void> {
     },
   )
 
+  // ============================================================================
+  // Probe Tool (no auth required - hits public /updates endpoint)
+  // ============================================================================
+
+  server.tool(
+    'capgo_probe',
+    'Probe the Capgo updates endpoint for a local project. Returns whether an OTA update would be delivered and diagnostic details if not. Does not require an API key.',
+    {
+      platform: z.enum(['ios', 'android']).describe('Target platform to probe'),
+    },
+    async ({ platform }) => {
+      const result = await sdk.probe({ platform })
+      if (!result.success) {
+        return formatMcpError(result)
+      }
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(result.data, null, 2),
+        }],
+      }
+    },
+  )
+
   // Start the server with stdio transport
   const transport = new StdioServerTransport()
   await server.connect(transport)
