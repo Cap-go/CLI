@@ -320,11 +320,14 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
     try {
       const s = pSpinner()
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
-      const addRes = await addAppInternal(currentAppId, options, organization, true)
-      if (!addRes)
-        s.stop(`App already add ✅`)
-      else
+      try {
+        await addAppInternal(currentAppId, options, organization, true)
         s.stop(`App add Done ✅`)
+      }
+      catch (innerError) {
+        s.stop(`App add failed ❌`)
+        throw innerError
+      }
 
       pLog.info(`This app is accessible to all members of your organization based on their permissions`)
       await markStep(organization.gid, apikey, 'add-app', currentAppId)
@@ -465,14 +468,20 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     // create production channel public
     s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default`)
-    const addChannelRes = await addChannelInternal(defaultChannel, appId, {
-      default: true,
-      apikey,
-    }, true)
-    if (!addChannelRes)
-      s.stop(`Channel already added ✅`)
-    else
-      s.stop(`Channel add Done ✅`)
+    try {
+      const addChannelRes = await addChannelInternal(defaultChannel, appId, {
+        default: true,
+        apikey,
+      }, true)
+      if (!addChannelRes)
+        s.stop(`Channel already added ✅`)
+      else
+        s.stop(`Channel add Done ✅`)
+    }
+    catch (error) {
+      s.stop(`Channel creation failed ❌`)
+      throw error
+    }
   }
   else {
     pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${defaultChannel} ${appId} --default"`)
@@ -1296,8 +1305,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
-    await loginInternal(options.apikey, options, false)
-    log.stop('Login Done ✅')
+    try {
+      await loginInternal(options.apikey, options, false)
+      log.stop('Login Done ✅')
+    }
+    catch (error) {
+      log.stop('Login failed ❌')
+      throw error
+    }
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
