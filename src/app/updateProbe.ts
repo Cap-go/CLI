@@ -318,129 +318,150 @@ export async function singleProbeRequest(endpoint: string, payload: UpdateProbeP
 
 /**
  * Brief CLI hints for recognized error codes.
- * One-liner cause + quick-fix. Full remediation details live in the website
- * docs page linked by {@link commonProblemsDocsUrl}.
+ * One-liner cause + quick-fix with a deep-link into the specific section of
+ * the common-problems docs page ({@link commonProblemsDocsUrl}).
+ *
+ * Anchors are derived from the heading slugs in:
+ *   Cap-go/website  src/content/docs/docs/plugins/updater/commonProblems.mdx
  */
-const errorHints: Record<string, { cause: string, fix: string }> = {
+const errorHints: Record<string, { cause: string, fix: string, docsUrl?: string }> = {
   disable_auto_update_to_major: {
-    cause: 'Channel policy blocks major upgrades.',
-    fix: 'Set CapacitorUpdater.version to the installed native version (e.g. 1.0.0), run cap sync, and reinstall the native build.',
+    cause: 'Channel blocks major upgrades and device baseline major does not match the target bundle major.',
+    fix: 'Set plugins.CapacitorUpdater.version so its MAJOR matches the bundle MAJOR (e.g. 1.0.0 for bundle 1.x.x), run npx cap sync, and reinstall the native build.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_auto_update_to_major`,
   },
   disable_auto_update_to_minor: {
-    cause: 'Channel policy blocks minor upgrades.',
-    fix: 'Upload a bundle within the allowed minor range or relax the channel auto-update policy.',
+    cause: 'Channel blocks minor upgrades and the target bundle minor is above the device baseline.',
+    fix: 'Upload a bundle within the allowed minor range, or change the channel disable_auto_update policy in the dashboard.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_auto_update_to_minor--disable_auto_update_to_patch`,
   },
   disable_auto_update_to_patch: {
-    cause: 'Channel policy blocks patch upgrades.',
-    fix: 'Upload a bundle within the allowed patch range or relax the channel auto-update policy.',
+    cause: 'Channel blocks patch upgrades and the target bundle patch is above the device baseline.',
+    fix: 'Upload a bundle within the allowed patch range, or change the channel disable_auto_update policy in the dashboard.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_auto_update_to_minor--disable_auto_update_to_patch`,
   },
   disable_auto_update_to_metadata: {
-    cause: 'Channel uses min_update_version metadata and this device baseline is below the minimum.',
-    fix: 'Align CapacitorUpdater.version with the installed native version or adjust min_update_version.',
+    cause: 'Channel uses metadata-based targeting (version_number) and the device baseline is below the required min_update_version.',
+    fix: 'Set plugins.CapacitorUpdater.version to match the installed native version, or adjust min_update_version on the channel.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_auto_update_to_metadata`,
   },
   disable_auto_update_under_native: {
     cause: 'Channel prevents downgrades below the native app version.',
-    fix: 'Upload a bundle >= native version or disable the under-native protection.',
+    fix: 'Upload a bundle with version >= native baseline, or disable the under-native downgrade protection on the channel.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_auto_update_under_native`,
   },
   misconfigured_channel: {
-    cause: 'Channel has disable_auto_update=version_number but missing min_update_version.',
-    fix: 'Set a valid min_update_version or change the disable_auto_update mode.',
+    cause: 'Channel has disable_auto_update=version_number but min_update_version is missing.',
+    fix: 'Set a valid min_update_version on the channel, or change disable_auto_update to a different mode.',
   },
   cannot_update_via_private_channel: {
-    cause: 'Selected channel does not allow device self-assignment.',
-    fix: 'Use a channel with self-assignment enabled, or make it public.',
+    cause: 'The selected channel does not allow device self-assignment.',
+    fix: 'Use a channel with self-assignment enabled, or enable self-assignment / make the channel public.',
+    docsUrl: `${commonProblemsDocsUrl}#cannot_update_via_private_channel`,
   },
   semver_error: {
-    cause: 'version_build sent to the backend is not valid semver.',
-    fix: 'Set CapacitorUpdater.version to a valid semver (x.y.z) and rebuild native.',
+    cause: 'version_build sent to the backend is not valid semver (expected x.y.z).',
+    fix: 'Set plugins.CapacitorUpdater.version to a valid semver like 1.2.3, run npx cap sync, and rebuild native.',
+    docsUrl: `${commonProblemsDocsUrl}#unknown_version_build--semver_error`,
   },
   unknown_version_build: {
-    cause: 'Backend received version_build=unknown.',
-    fix: 'Configure CapacitorUpdater.version or verify native version parsing.',
+    cause: 'Backend received version_build=unknown (device baseline version is missing).',
+    fix: 'Set plugins.CapacitorUpdater.version in capacitor.config.*, run npx cap sync, and rebuild native.',
+    docsUrl: `${commonProblemsDocsUrl}#unknown_version_build--semver_error`,
   },
   unsupported_plugin_version: {
-    cause: 'Plugin version is too old for this backend.',
-    fix: 'Upgrade @capgo/capacitor-updater and rebuild native.',
+    cause: 'Installed @capgo/capacitor-updater is too old for the current backend.',
+    fix: 'Run npm install @capgo/capacitor-updater@latest, then npx cap sync, and rebuild native.',
+    docsUrl: `${commonProblemsDocsUrl}#unsupported_plugin_version`,
   },
   key_id_mismatch: {
     cause: 'Bundle encryption key and device key differ.',
-    fix: 'Use the same public key across app config and bundle encryption, then republish.',
+    fix: 'Ensure the same public key is used in app config and when encrypting bundles, then re-upload the bundle.',
+    docsUrl: `${commonProblemsDocsUrl}#key_id_mismatch`,
   },
   disabled_platform_ios: {
     cause: 'Channel has iOS updates disabled.',
-    fix: 'Enable the iOS toggle on the target channel.',
+    fix: 'Enable the iOS platform toggle on the target channel in the dashboard.',
+    docsUrl: `${commonProblemsDocsUrl}#disabled_platform_ios--disabled_platform_android`,
   },
   disabled_platform_android: {
     cause: 'Channel has Android updates disabled.',
-    fix: 'Enable the Android toggle on the target channel.',
+    fix: 'Enable the Android platform toggle on the target channel in the dashboard.',
+    docsUrl: `${commonProblemsDocsUrl}#disabled_platform_ios--disabled_platform_android`,
   },
   disabled_platform_electron: {
     cause: 'Channel has Electron updates disabled.',
-    fix: 'Enable the Electron toggle on the target channel.',
+    fix: 'Enable the Electron platform toggle on the target channel in the dashboard.',
   },
   disable_prod_build: {
-    cause: 'Channel blocks production builds.',
-    fix: 'Adjust channel allow_prod setting or test with a dev build.',
+    cause: 'Channel blocks production builds (allow_prod is off).',
+    fix: 'Enable allow_prod on the channel, or test with a development build.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_prod_build--disable_dev_build--disable_device--disable_emulator`,
   },
   disable_dev_build: {
-    cause: 'Channel blocks development builds.',
-    fix: 'Adjust channel allow_dev setting or test with a prod build.',
+    cause: 'Channel blocks development builds (allow_dev is off).',
+    fix: 'Enable allow_dev on the channel, or test with a production build.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_prod_build--disable_dev_build--disable_device--disable_emulator`,
   },
   disable_device: {
-    cause: 'Channel blocks physical devices.',
-    fix: 'Adjust channel allow_device setting or test on emulator.',
+    cause: 'Channel blocks physical devices (allow_device is off).',
+    fix: 'Enable allow_device on the channel, or test on an emulator.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_prod_build--disable_dev_build--disable_device--disable_emulator`,
   },
   disable_emulator: {
-    cause: 'Channel blocks emulators.',
-    fix: 'Adjust channel allow_emulator setting or test on a physical device.',
+    cause: 'Channel blocks emulators (allow_emulator is off).',
+    fix: 'Enable allow_emulator on the channel, or test on a physical device.',
+    docsUrl: `${commonProblemsDocsUrl}#disable_prod_build--disable_dev_build--disable_device--disable_emulator`,
   },
   no_channel: {
     cause: 'No channel was resolved for this device.',
-    fix: 'Set defaultChannel in config or ensure a channel default/override exists.',
+    fix: 'Set defaultChannel in capacitor.config.* plugins.CapacitorUpdater section, or create a default channel in the dashboard.',
+    docsUrl: `${commonProblemsDocsUrl}#no_channel--null_channel_data`,
   },
   null_channel_data: {
-    cause: 'No usable channel data found.',
-    fix: 'Set defaultChannel in config or ensure a channel default/override exists.',
+    cause: 'Channel was resolved but contains no usable data.',
+    fix: 'Set defaultChannel in capacitor.config.* plugins.CapacitorUpdater section, or verify the channel has a bundle assigned.',
+    docsUrl: `${commonProblemsDocsUrl}#no_channel--null_channel_data`,
   },
   missing_info: {
-    cause: 'Request missing required identifiers (app/device/version/platform).',
-    fix: 'Verify CapacitorUpdater config and request payload.',
+    cause: 'Request is missing required fields (app_id, device_id, version_build, or platform).',
+    fix: 'Check capacitor.config.* for a valid appId and verify the probe payload.',
   },
   no_bundle: {
-    cause: 'Backend resolved a version but no downloadable artifact exists.',
-    fix: 'Verify bundle upload integrity and channel assignment.',
+    cause: 'Channel resolved a version but no downloadable bundle artifact exists.',
+    fix: 'Re-upload the bundle with npx @capgo/cli@latest bundle upload and verify channel assignment.',
   },
   no_bundle_url: {
-    cause: 'Bundle resolved but URL is missing.',
-    fix: 'Check storage configuration and bundle upload.',
+    cause: 'Bundle was resolved but its download URL is missing.',
+    fix: 'Re-upload the bundle — the storage artifact may be corrupted or missing.',
   },
   no_url_or_manifest: {
-    cause: 'Bundle resolved but no URL or manifest available.',
-    fix: 'Check storage configuration and bundle upload.',
+    cause: 'Bundle was resolved but neither URL nor manifest is available.',
+    fix: 'Re-upload the bundle — the storage artifact may be corrupted or missing.',
   },
   already_on_builtin: {
-    cause: 'Device is already on the builtin bundle.',
-    fix: 'Publish and assign a non-builtin bundle for OTA updates.',
+    cause: 'Device is already running the builtin bundle.',
+    fix: 'Upload and assign a bundle to the channel for OTA updates to be delivered.',
   },
   revert_to_builtin_plugin_version_too_old: {
     cause: 'Plugin version is too old for safe builtin revert.',
-    fix: 'Upgrade @capgo/capacitor-updater and rebuild native.',
+    fix: 'Run npm install @capgo/capacitor-updater@latest, then npx cap sync, and rebuild native.',
   },
   on_premise_app: {
-    cause: 'App is flagged as on-premise; cloud endpoint is blocked.',
-    fix: 'Use your on-prem update endpoint instead of plugin.capgo.app.',
+    cause: 'App is flagged as on-premise; the Capgo cloud endpoint is blocked.',
+    fix: 'Configure plugins.CapacitorUpdater.updateUrl to point to your on-prem update endpoint.',
   },
   need_plan_upgrade: {
-    cause: 'Update checks blocked by plan limits.',
-    fix: 'Upgrade plan or contact organization admin.',
+    cause: 'Update checks are blocked by plan limits.',
+    fix: 'Upgrade your Capgo plan or contact your organization admin.',
   },
   invalid_json_body: {
-    cause: 'Updates endpoint rejected the request body.',
-    fix: 'Verify payload contract (app_id, device_id, version_name, version_build, platform, plugin_version).',
+    cause: 'Updates endpoint rejected the request body as invalid JSON.',
+    fix: 'This is likely a CLI bug — please report it at https://github.com/Cap-go/CLI/issues.',
   },
   invalid_query_parameters: {
-    cause: 'Updates endpoint rejected query parameters.',
-    fix: 'Verify request format matches the expected contract.',
+    cause: 'Updates endpoint rejected the query parameters.',
+    fix: 'This is likely a CLI bug — please report it at https://github.com/Cap-go/CLI/issues.',
   },
 }
 
@@ -461,12 +482,13 @@ export function explainCommonUpdateError(result: Extract<UpdateProbeResult, { su
   if (known) {
     hints.push(known.cause)
     hints.push(`Fix: ${known.fix}`)
+    hints.push(`Details: ${known.docsUrl || commonProblemsDocsUrl}`)
   }
   else {
     hints.push(`Backend returned ${result.errorCode}.`)
     hints.push('Check channel restrictions, app/plugin configuration, and device version values.')
+    hints.push(`Troubleshooting guide: ${commonProblemsDocsUrl}`)
   }
 
-  hints.push(`Full troubleshooting guide: ${commonProblemsDocsUrl}`)
   return hints
 }
