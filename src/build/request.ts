@@ -926,6 +926,10 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.APPLE_PROFILE_NAME = options.appleProfileName
     if (options.appStoreConnectTeamId)
       cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId
+    if (options.iosScheme)
+      cliCredentials.CAPGO_IOS_SCHEME = options.iosScheme
+    if (options.iosTarget)
+      cliCredentials.CAPGO_IOS_TARGET = options.iosTarget
     if (options.androidKeystoreFile)
       cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
     if (options.keystoreKeyAlias)

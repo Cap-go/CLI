@@ -16,6 +16,8 @@ export const buildCredentialsSchema = z.object({
   APPLE_KEY_CONTENT: z.string().optional(),
   APPLE_PROFILE_NAME: z.string().optional(),
   APP_STORE_CONNECT_TEAM_ID: z.string().optional(),
+  CAPGO_IOS_SCHEME: z.string().optional(),
+  CAPGO_IOS_TARGET: z.string().optional(),
   // Android credentials
   ANDROID_KEYSTORE_FILE: z.string().optional(),
   KEYSTORE_KEY_ALIAS: z.string().optional(),
@@ -47,6 +49,8 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   appleKeyContent: z.string().optional(),
   appleProfileName: z.string().optional(),
   appStoreConnectTeamId: z.string().optional(),
+  iosScheme: z.string().optional(),
+  iosTarget: z.string().optional(),
   // Android credential options (flattened)
   androidKeystoreFile: z.string().optional(),
   keystoreKeyAlias: z.string().optional(),
