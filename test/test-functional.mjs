@@ -176,19 +176,8 @@ try {
     const stderr = e.stderr?.toString() || ''
     const stdout = e.stdout?.toString() || ''
 
-    // Check if the error is the __dirname bug we're trying to prevent.
-    // Note: stack traces naturally contain /home/runner/work/ since that's the
-    // actual runtime path of the CLI on CI. We filter those out to avoid false
-    // positives. The real bug would show ENOENT errors trying to resolve
-    // node_modules at a CI build-time path (not just the CLI's own location).
-    const filterStackTraces = (text) => text.split('\n')
-      .filter(line => !line.match(/^\s*(at |-)/) && !line.includes('file:///'))
-      .join('\n')
-
-    const filteredStderr = filterStackTraces(stderr)
-    const filteredStdout = filterStackTraces(stdout)
-
-    if (filteredStderr.includes('/home/runner/work/') || filteredStdout.includes('/home/runner/work/')) {
+    // Check if the error is the __dirname bug we're trying to prevent
+    if (stderr.includes('/home/runner/work/') || stdout.includes('/home/runner/work/')) {
       console.error('❌ CRITICAL: CLI has hardcoded CI paths!')
       console.error('   Error output:', stderr || stdout)
       throw new Error('Hardcoded CI path detected in CLI runtime')
