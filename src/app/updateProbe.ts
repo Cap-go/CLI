@@ -476,8 +476,8 @@ const errorHints: Record<string, { cause: string, fix: string, docsUrl?: string 
     fix: 'Run npm install @capgo/capacitor-updater@latest, then npx cap sync, and rebuild native.',
   },
   on_premise_app: {
-    cause: 'App is flagged as on-premise; the Capgo cloud endpoint is blocked.',
-    fix: 'Configure plugins.CapacitorUpdater.updateUrl to point to your on-prem update endpoint.',
+    cause: 'App is either flagged as on-premise or does not exist in Capgo Cloud.',
+    fix: 'Check that the app_id is registered in Capgo (capgo app add). If it is an on-premise app, configure plugins.CapacitorUpdater.updateUrl to point to your on-prem update endpoint.',
   },
   need_plan_upgrade: {
     cause: 'Update checks are blocked by plan limits.',
