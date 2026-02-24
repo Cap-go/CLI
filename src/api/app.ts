@@ -20,11 +20,10 @@ export async function checkAppIdsExist(supabase: SupabaseClient<Database>, appid
         .rpc('exist_app_v2', { appid })
         .single()
       return { appid, exists: !!app }
-    })
+    }),
   )
   return results
 }
-
 
 export async function check2FAComplianceForApp(
   supabase: SupabaseClient<Database>,
