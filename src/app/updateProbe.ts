@@ -163,13 +163,18 @@ export async function prepareUpdateProbe(
   platform: 'ios' | 'android',
   capConfig: any,
 ): Promise<PrepareUpdateProbeResult> {
-  const resolvedAppId = getAppId(undefined, capConfig)
+  const updaterAppId = capConfig?.plugins?.CapacitorUpdater?.appId
+  const topLevelAppId = capConfig?.appId
+  const resolvedAppId = updaterAppId || topLevelAppId
   if (!resolvedAppId) {
     return {
       ok: false,
       error: 'Could not resolve app ID from capacitor config. Ensure appId is set in capacitor.config.ts or CapacitorUpdater.appId is configured.',
     }
   }
+  const appIdSource = updaterAppId
+    ? 'CapacitorUpdater.appId from capacitor config'
+    : 'top-level appId from capacitor config'
 
   const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
   const nativeVersion = platform === 'android'
@@ -213,7 +218,7 @@ export async function prepareUpdateProbe(
       },
       nativeSource: nativeVersion.source,
       versionBuildSource,
-      appIdSource: 'capacitor config',
+      appIdSource,
     },
   }
 }

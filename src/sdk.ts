@@ -39,8 +39,8 @@ import type {
   UploadResult,
   ZipBundleOptions,
 } from './schemas/sdk'
-import type { Organization } from './utils'
 import type { ProbeInternalResult } from './probe'
+import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
 import { deleteAppInternal } from './app/delete'
@@ -1125,7 +1125,7 @@ export class CapgoSDK {
     try {
       const { probeInternal } = await import('./probe')
       const result = await probeInternal({ platform: options.platform })
-      if (!result.success) {
+      if (result.error) {
         return { success: false, error: result.error }
       }
       return { success: true, data: result }
@@ -1467,6 +1467,7 @@ export type {
   ListOrganizationsOptions,
   LoginOptions,
   OrganizationInfo,
+  ProbeOptions,
   RequestBuildOptions,
   SaveKeyOptions,
   SDKResult,
@@ -1475,13 +1476,12 @@ export type {
   UpdateAppOptions,
   UpdateChannelOptions,
   UpdateOrganizationOptions,
-  ProbeOptions,
   UploadOptions,
   UploadResult,
   ZipBundleOptions,
 } from './schemas/sdk'
-export type { ProbeInternalResult } from './probe'
 export type { UpdateProbeResult } from './app/updateProbe'
+export type { ProbeInternalResult } from './probe'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
 export {

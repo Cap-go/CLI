@@ -1,8 +1,6 @@
-import { stdin, stdout } from 'node:process'
-import { exit } from 'node:process'
-import { intro, isCancel, log, select, spinner } from '@clack/prompts'
-import { explainCommonUpdateError, prepareUpdateProbe, singleProbeRequest } from './app/updateProbe'
-import type { UpdateProbeResult } from './app/updateProbe'
+import { exit, stdin, stdout } from 'node:process'
+import { intro, isCancel, log, select } from '@clack/prompts'
+import { explainCommonUpdateError, prepareUpdateProbe, singleProbeRequest, type UpdateProbeResult } from './app/updateProbe'
 import { getConfig } from './utils'
 
 interface ProbeOptions {
@@ -24,8 +22,15 @@ export interface ProbeInternalResult {
 }
 
 export async function probeInternal(options: ProbeOptions): Promise<ProbeInternalResult> {
-  const extConfig = await getConfig()
-  const capConfig = extConfig.config
+  let capConfig: any
+  try {
+    const extConfig = await getConfig()
+    capConfig = extConfig.config
+  }
+  catch {
+    // getConfig already logs the error
+    return { success: false, error: 'Failed to load Capacitor config.' }
+  }
 
   let platform: 'ios' | 'android'
   if (options.platform === 'ios' || options.platform === 'android') {
