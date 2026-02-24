@@ -185,6 +185,8 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const appleKeyContent = readRuntimeEnv('APPLE_KEY_CONTENT')
   const appleProfileName = readRuntimeEnv('APPLE_PROFILE_NAME')
   const appStoreConnectTeamId = readRuntimeEnv('APP_STORE_CONNECT_TEAM_ID')
+  const capgoIosScheme = readRuntimeEnv('CAPGO_IOS_SCHEME')
+  const capgoIosTarget = readRuntimeEnv('CAPGO_IOS_TARGET')
   const androidKeystoreFile = readRuntimeEnv('ANDROID_KEYSTORE_FILE')
   const keystoreKeyAlias = readRuntimeEnv('KEYSTORE_KEY_ALIAS')
   const keystoreKeyPassword = readRuntimeEnv('KEYSTORE_KEY_PASSWORD')
@@ -212,6 +214,10 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.APPLE_PROFILE_NAME = appleProfileName
   if (appStoreConnectTeamId)
     credentials.APP_STORE_CONNECT_TEAM_ID = appStoreConnectTeamId
+  if (capgoIosScheme)
+    credentials.CAPGO_IOS_SCHEME = capgoIosScheme
+  if (capgoIosTarget)
+    credentials.CAPGO_IOS_TARGET = capgoIosTarget
 
   // Android credentials
   if (androidKeystoreFile)
