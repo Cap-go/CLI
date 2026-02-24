@@ -245,8 +245,13 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
 
       // Google Play Store credentials (optional - only needed for auto-upload to Play Store)
       if (!fileCredentials.PLAY_CONFIG_JSON) {
-        log.warn('⚠️  --play-config not provided - builds will succeed but cannot auto-upload to Play Store')
-        log.warn('   To enable auto-upload, add: --play-config ./play-store-service-account.json')
+        if (fileCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'false') {
+          missingCreds.push('--play-config <path> OR --output-upload (Build has no output destination - enable either Play Store upload or Capgo download link)')
+        }
+        else {
+          log.warn('⚠️  --play-config not provided - builds will succeed but cannot auto-upload to Play Store')
+          log.warn('   To enable auto-upload, add: --play-config ./play-store-service-account.json')
+        }
       }
     }
 
