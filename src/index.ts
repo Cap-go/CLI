@@ -745,6 +745,8 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--apple-key-content <content>', 'iOS: Base64-encoded App Store Connect API key (.p8)')
   .option('--apple-profile-name <name>', 'iOS: Provisioning profile name')
   .option('--app-store-connect-team-id <id>', 'iOS: App Store Connect Team ID')
+  .option('--ios-scheme <scheme>', 'iOS: Xcode scheme to build (default: App)')
+  .option('--ios-target <target>', 'iOS: Xcode target for reading build settings (default: same as scheme)')
   // Android credential CLI options (can also be set via env vars or saved credentials)
   .option('--android-keystore-file <keystore>', 'Android: Base64-encoded keystore file')
   .option('--keystore-key-alias <alias>', 'Android: Keystore key alias')
