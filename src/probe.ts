@@ -1,33 +1,44 @@
+import { stdin, stdout } from 'node:process'
 import { exit } from 'node:process'
 import { intro, isCancel, log, select, spinner } from '@clack/prompts'
 import { explainCommonUpdateError, prepareUpdateProbe, singleProbeRequest } from './app/updateProbe'
-import { getAppId, getConfig } from './utils'
+import type { UpdateProbeResult } from './app/updateProbe'
+import { getConfig } from './utils'
 
 interface ProbeOptions {
   platform?: string
 }
 
-export async function probe(options: ProbeOptions) {
-  intro('Probe Capgo updates endpoint')
+export interface ProbeInternalResult {
+  success: boolean
+  error?: string
+  probeResult?: UpdateProbeResult
+  endpoint?: string
+  platform?: 'ios' | 'android'
+  versionBuild?: string
+  versionBuildSource?: string
+  appId?: string
+  appIdSource?: string
+  nativeSource?: string
+  hints?: string[]
+}
 
+export async function probeInternal(options: ProbeOptions): Promise<ProbeInternalResult> {
   const extConfig = await getConfig()
   const capConfig = extConfig.config
-
-  const appId = getAppId(undefined, capConfig)
-  if (!appId) {
-    log.error('Could not resolve app ID from capacitor config. Ensure appId is set in capacitor.config.ts or CapacitorUpdater.appId is configured.')
-    exit(1)
-  }
 
   let platform: 'ios' | 'android'
   if (options.platform === 'ios' || options.platform === 'android') {
     platform = options.platform
   }
   else if (options.platform) {
-    log.error(`Invalid platform "${options.platform}". Must be "ios" or "android".`)
-    exit(1)
+    return { success: false, error: `Invalid platform "${options.platform}". Must be "ios" or "android".` }
   }
   else {
+    const interactive = !!stdin.isTTY && !!stdout.isTTY
+    if (!interactive) {
+      return { success: false, error: 'Platform is required in non-interactive environments. Use --platform ios or --platform android.' }
+    }
     const selected = await select({
       message: 'Which platform do you want to probe?',
       options: [
@@ -36,52 +47,70 @@ export async function probe(options: ProbeOptions) {
       ],
     })
     if (isCancel(selected)) {
-      log.warn('Probe cancelled.')
-      exit(0)
+      return { success: false, error: 'Probe cancelled.' }
     }
     platform = selected as 'ios' | 'android'
   }
 
-  const prepared = await prepareUpdateProbe(platform, capConfig, appId)
+  const prepared = await prepareUpdateProbe(platform, capConfig)
   if (!prepared.ok) {
-    log.error(`Probe setup failed: ${prepared.error}`)
-    exit(1)
+    return { success: false, error: `Probe setup failed: ${prepared.error}` }
   }
 
   const ctx = prepared.context
-  log.info(`Endpoint: ${ctx.endpoint}`)
-  log.info(`Platform: ${ctx.payload.platform}, version_name: ${ctx.payload.version_name}, version_build: ${ctx.payload.version_build}`)
-  log.info(`version_build source: ${ctx.versionBuildSource}`)
-  log.info(`app_id: ${ctx.payload.app_id} (${ctx.appIdSource})`)
-  log.info(`Native values source: ${ctx.nativeSource}`)
+  const result = await singleProbeRequest(ctx.endpoint, ctx.payload)
 
-  const s = spinner()
-  s.start('Probing updates endpoint...')
-
-  let result
-  try {
-    result = await singleProbeRequest(ctx.endpoint, ctx.payload)
+  const probeInternalResult: ProbeInternalResult = {
+    success: result.success,
+    probeResult: result,
+    endpoint: ctx.endpoint,
+    platform,
+    versionBuild: ctx.payload.version_build,
+    versionBuildSource: ctx.versionBuildSource,
+    appId: ctx.payload.app_id,
+    appIdSource: ctx.appIdSource,
+    nativeSource: ctx.nativeSource,
   }
-  catch (error) {
-    s.stop('Probe request failed')
-    log.error(`Network error: ${error instanceof Error ? error.message : String(error)}`)
+
+  if (!result.success) {
+    probeInternalResult.hints = explainCommonUpdateError(result)
+  }
+
+  return probeInternalResult
+}
+
+export async function probe(options: ProbeOptions) {
+  intro('Probe Capgo updates endpoint')
+
+  const result = await probeInternal(options)
+
+  if (result.error) {
+    log.error(result.error)
     exit(1)
   }
 
-  if (result.success) {
-    s.stop(`Update available: ${result.availableVersion}`)
+  log.info(`Endpoint: ${result.endpoint}`)
+  log.info(`Platform: ${result.platform}, version_build: ${result.versionBuild}`)
+  log.info(`version_build source: ${result.versionBuildSource}`)
+  log.info(`app_id: ${result.appId} (${result.appIdSource})`)
+  log.info(`Native values source: ${result.nativeSource}`)
+
+  const probeResult = result.probeResult!
+
+  if (probeResult.success) {
+    log.success(`Update available: ${probeResult.availableVersion}`)
   }
   else {
-    s.stop('No update available')
-    log.warn(`Reason: ${result.reason}`)
-    if (result.backendRefusal)
+    log.warn(`Reason: ${probeResult.reason}`)
+    if (probeResult.backendRefusal)
       log.warn('The backend actively refused the request (not a cache/propagation issue).')
-    if (result.errorCode)
-      log.warn(`Error code: ${result.errorCode}`)
-    if (result.backendMessage)
-      log.warn(`Backend message: ${result.backendMessage}`)
-    const hints = explainCommonUpdateError(result)
-    for (const hint of hints)
-      log.warn(`  ${hint}`)
+    if (probeResult.errorCode)
+      log.warn(`Error code: ${probeResult.errorCode}`)
+    if (probeResult.backendMessage)
+      log.warn(`Backend message: ${probeResult.backendMessage}`)
+    if (result.hints) {
+      for (const hint of result.hints)
+        log.warn(`  ${hint}`)
+    }
   }
 }

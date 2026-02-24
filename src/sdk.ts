@@ -27,6 +27,7 @@ import type {
   ListOrganizationsOptions,
   LoginOptions,
   OrganizationInfo,
+  ProbeOptions,
   RequestBuildOptions,
   SaveKeyOptions,
   SDKResult,
@@ -39,6 +40,7 @@ import type {
   ZipBundleOptions,
 } from './schemas/sdk'
 import type { Organization } from './utils'
+import type { ProbeInternalResult } from './probe'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
 import { deleteAppInternal } from './app/delete'
@@ -1114,6 +1116,24 @@ export class CapgoSDK {
       return createErrorResult(error)
     }
   }
+
+  // ==========================================================================
+  // Probe (no auth required - hits public /updates endpoint)
+  // ==========================================================================
+
+  async probe(options: ProbeOptions): Promise<SDKResult<ProbeInternalResult>> {
+    try {
+      const { probeInternal } = await import('./probe')
+      const result = await probeInternal({ platform: options.platform })
+      if (!result.success) {
+        return { success: false, error: result.error }
+      }
+      return { success: true, data: result }
+    }
+    catch (error) {
+      return createErrorResult(error)
+    }
+  }
 }
 
 // ============================================================================
@@ -1392,6 +1412,11 @@ export async function getStats(options: GetStatsOptions): Promise<SDKResult<Devi
   return sdk.getStats(options)
 }
 
+export async function probeUpdates(options: ProbeOptions): Promise<SDKResult<ProbeInternalResult>> {
+  const sdk = new CapgoSDK()
+  return sdk.probe(options)
+}
+
 // ============================================================================
 // Utility Functions
 // ============================================================================
@@ -1450,10 +1475,13 @@ export type {
   UpdateAppOptions,
   UpdateChannelOptions,
   UpdateOrganizationOptions,
+  ProbeOptions,
   UploadOptions,
   UploadResult,
   ZipBundleOptions,
 } from './schemas/sdk'
+export type { ProbeInternalResult } from './probe'
+export type { UpdateProbeResult } from './app/updateProbe'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
 export {

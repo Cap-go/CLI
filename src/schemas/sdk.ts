@@ -386,3 +386,13 @@ export const deviceStatsSchema = z.object({
 })
 
 export type DeviceStats = z.infer<typeof deviceStatsSchema>
+
+// ============================================================================
+// SDK Probe Schemas
+// ============================================================================
+
+export const probeOptionsSchema = z.object({
+  platform: z.enum(['ios', 'android']),
+})
+
+export type ProbeOptions = z.infer<typeof probeOptionsSchema>

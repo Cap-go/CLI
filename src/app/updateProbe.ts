@@ -162,9 +162,15 @@ function getUpdateUrl(capConfig: any): string {
 export async function prepareUpdateProbe(
   platform: 'ios' | 'android',
   capConfig: any,
-  onboardingAppId: string,
-  packageJsonPathFromOnboarding?: string,
 ): Promise<PrepareUpdateProbeResult> {
+  const resolvedAppId = getAppId(undefined, capConfig)
+  if (!resolvedAppId) {
+    return {
+      ok: false,
+      error: 'Could not resolve app ID from capacitor config. Ensure appId is set in capacitor.config.ts or CapacitorUpdater.appId is configured.',
+    }
+  }
+
   const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
   const nativeVersion = platform === 'android'
     ? parseAndroidNativeVersion(platformDir)
@@ -180,7 +186,7 @@ export async function prepareUpdateProbe(
   const probeVersionBuild = configuredVersion || nativeVersion.versionName
   const versionBuildSource = configuredVersion ? 'CapacitorUpdater.version from capacitor config' : `native ${platform.toUpperCase()} versionName`
 
-  const packageJsonPath = packageJsonPathFromOnboarding || join(cwd(), 'package.json')
+  const packageJsonPath = join(cwd(), 'package.json')
   const projectPath = dirname(packageJsonPath)
   const pluginVersion = await getInstalledVersion('@capgo/capacitor-updater', projectPath, packageJsonPath)
   if (!pluginVersion) {
@@ -189,9 +195,6 @@ export async function prepareUpdateProbe(
       error: 'Unable to resolve installed @capgo/capacitor-updater version from this project.',
     }
   }
-
-  const resolvedAppId = getAppId(undefined, capConfig) || onboardingAppId
-  const appIdSource = resolvedAppId === onboardingAppId ? 'onboarding app id' : 'CapacitorUpdater.appId from capacitor config'
 
   return {
     ok: true,
@@ -210,7 +213,7 @@ export async function prepareUpdateProbe(
       },
       nativeSource: nativeVersion.source,
       versionBuildSource,
-      appIdSource,
+      appIdSource: 'capacitor config',
     },
   }
 }
@@ -262,12 +265,32 @@ function parseUpdateResponse(json: any, currentVersionName: string): ParsedUpdat
   }
 }
 
+const PROBE_TIMEOUT_MS = 10_000
+
 export async function singleProbeRequest(endpoint: string, payload: UpdateProbePayload): Promise<UpdateProbeResult> {
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload),
-  })
+  let response: Response
+  try {
+    response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: AbortSignal.timeout(PROBE_TIMEOUT_MS),
+    })
+  }
+  catch (error) {
+    if (error instanceof DOMException && error.name === 'TimeoutError') {
+      return {
+        success: false,
+        reason: `Request timed out after ${PROBE_TIMEOUT_MS / 1000}s — the endpoint did not respond in time.`,
+        backendRefusal: false,
+      }
+    }
+    return {
+      success: false,
+      reason: `Network error: ${error instanceof Error ? error.message : String(error)}`,
+      backendRefusal: false,
+    }
+  }
 
   let json: any
   try {
