@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { cwd } from 'node:process'
 import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
-import { getAppId, getInstalledVersion } from '../utils'
+import { getInstalledVersion } from '../utils'
 
 const defaultUpdateUrl = 'https://plugin.capgo.app/updates'
 export const updateProbeDeviceId = '00000000-0000-0000-0000-000000000000'
