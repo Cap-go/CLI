@@ -1,3 +1,4 @@
+import process from 'node:process'
 import { log, spinner as spinnerC } from '@clack/prompts'
 
 interface DeploymentRegion {
