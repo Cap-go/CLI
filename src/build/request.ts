@@ -549,7 +549,8 @@ async function pollBuildStatus(
  */
 interface NativeDependencies {
   packages: Set<string> // Package paths like @capacitor/app
-  usesSPM: boolean // true = SPM (Package.swift), false = CocoaPods (podspec)
+  usesSPM: boolean
+  usesCocoaPods: boolean
 }
 
 async function extractNativeDependencies(
@@ -559,10 +560,10 @@ async function extractNativeDependencies(
 ): Promise<NativeDependencies> {
   const packages = new Set<string>()
   let usesSPM = false
+  let usesCocoaPods = false
 
   if (platform === 'ios') {
-    // Check for Swift Package Manager first (Capacitor 7+)
-    // SPM takes precedence over CocoaPods
+    // Detect Swift Package Manager dependencies from CapApp-SPM/Package.swift when present.
     const spmPackagePath = join(projectDir, platformDir, 'App', 'CapApp-SPM', 'Package.swift')
     if (existsSync(spmPackagePath)) {
       usesSPM = true
@@ -578,13 +579,29 @@ async function extractNativeDependencies(
         packages.add(pkgPath)
       }
     }
-    else {
-      // Fall back to CocoaPods (legacy, pre-Capacitor 7)
-      const podfilePath = join(projectDir, platformDir, 'App', 'Podfile')
-      if (existsSync(podfilePath)) {
+
+    // Detect CocoaPods dependencies from Podfile(s). SPM and CocoaPods may coexist.
+    const iosDir = join(projectDir, platformDir)
+    if (existsSync(iosDir)) {
+      const candidates: string[] = [
+        join(iosDir, 'App', 'Podfile'),
+        join(iosDir, 'Podfile'),
+      ]
+
+      for (const child of readdirSync(iosDir, { withFileTypes: true })) {
+        if (child.isDirectory()) {
+          candidates.push(join(iosDir, child.name, 'Podfile'))
+        }
+      }
+
+      const uniqPodfiles = [...new Set(candidates)].filter(candidate => existsSync(candidate))
+      if (uniqPodfiles.length > 0)
+        usesCocoaPods = true
+
+      for (const podfilePath of uniqPodfiles) {
         const podfileContent = await readFileAsync(podfilePath, 'utf-8')
         // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
-        const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"]\.\.\/\.\.\/node_modules\/([^'"]+)['"]/g)
+        const podMatches = podfileContent.matchAll(/pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"](?:\.\.\/)+node_modules\/([^'"]+)['"]/g)
         for (const match of podMatches) {
           let pkgPath = match[1]
           const lastNmIdx = pkgPath.lastIndexOf('node_modules/')
@@ -619,13 +636,13 @@ async function extractNativeDependencies(
     }
   }
 
-  return { packages, usesSPM }
+  return { packages, usesSPM, usesCocoaPods }
 }
 
 /**
  * Check if a file path should be included in the zip
  */
-function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies, platformDir: string): boolean {
+export function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', nativeDeps: NativeDependencies, platformDir: string): boolean {
   // Normalize path separators
   const normalizedPath = filePath.replace(/\\/g, '/')
 
@@ -670,8 +687,8 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
         if (normalizedPath === `${packagePrefix}Package.swift`)
           return true
       }
-      else {
-        // CocoaPods: include *.podspec files
+      if (nativeDeps.usesCocoaPods || !nativeDeps.usesSPM) {
+        // CocoaPods: include *.podspec files (also when neither manager is explicitly detected)
         if (normalizedPath.startsWith(packagePrefix) && normalizedPath.endsWith('.podspec'))
           return true
       }
@@ -757,7 +774,7 @@ function addDirectoryToZip(
  * - node_modules with native code (from Podfile/settings.gradle)
  * - capacitor.config.*, package.json, package-lock.json
  */
-async function zipDirectory(projectDir: string, outputPath: string, platform: 'ios' | 'android', capConfig: any): Promise<void> {
+export async function zipDirectory(projectDir: string, outputPath: string, platform: 'ios' | 'android', capConfig: any): Promise<void> {
   const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
 
   // Extract which node_modules have native code for this platform
@@ -774,8 +791,20 @@ async function zipDirectory(projectDir: string, outputPath: string, platform: 'i
   // Pods.xcodeproj/project.pbxproj, .xcconfig files, Manifest.lock, settings.gradle, etc.
   const pnpmPathPattern = /node_modules\/\.pnpm\/[^/\n\r]+(?:\/[^/\n\r]+)*\/node_modules\//g
   const textExtensions = new Set([
-    '', '.gradle', '.swift', '.json', '.lock', '.xml', '.properties',
-    '.pbxproj', '.xcconfig', '.plist', '.podspec', '.rb', '.yaml', '.yml',
+    '',
+    '.gradle',
+    '.swift',
+    '.json',
+    '.lock',
+    '.xml',
+    '.properties',
+    '.pbxproj',
+    '.xcconfig',
+    '.plist',
+    '.podspec',
+    '.rb',
+    '.yaml',
+    '.yml',
   ])
   for (const entry of zip.getEntries()) {
     if (entry.isDirectory)
