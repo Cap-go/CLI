@@ -69,6 +69,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 - 🔹 [Build](#build)
   - [Request](#build-request)
   - [Credentials](#build-credentials)
+- 🔹 [Probe](#probe)
 - 🔹 [Mcp](#mcp)
 
 ## <a id="init"></a> 🚀 **Init**
@@ -212,7 +213,6 @@ npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel prod
 | **--encrypted-checksum** | <code>string</code> | An encrypted checksum (signature). Used only when uploading an external bundle. |
 | **--auto-set-bundle** | <code>boolean</code> | Set the bundle in capacitor.config.json |
 | **--dry-upload** | <code>boolean</code> | Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing) |
-| **--show-replication-progress** | <code>string</code> | Show Capgo global replication progress after upload (yes/false) so you can confirm rollout across all regions. If omitted, you'll be prompted interactively. |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
 | **--node-modules** | <code>string</code> | Paths to node_modules directories for monorepos (comma-separated) |
 | **--encrypt-partial** | <code>boolean</code> | Encrypt delta update files (auto-enabled for updater > 6.14.4) |
@@ -1153,6 +1153,29 @@ Manage build credentials stored locally on your machine.
 📚 DOCUMENTATION:
    iOS setup: https://capgo.app/docs/cli/cloud-build/ios/
    Android setup: https://capgo.app/docs/cli/cloud-build/android/
+
+
+## <a id="probe"></a> 🔹 **Probe**
+
+```bash
+npx @capgo/cli@latest probe
+```
+
+🔎 Probe the Capgo updates endpoint to check if an update is available for your app.
+Sends a single request to the updates endpoint using your project's capacitor config
+and reports whether an update would be delivered, or explains why not.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest probe --platform ios
+```
+
+## <a id="options"></a> Options
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **--platform** | <code>string</code> | Platform to probe: ios or android |
 
 
 ## <a id="mcp"></a> 🔹 **Mcp**
