@@ -1,7 +1,7 @@
 {
   "name": "@capgo/cli",
   "type": "module",
-  "version": "7.76.3",
+  "version": "7.76.7",
   "description": "A CLI to upload to capgo servers",
   "author": "Martin martin@capgo.app",
   "license": "Apache 2.0",
@@ -63,13 +63,14 @@
     "test:upload": "bun test/test-upload-validation.mjs",
     "test:credentials": "bun test/test-credentials.mjs",
     "test:credentials-validation": "bun test/test-credentials-validation.mjs",
+    "test:build-zip-filter": "bun test/test-build-zip-filter.mjs",
     "test:checksum": "bun test/test-checksum-algorithm.mjs",
     "test:esm-sdk": "node test/test-sdk-esm.mjs",
     "test:mcp": "node test/test-mcp.mjs",
     "test:version-detection": "node test/test-get-installed-version.mjs",
     "test:version-detection:setup": "./test/fixtures/setup-test-projects.sh",
     "test:platform-paths": "bun test/test-platform-paths.mjs",
-    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection && bun run test:platform-paths"
+    "test": "bun run test:bundle && bun run test:functional && bun run test:semver && bun run test:version-edge-cases && bun run test:regex && bun run test:upload && bun run test:credentials && bun run test:credentials-validation && bun run test:build-zip-filter && bun run test:checksum && bun run test:esm-sdk && bun run test:mcp && bun run test:version-detection && bun run test:platform-paths"
   },
   "devDependencies": {
     "@antfu/eslint-config": "^7.0.0",

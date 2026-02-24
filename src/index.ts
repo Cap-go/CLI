@@ -43,6 +43,19 @@ const optionDescriptions = {
   verbose: `Enable verbose output with detailed logging`,
 }
 
+function parseBooleanOption(value?: string | boolean) {
+  if (value === undefined || value === true)
+    return true
+
+  const normalized = `${value}`.trim().toLowerCase()
+  if (normalized === 'true' || normalized === '1' || normalized === 'yes' || normalized === 'y')
+    return true
+  if (normalized === 'false' || normalized === '0' || normalized === 'no' || normalized === 'n')
+    return false
+
+  throw new Error(`Invalid value "${value}" for --show-replication-progress. Use true, false, yes, no, 1, or 0.`)
+}
+
 program
   .name(pack.name)
   .description(`📦 Manage packages and bundle versions in Capgo Cloud`)
@@ -146,6 +159,7 @@ Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --cha
   .option('--encrypted-checksum <encryptedChecksum>', `An encrypted checksum (signature). Used only when uploading an external bundle.`)
   .option('--auto-set-bundle', `Set the bundle in capacitor.config.json`)
   .option('--dry-upload', `Dry upload the bundle process, mean it will not upload the files but add the row in database (Used by Capgo for internal testing)`)
+  .option('--show-replication-progress [showReplicationProgress]', `Show Capgo global replication progress after upload (yes/false) so you can confirm rollout across all regions. If omitted, you'll be prompted interactively.`, parseBooleanOption)
   .option('--package-json <packageJson>', optionDescriptions.packageJson)
   .option('--node-modules <nodeModules>', optionDescriptions.nodeModules)
   .option('--encrypt-partial', `Encrypt delta update files (auto-enabled for updater > 6.14.4)`)

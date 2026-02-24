@@ -17,6 +17,7 @@ import { check2FAComplianceForApp, checkAppExistsAndHasPermissionOrgErr } from '
 import { calcKeyId, encryptChecksum, encryptChecksumV3, encryptSource, generateSessionKey } from '../api/crypto'
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
+import { showReplicationProgress } from '../replicationProgress'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -1237,6 +1238,25 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     log.info(`  - Checksum: ${result.checksum}`)
     log.info(`  - Encryption: ${result.encryptionMethod}`)
     log.info(`  - Storage: ${result.storageProvider}`)
+  }
+
+  if (interactive && !result.skipped) {
+    let shouldShowReplicationProgress = options.showReplicationProgress
+    if (shouldShowReplicationProgress === undefined) {
+      const showReplicationProgressPrompt = await pConfirm({
+        message: 'Show Capgo global replication progress for this upload so you can confirm rollout in all regions?',
+        initialValue: false,
+      })
+      shouldShowReplicationProgress = !pIsCancel(showReplicationProgressPrompt) && showReplicationProgressPrompt
+    }
+
+    if (shouldShowReplicationProgress) {
+      await showReplicationProgress({
+        title: 'Replicating your bundle in all regions to guarantee fast updates.',
+        completeMessage: 'Replication complete. Your update is now globally available.',
+        interactive,
+      })
+    }
   }
 
   if (silent && !result.skipped)
