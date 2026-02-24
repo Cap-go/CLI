@@ -1,14 +1,14 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options } from './api/app'
-import { checkAppIdsExist } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
-import { cwd, env, exit, platform } from 'node:process'
+import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
+import { checkAppIdsExist } from './api/app'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
@@ -16,6 +16,7 @@ import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
+import { showReplicationProgress } from './replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, promptAndSyncCapacitor, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
@@ -816,7 +817,6 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.stop(`key created 🔑`)
     }
     await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
-
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
@@ -1214,13 +1214,12 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
     }
     else {
       s.stop(`✅ Update v${newVersion} uploaded successfully!`)
+      await showReplicationProgress({
+        title: 'Replicating your updated bundle in onboarding regions.',
+        completeMessage: 'Update replication is now fully propagated.',
+        interactive: !!stdin.isTTY && !!stdout.isTTY,
+      })
       pLog.info(`🎉 Your updated bundle is now available on Capgo`)
-      pLog.info(`For your next self-test:`)
-      pLog.info(`1. Make a new visible change`)
-      pLog.info(`2. Build web assets only: ${pm.pm} run build`)
-      pLog.info(`3. Upload with a new version: ${pm.runner} @capgo/cli@latest bundle upload --bundle <new-version> --channel ${defaultChannel}`)
-      pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
-      pLog.warn('Reason: sync puts your local build directly in the native app, which bypasses the Capgo OTA path you are trying to test.')
     }
   }
   else {
@@ -1412,6 +1411,12 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pLog.info(`Welcome onboard ✈️!`)
   pLog.info(`Your Capgo update system is setup`)
   pLog.info(`Next time use \`${pm.runner} @capgo/cli@latest bundle upload\` to only upload your bundle`)
+  pLog.info(`If you want to run another full OTA self-test after onboarding:`)
+  pLog.info(`1. Make a visible change`)
+  pLog.info(`2. Build web assets only: ${pm.pm} run build`)
+  pLog.info(`3. Upload with a new version: ${pm.runner} @capgo/cli@latest bundle upload --bundle <new-version> --channel ${defaultChannel}`)
+  pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
+  pLog.warn('Reason: cap sync puts your local build directly in the native app, which bypasses the Capgo OTA path.')
   pLog.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
   pOutro(`Bye 👋`)
   exit()

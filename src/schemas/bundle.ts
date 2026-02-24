@@ -53,6 +53,7 @@ export const optionsUploadSchema = optionsBaseSchema.extend({
   versionExistsOk: z.boolean().optional(),
   selfAssign: z.boolean().optional(),
   verbose: z.boolean().optional(),
+  showReplicationProgress: z.boolean().optional(),
 })
 
 export type OptionsUpload = z.infer<typeof optionsUploadSchema>

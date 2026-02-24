@@ -651,6 +651,10 @@ function shouldIncludeFile(filePath: string, platform: 'ios' | 'android', native
   for (const packagePath of nativeDeps.packages) {
     const packagePrefix = `node_modules/${packagePath}/`
 
+    // Native dependency package metadata used by some podspecs/gradle scripts.
+    if (normalizedPath === `${packagePrefix}package.json`)
+      return true
+
     if (platform === 'android') {
       // For Android, only include the android/ subfolder
       if (normalizedPath.startsWith(`${packagePrefix}android/`))
