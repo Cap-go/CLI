@@ -959,6 +959,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     if (options.outputRetention) {
       cliCredentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(options.outputRetention))
     }
+    if (options.skipBuildNumberBump !== undefined) {
+      cliCredentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(options.skipBuildNumberBump) ? 'true' : 'false'
+    }
 
     // Merge credentials from all three sources:
     // 1. CLI args (highest priority)

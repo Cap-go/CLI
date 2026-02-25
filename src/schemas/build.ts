@@ -26,6 +26,7 @@ export const buildCredentialsSchema = z.object({
   PLAY_CONFIG_JSON: z.string().optional(),
   BUILD_OUTPUT_UPLOAD_ENABLED: z.string().optional(),
   BUILD_OUTPUT_RETENTION_SECONDS: z.string().optional(),
+  SKIP_BUILD_NUMBER_BUMP: z.string().optional(),
 }).catchall(z.string().optional())
 
 export type BuildCredentials = z.infer<typeof buildCredentialsSchema>
@@ -60,6 +61,7 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   // Output control
   outputUpload: z.boolean().optional(),
   outputRetention: z.string().optional(),
+  skipBuildNumberBump: z.boolean().optional(),
   verbose: z.boolean().optional(),
 })
 

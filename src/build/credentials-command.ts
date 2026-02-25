@@ -25,6 +25,7 @@ interface SaveCredentialsOptions {
 
   outputUpload?: boolean
   outputRetention?: string
+  skipBuildNumberBump?: boolean
 
   // iOS options
   certificate?: string
@@ -103,6 +104,12 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     else {
       credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(MIN_OUTPUT_RETENTION_SECONDS)
       log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
+    }
+    if (options.skipBuildNumberBump !== undefined) {
+      credentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(options.skipBuildNumberBump) ? 'true' : 'false'
+    }
+    else {
+      log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
     }
 
     if (platform === 'ios') {
@@ -479,7 +486,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       || options.appleProfileName || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
-    const hasOutputOptions = options.outputUpload !== undefined || options.outputRetention !== undefined
+    const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
 
     let platform = options.platform
     if (!platform) {
@@ -493,8 +500,8 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         log.error('Cannot mix iOS and Android options. Please use --platform to specify which platform.')
         exit(1)
       }
-      else if (hasOutputOptions) {
-        log.error('Output options require --platform to be set (ios or android).')
+      else if (hasCrossPlatformOptions) {
+        log.error('These options require --platform to be set (ios or android).')
         exit(1)
       }
       else {
@@ -541,6 +548,10 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
     if (options.outputRetention) {
       const outputRetentionSeconds = parseOutputRetentionSeconds(options.outputRetention)
       credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(outputRetentionSeconds)
+    }
+
+    if (options.skipBuildNumberBump !== undefined) {
+      credentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(options.skipBuildNumberBump) ? 'true' : 'false'
     }
 
     if (platform === 'ios') {
