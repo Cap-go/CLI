@@ -89,15 +89,21 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     const credentials: Partial<BuildCredentials> = {}
     const files: any = {}
 
-    const outputUploadEnabled = options.outputUpload === undefined
-      ? true
-      : parseOptionalBoolean(options.outputUpload)
-    const outputRetentionSeconds = options.outputRetention
-      ? parseOutputRetentionSeconds(options.outputRetention)
-      : MIN_OUTPUT_RETENTION_SECONDS
-
-    credentials.BUILD_OUTPUT_UPLOAD_ENABLED = outputUploadEnabled ? 'true' : 'false'
-    credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(outputRetentionSeconds)
+    // Output upload settings: always save, inform user when defaulting
+    if (options.outputUpload !== undefined) {
+      credentials.BUILD_OUTPUT_UPLOAD_ENABLED = parseOptionalBoolean(options.outputUpload) ? 'true' : 'false'
+    }
+    else {
+      credentials.BUILD_OUTPUT_UPLOAD_ENABLED = 'false'
+      log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
+    }
+    if (options.outputRetention) {
+      credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(options.outputRetention))
+    }
+    else {
+      credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(MIN_OUTPUT_RETENTION_SECONDS)
+      log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
+    }
 
     if (platform === 'ios') {
       // Handle iOS credentials
