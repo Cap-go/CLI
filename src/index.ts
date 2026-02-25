@@ -719,7 +719,6 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--path <path>', `Path to the project directory to build (default: current directory)`)
   .option('--platform <platform>', `Target platform: ios or android (required)`)
   .option('--build-mode <buildMode>', `Build mode: debug or release (default: release)`)
-  .option('--build-config <buildConfig>', `Additional build configuration as JSON string`)
   // iOS credential CLI options (can also be set via env vars or saved credentials)
   .option('--build-certificate-base64 <cert>', 'iOS: Base64-encoded .p12 certificate')
   .option('--build-provision-profile-base64 <profile>', 'iOS: Base64-encoded provisioning profile')
