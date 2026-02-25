@@ -487,7 +487,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       || options.appleProfileName || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
-    const hasOutputOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
+    const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
 
     let platform = options.platform
     if (!platform) {
@@ -501,8 +501,8 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         log.error('Cannot mix iOS and Android options. Please use --platform to specify which platform.')
         exit(1)
       }
-      else if (hasOutputOptions) {
-        log.error('Output options require --platform to be set (ios or android).')
+      else if (hasCrossPlatformOptions) {
+        log.error('These options require --platform to be set (ios or android).')
         exit(1)
       }
       else {
