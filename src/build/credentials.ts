@@ -238,7 +238,7 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(buildOutputRetentionSeconds))
   }
   if (skipBuildNumberBump) {
-    credentials.SKIP_BUILD_NUMBER_BUMP = skipBuildNumberBump
+    credentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(skipBuildNumberBump) ? 'true' : 'false'
   }
 
   return credentials

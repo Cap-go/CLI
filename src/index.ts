@@ -744,6 +744,7 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--no-output-upload', 'Override output upload behavior for this build only (disable). Precedence: CLI > env > saved credentials')
   .option('--output-retention <duration>', 'Override output link TTL for this build only (1h to 7d). Examples: 1h, 6h, 2d. Precedence: CLI > env > saved credentials')
   .option('--skip-build-number-bump', 'Skip automatic build number/version code incrementing. Uses whatever version is already in the project files.')
+  .option('--no-skip-build-number-bump', 'Override saved credentials to re-enable automatic build number incrementing for this build only.')
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
@@ -823,6 +824,7 @@ Local storage (per-project):
   .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d (default: 1h). Examples: 1h, 6h, 2d')
   .option('--skip-build-number-bump', 'Skip automatic build number/version code incrementing on future builds')
+  .option('--no-skip-build-number-bump', 'Re-enable automatic build number incrementing (default behavior)')
 
 buildCredentials
   .command('list')
@@ -887,6 +889,7 @@ Examples:
   .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
   .option('--skip-build-number-bump', 'Skip automatic build number/version code incrementing on future builds')
+  .option('--no-skip-build-number-bump', 'Re-enable automatic build number incrementing (default behavior)')
 
 program
   .command('probe')

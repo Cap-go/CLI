@@ -105,9 +105,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(MIN_OUTPUT_RETENTION_SECONDS)
       log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
     }
-    if (options.skipBuildNumberBump) {
-      credentials.SKIP_BUILD_NUMBER_BUMP = 'true'
-      log.info('ℹ️  --skip-build-number-bump set: builds will use the version already in project files')
+    if (options.skipBuildNumberBump !== undefined) {
+      credentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(options.skipBuildNumberBump) ? 'true' : 'false'
     }
     else {
       log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
@@ -551,8 +550,8 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(outputRetentionSeconds)
     }
 
-    if (options.skipBuildNumberBump) {
-      credentials.SKIP_BUILD_NUMBER_BUMP = 'true'
+    if (options.skipBuildNumberBump !== undefined) {
+      credentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(options.skipBuildNumberBump) ? 'true' : 'false'
     }
 
     if (platform === 'ios') {
