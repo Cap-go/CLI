@@ -90,7 +90,7 @@
     "adm-zip": "^0.5.16",
     "ci-info": "^4.3.1",
     "commander": "^14.0.2",
-    "eslint": "^9.38.0",
+    "eslint": "^10.0.0",
     "git-format-staged": "4.0.1",
     "husky": "^9.1.7",
     "is-wsl": "^3.1.0",
