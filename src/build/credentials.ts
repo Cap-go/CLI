@@ -194,6 +194,7 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const playConfigJson = readRuntimeEnv('PLAY_CONFIG_JSON')
   const buildOutputUploadEnabled = readRuntimeEnv('BUILD_OUTPUT_UPLOAD_ENABLED')
   const buildOutputRetentionSeconds = readRuntimeEnv('BUILD_OUTPUT_RETENTION_SECONDS')
+  const skipBuildNumberBump = readRuntimeEnv('SKIP_BUILD_NUMBER_BUMP')
 
   // iOS credentials
   if (buildCertificateBase64)
@@ -235,6 +236,9 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   }
   if (buildOutputRetentionSeconds) {
     credentials.BUILD_OUTPUT_RETENTION_SECONDS = String(parseOutputRetentionSeconds(buildOutputRetentionSeconds))
+  }
+  if (skipBuildNumberBump) {
+    credentials.SKIP_BUILD_NUMBER_BUMP = skipBuildNumberBump
   }
 
   return credentials
