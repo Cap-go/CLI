@@ -1025,13 +1025,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
 
-      // App Store Connect API key credentials required
-      if (!mergedCredentials.APPLE_KEY_ID)
-        missingCreds.push('APPLE_KEY_ID (or --apple-key-id)')
-      if (!mergedCredentials.APPLE_ISSUER_ID)
-        missingCreds.push('APPLE_ISSUER_ID (or --apple-issuer-id)')
-      if (!mergedCredentials.APPLE_KEY_CONTENT)
-        missingCreds.push('APPLE_KEY_CONTENT (or --apple-key-content)')
+      // App Store Connect API key (optional - only needed for TestFlight upload and build number auto-increment)
+      const hasAppleApiKey = mergedCredentials.APPLE_KEY_ID && mergedCredentials.APPLE_ISSUER_ID && mergedCredentials.APPLE_KEY_CONTENT
+      if (!hasAppleApiKey) {
+        if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+          missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either TestFlight upload or Capgo download link)')
+        }
+        else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
+          missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump (App Store Connect API key not provided - build numbers cannot be auto-incremented without it)')
+        }
+        else if (!silent) {
+          log.warn('⚠️  App Store Connect API key not provided - build will succeed but cannot auto-upload to TestFlight')
+        }
+      }
       if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
         missingCreds.push('APP_STORE_CONNECT_TEAM_ID (or --apple-team-id)')
     }
