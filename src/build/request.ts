@@ -1015,7 +1015,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const missingCreds: string[] = []
 
     if (options.platform === 'ios') {
-      const distributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store'
+      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store'
+      const validModes = ['app_store', 'ad_hoc'] as const
+      if (!validModes.includes(rawDistributionMode as any)) {
+        missingCreds.push(`Invalid CAPGO_IOS_DISTRIBUTION value: '${rawDistributionMode}'. Must be one of: ${validModes.join(', ')}`)
+      }
+      const distributionMode = validModes.includes(rawDistributionMode as any) ? rawDistributionMode : 'app_store'
 
       // iOS minimum requirements (all modes)
       if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)

@@ -234,7 +234,13 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     const missingCreds: string[] = []
 
     if (platform === 'ios') {
-      const distributionMode = (fileCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store') as string
+      const rawDistributionMode = (fileCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store') as string
+      const validModes = ['app_store', 'ad_hoc']
+      if (!validModes.includes(rawDistributionMode)) {
+        log.error(`❌ Invalid --ios-distribution value: '${rawDistributionMode}'. Must be one of: ${validModes.join(', ')}`)
+        exit(1)
+      }
+      const distributionMode = rawDistributionMode
 
       // iOS minimum requirements (all modes)
       if (!fileCredentials.BUILD_CERTIFICATE_BASE64)
