@@ -32,39 +32,44 @@ function assert(condition, message) {
 // Helper: run iOS validation logic matching request.ts
 function validateIosCredentials(credentials) {
   const missingCreds = []
+  const distributionMode = credentials.CAPGO_IOS_DISTRIBUTION || 'app_store'
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
-  // App Store Connect API key (optional - only needed for TestFlight upload and build number auto-increment)
-  const hasAppleKeyId = !!credentials.APPLE_KEY_ID
-  const hasAppleIssuerId = !!credentials.APPLE_ISSUER_ID
-  const hasAppleKeyContent = !!credentials.APPLE_KEY_CONTENT
-  const anyAppleApiField = hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent
-  const hasCompleteAppleApiKey = hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent
+  // App Store Connect API key validation depends on distribution mode
+  if (distributionMode === 'app_store') {
+    // app_store mode: API key logic unchanged
+    const hasAppleKeyId = !!credentials.APPLE_KEY_ID
+    const hasAppleIssuerId = !!credentials.APPLE_ISSUER_ID
+    const hasAppleKeyContent = !!credentials.APPLE_KEY_CONTENT
+    const anyAppleApiField = hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent
+    const hasCompleteAppleApiKey = hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent
 
-  if (!hasCompleteAppleApiKey) {
-    if (anyAppleApiField) {
-      // Partial API key — tell the user exactly which fields are missing
-      const missingAppleFields = []
-      if (!hasAppleKeyId)
-        missingAppleFields.push('APPLE_KEY_ID')
-      if (!hasAppleIssuerId)
-        missingAppleFields.push('APPLE_ISSUER_ID')
-      if (!hasAppleKeyContent)
-        missingAppleFields.push('APPLE_KEY_CONTENT')
-      missingCreds.push(`Incomplete App Store Connect API key - missing: ${missingAppleFields.join(', ')}`)
+    if (!hasCompleteAppleApiKey) {
+      if (anyAppleApiField) {
+        const missingAppleFields = []
+        if (!hasAppleKeyId)
+          missingAppleFields.push('APPLE_KEY_ID')
+        if (!hasAppleIssuerId)
+          missingAppleFields.push('APPLE_ISSUER_ID')
+        if (!hasAppleKeyContent)
+          missingAppleFields.push('APPLE_KEY_CONTENT')
+        missingCreds.push(`Incomplete App Store Connect API key - missing: ${missingAppleFields.join(', ')}`)
+      }
+      else if (credentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+        missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true')
+      }
+      else if (credentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
+        missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump')
+      }
+      // else: warn only, no error
     }
-    else if (credentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
-      missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true')
-    }
-    else if (credentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
-      missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump')
-    }
-    // else: warn only, no error
   }
+  // ad_hoc mode: no API key required at all (no TestFlight, timestamp fallback for build numbers)
+
   if (!credentials.APP_STORE_CONNECT_TEAM_ID)
     missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
 
@@ -255,6 +260,61 @@ await test('iOS validation fails with incomplete API key even when output upload
   assert(missingCreds[0].includes('APPLE_KEY_CONTENT'), 'Should list APPLE_KEY_CONTENT as missing')
 })
 
+
+// Test 9: ad_hoc mode passes without Apple API key
+await test('iOS ad_hoc validation passes without Apple API key', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    APPLE_PROFILE_NAME: 'profile-name',
+    CAPGO_IOS_DISTRIBUTION: 'ad_hoc',
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 0, `Should have no missing credentials, got: ${missingCreds.join(', ')}`)
+})
+
+// Test 10: ad_hoc mode still requires cert, profile, team ID
+await test('iOS ad_hoc validation still requires cert, profile, team ID', () => {
+  const credentials = {
+    CAPGO_IOS_DISTRIBUTION: 'ad_hoc',
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 3, `Should have 3 missing credentials, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds.includes('BUILD_CERTIFICATE_BASE64'), 'Should require cert')
+  assert(missingCreds.includes('BUILD_PROVISION_PROFILE_BASE64'), 'Should require profile')
+  assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require team ID')
+})
+
+// Test 11: missing/undefined distribution defaults to app_store behavior
+await test('iOS validation defaults to app_store when CAPGO_IOS_DISTRIBUTION is undefined', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 1, `Should have 1 missing credential (API key), got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds[0].includes('BUILD_OUTPUT_UPLOAD_ENABLED'), 'Should require API key or output upload (app_store default)')
+})
+
+// Test 12: ad_hoc mode without output upload does NOT fail (explicit opt-in only)
+await test('iOS ad_hoc passes without output upload enabled', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    CAPGO_IOS_DISTRIBUTION: 'ad_hoc',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 0, `Should have no missing credentials, got: ${missingCreds.join(', ')}`)
+})
 
 // Print summary
 console.log('\n' + '='.repeat(50))

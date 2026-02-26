@@ -195,6 +195,7 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const buildOutputUploadEnabled = readRuntimeEnv('BUILD_OUTPUT_UPLOAD_ENABLED')
   const buildOutputRetentionSeconds = readRuntimeEnv('BUILD_OUTPUT_RETENTION_SECONDS')
   const skipBuildNumberBump = readRuntimeEnv('SKIP_BUILD_NUMBER_BUMP')
+  const capgoIosDistribution = readRuntimeEnv('CAPGO_IOS_DISTRIBUTION')
 
   // iOS credentials
   if (buildCertificateBase64)
@@ -219,6 +220,8 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.CAPGO_IOS_SCHEME = capgoIosScheme
   if (capgoIosTarget)
     credentials.CAPGO_IOS_TARGET = capgoIosTarget
+  if (capgoIosDistribution)
+    credentials.CAPGO_IOS_DISTRIBUTION = capgoIosDistribution as 'app_store' | 'ad_hoc'
 
   // Android credentials
   if (androidKeystoreFile)
