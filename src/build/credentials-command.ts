@@ -233,13 +233,18 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
 
-      // App Store Connect API key credentials required
-      if (!fileCredentials.APPLE_KEY_ID)
-        missingCreds.push('--apple-key-id <id> (App Store Connect API Key ID)')
-      if (!fileCredentials.APPLE_ISSUER_ID)
-        missingCreds.push('--apple-issuer-id <id> (App Store Connect Issuer ID)')
-      if (!fileCredentials.APPLE_KEY_CONTENT)
-        missingCreds.push('--apple-key <path> (App Store Connect API Key file)')
+      // App Store Connect API key (optional - only needed for auto-upload to TestFlight)
+      const hasAppleApiKey = fileCredentials.APPLE_KEY_ID && fileCredentials.APPLE_ISSUER_ID && fileCredentials.APPLE_KEY_CONTENT
+      if (!hasAppleApiKey) {
+        if (fileCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'false') {
+          missingCreds.push('--apple-key/--apple-key-id/--apple-issuer-id OR --output-upload (Build has no output destination - enable either TestFlight upload or Capgo download link)')
+        }
+        else {
+          log.warn('⚠️  App Store Connect API key not provided - TestFlight auto-upload is disabled')
+          log.warn('   When building without API key, you must also set --skip-build-number-bump')
+          log.warn('   To enable auto-upload, add: --apple-key ./AuthKey.p8 --apple-key-id KEY_ID --apple-issuer-id ISSUER_ID')
+        }
+      }
       if (!fileCredentials.APP_STORE_CONNECT_TEAM_ID)
         missingCreds.push('--apple-team-id <id> (App Store Connect Team ID)')
       if (!fileCredentials.APPLE_PROFILE_NAME)
@@ -281,11 +286,11 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('    --certificate ./cert.p12 \\')
         log.error('    --p12-password "your-password" \\  # Optional if cert has no password')
         log.error('    --provisioning-profile ./profile.mobileprovision \\')
-        log.error('    --apple-key ./AuthKey_XXXXXXXXXX.p8 \\')
-        log.error('    --apple-key-id "XXXXXXXXXX" \\')
-        log.error('    --apple-issuer-id "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" \\')
         log.error('    --apple-team-id "XXXXXXXXXX" \\')
-        log.error('    --apple-profile-name "match AppStore com.example.app"')
+        log.error('    --apple-profile-name "match AppStore com.example.app" \\')
+        log.error('    --output-upload')
+        log.error('')
+        log.error('  Optionally replace --output-upload with --apple-key, --apple-key-id, --apple-issuer-id for TestFlight auto-upload.')
       }
       else {
         log.error('  npx @capgo/cli build credentials save --platform android \\')
