@@ -184,15 +184,6 @@ async function streamBuildLogs(
     if (!message.trim())
       return
 
-    // Check for final status messages from the server
-    // Server sends "Build succeeded", "Build failed", "Job already succeeded", etc.
-    const statusMatch = message.match(/^(?:Build|Job already) (succeeded|failed|expired|released|cancelled)$/i)
-    if (statusMatch) {
-      finalStatus = statusMatch[1].toLowerCase()
-      // Don't display status messages as log lines - they'll be displayed as final status
-      return
-    }
-
     // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
     if (finalStatus)
       return
