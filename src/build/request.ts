@@ -1026,9 +1026,25 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
 
       // App Store Connect API key (optional - only needed for TestFlight upload and build number auto-increment)
-      const hasAppleApiKey = mergedCredentials.APPLE_KEY_ID && mergedCredentials.APPLE_ISSUER_ID && mergedCredentials.APPLE_KEY_CONTENT
-      if (!hasAppleApiKey) {
-        if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+      const hasAppleKeyId = !!mergedCredentials.APPLE_KEY_ID
+      const hasAppleIssuerId = !!mergedCredentials.APPLE_ISSUER_ID
+      const hasAppleKeyContent = !!mergedCredentials.APPLE_KEY_CONTENT
+      const anyAppleApiField = hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent
+      const hasCompleteAppleApiKey = hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent
+
+      if (!hasCompleteAppleApiKey) {
+        if (anyAppleApiField) {
+          // Partial API key — tell the user exactly which fields are missing
+          const missingAppleFields: string[] = []
+          if (!hasAppleKeyId)
+            missingAppleFields.push('APPLE_KEY_ID (or --apple-key-id)')
+          if (!hasAppleIssuerId)
+            missingAppleFields.push('APPLE_ISSUER_ID (or --apple-issuer-id)')
+          if (!hasAppleKeyContent)
+            missingAppleFields.push('APPLE_KEY_CONTENT (or --apple-key-content)')
+          missingCreds.push(`Incomplete App Store Connect API key - missing: ${missingAppleFields.join(', ')}`)
+        }
+        else if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
           missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (or --output-upload) (build has no output destination - enable either TestFlight upload or Capgo download link)')
         }
         else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {

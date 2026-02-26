@@ -39,9 +39,25 @@ function validateIosCredentials(credentials) {
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
   // App Store Connect API key (optional - only needed for TestFlight upload and build number auto-increment)
-  const hasAppleApiKey = credentials.APPLE_KEY_ID && credentials.APPLE_ISSUER_ID && credentials.APPLE_KEY_CONTENT
-  if (!hasAppleApiKey) {
-    if (credentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+  const hasAppleKeyId = !!credentials.APPLE_KEY_ID
+  const hasAppleIssuerId = !!credentials.APPLE_ISSUER_ID
+  const hasAppleKeyContent = !!credentials.APPLE_KEY_CONTENT
+  const anyAppleApiField = hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent
+  const hasCompleteAppleApiKey = hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent
+
+  if (!hasCompleteAppleApiKey) {
+    if (anyAppleApiField) {
+      // Partial API key — tell the user exactly which fields are missing
+      const missingAppleFields = []
+      if (!hasAppleKeyId)
+        missingAppleFields.push('APPLE_KEY_ID')
+      if (!hasAppleIssuerId)
+        missingAppleFields.push('APPLE_ISSUER_ID')
+      if (!hasAppleKeyContent)
+        missingAppleFields.push('APPLE_KEY_CONTENT')
+      missingCreds.push(`Incomplete App Store Connect API key - missing: ${missingAppleFields.join(', ')}`)
+    }
+    else if (credentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
       missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true')
     }
     else if (credentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
@@ -196,8 +212,8 @@ await test('Android validation allows missing PLAY_CONFIG_JSON', () => {
   assert(!credentials.PLAY_CONFIG_JSON, 'PLAY_CONFIG_JSON should be optional')
 })
 
-// Test 7: iOS fails with partial API key (2 of 3 fields) and no output upload
-await test('iOS validation fails with incomplete API key and no output upload', () => {
+// Test 7: iOS fails with partial API key (2 of 3 fields) — reports specific missing fields
+await test('iOS validation fails with incomplete API key and reports missing fields', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
@@ -210,10 +226,33 @@ await test('iOS validation fails with incomplete API key and no output upload', 
 
   const missingCreds = validateIosCredentials(credentials)
 
-  // Should error for: incomplete API key (no destination) + missing team ID
+  // Should error for: incomplete API key (specific missing field) + missing team ID
   assert(missingCreds.length === 2, `Should have 2 missing credentials, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
-  assert(missingCreds.some(c => c.includes('BUILD_OUTPUT_UPLOAD_ENABLED')), 'Should suggest output upload as alternative')
+  assert(missingCreds.some(c => c.includes('Incomplete App Store Connect API key')), 'Should report incomplete API key')
+  assert(missingCreds.some(c => c.includes('APPLE_KEY_CONTENT')), 'Should list APPLE_KEY_CONTENT as missing field')
   assert(missingCreds.some(c => c.includes('APP_STORE_CONNECT_TEAM_ID')), 'Should require APP_STORE_CONNECT_TEAM_ID')
+})
+
+// Test 8: iOS partial API key always errors even with output upload enabled
+await test('iOS validation fails with incomplete API key even when output upload is enabled', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    P12_PASSWORD: 'pass',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APPLE_KEY_ID: 'keyid',
+    // Missing APPLE_ISSUER_ID and APPLE_KEY_CONTENT
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
+    SKIP_BUILD_NUMBER_BUMP: 'true',
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+
+  // Partial API key should always error — output upload doesn't bypass this
+  assert(missingCreds.length === 1, `Should have 1 missing credential, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds[0].includes('Incomplete App Store Connect API key'), 'Should report incomplete API key')
+  assert(missingCreds[0].includes('APPLE_ISSUER_ID'), 'Should list APPLE_ISSUER_ID as missing')
+  assert(missingCreds[0].includes('APPLE_KEY_CONTENT'), 'Should list APPLE_KEY_CONTENT as missing')
 })
 
 
