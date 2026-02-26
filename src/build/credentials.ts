@@ -221,7 +221,7 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   if (capgoIosTarget)
     credentials.CAPGO_IOS_TARGET = capgoIosTarget
   if (capgoIosDistribution)
-    credentials.CAPGO_IOS_DISTRIBUTION = capgoIosDistribution
+    credentials.CAPGO_IOS_DISTRIBUTION = capgoIosDistribution as 'app_store' | 'ad_hoc'
 
   // Android credentials
   if (androidKeystoreFile)
