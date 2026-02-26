@@ -172,8 +172,13 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.APPLE_PROFILE_NAME = options.appleProfileName
       if (options.appleTeamId)
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
-      if (options.iosDistribution)
+      if (options.iosDistribution) {
         credentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
+      }
+      else {
+        credentials.CAPGO_IOS_DISTRIBUTION = 'app_store'
+        log.info('ℹ️  --ios-distribution not specified, defaulting to app_store (App Store + TestFlight)')
+      }
     }
     else if (platform === 'android') {
       // Handle Android credentials
