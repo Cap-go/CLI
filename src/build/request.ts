@@ -1075,7 +1075,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
 
       if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
-        missingCreds.push('APP_STORE_CONNECT_TEAM_ID (or --apple-team-id)')
+        missingCreds.push('APP_STORE_CONNECT_TEAM_ID (or --app-store-connect-team-id)')
     }
     else if (options.platform === 'android') {
       // Android minimum requirements
