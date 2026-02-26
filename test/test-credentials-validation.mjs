@@ -29,43 +29,51 @@ function assert(condition, message) {
   }
 }
 
-// Test 1: iOS requires minimum credentials
-await test('iOS validation requires certificate, password, and provisioning profile', () => {
-  const credentials = {
-    BUILD_CERTIFICATE_BASE64: 'cert',
-    P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
-    // Missing auth - should fail
-  }
-
+// Helper: run iOS validation logic matching request.ts
+function validateIosCredentials(credentials) {
   const missingCreds = []
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
   if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
     missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
 
-  // App Store Connect API key credentials required
-  if (!credentials.APPLE_KEY_ID)
-    missingCreds.push('APPLE_KEY_ID')
-  if (!credentials.APPLE_ISSUER_ID)
-    missingCreds.push('APPLE_ISSUER_ID')
-  if (!credentials.APPLE_KEY_CONTENT)
-    missingCreds.push('APPLE_KEY_CONTENT')
+  // App Store Connect API key (optional - only needed for TestFlight upload and build number auto-increment)
+  const hasAppleApiKey = credentials.APPLE_KEY_ID && credentials.APPLE_ISSUER_ID && credentials.APPLE_KEY_CONTENT
+  if (!hasAppleApiKey) {
+    if (credentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
+      missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true')
+    }
+    else if (credentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
+      missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump')
+    }
+    // else: warn only, no error
+  }
   if (!credentials.APP_STORE_CONNECT_TEAM_ID)
     missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
 
-  assert(missingCreds.length === 4, 'Should have 4 missing API key credentials')
-  assert(missingCreds.includes('APPLE_KEY_ID'), 'Should require APPLE_KEY_ID')
-  assert(missingCreds.includes('APPLE_ISSUER_ID'), 'Should require APPLE_ISSUER_ID')
-  assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
-  assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
+  return missingCreds
+}
+
+// Test 1: iOS - no API key + no output upload → error (no destination)
+await test('iOS validation errors when no API key and no output upload', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    P12_PASSWORD: 'pass',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+    // Missing API key, no output upload
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+
+  assert(missingCreds.length === 1, `Should have 1 missing credential, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds[0].includes('BUILD_OUTPUT_UPLOAD_ENABLED'), 'Should suggest enabling output upload')
 })
 
-// Test 2: iOS accepts App Store Connect API key
-await test('iOS validation accepts App Store Connect API key', () => {
+// Test 2: iOS accepts full credentials (API key + everything)
+await test('iOS validation accepts complete credentials with API key', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
@@ -76,25 +84,41 @@ await test('iOS validation accepts App Store Connect API key', () => {
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
   }
 
-  const missingCreds = []
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 0, `Should have no missing credentials, got: ${missingCreds.join(', ')}`)
+})
 
-  if (!credentials.BUILD_CERTIFICATE_BASE64)
-    missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
-  if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
-    missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
+// Test 2b: iOS - no API key + output upload + no skip-build-number-bump → error
+await test('iOS validation errors when no API key with output upload but no skip-build-number-bump', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    P12_PASSWORD: 'pass',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
+    // No API key, no skip-build-number-bump
+  }
 
-  if (!credentials.APPLE_KEY_ID)
-    missingCreds.push('APPLE_KEY_ID')
-  if (!credentials.APPLE_ISSUER_ID)
-    missingCreds.push('APPLE_ISSUER_ID')
-  if (!credentials.APPLE_KEY_CONTENT)
-    missingCreds.push('APPLE_KEY_CONTENT')
-  if (!credentials.APP_STORE_CONNECT_TEAM_ID)
-    missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
+  const missingCreds = validateIosCredentials(credentials)
 
-  assert(missingCreds.length === 0, 'Should have no missing credentials with API key')
+  assert(missingCreds.length === 1, `Should have 1 missing credential, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds[0].includes('skip-build-number-bump'), 'Should require skip-build-number-bump')
+})
+
+// Test 2c: iOS - no API key + output upload + skip-build-number-bump → allow (warn only)
+await test('iOS validation allows no API key when output upload and skip-build-number-bump are set', () => {
+  const credentials = {
+    BUILD_CERTIFICATE_BASE64: 'cert',
+    P12_PASSWORD: 'pass',
+    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    APP_STORE_CONNECT_TEAM_ID: 'teamid',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
+    SKIP_BUILD_NUMBER_BUMP: 'true',
+    // No API key - should be allowed
+  }
+
+  const missingCreds = validateIosCredentials(credentials)
+  assert(missingCreds.length === 0, `Should have no missing credentials, got: ${missingCreds.join(', ')}`)
 })
 
 
@@ -172,38 +196,24 @@ await test('Android validation allows missing PLAY_CONFIG_JSON', () => {
   assert(!credentials.PLAY_CONFIG_JSON, 'PLAY_CONFIG_JSON should be optional')
 })
 
-// Test 7: iOS fails with partial API key
-await test('iOS validation fails with incomplete API key credentials', () => {
+// Test 7: iOS fails with partial API key (2 of 3 fields) and no output upload
+await test('iOS validation fails with incomplete API key and no output upload', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
     BUILD_PROVISION_PROFILE_BASE64: 'profile',
     APPLE_KEY_ID: 'keyid',
     APPLE_ISSUER_ID: 'issuerid',
-    // Missing APPLE_KEY_CONTENT and APP_STORE_CONNECT_TEAM_ID
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
+    // Missing APPLE_KEY_CONTENT (incomplete API key) and APP_STORE_CONNECT_TEAM_ID
   }
 
-  const missingCreds = []
+  const missingCreds = validateIosCredentials(credentials)
 
-  if (!credentials.BUILD_CERTIFICATE_BASE64)
-    missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.P12_PASSWORD)
-    missingCreds.push('P12_PASSWORD')
-  if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
-    missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
-
-  if (!credentials.APPLE_KEY_ID)
-    missingCreds.push('APPLE_KEY_ID')
-  if (!credentials.APPLE_ISSUER_ID)
-    missingCreds.push('APPLE_ISSUER_ID')
-  if (!credentials.APPLE_KEY_CONTENT)
-    missingCreds.push('APPLE_KEY_CONTENT')
-  if (!credentials.APP_STORE_CONNECT_TEAM_ID)
-    missingCreds.push('APP_STORE_CONNECT_TEAM_ID')
-
-  assert(missingCreds.length === 2, 'Should have 2 missing credentials (APPLE_KEY_CONTENT and APP_STORE_CONNECT_TEAM_ID)')
-  assert(missingCreds.includes('APPLE_KEY_CONTENT'), 'Should require APPLE_KEY_CONTENT')
-  assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require APP_STORE_CONNECT_TEAM_ID')
+  // Should error for: incomplete API key (no destination) + missing team ID
+  assert(missingCreds.length === 2, `Should have 2 missing credentials, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
+  assert(missingCreds.some(c => c.includes('BUILD_OUTPUT_UPLOAD_ENABLED')), 'Should suggest output upload as alternative')
+  assert(missingCreds.some(c => c.includes('APP_STORE_CONNECT_TEAM_ID')), 'Should require APP_STORE_CONNECT_TEAM_ID')
 })
 
 
