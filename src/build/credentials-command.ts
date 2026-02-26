@@ -37,6 +37,7 @@ interface SaveCredentialsOptions {
   appleIssuerId?: string
   appleProfileName?: string
   appleTeamId?: string
+  iosDistribution?: 'app_store' | 'ad_hoc'
 
   // Android options
   keystore?: string
@@ -171,6 +172,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.APPLE_PROFILE_NAME = options.appleProfileName
       if (options.appleTeamId)
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
+      if (options.iosDistribution)
+        credentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
     }
     else if (platform === 'android') {
       // Handle Android credentials
@@ -226,25 +229,32 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     const missingCreds: string[] = []
 
     if (platform === 'ios') {
-      // iOS minimum requirements
+      const distributionMode = (fileCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store') as string
+
+      // iOS minimum requirements (all modes)
       if (!fileCredentials.BUILD_CERTIFICATE_BASE64)
         missingCreds.push('--certificate <path> (P12 certificate file)')
-      // Note: P12_PASSWORD is optional - certificates can have no password
       if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
         missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
 
-      // App Store Connect API key (optional - only needed for auto-upload to TestFlight)
-      const hasAppleApiKey = fileCredentials.APPLE_KEY_ID && fileCredentials.APPLE_ISSUER_ID && fileCredentials.APPLE_KEY_CONTENT
-      if (!hasAppleApiKey) {
-        if (fileCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'false') {
-          missingCreds.push('--apple-key/--apple-key-id/--apple-issuer-id OR --output-upload (Build has no output destination - enable either TestFlight upload or Capgo download link)')
-        }
-        else {
-          log.warn('⚠️  App Store Connect API key not provided - TestFlight auto-upload is disabled')
-          log.warn('   When building without API key, you must also set --skip-build-number-bump')
-          log.warn('   To enable auto-upload, add: --apple-key ./AuthKey.p8 --apple-key-id KEY_ID --apple-issuer-id ISSUER_ID')
+      // App Store Connect API key: only required for app_store mode
+      if (distributionMode === 'app_store') {
+        const hasAppleApiKey = fileCredentials.APPLE_KEY_ID && fileCredentials.APPLE_ISSUER_ID && fileCredentials.APPLE_KEY_CONTENT
+        if (!hasAppleApiKey) {
+          if (fileCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'false') {
+            missingCreds.push('--apple-key/--apple-key-id/--apple-issuer-id OR --output-upload (Build has no output destination - enable either TestFlight upload or Capgo download link)')
+          }
+          else {
+            log.warn('⚠️  App Store Connect API key not provided - TestFlight auto-upload is disabled')
+            log.warn('   When building without API key, you must also set --skip-build-number-bump')
+            log.warn('   To enable auto-upload, add: --apple-key ./AuthKey.p8 --apple-key-id KEY_ID --apple-issuer-id ISSUER_ID')
+          }
         }
       }
+      else if (distributionMode === 'ad_hoc') {
+        log.info('📦 Ad-hoc distribution mode: App Store Connect API key not required')
+      }
+
       if (!fileCredentials.APP_STORE_CONNECT_TEAM_ID)
         missingCreds.push('--apple-team-id <id> (App Store Connect Team ID)')
       if (!fileCredentials.APPLE_PROFILE_NAME)
@@ -398,6 +408,8 @@ export async function listCredentialsCommand(options?: { appId?: string, local?:
           log.info(`    ✓ Apple Issuer ID: ${ios.APPLE_ISSUER_ID}`)
         if (ios.APP_STORE_CONNECT_TEAM_ID)
           log.info(`    ✓ Team ID: ${ios.APP_STORE_CONNECT_TEAM_ID}`)
+        if (ios.CAPGO_IOS_DISTRIBUTION)
+          log.info(`    ✓ Distribution Mode: ${ios.CAPGO_IOS_DISTRIBUTION}`)
       }
 
       if (saved.android) {
@@ -488,7 +500,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
     // Detect platform from provided options if not explicitly set
     const hasIosOptions = !!(options.certificate || options.provisioningProfile || options.provisioningProfileProd
       || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
-      || options.appleProfileName || options.appleTeamId)
+      || options.appleProfileName || options.appleTeamId || options.iosDistribution)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
     const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
@@ -621,6 +633,10 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       if (options.appleTeamId) {
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
         log.info(`✓ Updating Apple Team ID: ${options.appleTeamId}`)
+      }
+      if (options.iosDistribution) {
+        credentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
+        log.info(`✓ Updating iOS distribution mode: ${options.iosDistribution}`)
       }
     }
     else if (platform === 'android') {

@@ -733,6 +733,7 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--app-store-connect-team-id <id>', 'iOS: App Store Connect Team ID')
   .option('--ios-scheme <scheme>', 'iOS: Xcode scheme to build (default: App)')
   .option('--ios-target <target>', 'iOS: Xcode target for reading build settings (default: same as scheme)')
+  .option('--ios-distribution <mode>', 'iOS: Distribution mode: app_store (default) or ad_hoc')
   // Android credential CLI options (can also be set via env vars or saved credentials)
   .option('--android-keystore-file <keystore>', 'Android: Base64-encoded keystore file')
   .option('--keystore-key-alias <alias>', 'Android: Keystore key alias')
@@ -809,6 +810,7 @@ Local storage (per-project):
   .option('--apple-issuer-id <id>', 'iOS: App Store Connect Issuer ID')
   .option('--apple-profile-name <name>', 'iOS: Provisioning profile name')
   .option('--apple-team-id <id>', 'iOS: App Store Connect Team ID')
+  .option('--ios-distribution <mode>', 'iOS: Distribution mode: app_store (default) or ad_hoc')
   .option('--apple-id <email>', 'iOS: Apple ID email (optional)')
   .option('--apple-app-password <password>', 'iOS: App-specific password (optional)')
   // Android options
@@ -878,6 +880,7 @@ Examples:
   .option('--apple-issuer-id <id>', 'App Store Connect Issuer ID')
   .option('--apple-profile-name <name>', 'Provisioning profile name')
   .option('--apple-team-id <id>', 'App Store Connect Team ID')
+  .option('--ios-distribution <mode>', 'iOS: Distribution mode: app_store (default) or ad_hoc')
   // Android options
   .option('--keystore <path>', 'Path to keystore file (.keystore or .jks)')
   .option('--keystore-alias <alias>', 'Keystore key alias')
