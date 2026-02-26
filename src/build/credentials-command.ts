@@ -240,7 +240,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
           missingCreds.push('--apple-key/--apple-key-id/--apple-issuer-id OR --output-upload (Build has no output destination - enable either TestFlight upload or Capgo download link)')
         }
         else {
-          log.warn('⚠️  App Store Connect API key not provided - builds will succeed but cannot auto-upload to TestFlight')
+          log.warn('⚠️  App Store Connect API key not provided - TestFlight auto-upload is disabled')
+          log.warn('   When building without API key, you must also set --skip-build-number-bump')
           log.warn('   To enable auto-upload, add: --apple-key ./AuthKey.p8 --apple-key-id KEY_ID --apple-issuer-id ISSUER_ID')
         }
       }
@@ -286,9 +287,10 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('    --p12-password "your-password" \\  # Optional if cert has no password')
         log.error('    --provisioning-profile ./profile.mobileprovision \\')
         log.error('    --apple-team-id "XXXXXXXXXX" \\')
-        log.error('    --apple-profile-name "match AppStore com.example.app"')
+        log.error('    --apple-profile-name "match AppStore com.example.app" \\')
+        log.error('    --output-upload')
         log.error('')
-        log.error('  Optionally add --apple-key, --apple-key-id, --apple-issuer-id for auto-uploading to TestFlight.')
+        log.error('  Optionally replace --output-upload with --apple-key, --apple-key-id, --apple-issuer-id for TestFlight auto-upload.')
       }
       else {
         log.error('  npx @capgo/cli build credentials save --platform android \\')

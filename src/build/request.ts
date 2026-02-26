@@ -1029,7 +1029,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       const hasAppleApiKey = mergedCredentials.APPLE_KEY_ID && mergedCredentials.APPLE_ISSUER_ID && mergedCredentials.APPLE_KEY_CONTENT
       if (!hasAppleApiKey) {
         if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
-          missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either TestFlight upload or Capgo download link)')
+          missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (or --output-upload) (build has no output destination - enable either TestFlight upload or Capgo download link)')
         }
         else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
           missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump (App Store Connect API key not provided - build numbers cannot be auto-incremented without it)')
