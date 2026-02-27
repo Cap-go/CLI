@@ -33,7 +33,7 @@ async function cleanupTestEnv() {
 function clearCredentialEnvVars() {
   const credKeys = [
     'BUILD_CERTIFICATE_BASE64',
-    'BUILD_PROVISION_PROFILE_BASE64',
+    'CAPGO_IOS_PROVISIONING_MAP',
     'P12_PASSWORD',
     'APPLE_KEY_ID',
     'APPLE_ISSUER_ID',
@@ -207,8 +207,7 @@ await test('All credential types can be loaded from environment', async () => {
 
   // Set all iOS credential env vars
   process.env.BUILD_CERTIFICATE_BASE64 = 'cert'
-  process.env.BUILD_PROVISION_PROFILE_BASE64 = 'profile'
-  process.env.BUILD_PROVISION_PROFILE_BASE64_PROD = 'prodprofile'
+  process.env.CAPGO_IOS_PROVISIONING_MAP = '{"com.test.app":{"profile":"base64","name":"test"}}'
   process.env.P12_PASSWORD = 'pass'
   process.env.APPLE_KEY_ID = 'keyid'
   process.env.APPLE_ISSUER_ID = 'issuerid'
@@ -227,7 +226,7 @@ await test('All credential types can be loaded from environment', async () => {
 
   // Check iOS
   assertEquals(creds.BUILD_CERTIFICATE_BASE64, 'cert')
-  assertEquals(creds.BUILD_PROVISION_PROFILE_BASE64, 'profile')
+  assertEquals(creds.CAPGO_IOS_PROVISIONING_MAP, '{"com.test.app":{"profile":"base64","name":"test"}}')
   assertEquals(creds.P12_PASSWORD, 'pass')
   assertEquals(creds.APPLE_KEY_ID, 'keyid')
   assertEquals(creds.APPLE_ISSUER_ID, 'issuerid')
