@@ -1,7 +1,7 @@
 import type { BuildCredentials } from './request'
-import { existsSync } from 'node:fs'
+import { existsSync, readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { exit } from 'node:process'
+import { cwd, exit } from 'node:process'
 import { log } from '@clack/prompts'
 import { createSupabaseClient, findSavedKey, getAppId, getConfig, getOrganizationId, sendEvent } from '../utils'
 import {
@@ -17,6 +17,8 @@ import {
   parseOutputRetentionSeconds,
   updateSavedCredentials,
 } from './credentials'
+import { parseMobileprovision, parseMobileprovisionFromBase64 } from './mobileprovision-parser'
+import { findSignableTargets, readPbxproj } from './pbxproj-parser'
 
 interface SaveCredentialsOptions {
   platform?: 'ios' | 'android'
@@ -29,13 +31,11 @@ interface SaveCredentialsOptions {
 
   // iOS options
   certificate?: string
-  provisioningProfile?: string
-  provisioningProfileProd?: string
+  iosProvisioningProfile?: string[]
   p12Password?: string
   appleKey?: string
   appleKeyId?: string
   appleIssuerId?: string
-  appleProfileName?: string
   appleTeamId?: string
   iosDistribution?: 'app_store' | 'ad_hoc'
 
@@ -45,6 +45,93 @@ interface SaveCredentialsOptions {
   keystoreKeyPassword?: string
   keystoreStorePassword?: string
   playConfig?: string
+}
+
+/**
+ * Provisioning map entry: stores the base64-encoded profile and its extracted name
+ */
+interface ProvisioningMapEntry {
+  profile: string
+  name: string
+}
+
+/**
+ * Build a provisioning map from --ios-provisioning-profile entries.
+ *
+ * Each entry is either:
+ *   - "bundleId=path" (explicit bundle ID assignment)
+ *   - "path" (auto-infer bundle ID by matching mobileprovision against pbxproj targets)
+ */
+export function buildProvisioningMap(
+  entries: string[],
+  projectDir?: string,
+): Record<string, ProvisioningMapEntry> {
+  const map: Record<string, ProvisioningMapEntry> = {}
+
+  // Read pbxproj targets for auto-inference
+  let pbxTargets: Array<{ name: string, bundleId: string, productType: string }> = []
+  if (projectDir) {
+    const pbxContent = readPbxproj(projectDir)
+    if (pbxContent) {
+      pbxTargets = findSignableTargets(pbxContent)
+    }
+  }
+
+  for (const entry of entries) {
+    const equalsIdx = entry.indexOf('=')
+    let bundleId: string
+    let profilePath: string
+
+    if (equalsIdx !== -1) {
+      // Explicit format: bundleId=path
+      bundleId = entry.slice(0, equalsIdx).trim()
+      profilePath = entry.slice(equalsIdx + 1).trim()
+    }
+    else {
+      // Auto-infer: just a path
+      profilePath = entry.trim()
+      const resolved = resolve(profilePath)
+      if (!existsSync(resolved)) {
+        throw new Error(`Provisioning profile not found: ${resolved}`)
+      }
+
+      const info = parseMobileprovision(resolved)
+      // Try to match against pbxproj targets
+      const matchedTarget = pbxTargets.find(t => t.bundleId === info.bundleId)
+      if (matchedTarget) {
+        bundleId = info.bundleId
+      }
+      else if (info.bundleId.endsWith('.*')) {
+        // Wildcard profile - match against main app target (first application target)
+        const mainTarget = pbxTargets.find(t => t.productType === 'com.apple.product-type.application')
+        if (mainTarget) {
+          bundleId = mainTarget.bundleId
+        }
+        else {
+          bundleId = info.bundleId
+        }
+      }
+      else {
+        bundleId = info.bundleId
+      }
+    }
+
+    const resolvedPath = resolve(profilePath)
+    if (!existsSync(resolvedPath)) {
+      throw new Error(`Provisioning profile not found: ${resolvedPath}`)
+    }
+
+    const profileData = readFileSync(resolvedPath)
+    const base64 = profileData.toString('base64')
+    const info = parseMobileprovision(resolvedPath)
+
+    map[bundleId] = {
+      profile: base64,
+      name: info.name,
+    }
+  }
+
+  return map
 }
 
 /**
@@ -125,24 +212,34 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.info(`✓ Certificate file: ${certPath}`)
       }
 
-      if (options.provisioningProfile) {
-        const profilePath = resolve(options.provisioningProfile)
-        if (!existsSync(profilePath)) {
-          log.error(`Provisioning profile not found: ${profilePath}`)
-          exit(1)
-        }
-        files.BUILD_PROVISION_PROFILE_FILE = profilePath
-        log.info(`✓ Provisioning profile: ${profilePath}`)
-      }
+      // Handle provisioning profiles via --ios-provisioning-profile (repeatable)
+      if (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0) {
+        try {
+          const provMap = buildProvisioningMap(options.iosProvisioningProfile, cwd())
+          credentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
+          const bundleIds = Object.keys(provMap)
+          for (const bid of bundleIds) {
+            log.info(`✓ Provisioning profile for ${bid}: ${provMap[bid].name}`)
+          }
 
-      if (options.provisioningProfileProd) {
-        const profilePath = resolve(options.provisioningProfileProd)
-        if (!existsSync(profilePath)) {
-          log.error(`Production provisioning profile not found: ${profilePath}`)
+          // Best-effort warning about uncovered targets
+          const pbxContent = readPbxproj(cwd())
+          if (pbxContent) {
+            const targets = findSignableTargets(pbxContent)
+            const uncovered = targets.filter(t => !provMap[t.bundleId])
+            if (uncovered.length > 0) {
+              log.warn(`⚠️  The following signable targets have no provisioning profile:`)
+              for (const t of uncovered) {
+                log.warn(`     ${t.name} (${t.bundleId})`)
+              }
+              log.warn(`   Add more --ios-provisioning-profile entries if these targets need signing.`)
+            }
+          }
+        }
+        catch (error) {
+          log.error(`Failed to process provisioning profiles: ${error instanceof Error ? error.message : String(error)}`)
           exit(1)
         }
-        files.BUILD_PROVISION_PROFILE_FILE_PROD = profilePath
-        log.info(`✓ Production provisioning profile: ${profilePath}`)
       }
 
       if (options.appleKey) {
@@ -168,8 +265,6 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.APPLE_KEY_ID = options.appleKeyId
       if (options.appleIssuerId)
         credentials.APPLE_ISSUER_ID = options.appleIssuerId
-      if (options.appleProfileName)
-        credentials.APPLE_PROFILE_NAME = options.appleProfileName
       if (options.appleTeamId)
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
       if (options.iosDistribution) {
@@ -245,8 +340,8 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       // iOS minimum requirements (all modes)
       if (!fileCredentials.BUILD_CERTIFICATE_BASE64)
         missingCreds.push('--certificate <path> (P12 certificate file)')
-      if (!fileCredentials.BUILD_PROVISION_PROFILE_BASE64)
-        missingCreds.push('--provisioning-profile <path> (Provisioning profile file)')
+      if (!fileCredentials.CAPGO_IOS_PROVISIONING_MAP)
+        missingCreds.push('--ios-provisioning-profile <path> (Provisioning profile file)')
 
       // App Store Connect API key: only required for app_store mode
       if (distributionMode === 'app_store') {
@@ -268,8 +363,6 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
 
       if (!fileCredentials.APP_STORE_CONNECT_TEAM_ID)
         missingCreds.push('--apple-team-id <id> (App Store Connect Team ID)')
-      if (!fileCredentials.APPLE_PROFILE_NAME)
-        missingCreds.push('--apple-profile-name <name> (Provisioning profile name)')
     }
     else if (platform === 'android') {
       // Android minimum requirements
@@ -306,10 +399,13 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.error('  npx @capgo/cli build credentials save --platform ios \\')
         log.error('    --certificate ./cert.p12 \\')
         log.error('    --p12-password "your-password" \\  # Optional if cert has no password')
-        log.error('    --provisioning-profile ./profile.mobileprovision \\')
+        log.error('    --ios-provisioning-profile ./profile.mobileprovision \\')
         log.error('    --apple-team-id "XXXXXXXXXX" \\')
-        log.error('    --apple-profile-name "match AppStore com.example.app" \\')
         log.error('    --output-upload')
+        log.error('')
+        log.error('  For multi-target apps (e.g., with extensions), repeat --ios-provisioning-profile:')
+        log.error('    --ios-provisioning-profile ./App.mobileprovision \\')
+        log.error('    --ios-provisioning-profile com.example.widget=./Widget.mobileprovision')
         log.error('')
         log.error('  Optionally replace --output-upload with --apple-key, --apple-key-id, --apple-issuer-id for TestFlight auto-upload.')
       }
@@ -405,10 +501,21 @@ export async function listCredentialsCommand(options?: { appId?: string, local?:
         const ios = saved.ios
         if (ios.BUILD_CERTIFICATE_BASE64)
           log.info('    ✓ Certificate (base64)')
+        if (ios.CAPGO_IOS_PROVISIONING_MAP) {
+          try {
+            const provMap = JSON.parse(ios.CAPGO_IOS_PROVISIONING_MAP) as Record<string, { name: string }>
+            const bundleIds = Object.keys(provMap)
+            log.info(`    ✓ Provisioning Map (${bundleIds.length} target${bundleIds.length === 1 ? '' : 's'}):`)
+            for (const bid of bundleIds) {
+              log.info(`      - ${bid}: ${provMap[bid].name}`)
+            }
+          }
+          catch {
+            log.info('    ✓ Provisioning Map (JSON)')
+          }
+        }
         if (ios.BUILD_PROVISION_PROFILE_BASE64)
-          log.info('    ✓ Provisioning Profile (base64)')
-        if (ios.BUILD_PROVISION_PROFILE_BASE64_PROD)
-          log.info('    ✓ Production Provisioning Profile (base64)')
+          log.info('    ⚠️  Legacy Provisioning Profile (run "build credentials migrate" to update)')
         if (ios.APPLE_KEY_CONTENT)
           log.info('    ✓ Apple Key Content (base64)')
         if (ios.P12_PASSWORD)
@@ -509,9 +616,9 @@ export async function clearCredentialsCommand(options: { appId?: string, platfor
 export async function updateCredentialsCommand(options: SaveCredentialsOptions): Promise<void> {
   try {
     // Detect platform from provided options if not explicitly set
-    const hasIosOptions = !!(options.certificate || options.provisioningProfile || options.provisioningProfileProd
+    const hasIosOptions = !!(options.certificate || (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0)
       || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
-      || options.appleProfileName || options.appleTeamId || options.iosDistribution)
+      || options.appleTeamId || options.iosDistribution)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
     const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
@@ -594,24 +701,20 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         log.info(`✓ Updating certificate: ${certPath}`)
       }
 
-      if (options.provisioningProfile) {
-        const profilePath = resolve(options.provisioningProfile)
-        if (!existsSync(profilePath)) {
-          log.error(`Provisioning profile not found: ${profilePath}`)
+      // Handle provisioning profiles via --ios-provisioning-profile (repeatable)
+      if (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0) {
+        try {
+          const provMap = buildProvisioningMap(options.iosProvisioningProfile, cwd())
+          credentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
+          const bundleIds = Object.keys(provMap)
+          for (const bid of bundleIds) {
+            log.info(`✓ Updating provisioning profile for ${bid}: ${provMap[bid].name}`)
+          }
+        }
+        catch (error) {
+          log.error(`Failed to process provisioning profiles: ${error instanceof Error ? error.message : String(error)}`)
           exit(1)
         }
-        files.BUILD_PROVISION_PROFILE_FILE = profilePath
-        log.info(`✓ Updating provisioning profile: ${profilePath}`)
-      }
-
-      if (options.provisioningProfileProd) {
-        const profilePath = resolve(options.provisioningProfileProd)
-        if (!existsSync(profilePath)) {
-          log.error(`Production provisioning profile not found: ${profilePath}`)
-          exit(1)
-        }
-        files.BUILD_PROVISION_PROFILE_FILE_PROD = profilePath
-        log.info(`✓ Updating production provisioning profile: ${profilePath}`)
       }
 
       if (options.appleKey) {
@@ -636,10 +739,6 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       if (options.appleIssuerId) {
         credentials.APPLE_ISSUER_ID = options.appleIssuerId
         log.info(`✓ Updating Apple Issuer ID: ${options.appleIssuerId}`)
-      }
-      if (options.appleProfileName) {
-        credentials.APPLE_PROFILE_NAME = options.appleProfileName
-        log.info(`✓ Updating Apple Profile Name: ${options.appleProfileName}`)
       }
       if (options.appleTeamId) {
         credentials.APP_STORE_CONNECT_TEAM_ID = options.appleTeamId
