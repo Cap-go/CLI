@@ -8,7 +8,7 @@ import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
-import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
+import { clearCredentialsCommand, listCredentialsCommand, migrateCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
@@ -896,6 +896,20 @@ Examples:
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
   .option('--skip-build-number-bump', 'Skip automatic build number/version code incrementing on future builds')
   .option('--no-skip-build-number-bump', 'Re-enable automatic build number incrementing (default behavior)')
+
+buildCredentials
+  .command('migrate')
+  .description(`Migrate legacy provisioning profile to the new multi-target format.
+
+Converts BUILD_PROVISION_PROFILE_BASE64 to CAPGO_IOS_PROVISIONING_MAP.
+Discovers the main bundle ID from your Xcode project automatically.
+
+Example:
+  npx @capgo/cli build credentials migrate --platform ios`)
+  .action(migrateCredentialsCommand)
+  .option('--appId <appId>', 'App ID (auto-detected from capacitor.config if omitted)')
+  .option('--platform <platform>', 'Platform (only ios is supported)')
+  .option('--local', 'Migrate from local .capgo-credentials.json instead of global')
 
 program
   .command('probe')

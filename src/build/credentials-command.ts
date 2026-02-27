@@ -801,3 +801,142 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
     exit(1)
   }
 }
+
+/**
+ * Build a migration map from a single legacy base64 provisioning profile.
+ *
+ * Takes the legacy BUILD_PROVISION_PROFILE_BASE64 value and a bundle ID,
+ * extracts the profile name, and returns a JSON-serialized provisioning map.
+ */
+export function buildMigrationMap(profileBase64: string, bundleId: string): string {
+  const info = parseMobileprovisionFromBase64(profileBase64)
+  const map: Record<string, ProvisioningMapEntry> = {
+    [bundleId]: {
+      profile: profileBase64,
+      name: info.name,
+    },
+  }
+  return JSON.stringify(map)
+}
+
+/**
+ * Migrate legacy provisioning profile credentials to the new map format.
+ *
+ * Reads saved credentials, finds the legacy BUILD_PROVISION_PROFILE_BASE64,
+ * discovers the main bundle ID from the local pbxproj, synthesizes the map,
+ * saves it, and removes old keys.
+ */
+export async function migrateCredentialsCommand(options: { appId?: string, platform?: string, local?: boolean }): Promise<void> {
+  try {
+    if (options.platform && options.platform !== 'ios') {
+      log.error('Migration is only needed for iOS credentials.')
+      exit(1)
+    }
+
+    // Try to infer appId from capacitor.config if not provided
+    const extConfig = await getConfig()
+    const appId = getAppId(options.appId, extConfig?.config)
+
+    if (!appId) {
+      log.error('❌ App ID is required.')
+      log.error('')
+      log.error('Either:')
+      log.error('  1. Run this command from a Capacitor project directory, OR')
+      log.error('  2. Provide --appId explicitly: --appId com.example.app')
+      exit(1)
+    }
+
+    // Load existing credentials
+    const saved = await getSavedCredentials(appId, 'ios', options.local)
+    if (!saved) {
+      log.error(`❌ No iOS credentials found for ${appId}.`)
+      log.error('   Nothing to migrate.')
+      exit(1)
+    }
+
+    // Check for legacy format
+    if (!saved.BUILD_PROVISION_PROFILE_BASE64) {
+      if (saved.CAPGO_IOS_PROVISIONING_MAP) {
+        log.info('✅ Credentials are already in the new provisioning map format. No migration needed.')
+        return
+      }
+      log.error('❌ No provisioning profile found in saved credentials. Nothing to migrate.')
+      exit(1)
+    }
+
+    if (saved.CAPGO_IOS_PROVISIONING_MAP) {
+      log.info('✅ Credentials already have a provisioning map. No migration needed.')
+      return
+    }
+
+    // Discover main bundle ID from local pbxproj
+    let mainBundleId: string | undefined
+    const pbxContent = readPbxproj(cwd())
+    if (pbxContent) {
+      const targets = findSignableTargets(pbxContent)
+      const mainTarget = targets.find(t => t.productType === 'com.apple.product-type.application')
+      if (mainTarget) {
+        mainBundleId = mainTarget.bundleId
+        log.info(`Discovered main target: ${mainTarget.name} (${mainTarget.bundleId})`)
+      }
+    }
+
+    if (!mainBundleId) {
+      // Try to infer from the profile itself
+      try {
+        const info = parseMobileprovisionFromBase64(saved.BUILD_PROVISION_PROFILE_BASE64)
+        mainBundleId = info.bundleId
+        log.info(`Using bundle ID from provisioning profile: ${mainBundleId}`)
+      }
+      catch {
+        log.error('❌ Could not determine bundle ID from pbxproj or provisioning profile.')
+        log.error('   Please run this command from a Capacitor project directory with an Xcode project.')
+        exit(1)
+      }
+    }
+
+    // Build the provisioning map
+    const mapJson = buildMigrationMap(saved.BUILD_PROVISION_PROFILE_BASE64, mainBundleId!)
+    const provMap = JSON.parse(mapJson)
+
+    // Save updated credentials: add map, remove old keys
+    const updates: Partial<BuildCredentials> = {
+      CAPGO_IOS_PROVISIONING_MAP: mapJson,
+    }
+
+    await updateSavedCredentials(appId, 'ios', updates, options.local)
+
+    // Note: We don't actively remove BUILD_PROVISION_PROFILE_BASE64 from saved credentials
+    // because updateSavedCredentials merges. It will be ignored by the new validation logic.
+
+    const bundleIds = Object.keys(provMap)
+    log.success(`\n✅ Migration complete for ${appId}!`)
+    log.info(`   Provisioning map created with ${bundleIds.length} target${bundleIds.length === 1 ? '' : 's'}:`)
+    for (const bid of bundleIds) {
+      log.info(`     - ${bid}: ${provMap[bid].name}`)
+    }
+
+    // Warn about extension targets
+    if (pbxContent) {
+      const targets = findSignableTargets(pbxContent)
+      const extensions = targets.filter(t => t.productType !== 'com.apple.product-type.application')
+      if (extensions.length > 0) {
+        log.warn('')
+        log.warn('⚠️  Your project has extension targets that are not covered by this migration:')
+        for (const ext of extensions) {
+          log.warn(`     ${ext.name} (${ext.bundleId})`)
+        }
+        log.warn('')
+        log.warn('   To add provisioning profiles for extensions, run:')
+        log.warn('     npx @capgo/cli build credentials update --platform ios \\')
+        log.warn('       --ios-provisioning-profile bundleId=path.mobileprovision')
+      }
+    }
+
+    log.info('')
+  }
+  catch (error) {
+    log.error(`Failed to migrate credentials: ${error instanceof Error ? error.message : String(error)}`)
+    exit(1)
+  }
+}
