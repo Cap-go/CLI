@@ -14,9 +14,6 @@ export const buildCredentialsSchema = z.object({
   APPLE_ISSUER_ID: z.string().optional(),
   APPLE_KEY_CONTENT: z.string().optional(),
   APP_STORE_CONNECT_TEAM_ID: z.string().optional(),
-  CAPGO_IOS_SCHEME: z.string().optional(),
-  CAPGO_IOS_TARGET: z.string().optional(),
-  CAPGO_IOS_DISTRIBUTION: z.enum(['app_store', 'ad_hoc']).optional(),
   CAPGO_IOS_PROVISIONING_MAP: z.string().optional(),
   // Android credentials
   ANDROID_KEYSTORE_FILE: z.string().optional(),
@@ -24,9 +21,6 @@ export const buildCredentialsSchema = z.object({
   KEYSTORE_KEY_PASSWORD: z.string().optional(),
   KEYSTORE_STORE_PASSWORD: z.string().optional(),
   PLAY_CONFIG_JSON: z.string().optional(),
-  BUILD_OUTPUT_UPLOAD_ENABLED: z.string().optional(),
-  BUILD_OUTPUT_RETENTION_SECONDS: z.string().optional(),
-  SKIP_BUILD_NUMBER_BUMP: z.string().optional(),
 }).catchall(z.string().optional())
 
 export type BuildCredentials = z.infer<typeof buildCredentialsSchema>
@@ -93,6 +87,30 @@ export const buildRequestResultSchema = z.object({
 })
 
 export type BuildRequestResult = z.infer<typeof buildRequestResultSchema>
+
+// ============================================================================
+// Build Options Payload Schema (sent to server as buildOptions)
+// ============================================================================
+
+export const buildOptionsPayloadSchema = z.object({
+  platform: z.enum(['ios', 'android']),
+  buildMode: z.enum(['debug', 'release']),
+  cliVersion: z.string(),
+  iosScheme: z.string().optional(),
+  iosTarget: z.string().optional(),
+  iosDistribution: z.enum(['app_store', 'ad_hoc']).optional(),
+  iosSourceDir: z.string().optional(),
+  iosAppDir: z.string().optional(),
+  iosProjectDir: z.string().optional(),
+  androidSourceDir: z.string().optional(),
+  androidAppDir: z.string().optional(),
+  androidProjectDir: z.string().optional(),
+  outputUploadEnabled: z.boolean(),
+  outputRetentionSeconds: z.number(),
+  skipBuildNumberBump: z.boolean(),
+})
+
+export type BuildOptionsPayload = z.infer<typeof buildOptionsPayloadSchema>
 
 // ============================================================================
 // Credential File Schemas
