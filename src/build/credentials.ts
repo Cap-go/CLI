@@ -177,16 +177,14 @@ function readRuntimeEnv(name: string): string | undefined {
 export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const credentials: Partial<BuildCredentials> = {}
   const buildCertificateBase64 = readRuntimeEnv('BUILD_CERTIFICATE_BASE64')
-  const buildProvisionProfileBase64 = readRuntimeEnv('BUILD_PROVISION_PROFILE_BASE64')
-  const buildProvisionProfileBase64Prod = readRuntimeEnv('BUILD_PROVISION_PROFILE_BASE64_PROD')
   const p12Password = readRuntimeEnv('P12_PASSWORD')
   const appleKeyId = readRuntimeEnv('APPLE_KEY_ID')
   const appleIssuerId = readRuntimeEnv('APPLE_ISSUER_ID')
   const appleKeyContent = readRuntimeEnv('APPLE_KEY_CONTENT')
-  const appleProfileName = readRuntimeEnv('APPLE_PROFILE_NAME')
   const appStoreConnectTeamId = readRuntimeEnv('APP_STORE_CONNECT_TEAM_ID')
   const capgoIosScheme = readRuntimeEnv('CAPGO_IOS_SCHEME')
   const capgoIosTarget = readRuntimeEnv('CAPGO_IOS_TARGET')
+  const capgoIosProvisioningMap = readRuntimeEnv('CAPGO_IOS_PROVISIONING_MAP')
   const androidKeystoreFile = readRuntimeEnv('ANDROID_KEYSTORE_FILE')
   const keystoreKeyAlias = readRuntimeEnv('KEYSTORE_KEY_ALIAS')
   const keystoreKeyPassword = readRuntimeEnv('KEYSTORE_KEY_PASSWORD')
@@ -200,10 +198,6 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   // iOS credentials
   if (buildCertificateBase64)
     credentials.BUILD_CERTIFICATE_BASE64 = buildCertificateBase64
-  if (buildProvisionProfileBase64)
-    credentials.BUILD_PROVISION_PROFILE_BASE64 = buildProvisionProfileBase64
-  if (buildProvisionProfileBase64Prod)
-    credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = buildProvisionProfileBase64Prod
   if (p12Password)
     credentials.P12_PASSWORD = p12Password
   if (appleKeyId)
@@ -212,8 +206,6 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.APPLE_ISSUER_ID = appleIssuerId
   if (appleKeyContent)
     credentials.APPLE_KEY_CONTENT = appleKeyContent
-  if (appleProfileName)
-    credentials.APPLE_PROFILE_NAME = appleProfileName
   if (appStoreConnectTeamId)
     credentials.APP_STORE_CONNECT_TEAM_ID = appStoreConnectTeamId
   if (capgoIosScheme)
@@ -222,6 +214,8 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.CAPGO_IOS_TARGET = capgoIosTarget
   if (capgoIosDistribution)
     credentials.CAPGO_IOS_DISTRIBUTION = capgoIosDistribution as 'app_store' | 'ad_hoc'
+  if (capgoIosProvisioningMap)
+    credentials.CAPGO_IOS_PROVISIONING_MAP = capgoIosProvisioningMap
 
   // Android credentials
   if (androidKeystoreFile)
@@ -301,15 +295,9 @@ export async function convertFilesToCredentials(
   const credentials: BuildCredentials = { ...passwords }
 
   if (platform === 'ios') {
-    // iOS certificates and profiles
+    // iOS certificates
     if (files.BUILD_CERTIFICATE_FILE) {
       credentials.BUILD_CERTIFICATE_BASE64 = await fileToBase64(files.BUILD_CERTIFICATE_FILE)
-    }
-    if (files.BUILD_PROVISION_PROFILE_FILE) {
-      credentials.BUILD_PROVISION_PROFILE_BASE64 = await fileToBase64(files.BUILD_PROVISION_PROFILE_FILE)
-    }
-    if (files.BUILD_PROVISION_PROFILE_FILE_PROD) {
-      credentials.BUILD_PROVISION_PROFILE_BASE64_PROD = await fileToBase64(files.BUILD_PROVISION_PROFILE_FILE_PROD)
     }
     if (files.APPLE_KEY_FILE) {
       credentials.APPLE_KEY_CONTENT = await fileToBase64(files.APPLE_KEY_FILE)

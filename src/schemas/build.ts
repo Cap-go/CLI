@@ -8,14 +8,13 @@ import { optionsBaseSchema } from './base'
 export const buildCredentialsSchema = z.object({
   // iOS credentials
   BUILD_CERTIFICATE_BASE64: z.string().optional(),
-  BUILD_PROVISION_PROFILE_BASE64: z.string().optional(),
-  BUILD_PROVISION_PROFILE_BASE64_PROD: z.string().optional(),
+  BUILD_PROVISION_PROFILE_BASE64: z.string().optional(), // Legacy: kept for migration detection
   P12_PASSWORD: z.string().optional(),
   APPLE_KEY_ID: z.string().optional(),
   APPLE_ISSUER_ID: z.string().optional(),
   APPLE_KEY_CONTENT: z.string().optional(),
-  APPLE_PROFILE_NAME: z.string().optional(),
   APP_STORE_CONNECT_TEAM_ID: z.string().optional(),
+  CAPGO_IOS_PROVISIONING_MAP: z.string().optional(),
   // Android credentials
   ANDROID_KEYSTORE_FILE: z.string().optional(),
   KEYSTORE_KEY_ALIAS: z.string().optional(),
@@ -37,17 +36,15 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   userId: z.string().optional(),
   // iOS credential options (flattened)
   buildCertificateBase64: z.string().optional(),
-  buildProvisionProfileBase64: z.string().optional(),
-  buildProvisionProfileBase64Prod: z.string().optional(),
   p12Password: z.string().optional(),
   appleKeyId: z.string().optional(),
   appleIssuerId: z.string().optional(),
   appleKeyContent: z.string().optional(),
-  appleProfileName: z.string().optional(),
   appStoreConnectTeamId: z.string().optional(),
   iosScheme: z.string().optional(),
   iosTarget: z.string().optional(),
   iosDistribution: z.enum(['app_store', 'ad_hoc']).optional(),
+  iosProvisioningProfile: z.array(z.string()).optional(),
   // Android credential options (flattened)
   androidKeystoreFile: z.string().optional(),
   keystoreKeyAlias: z.string().optional(),
@@ -122,8 +119,6 @@ export type BuildOptionsPayload = z.infer<typeof buildOptionsPayloadSchema>
 export const credentialFileSchema = z.object({
   // iOS file paths
   BUILD_CERTIFICATE_FILE: z.string().optional(),
-  BUILD_PROVISION_PROFILE_FILE: z.string().optional(),
-  BUILD_PROVISION_PROFILE_FILE_PROD: z.string().optional(),
   APPLE_KEY_FILE: z.string().optional(),
   // Android file paths
   ANDROID_KEYSTORE_PATH: z.string().optional(),

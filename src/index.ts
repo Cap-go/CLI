@@ -8,7 +8,7 @@ import { getInfo } from './app/info'
 import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
-import { clearCredentialsCommand, listCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
+import { clearCredentialsCommand, listCredentialsCommand, migrateCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
@@ -42,6 +42,11 @@ const optionDescriptions = {
   packageJson: `Paths to package.json files for monorepos (comma-separated)`,
   nodeModules: `Paths to node_modules directories for monorepos (comma-separated)`,
   verbose: `Enable verbose output with detailed logging`,
+}
+
+/** Collector for repeatable CLI options (e.g. --ios-provisioning-profile used multiple times) */
+function collect(value: string, previous: string[]): string[] {
+  return previous.concat([value])
 }
 
 program
@@ -721,19 +726,17 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--build-mode <buildMode>', `Build mode: debug or release (default: release)`)
   // iOS credential CLI options (can also be set via env vars or saved credentials)
   .option('--build-certificate-base64 <cert>', 'iOS: Base64-encoded .p12 certificate')
-  .option('--build-provision-profile-base64 <profile>', 'iOS: Base64-encoded provisioning profile')
-  .option('--build-provision-profile-base64-prod <profile>', 'iOS: Base64-encoded production provisioning profile')
   .option('--p12-password <password>', 'iOS: Certificate password (optional if cert has no password)')
   .option('--apple-id <email>', 'iOS: Apple ID email')
   .option('--apple-app-specific-password <password>', 'iOS: App-specific password')
   .option('--apple-key-id <id>', 'iOS: App Store Connect API Key ID')
   .option('--apple-issuer-id <id>', 'iOS: App Store Connect Issuer ID')
   .option('--apple-key-content <content>', 'iOS: Base64-encoded App Store Connect API key (.p8)')
-  .option('--apple-profile-name <name>', 'iOS: Provisioning profile name')
   .option('--app-store-connect-team-id <id>', 'iOS: App Store Connect Team ID')
   .option('--ios-scheme <scheme>', 'iOS: Xcode scheme to build (default: App)')
   .option('--ios-target <target>', 'iOS: Xcode target for reading build settings (default: same as scheme)')
   .addOption(new Option('--ios-distribution <mode>', 'iOS: Distribution mode').choices(['app_store', 'ad_hoc']).default('app_store'))
+  .option('--ios-provisioning-profile <mapping>', 'iOS: Provisioning profile path or bundleId=path mapping (repeatable)', collect, [])
   // Android credential CLI options (can also be set via env vars or saved credentials)
   .option('--android-keystore-file <keystore>', 'Android: Base64-encoded keystore file')
   .option('--keystore-key-alias <alias>', 'Android: Keystore key alias')
@@ -784,10 +787,15 @@ Credentials are stored in:
 iOS Example:
   npx @capgo/cli build credentials save --platform ios \\
     --certificate ./cert.p12 --p12-password "password" \\
-    --provisioning-profile ./profile.mobileprovision \\
+    --ios-provisioning-profile ./profile.mobileprovision \\
     --apple-key ./AuthKey.p8 --apple-key-id "KEY123" \\
-    --apple-issuer-id "issuer-uuid" --apple-team-id "team-id" \\
-    --apple-profile-name "My App Profile"
+    --apple-issuer-id "issuer-uuid" --apple-team-id "team-id"
+
+Multi-target Example (app + widget extension):
+  npx @capgo/cli build credentials save --platform ios \\
+    --ios-provisioning-profile ./App.mobileprovision \\
+    --ios-provisioning-profile com.example.widget=./Widget.mobileprovision \\
+    ...
 
 Android Example:
   npx @capgo/cli build credentials save --platform android \\
@@ -802,13 +810,11 @@ Local storage (per-project):
   .option('--platform <platform>', 'Platform: ios or android (required)')
   // iOS options
   .option('--certificate <path>', 'iOS: Path to .p12 certificate file')
-  .option('--provisioning-profile <path>', 'iOS: Path to provisioning profile (.mobileprovision)')
-  .option('--provisioning-profile-prod <path>', 'iOS: Path to production provisioning profile')
+  .option('--ios-provisioning-profile <mapping>', 'iOS: Provisioning profile path or bundleId=path (repeatable)', collect, [])
   .option('--p12-password <password>', 'iOS: Certificate password (optional if cert has no password)')
   .option('--apple-key <path>', 'iOS: Path to .p8 App Store Connect API key')
   .option('--apple-key-id <id>', 'iOS: App Store Connect API Key ID')
   .option('--apple-issuer-id <id>', 'iOS: App Store Connect Issuer ID')
-  .option('--apple-profile-name <name>', 'iOS: Provisioning profile name')
   .option('--apple-team-id <id>', 'iOS: App Store Connect Team ID')
   .addOption(new Option('--ios-distribution <mode>', 'iOS: Distribution mode').choices(['app_store', 'ad_hoc']).default('app_store'))
   .option('--apple-id <email>', 'iOS: Apple ID email (optional)')
@@ -864,7 +870,7 @@ Update existing credentials by providing only the fields you want to change.
 Platform is auto-detected from the options you provide.
 
 Examples:
-  npx @capgo/cli build credentials update --provisioning-profile ./new-profile.mobileprovision
+  npx @capgo/cli build credentials update --ios-provisioning-profile ./new-profile.mobileprovision
   npx @capgo/cli build credentials update --local --keystore ./new-keystore.jks`)
   .action(updateCredentialsCommand)
   .option('--appId <appId>', 'App ID (auto-detected from capacitor.config if omitted)')
@@ -872,13 +878,11 @@ Examples:
   .option('--local', 'Update local .capgo-credentials.json instead of global')
   // iOS options
   .option('--certificate <path>', 'Path to P12 certificate file')
-  .option('--provisioning-profile <path>', 'Path to provisioning profile (.mobileprovision)')
-  .option('--provisioning-profile-prod <path>', 'Path to production provisioning profile')
+  .option('--ios-provisioning-profile <mapping>', 'Provisioning profile path or bundleId=path (repeatable)', collect, [])
   .option('--p12-password <password>', 'P12 certificate password')
   .option('--apple-key <path>', 'Path to App Store Connect API key (.p8 file)')
   .option('--apple-key-id <id>', 'App Store Connect API Key ID')
   .option('--apple-issuer-id <id>', 'App Store Connect Issuer ID')
-  .option('--apple-profile-name <name>', 'Provisioning profile name')
   .option('--apple-team-id <id>', 'App Store Connect Team ID')
   .addOption(new Option('--ios-distribution <mode>', 'iOS: Distribution mode').choices(['app_store', 'ad_hoc']).default('app_store'))
   // Android options
@@ -892,6 +896,20 @@ Examples:
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
   .option('--skip-build-number-bump', 'Skip automatic build number/version code incrementing on future builds')
   .option('--no-skip-build-number-bump', 'Re-enable automatic build number incrementing (default behavior)')
+
+buildCredentials
+  .command('migrate')
+  .description(`Migrate legacy provisioning profile to the new multi-target format.
+
+Converts BUILD_PROVISION_PROFILE_BASE64 to CAPGO_IOS_PROVISIONING_MAP.
+Discovers the main bundle ID from your Xcode project automatically.
+
+Example:
+  npx @capgo/cli build credentials migrate --platform ios`)
+  .action(migrateCredentialsCommand)
+  .option('--appId <appId>', 'App ID (auto-detected from capacitor.config if omitted)')
+  .option('--platform <platform>', 'Platform (only ios is supported)')
+  .option('--local', 'Migrate from local .capgo-credentials.json instead of global')
 
 program
   .command('probe')
