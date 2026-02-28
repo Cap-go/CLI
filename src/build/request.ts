@@ -40,7 +40,7 @@ import * as tus from 'tus-js-client'
 import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
 import pack from '../../package.json'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
-import { mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -1127,8 +1127,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       androidProjectDir: mergedCredentials.CAPGO_ANDROID_PROJECT_DIR,
       outputUploadEnabled: mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'true',
       outputRetentionSeconds: mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS
-        ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10) || 3600
-        : 3600,
+        ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10) || MIN_OUTPUT_RETENTION_SECONDS
+        : MIN_OUTPUT_RETENTION_SECONDS,
       skipBuildNumberBump: mergedCredentials.SKIP_BUILD_NUMBER_BUMP === 'true',
     }
 
