@@ -1134,10 +1134,20 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Remove non-credential fields from the credentials blob
     const NON_CREDENTIAL_KEYS = new Set([
-      'CAPGO_IOS_SCHEME', 'CAPGO_IOS_TARGET', 'CAPGO_IOS_DISTRIBUTION',
-      'BUILD_OUTPUT_UPLOAD_ENABLED', 'BUILD_OUTPUT_RETENTION_SECONDS', 'SKIP_BUILD_NUMBER_BUMP',
-      'CAPGO_IOS_SOURCE_DIR', 'CAPGO_IOS_APP_DIR', 'CAPGO_IOS_PROJECT_DIR', 'IOS_PROJECT_DIR',
-      'CAPGO_ANDROID_SOURCE_DIR', 'CAPGO_ANDROID_APP_DIR', 'CAPGO_ANDROID_PROJECT_DIR', 'ANDROID_PROJECT_DIR',
+      'CAPGO_IOS_SCHEME',
+      'CAPGO_IOS_TARGET',
+      'CAPGO_IOS_DISTRIBUTION',
+      'BUILD_OUTPUT_UPLOAD_ENABLED',
+      'BUILD_OUTPUT_RETENTION_SECONDS',
+      'SKIP_BUILD_NUMBER_BUMP',
+      'CAPGO_IOS_SOURCE_DIR',
+      'CAPGO_IOS_APP_DIR',
+      'CAPGO_IOS_PROJECT_DIR',
+      'IOS_PROJECT_DIR',
+      'CAPGO_ANDROID_SOURCE_DIR',
+      'CAPGO_ANDROID_APP_DIR',
+      'CAPGO_ANDROID_PROJECT_DIR',
+      'ANDROID_PROJECT_DIR',
     ])
     const buildCredentialsPayload: Record<string, string> = {}
     for (const [key, value] of Object.entries(mergedCredentials)) {
