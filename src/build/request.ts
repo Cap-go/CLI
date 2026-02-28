@@ -1158,8 +1158,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     const requestPayload = {
       app_id: appId,
-      buildOptions: buildOptionsPayload,
-      buildCredentials: buildCredentialsPayload,
+      build_options: buildOptionsPayload,
+      build_credentials: buildCredentialsPayload,
     }
 
     if (!silent) {
