@@ -1067,12 +1067,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const missingCreds: string[] = []
 
     if (options.platform === 'ios') {
-      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store'
+      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION
       const validModes = ['app_store', 'ad_hoc'] as const
-      if (!validModes.includes(rawDistributionMode as any)) {
+      if (rawDistributionMode && !validModes.includes(rawDistributionMode as any)) {
         missingCreds.push(`Invalid CAPGO_IOS_DISTRIBUTION value: '${rawDistributionMode}'. Must be one of: ${validModes.join(', ')}`)
       }
-      const distributionMode = validModes.includes(rawDistributionMode as any) ? rawDistributionMode : 'app_store'
+      const distributionMode = (rawDistributionMode && validModes.includes(rawDistributionMode as any))
+        ? rawDistributionMode
+        : 'app_store'
+      if (!rawDistributionMode && !silent) {
+        log.info('ℹ️  --ios-distribution not specified, defaulting to app_store')
+      }
+      // Write normalized value back so splitPayload picks it up
+      mergedCredentials.CAPGO_IOS_DISTRIBUTION = distributionMode
 
       // iOS minimum requirements (all modes)
       if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
@@ -1169,6 +1176,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
       }
       throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
+    }
+
+    // Log defaults for output control fields when not explicitly set
+    if (!silent) {
+      if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
+        log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
+      }
+      if (!mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS) {
+        log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
+      }
+      if (!mergedCredentials.SKIP_BUILD_NUMBER_BUMP) {
+        log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
+      }
     }
 
     const { buildOptions: buildOptionsPayload, buildCredentials: buildCredentialsPayload } = splitPayload(
