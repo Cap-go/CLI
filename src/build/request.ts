@@ -1200,6 +1200,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     const requestPayload = {
       app_id: appId,
+      platform: options.platform,
+      build_mode: options.buildMode || 'release',
       build_options: buildOptionsPayload,
       build_credentials: buildCredentialsPayload,
     }
