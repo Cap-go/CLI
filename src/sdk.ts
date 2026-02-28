@@ -3,6 +3,7 @@ import type { BuildRequestOptions as InternalBuildRequestOptions } from './build
 import type { DecryptResult } from './bundle/decrypt'
 import type { EncryptResult } from './bundle/encrypt'
 import type { ZipResult } from './bundle/zip'
+import type { ProbeInternalResult } from './probe'
 import type { AppOptions } from './schemas/app'
 import type { OptionsUpload } from './schemas/bundle'
 import type { OptionsSetChannel } from './schemas/channel'
@@ -39,7 +40,6 @@ import type {
   UploadResult,
   ZipBundleOptions,
 } from './schemas/sdk'
-import type { ProbeInternalResult } from './probe'
 import type { Organization } from './utils'
 import { getActiveAppVersions } from './api/versions'
 import { addAppInternal } from './app/add'
@@ -79,7 +79,7 @@ export type BundleCompatibilityEntry = CompatibilityReport[number]
 // Re-export all SDK types from schemas
 // ============================================================================
 
-export type { BuildCredentials } from './build/request'
+export type { UpdateProbeResult } from './app/updateProbe'
 
 /**
  * Create an SDK error result from an error, with security policy awareness.
@@ -603,7 +603,7 @@ export class CapgoSDK {
    *   lane: 'ios', // Must be exactly "ios" or "android"
    *   credentials: {
    *     BUILD_CERTIFICATE_BASE64: 'base64-cert...',
-   *     BUILD_PROVISION_PROFILE_BASE64: 'base64-profile...',
+   *     CAPGO_IOS_PROVISIONING_MAP: '{"com.example.app":{"profile":"base64...","name":"match AppStore com.example.app"}}',
    *     P12_PASSWORD: 'cert-password',
    *     APPLE_KEY_ID: 'KEY123',
    *     APPLE_ISSUER_ID: 'issuer-uuid',
@@ -630,8 +630,6 @@ export class CapgoSDK {
         userId: options.userId,
         // Flatten BuildCredentials to individual fields
         buildCertificateBase64: creds?.BUILD_CERTIFICATE_BASE64,
-        buildProvisionProfileBase64: creds?.BUILD_PROVISION_PROFILE_BASE64,
-        buildProvisionProfileBase64Prod: creds?.BUILD_PROVISION_PROFILE_BASE64_PROD,
         p12Password: creds?.P12_PASSWORD,
         appleKeyId: creds?.APPLE_KEY_ID,
         appleIssuerId: creds?.APPLE_ISSUER_ID,
@@ -1445,7 +1443,9 @@ export async function getCapacitorConfig() {
 // Re-export useful types
 // ============================================================================
 
+export type { BuildCredentials } from './build/request'
 export type { CapacitorConfig } from './config'
+export type { ProbeInternalResult } from './probe'
 export type {
   AccountIdOptions,
   AddAppOptions,
@@ -1480,8 +1480,6 @@ export type {
   UploadResult,
   ZipBundleOptions,
 } from './schemas/sdk'
-export type { UpdateProbeResult } from './app/updateProbe'
-export type { ProbeInternalResult } from './probe'
 export type { Database } from './types/supabase.types'
 export { createSupabaseClient } from './utils'
 export {

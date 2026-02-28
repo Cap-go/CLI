@@ -1,4 +1,5 @@
-import { readFileSync } from 'fs'
+import { Buffer } from 'node:buffer'
+import { readFileSync } from 'node:fs'
 
 export interface MobileprovisionInfo {
   name: string
@@ -52,7 +53,8 @@ function extractPlistValue(xml: string, key: string): string | null {
 function extractNestedPlistValue(xml: string, dictKey: string, valueKey: string): string | null {
   const dictKeyRegex = new RegExp(`<key>${escapeRegex(dictKey)}</key>\\s*<dict>([\\s\\S]*?)</dict>`)
   const dictMatch = xml.match(dictKeyRegex)
-  if (!dictMatch) return null
+  if (!dictMatch)
+    return null
   return extractPlistValue(dictMatch[1], valueKey)
 }
 

@@ -1,6 +1,6 @@
+import type { UpdateProbeResult } from './app/updateProbe'
 import { exit, stdin, stdout } from 'node:process'
 import { intro, isCancel, log, select } from '@clack/prompts'
-import type { UpdateProbeResult } from './app/updateProbe'
 import { explainCommonUpdateError, prepareUpdateProbe, singleProbeRequest } from './app/updateProbe'
 import { getConfig } from './utils'
 

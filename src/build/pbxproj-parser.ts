@@ -1,5 +1,5 @@
-import { readFileSync, readdirSync, existsSync } from 'fs'
-import { join } from 'path'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 
 export interface PbxTarget {
   name: string
@@ -23,27 +23,29 @@ const SIGNABLE_PRODUCT_TYPES = new Set([
  * with their resolved bundle identifiers.
  */
 export function findSignableTargets(pbxprojContent: string): PbxTarget[] {
-  if (!pbxprojContent) return []
+  if (!pbxprojContent)
+    return []
 
   // Step 1: Find all PBXNativeTarget blocks
-  const targetRegex = /(\w+)\s*\/\*[^*]*\*\/\s*=\s*\{[^}]*isa\s*=\s*PBXNativeTarget;[^}]*\}/g
+  const targetRegex = /\w+\s*\/\*[^*]*\*\/\s*=\s*\{[^}]*isa\s*=\s*PBXNativeTarget;[^}]*\}/g
   const targets: PbxTarget[] = []
 
-  let match: RegExpExecArray | null
-  while ((match = targetRegex.exec(pbxprojContent)) !== null) {
+  for (const match of pbxprojContent.matchAll(targetRegex)) {
     const block = match[0]
 
-    const nameMatch = block.match(/name\s*=\s*([^;]+);/)
+    const nameMatch = block.match(/name\s*=\s*("[^"]*"|[^;\s]+)\s*;/)
     const productTypeMatch = block.match(/productType\s*=\s*"([^"]+)"/)
     const configListMatch = block.match(/buildConfigurationList\s*=\s*(\w+)/)
 
-    if (!nameMatch || !productTypeMatch || !configListMatch) continue
+    if (!nameMatch || !productTypeMatch || !configListMatch)
+      continue
 
-    const name = nameMatch[1].trim()
+    const name = nameMatch[1].replace(/^"|"$/g, '')
     const productType = productTypeMatch[1]
     const configListId = configListMatch[1]
 
-    if (!SIGNABLE_PRODUCT_TYPES.has(productType)) continue
+    if (!SIGNABLE_PRODUCT_TYPES.has(productType))
+      continue
 
     const bundleId = resolveBundleId(pbxprojContent, configListId)
 
@@ -63,11 +65,13 @@ function resolveBundleId(content: string, configListId: string): string {
     `${escapeRegex(configListId)}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{[^}]*isa\\s*=\\s*XCConfigurationList;[^}]*\\}`,
   )
   const configListMatch = content.match(configListRegex)
-  if (!configListMatch) return ''
+  if (!configListMatch)
+    return ''
 
   // Extract first build configuration ID from buildConfigurations list
   const configIdsMatch = configListMatch[0].match(/buildConfigurations\s*=\s*\(\s*(\w+)/)
-  if (!configIdsMatch) return ''
+  if (!configIdsMatch)
+    return ''
   const firstConfigId = configIdsMatch[1]
 
   // Find the XCBuildConfiguration block for that ID
@@ -75,10 +79,11 @@ function resolveBundleId(content: string, configListId: string): string {
     `${escapeRegex(firstConfigId)}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{[^}]*isa\\s*=\\s*XCBuildConfiguration;[^}]*\\}`,
   )
   const buildConfigMatch = content.match(buildConfigRegex)
-  if (!buildConfigMatch) return ''
+  if (!buildConfigMatch)
+    return ''
 
   // Extract PRODUCT_BUNDLE_IDENTIFIER from buildSettings
-  const bundleIdMatch = buildConfigMatch[0].match(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*"?([^";]+)"?\s*;/)
+  const bundleIdMatch = buildConfigMatch[0].match(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*"?([^";\s]+)"?\s*;/)
   return bundleIdMatch ? bundleIdMatch[1] : ''
 }
 
@@ -92,14 +97,16 @@ export function findXcodeProject(searchDir: string): string | null {
   // Search ios/ subdirectory first (most common for Capacitor/RN projects)
   const iosDir = join(searchDir, 'ios')
   const found = findPbxprojInDir(iosDir)
-  if (found) return found
+  if (found)
+    return found
 
   // Fall back to searching the root directory
   return findPbxprojInDir(searchDir)
 }
 
 function findPbxprojInDir(dir: string): string | null {
-  if (!existsSync(dir)) return null
+  if (!existsSync(dir))
+    return null
 
   let entries: string[]
   try {
@@ -127,7 +134,8 @@ function findPbxprojInDir(dir: string): string | null {
  */
 export function readPbxproj(projectDir: string): string | null {
   const pbxprojPath = findXcodeProject(projectDir)
-  if (!pbxprojPath) return null
+  if (!pbxprojPath)
+    return null
 
   try {
     return readFileSync(pbxprojPath, 'utf-8')
