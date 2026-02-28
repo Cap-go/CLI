@@ -26,7 +26,7 @@
  * - Use `build credentials clear` to remove saved credentials
  */
 
-import type { BuildCredentials, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
+import type { BuildCredentials, BuildOptionsPayload, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
 import { Buffer } from 'node:buffer'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
@@ -38,8 +38,9 @@ import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
 import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
+import pack from '../../package.json'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
-import { mergeCredentials, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -852,6 +853,66 @@ export async function zipDirectory(projectDir: string, outputPath: string, platf
  * - NEVER stored permanently on Capgo servers
  * - Build outputs may optionally be uploaded for time-limited download links
  */
+
+/** Keys that are non-secret build options and should NOT be sent in the credentials blob. */
+export const NON_CREDENTIAL_KEYS = new Set([
+  'CAPGO_IOS_SCHEME',
+  'CAPGO_IOS_TARGET',
+  'CAPGO_IOS_DISTRIBUTION',
+  'BUILD_OUTPUT_UPLOAD_ENABLED',
+  'BUILD_OUTPUT_RETENTION_SECONDS',
+  'SKIP_BUILD_NUMBER_BUMP',
+  'CAPGO_IOS_SOURCE_DIR',
+  'CAPGO_IOS_APP_DIR',
+  'CAPGO_IOS_PROJECT_DIR',
+  'IOS_PROJECT_DIR',
+  'CAPGO_ANDROID_SOURCE_DIR',
+  'CAPGO_ANDROID_APP_DIR',
+  'CAPGO_ANDROID_PROJECT_DIR',
+  'ANDROID_PROJECT_DIR',
+])
+
+/**
+ * Split merged credentials into a build options payload and a credentials-only payload.
+ * Non-secret configuration keys (schemes, directories, output control) go into buildOptions.
+ * Only actual secrets (certificates, passwords, API keys) remain in buildCredentials.
+ */
+export function splitPayload(
+  mergedCredentials: Record<string, string | undefined>,
+  platform: 'ios' | 'android',
+  buildMode: string,
+  cliVersion: string,
+): { buildOptions: BuildOptionsPayload, buildCredentials: Record<string, string> } {
+  const buildOptions: BuildOptionsPayload = {
+    platform,
+    buildMode: buildMode as 'debug' | 'release',
+    cliVersion,
+    iosScheme: mergedCredentials.CAPGO_IOS_SCHEME,
+    iosTarget: mergedCredentials.CAPGO_IOS_TARGET,
+    iosDistribution: mergedCredentials.CAPGO_IOS_DISTRIBUTION as 'app_store' | 'ad_hoc' | undefined,
+    iosSourceDir: mergedCredentials.CAPGO_IOS_SOURCE_DIR,
+    iosAppDir: mergedCredentials.CAPGO_IOS_APP_DIR,
+    iosProjectDir: mergedCredentials.CAPGO_IOS_PROJECT_DIR,
+    androidSourceDir: mergedCredentials.CAPGO_ANDROID_SOURCE_DIR,
+    androidAppDir: mergedCredentials.CAPGO_ANDROID_APP_DIR,
+    androidProjectDir: mergedCredentials.CAPGO_ANDROID_PROJECT_DIR,
+    outputUploadEnabled: mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'true',
+    outputRetentionSeconds: mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS
+      ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10) || MIN_OUTPUT_RETENTION_SECONDS
+      : MIN_OUTPUT_RETENTION_SECONDS,
+    skipBuildNumberBump: mergedCredentials.SKIP_BUILD_NUMBER_BUMP === 'true',
+  }
+
+  const buildCredentials: Record<string, string> = {}
+  for (const [key, value] of Object.entries(mergedCredentials)) {
+    if (!NON_CREDENTIAL_KEYS.has(key) && value !== undefined) {
+      buildCredentials[key] = value
+    }
+  }
+
+  return { buildOptions, buildCredentials }
+}
+
 export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
   // Track build time
   const buildStartTime = Date.now()
@@ -983,16 +1044,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     }
 
     // Prepare request payload for Capgo backend
-    const requestPayload: {
-      app_id: string
-      platform: 'ios' | 'android'
-      build_mode?: 'debug' | 'release'
-      credentials?: BuildCredentials
-    } = {
-      app_id: appId,
-      platform: options.platform,
-      build_mode: options.buildMode,
-    }
+    // (payload structure will be finalized after credential validation below)
 
     // Validate required credentials for the platform
     if (!mergedCredentials) {
@@ -1015,12 +1067,19 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const missingCreds: string[] = []
 
     if (options.platform === 'ios') {
-      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION || 'app_store'
+      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION
       const validModes = ['app_store', 'ad_hoc'] as const
-      if (!validModes.includes(rawDistributionMode as any)) {
+      if (rawDistributionMode && !validModes.includes(rawDistributionMode as any)) {
         missingCreds.push(`Invalid CAPGO_IOS_DISTRIBUTION value: '${rawDistributionMode}'. Must be one of: ${validModes.join(', ')}`)
       }
-      const distributionMode = validModes.includes(rawDistributionMode as any) ? rawDistributionMode : 'app_store'
+      const distributionMode = (rawDistributionMode && validModes.includes(rawDistributionMode as any))
+        ? rawDistributionMode
+        : 'app_store'
+      if (!rawDistributionMode && !silent) {
+        log.info('ℹ️  --ios-distribution not specified, defaulting to app_store')
+      }
+      // Write normalized value back so splitPayload picks it up
+      mergedCredentials.CAPGO_IOS_DISTRIBUTION = distributionMode
 
       // iOS minimum requirements (all modes)
       if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
@@ -1119,14 +1178,39 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
     }
 
-    // Add credentials to request payload
-    requestPayload.credentials = mergedCredentials
+    // Log defaults for output control fields when not explicitly set
+    if (!silent) {
+      if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
+        log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
+      }
+      if (!mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS) {
+        log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
+      }
+      if (!mergedCredentials.SKIP_BUILD_NUMBER_BUMP) {
+        log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
+      }
+    }
+
+    const { buildOptions: buildOptionsPayload, buildCredentials: buildCredentialsPayload } = splitPayload(
+      mergedCredentials,
+      options.platform,
+      options.buildMode || 'release',
+      pack.version,
+    )
+
+    const requestPayload = {
+      app_id: appId,
+      build_options: buildOptionsPayload,
+      build_credentials: buildCredentialsPayload,
+    }
+
     if (!silent) {
       log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
     }
     if (verbose) {
-      const credentialKeys = Object.keys(mergedCredentials).filter(k => mergedCredentials[k])
+      const credentialKeys = Object.keys(buildCredentialsPayload)
       log.info(`Credentials provided: ${credentialKeys.join(', ')}`)
+      log.info(`Build options: platform=${buildOptionsPayload.platform}, mode=${buildOptionsPayload.buildMode}, cliVersion=${buildOptionsPayload.cliVersion}`)
     }
 
     // Request build from Capgo backend (POST /build/request)
