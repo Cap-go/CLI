@@ -1092,8 +1092,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.warn('   If your certificate requires a password, provide it with --p12-password')
       }
 
-      // Legacy detection: old BUILD_PROVISION_PROFILE_BASE64 without new provisioning map
-      if (mergedCredentials.BUILD_PROVISION_PROFILE_BASE64 && !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP) {
+      // Legacy detection: old provisioning keys without new provisioning map
+      const hasLegacyProvisioning = !!(mergedCredentials.BUILD_PROVISION_PROFILE_BASE64 || mergedCredentials.APPLE_PROFILE_NAME)
+      if (hasLegacyProvisioning && !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP) {
         if (!silent) {
           log.error('❌ Legacy provisioning profile format detected. Run:')
           log.error('     npx @capgo/cli build credentials migrate --platform ios')
