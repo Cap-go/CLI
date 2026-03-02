@@ -87,10 +87,18 @@ export function buildProvisioningMap(
       // Explicit format: bundleId=path
       bundleId = entry.slice(0, equalsIdx).trim()
       profilePath = entry.slice(equalsIdx + 1).trim()
+
+      if (!bundleId)
+        throw new Error(`Empty bundle ID in provisioning profile entry: "${entry}"`)
+      if (!profilePath)
+        throw new Error(`Empty profile path in provisioning profile entry: "${entry}"`)
     }
     else {
       // Auto-infer: just a path
       profilePath = entry.trim()
+      if (!profilePath)
+        throw new Error('Empty provisioning profile entry')
+
       const resolved = resolve(profilePath)
       if (!existsSync(resolved)) {
         throw new Error(`Provisioning profile not found: ${resolved}`)
@@ -121,6 +129,9 @@ export function buildProvisioningMap(
     if (!existsSync(resolvedPath)) {
       throw new Error(`Provisioning profile not found: ${resolvedPath}`)
     }
+
+    if (map[bundleId])
+      throw new Error(`Duplicate provisioning profile for bundle ID "${bundleId}". Each bundle ID can only have one profile.`)
 
     const profileData = readFileSync(resolvedPath)
     const base64 = profileData.toString('base64')
