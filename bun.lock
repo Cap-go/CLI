@@ -12,7 +12,7 @@
         "@clack/prompts": "^1.0.0",
         "@modelcontextprotocol/sdk": "^1.25.3",
         "@sauber/table": "npm:@jsr/sauber__table",
-        "@std/semver": "npm:@jsr/std__semver@1.0.6",
+        "@std/semver": "npm:@jsr/std__semver@1.0.8",
         "@supabase/supabase-js": "^2.79.0",
         "@types/adm-zip": "^0.5.7",
         "@types/node": "^25.0.0",
@@ -129,7 +129,7 @@
 
     "@sindresorhus/base62": ["@sindresorhus/base62@1.0.0", "", {}, "sha512-TeheYy0ILzBEI/CO55CP6zJCSdSWeRtGnHy8U8dWSUH4I68iqTsy7HkMktR4xakThc9jotkPQUXT4ITdbV7cHA=="],
 
-    "@std/semver": ["@jsr/std__semver@1.0.6", "https://npm.jsr.io/~/11/@jsr/std__semver/1.0.6.tgz", {}, "sha512-MXgSPv8WEB7ygO32CHPi4Yg6CoywGdi+aRlgBU9heWdyhASrpJwn+RMuKxOyWxCg5qYQz+oApbqm8CblnT+l5Q=="],
+    "@std/semver": ["@jsr/std__semver@1.0.8", "https://npm.jsr.io/~/11/@jsr/std__semver/1.0.8.tgz", {}, "sha512-YhkykPU2Majz66e+rQbP0okYc7kKv+U32aguLPCXZZAL+vEVmBA+khHjPHhLBpWR073gzU3WHqGRgB7a/aXCjg=="],
 
     "@stylistic/eslint-plugin": ["@stylistic/eslint-plugin@5.8.0", "", { "dependencies": { "@eslint-community/eslint-utils": "^4.9.1", "@typescript-eslint/types": "^8.54.0", "eslint-visitor-keys": "^4.2.1", "espree": "^10.4.0", "estraverse": "^5.3.0", "picomatch": "^4.0.3" }, "peerDependencies": { "eslint": ">=9.0.0" } }, "sha512-WNPVF/FfBAjyi3OA7gok8swRiImNLKI4dmV3iK/GC/0xSJR7eCzBFsw9hLZVgb1+MYNLy7aDsjohxN1hA/FIfQ=="],
 
