@@ -36,8 +36,8 @@ function validateIosCredentials(credentials) {
 
   if (!credentials.BUILD_CERTIFICATE_BASE64)
     missingCreds.push('BUILD_CERTIFICATE_BASE64')
-  if (!credentials.BUILD_PROVISION_PROFILE_BASE64)
-    missingCreds.push('BUILD_PROVISION_PROFILE_BASE64')
+  if (!credentials.CAPGO_IOS_PROVISIONING_MAP)
+    missingCreds.push('CAPGO_IOS_PROVISIONING_MAP')
 
   // App Store Connect API key validation depends on distribution mode
   if (distributionMode === 'app_store') {
@@ -81,7 +81,7 @@ await test('iOS validation errors when no API key and no output upload', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
     // Missing API key, no output upload
@@ -98,7 +98,7 @@ await test('iOS validation accepts complete credentials with API key', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APPLE_KEY_ID: 'keyid',
     APPLE_ISSUER_ID: 'issuerid',
     APPLE_KEY_CONTENT: 'keycontent',
@@ -114,7 +114,7 @@ await test('iOS validation errors when no API key with output upload but no skip
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
     // No API key, no skip-build-number-bump
@@ -131,7 +131,7 @@ await test('iOS validation allows no API key when output upload and skip-build-n
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
     SKIP_BUILD_NUMBER_BUMP: 'true',
@@ -222,7 +222,7 @@ await test('iOS validation fails with incomplete API key and reports missing fie
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APPLE_KEY_ID: 'keyid',
     APPLE_ISSUER_ID: 'issuerid',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
@@ -243,7 +243,7 @@ await test('iOS validation fails with incomplete API key even when output upload
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
     P12_PASSWORD: 'pass',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APPLE_KEY_ID: 'keyid',
     // Missing APPLE_ISSUER_ID and APPLE_KEY_CONTENT
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
@@ -265,9 +265,8 @@ await test('iOS validation fails with incomplete API key even when output upload
 await test('iOS ad_hoc validation passes without Apple API key', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
-    APPLE_PROFILE_NAME: 'profile-name',
     CAPGO_IOS_DISTRIBUTION: 'ad_hoc',
   }
 
@@ -284,7 +283,7 @@ await test('iOS ad_hoc validation still requires cert, profile, team ID', () => 
   const missingCreds = validateIosCredentials(credentials)
   assert(missingCreds.length === 3, `Should have 3 missing credentials, got ${missingCreds.length}: ${missingCreds.join(', ')}`)
   assert(missingCreds.includes('BUILD_CERTIFICATE_BASE64'), 'Should require cert')
-  assert(missingCreds.includes('BUILD_PROVISION_PROFILE_BASE64'), 'Should require profile')
+  assert(missingCreds.includes('CAPGO_IOS_PROVISIONING_MAP'), 'Should require provisioning map')
   assert(missingCreds.includes('APP_STORE_CONNECT_TEAM_ID'), 'Should require team ID')
 })
 
@@ -292,7 +291,7 @@ await test('iOS ad_hoc validation still requires cert, profile, team ID', () => 
 await test('iOS validation defaults to app_store when CAPGO_IOS_DISTRIBUTION is undefined', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'false',
   }
@@ -306,7 +305,7 @@ await test('iOS validation defaults to app_store when CAPGO_IOS_DISTRIBUTION is 
 await test('iOS ad_hoc passes without output upload enabled', () => {
   const credentials = {
     BUILD_CERTIFICATE_BASE64: 'cert',
-    BUILD_PROVISION_PROFILE_BASE64: 'profile',
+    CAPGO_IOS_PROVISIONING_MAP: '{"com.test.app":{"profile":"base64","name":"test"}}',
     APP_STORE_CONNECT_TEAM_ID: 'teamid',
     CAPGO_IOS_DISTRIBUTION: 'ad_hoc',
     BUILD_OUTPUT_UPLOAD_ENABLED: 'false',

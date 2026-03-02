@@ -41,6 +41,7 @@ import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should d
 import pack from '../../package.json'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { buildProvisioningMap } from './credentials-command'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -962,10 +963,6 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const cliCredentials: Partial<BuildCredentials> = {}
     if (options.buildCertificateBase64)
       cliCredentials.BUILD_CERTIFICATE_BASE64 = options.buildCertificateBase64
-    if (options.buildProvisionProfileBase64)
-      cliCredentials.BUILD_PROVISION_PROFILE_BASE64 = options.buildProvisionProfileBase64
-    if (options.buildProvisionProfileBase64Prod)
-      cliCredentials.BUILD_PROVISION_PROFILE_BASE64_PROD = options.buildProvisionProfileBase64Prod
     if (options.p12Password)
       cliCredentials.P12_PASSWORD = options.p12Password
     if (options.appleKeyId)
@@ -974,8 +971,6 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.APPLE_ISSUER_ID = options.appleIssuerId
     if (options.appleKeyContent)
       cliCredentials.APPLE_KEY_CONTENT = options.appleKeyContent
-    if (options.appleProfileName)
-      cliCredentials.APPLE_PROFILE_NAME = options.appleProfileName
     if (options.appStoreConnectTeamId)
       cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId
     if (options.iosScheme)
@@ -984,6 +979,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.CAPGO_IOS_TARGET = options.iosTarget
     if (options.iosDistribution)
       cliCredentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
+    if (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0) {
+      const provMap = buildProvisioningMap(options.iosProvisioningProfile, resolve(options.path || cwd()))
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
+    }
+    if (options.iosProvisioningMap)
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = options.iosProvisioningMap
     if (options.androidKeystoreFile)
       cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
     if (options.keystoreKeyAlias)
@@ -1090,8 +1091,21 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         log.warn('⚠️  P12_PASSWORD not provided - assuming certificate has no password')
         log.warn('   If your certificate requires a password, provide it with --p12-password')
       }
-      if (!mergedCredentials.BUILD_PROVISION_PROFILE_BASE64)
-        missingCreds.push('BUILD_PROVISION_PROFILE_BASE64 (or --build-provision-profile-base64)')
+
+      // Legacy detection: old provisioning keys without new provisioning map
+      const hasLegacyProvisioning = !!(mergedCredentials.BUILD_PROVISION_PROFILE_BASE64 || mergedCredentials.APPLE_PROFILE_NAME)
+      if (hasLegacyProvisioning && !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP) {
+        if (!silent) {
+          log.error('❌ Legacy provisioning profile format detected. Run:')
+          log.error('     npx @capgo/cli build credentials migrate --platform ios')
+          log.error('')
+          log.error('   This will convert your existing provisioning profile to the new multi-target format.')
+        }
+        throw new Error('Legacy provisioning profile format detected. Run: npx @capgo/cli build credentials migrate --platform ios')
+      }
+
+      if (!mergedCredentials.CAPGO_IOS_PROVISIONING_MAP)
+        missingCreds.push('CAPGO_IOS_PROVISIONING_MAP (use --ios-provisioning-profile or save via "build credentials save")')
 
       // App Store Connect API key: only required for app_store mode
       if (distributionMode === 'app_store') {
