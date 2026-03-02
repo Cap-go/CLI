@@ -96,14 +96,17 @@ t('returns empty array for empty content', () => {
 
 t('findXcodeProject finds .xcodeproj in ios/ subdirectory', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pbx-test-'))
-  const xcodeprojDir = join(dir, 'ios', 'MyApp.xcodeproj')
-  mkdirSync(xcodeprojDir, { recursive: true })
-  writeFileSync(join(xcodeprojDir, 'project.pbxproj'), 'fake content')
+  try {
+    const xcodeprojDir = join(dir, 'ios', 'MyApp.xcodeproj')
+    mkdirSync(xcodeprojDir, { recursive: true })
+    writeFileSync(join(xcodeprojDir, 'project.pbxproj'), 'fake content')
 
-  const result = findXcodeProject(dir)
-  assert.equal(result, join(xcodeprojDir, 'project.pbxproj'))
-
-  rmSync(dir, { recursive: true })
+    const result = findXcodeProject(dir)
+    assert.equal(result, join(xcodeprojDir, 'project.pbxproj'))
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 // --- resolveBundleId prefers Release over Debug ---
@@ -238,12 +241,15 @@ t('falls back to Debug bundle ID when no Release config exists', () => {
 
 t('findXcodeProject returns null when no .xcodeproj exists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pbx-test-'))
-  mkdirSync(join(dir, 'ios'), { recursive: true })
+  try {
+    mkdirSync(join(dir, 'ios'), { recursive: true })
 
-  const result = findXcodeProject(dir)
-  assert.equal(result, null)
-
-  rmSync(dir, { recursive: true })
+    const result = findXcodeProject(dir)
+    assert.equal(result, null)
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 process.stdout.write('OK\n')
