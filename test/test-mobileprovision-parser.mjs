@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict'
-import { writeFileSync, unlinkSync, mkdtempSync } from 'fs'
+import { writeFileSync, mkdtempSync, rmSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { parseMobileprovision, parseMobileprovisionFromBase64 } from '../src/build/mobileprovision-parser.ts'
@@ -40,27 +40,33 @@ const fullPlist = `<?xml version="1.0" encoding="UTF-8"?>
 
 t('extracts Name from embedded plist', () => {
   const dir = mkdtempSync(join(tmpdir(), 'mp-test-'))
-  const path = join(dir, 'test.mobileprovision')
-  writeFileSync(path, createFakeProfile(fullPlist))
+  try {
+    const path = join(dir, 'test.mobileprovision')
+    writeFileSync(path, createFakeProfile(fullPlist))
 
-  const result = parseMobileprovision(path)
+    const result = parseMobileprovision(path)
 
-  assert.equal(result.name, 'match AdHoc com.example.app')
-  assert.equal(result.applicationIdentifier, 'TEAM123.com.example.app')
-  assert.equal(result.bundleId, 'com.example.app')
-  assert.equal(result.uuid, 'A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6')
-
-  unlinkSync(path)
+    assert.equal(result.name, 'match AdHoc com.example.app')
+    assert.equal(result.applicationIdentifier, 'TEAM123.com.example.app')
+    assert.equal(result.bundleId, 'com.example.app')
+    assert.equal(result.uuid, 'A1B2C3D4-E5F6-G7H8-I9J0-K1L2M3N4O5P6')
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 t('throws on file without embedded plist', () => {
   const dir = mkdtempSync(join(tmpdir(), 'mp-test-'))
-  const path = join(dir, 'bad.mobileprovision')
-  writeFileSync(path, Buffer.from('not a real profile'))
+  try {
+    const path = join(dir, 'bad.mobileprovision')
+    writeFileSync(path, Buffer.from('not a real profile'))
 
-  assert.throws(() => parseMobileprovision(path), /No embedded plist found/)
-
-  unlinkSync(path)
+    assert.throws(() => parseMobileprovision(path), /No embedded plist found/)
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 t('throws on plist missing Name key', () => {
@@ -72,12 +78,15 @@ t('throws on plist missing Name key', () => {
 </dict>
 </plist>`
   const dir = mkdtempSync(join(tmpdir(), 'mp-test-'))
-  const path = join(dir, 'noname.mobileprovision')
-  writeFileSync(path, createFakeProfile(plist))
+  try {
+    const path = join(dir, 'noname.mobileprovision')
+    writeFileSync(path, createFakeProfile(plist))
 
-  assert.throws(() => parseMobileprovision(path), /Name/)
-
-  unlinkSync(path)
+    assert.throws(() => parseMobileprovision(path), /Name/)
+  }
+  finally {
+    rmSync(dir, { recursive: true, force: true })
+  }
 })
 
 t('parses base64-encoded mobileprovision', () => {

@@ -22,9 +22,9 @@ function parseMobileprovisionBuffer(data: Buffer, source: string): Mobileprovisi
   const xmlStartMarker = '<?xml'
   const xmlEndMarker = '</plist>'
   const xmlStartIdx = data.indexOf(xmlStartMarker)
-  const xmlEndIdx = data.indexOf(xmlEndMarker)
+  const xmlEndIdx = xmlStartIdx !== -1 ? data.indexOf(xmlEndMarker, xmlStartIdx) : -1
 
-  if (xmlStartIdx === -1 || xmlEndIdx === -1) {
+  if (xmlStartIdx === -1 || xmlEndIdx === -1 || xmlEndIdx <= xmlStartIdx) {
     throw new Error(`No embedded plist found in mobileprovision file: ${source}`)
   }
 
