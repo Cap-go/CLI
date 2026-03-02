@@ -33,6 +33,7 @@ interface SaveCredentialsOptions {
   // iOS options
   certificate?: string
   iosProvisioningProfile?: string[]
+  overwriteIosProvisioningMap?: boolean
   p12Password?: string
   appleKey?: string
   appleKeyId?: string
@@ -716,11 +717,30 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       // Handle provisioning profiles via --ios-provisioning-profile (repeatable)
       if (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0) {
         try {
-          const provMap = buildProvisioningMap(options.iosProvisioningProfile, cwd())
-          credentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
-          const bundleIds = Object.keys(provMap)
-          for (const bid of bundleIds) {
-            log.info(`✓ Updating provisioning profile for ${bid}: ${provMap[bid].name}`)
+          const newEntries = buildProvisioningMap(options.iosProvisioningProfile, cwd())
+
+          let mergedMap: Record<string, ProvisioningMapEntry>
+          if (options.overwriteIosProvisioningMap) {
+            mergedMap = newEntries
+          }
+          else {
+            // Merge into existing map (additive)
+            let existingMap: Record<string, ProvisioningMapEntry> = {}
+            if (existing.CAPGO_IOS_PROVISIONING_MAP) {
+              try {
+                existingMap = JSON.parse(existing.CAPGO_IOS_PROVISIONING_MAP) as Record<string, ProvisioningMapEntry>
+              }
+              catch {
+                // Invalid existing JSON — start fresh
+              }
+            }
+            mergedMap = { ...existingMap, ...newEntries }
+          }
+
+          credentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(mergedMap)
+          const newBundleIds = Object.keys(newEntries)
+          for (const bid of newBundleIds) {
+            log.info(`✓ Updating provisioning profile for ${bid}: ${newEntries[bid].name}`)
           }
         }
         catch (error) {

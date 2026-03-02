@@ -127,4 +127,120 @@ t('accepts different bundle IDs without error', () => {
   }
 })
 
+// --- Merge behavior (simulates updateCredentialsCommand logic) ---
+
+/**
+ * Simulates the merge logic from updateCredentialsCommand:
+ * given an existing CAPGO_IOS_PROVISIONING_MAP JSON string and new entries,
+ * merges them (new entries overwrite matching keys, existing keys preserved).
+ */
+function simulateMerge(existingMapJson, newEntries, overwrite) {
+  if (overwrite)
+    return newEntries
+
+  let existingMap = {}
+  if (existingMapJson) {
+    try {
+      existingMap = JSON.parse(existingMapJson)
+    }
+    catch {
+      // Invalid JSON — start fresh
+    }
+  }
+  return { ...existingMap, ...newEntries }
+}
+
+t('merge: new entries are added to existing map', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-test-'))
+  try {
+    const p1 = createFakeProfile(dir, 'widget.mobileprovision', 'com.example.widget', 'Widget Profile')
+    const newEntries = buildProvisioningMap([`com.example.widget=${p1}`])
+
+    const existingJson = JSON.stringify({
+      'com.example.app': { profile: 'base64app', name: 'App Profile' },
+    })
+
+    const merged = simulateMerge(existingJson, newEntries, false)
+    assert.ok(merged['com.example.app'], 'existing app entry preserved')
+    assert.equal(merged['com.example.app'].name, 'App Profile')
+    assert.ok(merged['com.example.widget'], 'new widget entry added')
+    assert.equal(merged['com.example.widget'].name, 'Widget Profile')
+  }
+  finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+t('merge: new entry overwrites matching bundle ID in existing map', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-test-'))
+  try {
+    const p1 = createFakeProfile(dir, 'app-new.mobileprovision', 'com.example.app', 'New App Profile')
+    const newEntries = buildProvisioningMap([`com.example.app=${p1}`])
+
+    const existingJson = JSON.stringify({
+      'com.example.app': { profile: 'old-base64', name: 'Old App Profile' },
+      'com.example.widget': { profile: 'base64widget', name: 'Widget Profile' },
+    })
+
+    const merged = simulateMerge(existingJson, newEntries, false)
+    assert.equal(merged['com.example.app'].name, 'New App Profile', 'app entry updated')
+    assert.notEqual(merged['com.example.app'].profile, 'old-base64', 'profile data updated')
+    assert.equal(merged['com.example.widget'].name, 'Widget Profile', 'widget entry preserved')
+  }
+  finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+t('merge: handles missing existing map gracefully', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-test-'))
+  try {
+    const p1 = createFakeProfile(dir, 'app.mobileprovision', 'com.example.app', 'App Profile')
+    const newEntries = buildProvisioningMap([`com.example.app=${p1}`])
+
+    const merged = simulateMerge(undefined, newEntries, false)
+    assert.ok(merged['com.example.app'], 'entry created from scratch')
+    assert.equal(merged['com.example.app'].name, 'App Profile')
+  }
+  finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+t('merge: handles invalid existing JSON gracefully', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-test-'))
+  try {
+    const p1 = createFakeProfile(dir, 'app.mobileprovision', 'com.example.app', 'App Profile')
+    const newEntries = buildProvisioningMap([`com.example.app=${p1}`])
+
+    const merged = simulateMerge('{invalid json', newEntries, false)
+    assert.ok(merged['com.example.app'], 'entry created despite invalid existing JSON')
+    assert.equal(Object.keys(merged).length, 1, 'only new entry present')
+  }
+  finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
+t('overwrite: replaces entire map, drops existing entries', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'prov-test-'))
+  try {
+    const p1 = createFakeProfile(dir, 'app.mobileprovision', 'com.example.app', 'New App Profile')
+    const newEntries = buildProvisioningMap([`com.example.app=${p1}`])
+
+    const existingJson = JSON.stringify({
+      'com.example.app': { profile: 'old-base64', name: 'Old App Profile' },
+      'com.example.widget': { profile: 'base64widget', name: 'Widget Profile' },
+    })
+
+    const merged = simulateMerge(existingJson, newEntries, true)
+    assert.equal(merged['com.example.app'].name, 'New App Profile', 'app entry replaced')
+    assert.ok(!merged['com.example.widget'], 'widget entry dropped')
+    assert.equal(Object.keys(merged).length, 1, 'only new entries remain')
+  }
+  finally {
+    rmSync(dir, { recursive: true })
+  }
+})
+
 process.stdout.write('OK\n')

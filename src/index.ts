@@ -878,7 +878,8 @@ Examples:
   .option('--local', 'Update local .capgo-credentials.json instead of global')
   // iOS options
   .option('--certificate <path>', 'Path to P12 certificate file')
-  .option('--ios-provisioning-profile <mapping>', 'Provisioning profile path or bundleId=path (repeatable)', collect, [])
+  .option('--ios-provisioning-profile <mapping>', 'Provisioning profile path or bundleId=path (repeatable, additive by default)', collect, [])
+  .option('--overwrite-ios-provisioning-map', 'Replace the entire provisioning map instead of merging (default: merge)')
   .option('--p12-password <password>', 'P12 certificate password')
   .option('--apple-key <path>', 'Path to App Store Connect API key (.p8 file)')
   .option('--apple-key-id <id>', 'App Store Connect API Key ID')
