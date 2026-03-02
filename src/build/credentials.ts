@@ -338,6 +338,29 @@ export async function updateSavedCredentials(
 }
 
 /**
+ * Remove specific credential keys for an app/platform.
+ * Used during migration to clean up legacy keys.
+ */
+export async function removeSavedCredentialKeys(
+  appId: string,
+  platform: 'ios' | 'android',
+  keys: string[],
+  local?: boolean,
+): Promise<void> {
+  const all = await loadAllCredentials(local)
+  const saved = all[appId]
+  if (!saved || !saved[platform])
+    return
+
+  for (const key of keys) {
+    delete (saved[platform] as Record<string, unknown>)[key]
+  }
+
+  all[appId] = saved
+  await saveAllCredentials(all, local)
+}
+
+/**
  * Clear saved credentials for a specific app and/or platform
  */
 export async function clearSavedCredentials(appId?: string, platform?: 'ios' | 'android', local?: boolean): Promise<void> {

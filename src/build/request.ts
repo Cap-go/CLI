@@ -41,6 +41,7 @@ import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should d
 import pack from '../../package.json'
 import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
 import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { buildProvisioningMap } from './credentials-command'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
@@ -978,6 +979,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.CAPGO_IOS_TARGET = options.iosTarget
     if (options.iosDistribution)
       cliCredentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
+    if (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0) {
+      const provMap = buildProvisioningMap(options.iosProvisioningProfile, resolve(options.path || cwd()))
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
+    }
+    if (options.iosProvisioningMap)
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = options.iosProvisioningMap
     if (options.androidKeystoreFile)
       cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
     if (options.keystoreKeyAlias)

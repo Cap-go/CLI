@@ -15,6 +15,7 @@ import {
   MIN_OUTPUT_RETENTION_SECONDS,
   parseOptionalBoolean,
   parseOutputRetentionSeconds,
+  removeSavedCredentialKeys,
   updateSavedCredentials,
 } from './credentials'
 import { parseMobileprovision, parseMobileprovisionFromBase64 } from './mobileprovision-parser'
@@ -906,8 +907,9 @@ export async function migrateCredentialsCommand(options: { appId?: string, platf
 
     await updateSavedCredentials(appId, 'ios', updates, options.local)
 
-    // Note: We don't actively remove BUILD_PROVISION_PROFILE_BASE64 from saved credentials
-    // because updateSavedCredentials merges. It will be ignored by the new validation logic.
+    // Remove legacy keys that are superseded by CAPGO_IOS_PROVISIONING_MAP
+    const legacyKeys = ['BUILD_PROVISION_PROFILE_BASE64', 'APPLE_PROFILE_NAME']
+    await removeSavedCredentialKeys(appId, 'ios', legacyKeys, options.local)
 
     const bundleIds = Object.keys(provMap)
     log.success(`\n✅ Migration complete for ${appId}!`)

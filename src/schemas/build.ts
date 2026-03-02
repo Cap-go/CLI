@@ -45,6 +45,7 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   iosTarget: z.string().optional(),
   iosDistribution: z.enum(['app_store', 'ad_hoc']).optional(),
   iosProvisioningProfile: z.array(z.string()).optional(),
+  iosProvisioningMap: z.string().optional(), // Pre-serialized CAPGO_IOS_PROVISIONING_MAP JSON (SDK use)
   // Android credential options (flattened)
   androidKeystoreFile: z.string().optional(),
   keystoreKeyAlias: z.string().optional(),
