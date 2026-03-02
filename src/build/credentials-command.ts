@@ -631,7 +631,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
     // Detect platform from provided options if not explicitly set
     const hasIosOptions = !!(options.certificate || (options.iosProvisioningProfile && options.iosProvisioningProfile.length > 0)
       || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
-      || options.appleTeamId || options.iosDistribution)
+      || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
       || options.keystoreStorePassword || options.playConfig)
     const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
