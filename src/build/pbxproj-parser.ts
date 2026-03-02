@@ -57,7 +57,7 @@ export function findSignableTargets(pbxprojContent: string): PbxTarget[] {
 
 /**
  * Given an XCConfigurationList ID, walk the pbxproj to find the
- * PRODUCT_BUNDLE_IDENTIFIER from the first build configuration.
+ * PRODUCT_BUNDLE_IDENTIFIER, preferring the Release configuration.
  */
 function resolveBundleId(content: string, configListId: string): string {
   // Find XCConfigurationList block for the given ID
@@ -68,23 +68,41 @@ function resolveBundleId(content: string, configListId: string): string {
   if (!configListMatch)
     return ''
 
-  // Extract first build configuration ID from buildConfigurations list
-  const configIdsMatch = configListMatch[0].match(/buildConfigurations\s*=\s*\(\s*(\w+)/)
-  if (!configIdsMatch)
+  // Extract all build configuration IDs from buildConfigurations list
+  const configIdsSection = configListMatch[0].match(/buildConfigurations\s*=\s*\(([^)]*)\)/)
+  if (!configIdsSection)
     return ''
-  const firstConfigId = configIdsMatch[1]
-
-  // Find the XCBuildConfiguration block for that ID
-  const buildConfigRegex = new RegExp(
-    `${escapeRegex(firstConfigId)}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{[^}]*isa\\s*=\\s*XCBuildConfiguration;[^}]*\\}`,
-  )
-  const buildConfigMatch = content.match(buildConfigRegex)
-  if (!buildConfigMatch)
+  const configIds = [...configIdsSection[1].matchAll(/(\w+)/g)].map(m => m[1])
+  if (configIds.length === 0)
     return ''
 
-  // Extract PRODUCT_BUNDLE_IDENTIFIER from buildSettings
-  const bundleIdMatch = buildConfigMatch[0].match(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*"?([^";\s]+)"?\s*;/)
-  return bundleIdMatch ? bundleIdMatch[1] : ''
+  // Resolve each configuration to its name and bundle ID
+  // Regex allows one level of nested braces (e.g. buildSettings = { ... })
+  let fallbackBundleId = ''
+  for (const configId of configIds) {
+    const buildConfigRegex = new RegExp(
+      `${escapeRegex(configId)}\\s*\\/\\*[^*]*\\*\\/\\s*=\\s*\\{(?:[^{}]*\\{[^}]*\\})*[^}]*\\}`,
+    )
+    const buildConfigMatch = content.match(buildConfigRegex)
+    if (!buildConfigMatch)
+      continue
+
+    const block = buildConfigMatch[0]
+    const bundleIdMatch = block.match(/PRODUCT_BUNDLE_IDENTIFIER\s*=\s*"?([^";\s]+)"?\s*;/)
+    if (!bundleIdMatch)
+      continue
+
+    const nameMatch = block.match(/name\s*=\s*("[^"]*"|[^;\s]+)\s*;/)
+    const configName = nameMatch ? nameMatch[1].replace(/^"|"$/g, '') : ''
+
+    if (configName === 'Release')
+      return bundleIdMatch[1]
+
+    if (!fallbackBundleId)
+      fallbackBundleId = bundleIdMatch[1]
+  }
+
+  return fallbackBundleId
 }
 
 /**

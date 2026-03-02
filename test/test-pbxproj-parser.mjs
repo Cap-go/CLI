@@ -106,6 +106,136 @@ t('findXcodeProject finds .xcodeproj in ios/ subdirectory', () => {
   rmSync(dir, { recursive: true })
 })
 
+// --- resolveBundleId prefers Release over Debug ---
+
+const debugReleasePbxproj = `// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  objectVersion = 56;
+  objects = {
+    AABB0011 /* App */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = AABB0022;
+      name = App;
+      productName = App;
+      productType = "com.apple.product-type.application";
+    };
+    AABB0022 /* Build configuration list for App */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        AABB0033,
+        AABB0044,
+      );
+    };
+    AABB0033 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        PRODUCT_BUNDLE_IDENTIFIER = "com.example.debug";
+        INFOPLIST_FILE = App/Info.plist;
+      };
+      name = Debug;
+    };
+    AABB0044 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        PRODUCT_BUNDLE_IDENTIFIER = "com.example.release";
+        INFOPLIST_FILE = App/Info.plist;
+      };
+      name = Release;
+    };
+  };
+  rootObject = 089C1665FE841187C02AAC07;
+}`
+
+t('prefers Release bundle ID over Debug when both exist', () => {
+  const targets = findSignableTargets(debugReleasePbxproj)
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].bundleId, 'com.example.release')
+})
+
+// Debug listed first but Release should still win
+const debugFirstPbxproj = `// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  objectVersion = 56;
+  objects = {
+    CC110011 /* App */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = CC110022;
+      name = App;
+      productName = App;
+      productType = "com.apple.product-type.application";
+    };
+    CC110022 /* Build configuration list for App */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        CC110033,
+        CC110044,
+      );
+    };
+    CC110033 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        PRODUCT_BUNDLE_IDENTIFIER = "com.example.app.debug";
+        INFOPLIST_FILE = App/Info.plist;
+      };
+      name = Debug;
+    };
+    CC110044 /* Release */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        PRODUCT_BUNDLE_IDENTIFIER = "com.example.app";
+        INFOPLIST_FILE = App/Info.plist;
+      };
+      name = Release;
+    };
+  };
+  rootObject = 089C1665FE841187C02AAC07;
+}`
+
+t('picks Release even when Debug is listed first in buildConfigurations', () => {
+  const targets = findSignableTargets(debugFirstPbxproj)
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].bundleId, 'com.example.app')
+})
+
+// Only Debug config present — should fall back to it
+const debugOnlyPbxproj = `// !$*UTF8*$!
+{
+  archiveVersion = 1;
+  objectVersion = 56;
+  objects = {
+    DD110011 /* App */ = {
+      isa = PBXNativeTarget;
+      buildConfigurationList = DD110022;
+      name = App;
+      productName = App;
+      productType = "com.apple.product-type.application";
+    };
+    DD110022 /* Build configuration list for App */ = {
+      isa = XCConfigurationList;
+      buildConfigurations = (
+        DD110033,
+      );
+    };
+    DD110033 /* Debug */ = {
+      isa = XCBuildConfiguration;
+      buildSettings = {
+        PRODUCT_BUNDLE_IDENTIFIER = "com.example.debugonly";
+        INFOPLIST_FILE = App/Info.plist;
+      };
+      name = Debug;
+    };
+  };
+  rootObject = 089C1665FE841187C02AAC07;
+}`
+
+t('falls back to Debug bundle ID when no Release config exists', () => {
+  const targets = findSignableTargets(debugOnlyPbxproj)
+  assert.equal(targets.length, 1)
+  assert.equal(targets[0].bundleId, 'com.example.debugonly')
+})
+
 t('findXcodeProject returns null when no .xcodeproj exists', () => {
   const dir = mkdtempSync(join(tmpdir(), 'pbx-test-'))
   mkdirSync(join(dir, 'ios'), { recursive: true })
