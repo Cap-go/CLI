@@ -1114,19 +1114,17 @@ npx @capgo/cli@latest build request com.example.app --platform ios --path .
 | **--platform** | <code>string</code> | Target platform: ios or android (required) |
 | **--build-mode** | <code>string</code> | Build mode: debug or release (default: release) |
 | **--build-certificate-base64** | <code>string</code> | iOS: Base64-encoded .p12 certificate |
-| **--build-provision-profile-base64** | <code>string</code> | iOS: Base64-encoded provisioning profile |
-| **--build-provision-profile-base64-prod** | <code>string</code> | iOS: Base64-encoded production provisioning profile |
 | **--p12-password** | <code>string</code> | iOS: Certificate password (optional if cert has no password) |
 | **--apple-id** | <code>string</code> | iOS: Apple ID email |
 | **--apple-app-specific-password** | <code>string</code> | iOS: App-specific password |
 | **--apple-key-id** | <code>string</code> | iOS: App Store Connect API Key ID |
 | **--apple-issuer-id** | <code>string</code> | iOS: App Store Connect Issuer ID |
 | **--apple-key-content** | <code>string</code> | iOS: Base64-encoded App Store Connect API key (.p8) |
-| **--apple-profile-name** | <code>string</code> | iOS: Provisioning profile name |
 | **--app-store-connect-team-id** | <code>string</code> | iOS: App Store Connect Team ID |
 | **--ios-scheme** | <code>string</code> | iOS: Xcode scheme to build (default: App) |
 | **--ios-target** | <code>string</code> | iOS: Xcode target for reading build settings (default: same as scheme) |
 | **--ios-distribution** | <code>string</code> | iOS: Distribution mode |
+| **--ios-provisioning-profile** | <code>string</code> | iOS: Provisioning profile path or bundleId=path mapping (repeatable) |
 | **--android-keystore-file** | <code>string</code> | Android: Base64-encoded keystore file |
 | **--keystore-key-alias** | <code>string</code> | Android: Keystore key alias |
 | **--keystore-key-password** | <code>string</code> | Android: Keystore key password |
