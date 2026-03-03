@@ -328,7 +328,14 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
 
   // Priority 5: Final fallback - use default package.json location (declared version)
   try {
-    const dependencies = await getAllPackagesDependencies(rootDir, packageJsonPath)
+    const normalizedPackageJsonPath = packageJsonPath
+      ? packageJsonPath
+        .split(',')
+        .map(path => path.trim())
+        .filter(Boolean)
+        .join(',')
+      : packageJsonPath
+    const dependencies = await getAllPackagesDependencies(rootDir, normalizedPackageJsonPath)
     const version = dependencies.get(packageName)
     if (version)
       return version
@@ -342,7 +349,7 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
 
 export async function getAllPackagesDependencies(f: string = findRoot(cwd()), file: string | undefined = undefined) {
   // if file contain , split by comma and return the array
-  let files = file?.split(',')
+  let files = file?.split(',').map(file => file.trim()).filter(Boolean)
   files ??= [join(f, PACKNAME)]
   if (files) {
     for (const file of files) {
@@ -1629,7 +1636,12 @@ async function calculatePlatformChecksums(dependencyFolderPath: string): Promise
 }
 
 export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
-  const nodeModules = nodeModulesString ? nodeModulesString.split(',') : []
+  const nodeModules = nodeModulesString
+    ? nodeModulesString
+      .split(',')
+      .map(nodeModulesPath => nodeModulesPath.trim())
+      .filter(Boolean)
+    : []
   let dependencies
   try {
     dependencies = await getAllPackagesDependencies('', packageJsonPath)
@@ -1639,7 +1651,9 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
     console.error('json parse error: ', err)
     throw err instanceof Error ? err : new Error('Invalid package.json')
   }
-  const firstPackageJson = packageJsonPath?.split(',')[0]
+  const firstPackageJson = packageJsonPath
+    ? packageJsonPath.split(',')[0].trim()
+    : undefined
   const dir = !firstPackageJson ? findRoot(cwd()) : path.resolve(firstPackageJson).replace(PACKNAME, '')
   if (!dependencies) {
     log.error('Missing dependencies section in package.json')
