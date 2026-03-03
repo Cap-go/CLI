@@ -205,45 +205,68 @@ function returnVersion(version: string) {
  * @param packageJsonPath - Optional custom package.json path provided by user (takes priority if provided)
  */
 export async function getInstalledVersion(packageName: string, rootDir: string = cwd(), packageJsonPath?: string): Promise<string | null> {
-  // Determine the base directory for resolution
-  // If packageJsonPath is provided, use its directory as the starting point
-  const baseDir = packageJsonPath ? dirname(packageJsonPath) : rootDir
+  const providedPackageJsonFiles = packageJsonPath
+    ? packageJsonPath
+      .split(',')
+      .map(packageJsonPathItem => packageJsonPathItem.trim())
+      .filter(Boolean)
+    : []
+
+  const candidateBaseDirs: string[] = []
+  const addCandidateDir = (dir: string) => {
+    const normalized = resolve(dir)
+    if (!candidateBaseDirs.includes(normalized))
+      candidateBaseDirs.push(normalized)
+  }
+
+  for (const packageJsonFile of providedPackageJsonFiles) {
+    const resolvedPackageJson = resolve(rootDir, packageJsonFile)
+    if (existsSync(resolvedPackageJson))
+      addCandidateDir(dirname(resolvedPackageJson))
+  }
+
+  addCandidateDir(resolve(rootDir))
+  addCandidateDir(cwd())
 
   // Priority 1: Use require.resolve to find the actual installed package
   // This works with all package managers (npm, yarn, pnpm, bun) and monorepos
-  try {
-    const packageJsonFile = `${packageName}/package.json`
-    // Create require from baseDir context to resolve from the right location
-    const { createRequire } = await import('node:module')
-    const requireFromBase = createRequire(join(baseDir, 'package.json'))
-    const resolvedPath = requireFromBase.resolve(packageJsonFile)
-    const pkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
-    if (pkg.version)
-      return pkg.version
-  }
-  catch {
-    // require.resolve failed, try other methods
+  for (const baseDir of candidateBaseDirs) {
+    try {
+      const packageJsonFile = `${packageName}/package.json`
+      // Create require from baseDir context to resolve from the right location
+      const { createRequire } = await import('node:module')
+      const requireFromBase = createRequire(join(baseDir, 'package.json'))
+      const resolvedPath = requireFromBase.resolve(packageJsonFile)
+      const pkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
+      if (pkg.version)
+        return pkg.version
+    }
+    catch {
+      // try next candidate directory
+    }
   }
 
   // Priority 2: Walk up directories looking for node_modules (handles monorepos with hoisting)
-  let currentDir = baseDir
-  const root = path.parse(currentDir).root
-  while (currentDir !== root) {
-    const nodeModulesPath = join(currentDir, 'node_modules', packageName, PACKNAME)
-    if (existsSync(nodeModulesPath)) {
-      try {
-        const pkg = JSON.parse(readFileSync(nodeModulesPath, 'utf-8'))
-        if (pkg.version)
-          return pkg.version
+  for (const baseDir of candidateBaseDirs) {
+    let currentDir = baseDir
+    const currentRoot = path.parse(currentDir).root
+    while (currentDir !== currentRoot) {
+      const nodeModulesPath = join(currentDir, 'node_modules', packageName, PACKNAME)
+      if (existsSync(nodeModulesPath)) {
+        try {
+          const pkg = JSON.parse(readFileSync(nodeModulesPath, 'utf-8'))
+          if (pkg.version)
+            return pkg.version
+        }
+        catch {
+          // Continue walking up
+        }
       }
-      catch {
-        // Continue walking up
-      }
+      const parentDir = dirname(currentDir)
+      if (parentDir === currentDir)
+        break
+      currentDir = parentDir
     }
-    const parentDir = dirname(currentDir)
-    if (parentDir === currentDir)
-      break
-    currentDir = parentDir
   }
 
   // Priority 3: Check native config files (iOS Podfile or Android gradle) - only for @capgo/capacitor-updater
@@ -305,7 +328,7 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
 
   // Priority 5: Final fallback - use default package.json location (declared version)
   try {
-    const dependencies = await getAllPackagesDependencies(rootDir)
+    const dependencies = await getAllPackagesDependencies(rootDir, packageJsonPath)
     const version = dependencies.get(packageName)
     if (version)
       return version
