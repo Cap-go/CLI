@@ -10,7 +10,7 @@
  */
 
 import { existsSync, readFileSync } from 'node:fs'
-import { join, dirname } from 'node:path'
+import { join, dirname, resolve } from 'node:path'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -42,45 +42,76 @@ async function getInstalledVersion(packageName, rootDir, packageJsonPath) {
     return null
   }
 
-  const baseDir = packageJsonPath ? dirname(packageJsonPath) : rootDir
+  const providedPackageJsonFiles = packageJsonPath
+    ? packageJsonPath
+      .split(',')
+      .map(packageJsonPathItem => packageJsonPathItem.trim())
+      .filter(Boolean)
+    : []
+
+  const candidateBaseDirs = []
+  const addCandidateDir = (dir) => {
+    const candidate = resolve(dir)
+    if (!candidateBaseDirs.includes(candidate))
+      candidateBaseDirs.push(candidate)
+  }
+
+  for (const packageJsonFile of providedPackageJsonFiles) {
+    const resolvedPackageJson = resolve(rootDir, packageJsonFile)
+    if (existsSync(resolvedPackageJson))
+      addCandidateDir(dirname(resolvedPackageJson))
+  }
+
+  addCandidateDir(rootDir)
+  addCandidateDir(process.cwd())
 
   // Priority 1: Use require.resolve
-  try {
-    const packageJsonFile = `${packageName}/package.json`
-    const { createRequire } = await import('node:module')
-    const requireFromBase = createRequire(join(baseDir, 'package.json'))
-    const resolvedPath = requireFromBase.resolve(packageJsonFile)
-    const pkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
-    if (pkg.version)
-      return pkg.version
-  }
-  catch {
-    // require.resolve failed
+  for (const baseDir of candidateBaseDirs) {
+    try {
+      const packageJsonFile = `${packageName}/package.json`
+      const { createRequire } = await import('node:module')
+      const requireFromBase = createRequire(join(baseDir, 'package.json'))
+      const resolvedPath = requireFromBase.resolve(packageJsonFile)
+      const pkg = JSON.parse(readFileSync(resolvedPath, 'utf-8'))
+      if (pkg.version)
+        return pkg.version
+    }
+    catch {
+      // require.resolve failed
+    }
   }
 
   // Priority 2: Walk up directories
-  let currentDir = baseDir
-  const root = path.parse(currentDir).root
-  while (currentDir !== root) {
-    const nodeModulesPath = join(currentDir, 'node_modules', ...packageName.split('/'), PACKNAME)
-    if (existsSync(nodeModulesPath)) {
-      try {
-        const pkg = JSON.parse(readFileSync(nodeModulesPath, 'utf-8'))
-        if (pkg.version)
-          return pkg.version
+  for (const baseDir of candidateBaseDirs) {
+    let currentDir = baseDir
+    const currentRoot = path.parse(currentDir).root
+    while (currentDir !== currentRoot) {
+      const nodeModulesPath = join(currentDir, 'node_modules', ...packageName.split('/'), PACKNAME)
+      if (existsSync(nodeModulesPath)) {
+        try {
+          const pkg = JSON.parse(readFileSync(nodeModulesPath, 'utf-8'))
+          if (pkg.version)
+            return pkg.version
+        }
+        catch {
+          // Continue
+        }
       }
-      catch {
-        // Continue
-      }
+      const parentDir = dirname(currentDir)
+      if (parentDir === currentDir)
+        break
+      currentDir = parentDir
     }
-    const parentDir = dirname(currentDir)
-    if (parentDir === currentDir) break
-    currentDir = parentDir
   }
 
   // Priority 3: Fallback to declared version
-  const pkgJsonPath = packageJsonPath || join(rootDir, PACKNAME)
-  if (existsSync(pkgJsonPath)) {
+  const pkgJsonPathCandidates = providedPackageJsonFiles.length > 0
+    ? providedPackageJsonFiles
+      .map(packageJsonFile => resolve(rootDir, packageJsonFile))
+      .filter(file => existsSync(file))
+    : [join(rootDir, PACKNAME)]
+
+  for (const pkgJsonPath of pkgJsonPathCandidates) {
     try {
       const pkg = JSON.parse(readFileSync(pkgJsonPath, 'utf-8'))
       const version = pkg.dependencies?.[packageName] || pkg.devDependencies?.[packageName]
@@ -88,7 +119,23 @@ async function getInstalledVersion(packageName, rootDir, packageJsonPath) {
         return version.replace(/^[\^~]/, '')
       }
     }
-    catch {}
+    catch {
+      // Continue
+    }
+  }
+
+  const fallbackPkgJsonPath = join(rootDir, PACKNAME)
+  if (existsSync(fallbackPkgJsonPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(fallbackPkgJsonPath, 'utf-8'))
+      const version = pkg.dependencies?.[packageName] || pkg.devDependencies?.[packageName]
+      if (version) {
+        return version.replace(/^[\^~]/, '')
+      }
+    }
+    catch {
+      // Continue
+    }
   }
 
   return null
@@ -206,6 +253,20 @@ await runTest(
   join(FIXTURES_DIR, 'pnpm-workspaces'),
   EXPECTED_VERSION,
   { packageJsonPath: 'apps/mobile/package.json' }
+)
+
+await runTest(
+  'pnpm workspaces: with packageJsonPath list',
+  join(FIXTURES_DIR, 'pnpm-workspaces'),
+  EXPECTED_VERSION,
+  { packageJsonPath: 'apps/mobile/package.json,package.json' }
+)
+
+await runTest(
+  'pnpm workspaces: with spaced packageJsonPath list',
+  join(FIXTURES_DIR, 'pnpm-workspaces'),
+  EXPECTED_VERSION,
+  { packageJsonPath: 'apps/mobile/package.json,   package.json' }
 )
 
 await runTest(
