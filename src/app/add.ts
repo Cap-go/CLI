@@ -142,8 +142,6 @@ export async function addAppInternal(
 
     if (error) {
       if (!silent)
-        console.error(error)
-      if (!silent)
         log.error(`Could not add app ${formatError(error)}`)
       throw new Error(`Could not add app ${formatError(error)}`)
     }

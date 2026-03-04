@@ -17,7 +17,7 @@ import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { showReplicationProgress } from './replicationProgress'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -1418,7 +1418,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     cleanupStepsDone()
   }
   catch (e) {
-    console.error(e)
+    pLog.error(`Error during onboarding: ${formatError(e)}`)
     pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/getting-started/add-an-app/`)
     exit(1)
   }

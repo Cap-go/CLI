@@ -18,6 +18,40 @@ function formatTimeOnly(createdAt: string) {
   return d.toLocaleTimeString()
 }
 
+function describeFetchFailure(error: unknown, endpoint: string) {
+  const details = error as {
+    message?: string
+    name?: string
+    cause?: {
+      message?: string
+      name?: string
+      code?: string
+    }
+    code?: string
+  }
+
+  const causeName = details?.cause?.name
+  const causeCode = details?.cause?.code || details?.code
+  const message = (details?.message || '').toLowerCase()
+
+  if (causeCode === 'UND_ERR_CONNECT_TIMEOUT'
+    || causeName === 'UND_ERR_CONNECT_TIMEOUT'
+    || /connect timeout/.test(message)
+    || /timed out/.test(message)) {
+    return `Cannot reach ${endpoint} (connection timeout after 10s). Check VPN/firewall/network rules or update API host settings in capacitor.config.json.`
+  }
+
+  if (causeCode === 'ENOTFOUND' || causeCode === 'ECONNREFUSED' || message.includes('fetch failed')) {
+    return `Cannot reach ${endpoint} (network error). Verify internet connectivity and that ${endpoint} is reachable from this machine.`
+  }
+
+  if (message.startsWith('http error! status: ')) {
+    return details?.message || 'Capgo API returned an HTTP error.'
+  }
+
+  return formatError(error)
+}
+
 export type { AppDebugOptions as OptionsBaseDebug } from '../schemas/app'
 
 export async function markSnag(channel: string, orgId: string, apikey: string, event: string, appId?: string, icon = '✅') {
@@ -62,12 +96,14 @@ interface LogData {
   created_at: string
 }
 export async function getStats(apikey: string, query: QueryStats, after: string | null): Promise<LogData[]> {
+  const localConfig = await getLocalConfig()
+  const statsEndpoint = `${localConfig.hostApi}/private/stats`
+
   try {
-    const localConfig = await getLocalConfig()
     // If we already have a latest timestamp, query only after that point
     const effectiveQuery: QueryStats = after ? { ...query, rangeStart: after } : { ...query }
 
-    const response = await fetch(`${localConfig.hostApi}/private/stats`, {
+    const response = await fetch(statsEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -86,8 +122,7 @@ export async function getStats(apikey: string, query: QueryStats, after: string 
       return dataD
   }
   catch (error) {
-    console.error('Cannot get devices', error)
-    log.error(`Cannot get stats ${formatError(error)}`)
+    log.error(`Cannot get stats: ${describeFetchFailure(error, statsEndpoint)}`)
   }
   return []
 }
