@@ -2,6 +2,7 @@ import type { Command, Option } from 'commander'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { log } from '@clack/prompts'
 import { program } from 'commander'
+import { formatError } from './utils'
 
 // Define proper types for mapped commands
 interface CommandOption {
@@ -261,7 +262,7 @@ sidebar:
         log.success(`Generated documentation file for ${cmd.name} command in ${folderPath}/${cmd.name}.mdx`)
       }
       catch (error) {
-        console.error(`Error generating file for ${cmd.name}:`, error)
+        log.error(`Error generating file for ${cmd.name}: ${formatError(error)}`)
       }
     }
     log.success(`Documentation files generated in ${folderPath}/`)

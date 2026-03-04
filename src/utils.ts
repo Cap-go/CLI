@@ -54,13 +54,62 @@ export const regexSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[
  */
 export function formatError(error: any): string {
   if (!error)
-    return ''
+    return 'Unknown error'
 
   // Check if this is a security policy error first
   const parsed = parseSecurityPolicyError(error)
   if (parsed.isSecurityPolicyError) {
     return formatApiErrorForCli(error)
   }
+
+  const asError = error as {
+    message?: string
+    stack?: string
+    cause?: { message?: string, name?: string }
+    code?: string | number
+    status?: number
+    statusCode?: number
+    details?: string
+    hint?: string
+    error?: string | { message?: string }
+  }
+
+  if (typeof error === 'string')
+    return error
+
+  if (error instanceof Error) {
+    const reason = asError.message || asError.cause?.message || asError.stack || error.name
+    const causeName = asError.cause?.name
+    const reasonLower = reason.toLowerCase()
+    if (reasonLower.includes('fetch failed') || reasonLower.includes('failed to fetch') || reasonLower.includes('connect timeout')
+      || reasonLower.includes('network') || causeName?.startsWith('UND_ERR')) {
+      return `Network error: ${reason}${asError.code ? ` (code ${asError.code})` : ''}. Check your network connection and API endpoint availability.`
+    }
+
+    const status = asError.status || asError.statusCode
+    const details = [reason, asError.code ? `Code: ${asError.code}` : undefined, status ? `Status: ${status}` : undefined]
+      .filter(Boolean)
+      .join(' | ')
+    return details || error.name
+  }
+
+  if (asError.message) {
+    const details = [asError.message, asError.code ? `Code: ${asError.code}` : undefined, asError.status || asError.statusCode ? `Status: ${asError.status || asError.statusCode}` : undefined]
+      .filter(Boolean)
+      .join(' | ')
+    const normalized = asError.message.toLowerCase()
+    if (normalized.includes('fetch failed') || normalized.includes('failed to fetch') || asError.error === 'Failed to fetch') {
+      return `Network error: ${details}. Check your network connection and API endpoint availability.`
+    }
+    if (asError.details || asError.hint || asError.error)
+      return `${details}${details ? ' | ' : ''}${asError.error ? (typeof asError.error === 'string' ? asError.error : asError.error.message ?? '') : ''}${asError.details ? `Details: ${asError.details}` : ''}${asError.hint ? `Hint: ${asError.hint}` : ''}`.trim()
+    return details
+  }
+
+  if (typeof asError.error === 'string' && asError.error.length > 0)
+    return asError.error
+  if (asError.error && typeof asError.error === 'object' && typeof asError.error.message === 'string' && asError.error.message.length > 0)
+    return asError.error.message
 
   // Fall back to prettyjson for other errors
   return `\n${prettyjson.render(error)}`
@@ -647,7 +696,7 @@ export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey
 
   if (error) {
     log.error('Cannot get permissions for organization!')
-    console.error(error)
+    log.error(formatError(error))
     throw new Error('Cannot get permissions for organization')
   }
 
@@ -1648,7 +1697,7 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
   }
   catch (err) {
     log.error('Invalid package.json, JSON parsing failed')
-    console.error('json parse error: ', err)
+    log.error(`json parse error: ${formatError(err)}`)
     throw err instanceof Error ? err : new Error('Invalid package.json')
   }
   const firstPackageJson = packageJsonPath
@@ -1715,7 +1764,7 @@ export async function getLocalDependencies(packageJsonPath: string | undefined, 
           }
           catch (error) {
             log.error(`Error reading node_modules files for ${key} package in ${modulePath}`)
-            console.error(error)
+            log.error(formatError(error))
             throw error instanceof Error ? error : new Error(`Error reading node_modules files for ${key}`)
           }
         }

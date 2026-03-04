@@ -1,5 +1,6 @@
 import { exit } from 'node:process'
 import { Option, program } from 'commander'
+import { log } from '@clack/prompts'
 import pack from '../package.json'
 import { addApp } from './app/add'
 import { debugApp } from './app/debug'
@@ -979,12 +980,12 @@ program.parseAsync().catch((error: unknown) => {
     }
     // For actual errors, show just the message without the full stack trace
     if (commanderError.message) {
-      console.error(commanderError.message)
+      log.error(commanderError.message)
     }
     const exitCode = commanderError.exitCode ?? 1
     exit(exitCode)
   }
   // For non-Commander errors, show full error details
-  console.error(`Error: ${formatError(error)}`)
+  log.error(`Error: ${formatError(error)}`)
   exit(1)
 })
