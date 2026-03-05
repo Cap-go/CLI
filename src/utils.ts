@@ -1438,7 +1438,9 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
     throw new Error('Cannot get the list of organizations')
   }
 
-  const adminOrgs = allOrganizations.filter(org => !!roles.find(role => role === org.role))
+  const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
+  const normalizedRoles = roles.map(role => normalizeRole(role))
+  const adminOrgs = allOrganizations.filter(org => normalizedRoles.includes(normalizeRole(org.role)))
 
   if (allOrganizations.length === 0) {
     log.error('Could not get organization please create an organization first')
