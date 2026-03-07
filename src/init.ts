@@ -27,6 +27,7 @@ const codeInject = 'CapacitorUpdater.notifyAppReady()'
 // create regex to find line who start by 'import ' and end by ' from '
 const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
+const appIdRegex = /^[a-z0-9]+(?:\.[\w-]+)+$/i
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
 
@@ -199,6 +200,30 @@ function stopForBrokenIosSync(platformRunner: string, details: string[]): never 
   exit(1)
 }
 
+function validateAppId(value: string | undefined): string | undefined {
+  if (!value)
+    return 'App ID is required'
+  if (value.includes('--'))
+    return 'App ID cannot contain "--"'
+  if (!appIdRegex.test(value))
+    return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
+}
+
+async function askForAppId(message = 'Enter your appId:'): Promise<string> {
+  const appId = await pText({
+    message,
+    validate: validateAppId,
+  })
+
+  if (pIsCancel(appId)) {
+    pCancel('Operation cancelled.')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+    exit()
+  }
+
+  return appId as string
+}
+
 async function checkPrerequisitesStep(orgId: string, apikey: string) {
   pLog.info(`📋 Checking development environment prerequisites`)
   pLog.info(`   For mobile development, you need at least one platform setup`)
@@ -308,6 +333,18 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
   const maxRetries = 5
 
   while (retryCount < maxRetries) {
+    const appIdCorrect = await pConfirm({
+      message: `Is ${currentAppId} the correct app ID?`,
+      initialValue: true,
+    })
+    await cancelCommand(appIdCorrect, organization.gid, apikey)
+
+    if (!appIdCorrect) {
+      currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
+      await saveAppIdToCapacitorConfig(currentAppId)
+      continue
+    }
+
     const doAdd = await pConfirm({ message: `Add ${currentAppId} in Capgo?` })
     await cancelCommand(doAdd, organization.gid, apikey)
 
@@ -359,25 +396,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
         // If no suggestions are available, ask for custom input
         if (availableSuggestions.length === 0) {
           pLog.warn(`No available suggestions found. Please enter a custom app ID.`)
-          const customAppId = await pText({
-            message: 'Enter your custom app ID (e.g., com.example.myapp):',
-            validate: (value) => {
-              if (!value)
-                return 'App ID is required'
-              if (value.includes('--'))
-                return 'App ID cannot contain "--"'
-              if (!/^[a-z0-9]+(?:\.[\w-]+)+$/i.test(value))
-                return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
-            },
-          })
-
-          if (pIsCancel(customAppId)) {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
-            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-            exit()
-          }
-
-          currentAppId = customAppId as string
+          currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
         }
         else {
           const suggestions = availableSuggestions
@@ -412,25 +431,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
           }
 
           if (choice === 'custom') {
-            const customAppId = await pText({
-              message: 'Enter your custom app ID (e.g., com.example.myapp):',
-              validate: (value) => {
-                if (!value)
-                  return 'App ID is required'
-                if (value.includes('--'))
-                  return 'App ID cannot contain "--"'
-                if (!/^[a-z0-9]+(?:\.[\w-]+)+$/i.test(value))
-                  return 'Invalid format. Use reverse domain notation (e.g., com.example.app)'
-              },
-            })
-
-            if (pIsCancel(customAppId)) {
-              await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
-              pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-              exit()
-            }
-
-            currentAppId = customAppId as string
+            currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
           }
           else {
             // Use one of the suggestions
@@ -1293,13 +1294,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   if (appId === undefined) {
     // ask for the appId
-    appId = await pText({
-      message: 'Enter your appId:',
-    }) as string
-    if (pIsCancel(appId)) {
-      pCancel('Operation cancelled.')
-      exit(1)
-    }
+    appId = await askForAppId('Enter your appId:')
   }
 
   const log = pSpinner()
