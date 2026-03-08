@@ -42,22 +42,17 @@ export async function loginInternal(apikey: string, options: Options, silent = f
   await checkAlerts()
   // write in file .capgo the apikey in home directory
   const { local } = options
+
+  if (local && !existsSync('.git')) {
+    if (!silent)
+      log.error('To use local you should be in a git repository')
+    throw new Error('Not in a git repository')
+  }
+
   const supabase = await createSupabaseClient(apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
-  await sendEvent(apikey, {
-    channel: 'user-login',
-    event: 'User CLI login',
-    icon: '✅',
-    user_id: userId,
-    notify: false,
-  }).catch()
 
   if (local) {
-    if (!existsSync('.git')) {
-      if (!silent)
-        log.error('To use local you should be in a git repository')
-      throw new Error('Not in a git repository')
-    }
     await writeFileAtomic('.capgo', `${apikey}\n`, { mode: 0o600 })
     await appendToSafeFile('.gitignore', '.capgo\n', 0o600)
   }
@@ -65,6 +60,14 @@ export async function loginInternal(apikey: string, options: Options, silent = f
     const userHomeDir = homedir()
     await writeFileAtomic(`${userHomeDir}/.capgo`, `${apikey}\n`, { mode: 0o600 })
   }
+
+  await sendEvent(apikey, {
+    channel: 'user-login',
+    event: 'User CLI login',
+    icon: '✅',
+    user_id: userId,
+    notify: false,
+  }).catch()
 
   if (!silent) {
     log.success(`login saved into .capgo file in ${local ? 'local' : 'home'} directory`)

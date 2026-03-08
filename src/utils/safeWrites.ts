@@ -7,6 +7,10 @@ type WriteOptions = {
   encoding?: BufferEncoding
 }
 
+/**
+ * Ensure the target path exists and is not a symbolic link.
+ * This prevents symlink-based path traversal and file clobbering.
+ */
 async function ensureNotSymlink(path: string): Promise<void> {
   try {
     const stat = await lstat(path)
@@ -20,6 +24,9 @@ async function ensureNotSymlink(path: string): Promise<void> {
   }
 }
 
+/**
+ * Create (or reuse) a directory and enforce safe permissions.
+ */
 export async function ensureSecureDirectory(path: string, mode: number): Promise<void> {
   await ensureNotSymlink(path)
   await mkdir(path, { recursive: true, mode })
@@ -29,11 +36,17 @@ export async function ensureSecureDirectory(path: string, mode: number): Promise
   await chmod(path, mode)
 }
 
+/**
+ * Append content to a file without following symbolic links.
+ */
 export async function appendToSafeFile(filePath: string, content: string, mode: number = 0o600): Promise<void> {
   await ensureNotSymlink(filePath)
   await appendFile(filePath, content, { mode })
 }
 
+/**
+ * Write content atomically by writing a temp file and renaming.
+ */
 export async function writeFileAtomic(filePath: string, content: string, options: WriteOptions = {}): Promise<void> {
   const mode = options.mode ?? 0o600
   await ensureNotSymlink(filePath)
@@ -49,8 +62,10 @@ export async function writeFileAtomic(filePath: string, content: string, options
   }
 }
 
+/**
+ * Read file content while rejecting symbolic-link targets.
+ */
 export async function readSafeFile(filePath: string): Promise<string> {
   await ensureNotSymlink(filePath)
   return await readFile(filePath, 'utf-8')
 }
-
