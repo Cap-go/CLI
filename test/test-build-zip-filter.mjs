@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdtempSync, mkdirSync, rmSync, symlinkSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { tmpdir } from 'node:os'
 import assert from 'node:assert/strict'
@@ -38,6 +38,76 @@ await t('should include package metadata for @capacitor dependencies in zip filt
     shouldIncludeFile('node_modules/@capacitor/app/ios/App.swift', 'ios', nativeDeps, 'ios'),
     true,
   )
+})
+
+await t('generated build zip follows symlinked pnpm-style node_modules package folders', async () => {
+  const testRoot = mkdtempSync(join(tmpdir(), 'capgo-build-zip-filter-'))
+  const zipPath = join(testRoot, 'build.zip')
+
+  try {
+    const pnpmStore = join(testRoot, 'pnpm-store')
+    const storeScopePath = join(pnpmStore, 'node_modules', '@capacitor')
+    const storePackagePath = join(storeScopePath, 'app')
+    const linkedScopePath = join(testRoot, 'node_modules', '@capacitor')
+
+    mkdirSync(join(testRoot, 'node_modules'), { recursive: true })
+    symlinkSync(storeScopePath, linkedScopePath, 'dir')
+
+    writeFile(
+      join(testRoot, 'package.json'),
+      JSON.stringify({
+        dependencies: {
+          '@capacitor/core': '^6.0.0',
+          '@capacitor/app': '^6.0.0',
+        },
+      }, null, 2),
+    )
+
+    writeFile(
+      join(testRoot, 'capacitor.config.json'),
+      JSON.stringify({
+        ios: {
+          path: 'ios',
+        },
+        appId: 'com.example.app',
+        appName: 'Example',
+      }, null, 2),
+    )
+
+    writeFile(
+      join(testRoot, 'ios', 'App', 'Podfile'),
+      "pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'\n",
+    )
+
+    writeFile(
+      join(storePackagePath, 'package.json'),
+      JSON.stringify({ name: '@capacitor/app', version: '6.0.0' }, null, 2),
+    )
+    writeFile(
+      join(storePackagePath, 'CapacitorApp.podspec'),
+      "Pod::Spec.new do |s|\n  s.name = 'CapacitorApp'\nend",
+    )
+    writeFile(
+      join(storePackagePath, 'ios', 'Plugin.swift'),
+      'import Foundation\n',
+    )
+
+    await zipDirectory(testRoot, zipPath, 'ios', {
+      ios: {
+        path: 'ios',
+      },
+    })
+
+    const zip = new AdmZip(zipPath)
+    const entries = zip.getEntries().map(entry => entry.entryName).sort()
+
+    assert.ok(entries.includes('node_modules/@capacitor/app/package.json'), 'missing symlinked plugin package.json in zip')
+    assert.ok(entries.includes('node_modules/@capacitor/app/CapacitorApp.podspec'), 'missing symlinked plugin podspec in zip')
+    assert.ok(entries.includes('node_modules/@capacitor/app/ios/Plugin.swift'), 'missing symlinked ios plugin file in zip')
+  }
+  finally {
+    rmSync(testRoot, { recursive: true, force: true })
+  }
 })
 
 await t('generated build zip includes @capacitor plugin package.json for CocoaPods path resolution', async () => {
