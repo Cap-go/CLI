@@ -28,7 +28,7 @@
 
 import type { BuildCredentials, BuildOptionsPayload, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
 import { Buffer } from 'node:buffer'
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
@@ -707,7 +707,10 @@ function addDirectoryToZip(
   for (const item of items) {
     const itemPath = join(dirPath, item)
     const itemZipPath = zipPath ? `${zipPath}/${item}` : item
-    const stats = statSync(itemPath)
+    const stats = lstatSync(itemPath)
+    if (stats.isSymbolicLink()) {
+      throw new Error(`Refusing to include symbolic link during zip: ${itemZipPath}`)
+    }
 
     if (stats.isDirectory()) {
       // Skip excluded directories
