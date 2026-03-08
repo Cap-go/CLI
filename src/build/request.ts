@@ -28,7 +28,7 @@
 
 import type { BuildCredentials, BuildOptionsPayload, BuildRequestOptions, BuildRequestResult } from '../schemas/build'
 import { Buffer } from 'node:buffer'
-import { existsSync, lstatSync, readdirSync, readFileSync } from 'node:fs'
+import { existsSync, lstatSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
@@ -707,10 +707,10 @@ function addDirectoryToZip(
   for (const item of items) {
     const itemPath = join(dirPath, item)
     const itemZipPath = zipPath ? `${zipPath}/${item}` : item
-    const stats = lstatSync(itemPath)
-    if (stats.isSymbolicLink()) {
-      throw new Error(`Refusing to include symbolic link during zip: ${itemZipPath}`)
-    }
+    const lstats = lstatSync(itemPath)
+    const isSymbolicLink = lstats.isSymbolicLink()
+    const stats = isSymbolicLink ? statSync(itemPath) : lstats
+    const shouldInclude = shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)
 
     if (stats.isDirectory()) {
       // Skip excluded directories
@@ -738,7 +738,7 @@ function addDirectoryToZip(
       // 1. This directory itself should be included (matches a pattern)
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
       const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
-      const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)
+      const shouldRecurse = shouldInclude
         // Ensure we can reach nested platform directories like projects/app/android.
         || platformDir === normalizedItemPath
         || platformDir.startsWith(`${normalizedItemPath}/`)
@@ -747,17 +747,24 @@ function addDirectoryToZip(
           return depPath.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`node_modules/${pkg}`)
         })
 
+      // Skip unrelated symlinks instead of failing hard.
+      if (isSymbolicLink && !shouldRecurse)
+        continue
+
       if (shouldRecurse) {
         addDirectoryToZip(zip, itemPath, itemZipPath, platform, nativeDeps, platformDir)
       }
     }
     else if (stats.isFile()) {
+      if (isSymbolicLink)
+        continue
+
       // Skip excluded files
       if (item === '.DS_Store' || item.endsWith('.log'))
         continue
 
       // Check if we should include this file
-      if (shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)) {
+      if (shouldInclude) {
         zip.addLocalFile(itemPath, zipPath || undefined)
       }
     }
