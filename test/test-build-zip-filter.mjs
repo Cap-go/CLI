@@ -40,18 +40,13 @@ await t('should include package metadata for @capacitor dependencies in zip filt
   )
 })
 
-await t('generated build zip follows symlinked pnpm-style node_modules package folders', async () => {
+await t('generated build zip skips dangling symlinks in project tree', async () => {
   const testRoot = mkdtempSync(join(tmpdir(), 'capgo-build-zip-filter-'))
   const zipPath = join(testRoot, 'build.zip')
 
   try {
-    const pnpmStore = join(testRoot, 'pnpm-store')
-    const storeScopePath = join(pnpmStore, 'node_modules', '@capacitor')
-    const storePackagePath = join(storeScopePath, 'app')
-    const linkedScopePath = join(testRoot, 'node_modules', '@capacitor')
-
     mkdirSync(join(testRoot, 'node_modules'), { recursive: true })
-    symlinkSync(storeScopePath, linkedScopePath, 'dir')
+    symlinkSync(join(testRoot, 'missing-pnpm-store', 'node_modules', '@capacitor'), join(testRoot, 'node_modules', '@capacitor'), 'dir')
 
     writeFile(
       join(testRoot, 'package.json'),
@@ -74,23 +69,9 @@ await t('generated build zip follows symlinked pnpm-style node_modules package f
       }, null, 2),
     )
 
-    writeFile(
-      join(testRoot, 'ios', 'App', 'Podfile'),
-      "pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'\n",
-    )
+    writeFile(join(testRoot, 'ios', 'App', 'Podfile'), "platform :ios, '14.0'\n")
 
-    writeFile(
-      join(storePackagePath, 'package.json'),
-      JSON.stringify({ name: '@capacitor/app', version: '6.0.0' }, null, 2),
-    )
-    writeFile(
-      join(storePackagePath, 'CapacitorApp.podspec'),
-      "Pod::Spec.new do |s|\n  s.name = 'CapacitorApp'\nend",
-    )
-    writeFile(
-      join(storePackagePath, 'ios', 'Plugin.swift'),
-      'import Foundation\n',
-    )
+    writeFile(join(testRoot, 'www', 'index.html'), '<!doctype html><html></html>')
 
     await zipDirectory(testRoot, zipPath, 'ios', {
       ios: {
@@ -101,9 +82,8 @@ await t('generated build zip follows symlinked pnpm-style node_modules package f
     const zip = new AdmZip(zipPath)
     const entries = zip.getEntries().map(entry => entry.entryName).sort()
 
-    assert.ok(entries.includes('node_modules/@capacitor/app/package.json'), 'missing symlinked plugin package.json in zip')
-    assert.ok(entries.includes('node_modules/@capacitor/app/CapacitorApp.podspec'), 'missing symlinked plugin podspec in zip')
-    assert.ok(entries.includes('node_modules/@capacitor/app/ios/Plugin.swift'), 'missing symlinked ios plugin file in zip')
+    assert.ok(entries.includes('package.json'), 'root package.json not included')
+    assert.ok(entries.includes('ios/App/Podfile'), 'native platform folder not included')
   }
   finally {
     rmSync(testRoot, { recursive: true, force: true })
@@ -115,6 +95,12 @@ await t('generated build zip includes @capacitor plugin package.json for CocoaPo
   const zipPath = join(testRoot, 'build.zip')
 
   try {
+    const pnpmStore = join(testRoot, 'pnpm-store')
+    const linkedScopePath = join(testRoot, 'node_modules', '@capacitor')
+
+    mkdirSync(join(testRoot, 'node_modules'), { recursive: true })
+    symlinkSync(join(pnpmStore, 'node_modules', '@capacitor'), linkedScopePath, 'dir')
+
     writeFile(
       join(testRoot, 'package.json'),
       JSON.stringify({
@@ -146,22 +132,22 @@ await t('generated build zip includes @capacitor plugin package.json for CocoaPo
 
     writeFile(join(testRoot, 'www', 'index.html'), '<!doctype html><html></html>')
     writeFile(
-      join(testRoot, 'node_modules', '@capacitor', 'app', 'package.json'),
+      join(pnpmStore, 'node_modules', '@capacitor', 'app', 'package.json'),
       JSON.stringify({ name: '@capacitor/app', version: '6.0.0' }, null, 2),
     )
     writeFile(
-      join(testRoot, 'node_modules', '@capacitor', 'app', 'CapacitorApp.podspec'),
+      join(pnpmStore, 'node_modules', '@capacitor', 'app', 'CapacitorApp.podspec'),
       "Pod::Spec.new do |s|\n  s.name = 'CapacitorApp'\nend",
     )
     writeFile(
-      join(testRoot, 'node_modules', '@capacitor', 'app', 'ios', 'Plugin.swift'),
+      join(pnpmStore, 'node_modules', '@capacitor', 'app', 'ios', 'Plugin.swift'),
       '// iOS source file',
     )
     writeFile(
-      join(testRoot, 'node_modules', '@capacitor', 'app', 'README.md'),
+      join(pnpmStore, 'node_modules', '@capacitor', 'app', 'README.md'),
       'should be filtered out',
     )
-    writeFile(join(testRoot, 'node_modules', '@capacitor', 'app', 'android', 'build.gradle'), '')
+    writeFile(join(pnpmStore, 'node_modules', '@capacitor', 'app', 'android', 'build.gradle'), '')
 
     await zipDirectory(testRoot, zipPath, 'ios', {
       ios: { path: 'ios' },

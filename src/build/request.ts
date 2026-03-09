@@ -709,7 +709,17 @@ function addDirectoryToZip(
     const itemZipPath = zipPath ? `${zipPath}/${item}` : item
     const lstats = lstatSync(itemPath)
     const isSymbolicLink = lstats.isSymbolicLink()
-    const stats = isSymbolicLink ? statSync(itemPath) : lstats
+    let stats = lstats
+
+    if (isSymbolicLink) {
+      try {
+        stats = statSync(itemPath)
+      }
+      catch {
+        // Broken symlink: skip gracefully to avoid failing the whole zip.
+        continue
+      }
+    }
     const shouldInclude = shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)
 
     if (stats.isDirectory()) {
