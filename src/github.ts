@@ -5,8 +5,8 @@ export const defaultStarRepo = 'capacitor-updater'
 const defaultStarTarget = `${defaultStarOwner}/${defaultStarRepo}`
 const defaultStarPrefix = 'capacitor-'
 const fallbackStarRepositories = [defaultStarTarget] as const
-const defaultMinStarDelayMs = 80
-const defaultMaxStarDelayMs = 350
+const defaultMinStarDelayMs = 20
+const defaultMaxStarDelayMs = 180
 const starredRepoSessionCache = new Set<string>()
 
 type GhCommandResult = {

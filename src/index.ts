@@ -90,8 +90,8 @@ program
   .description(`⭐ Star all Capgo GitHub repositories with a small random delay between each request.
 
 If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with \`capacitor-\`.`)
-  .option('--min-delay-ms <ms>', 'Minimum delay in ms between each star action (default: 80)')
-  .option('--max-delay-ms <ms>', 'Maximum delay in ms between each star action (default: 350)')
+  .option('--min-delay-ms <ms>', 'Minimum delay in ms between each star action (default: 20)')
+  .option('--max-delay-ms <ms>', 'Maximum delay in ms between each star action (default: 180)')
   .action(async (repositories: string[], options: { minDelayMs?: string; maxDelayMs?: string }) => {
     const parseDelay = (value: string | undefined, fallback: number) => {
       const parsed = Number.parseInt(value ?? String(fallback), 10)
@@ -116,8 +116,8 @@ If you do not pass repositories, this defaults to all Cap-go repositories whose 
     let hasResult = false
     const result = await starAllRepositories({
       repositories: repositories && repositories.length > 0 ? repositories : undefined,
-      minDelayMs: parseDelay(options?.minDelayMs, 80),
-      maxDelayMs: parseDelay(options?.maxDelayMs, 350),
+      minDelayMs: parseDelay(options?.minDelayMs, 20),
+      maxDelayMs: parseDelay(options?.maxDelayMs, 180),
       onDiscovery: (message) => {
         discoverySteps += 1
         const preparedCount = parsePreparedCount(message)
