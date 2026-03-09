@@ -17,6 +17,7 @@ import { addChannelInternal } from './channel/add'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { showReplicationProgress } from './replicationProgress'
+import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRepository } from './github'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
@@ -1269,6 +1270,58 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
   await markStep(orgId, apikey, 'test-update', appId)
 }
 
+async function maybeStarCapgoRepo(repository?: string) {
+  if (!stdin.isTTY || !stdout.isTTY)
+    return
+
+  const status = getRepoStarStatus(repository)
+  if (isRepoStarredInSession(status.repository) || !status.ghInstalled || !status.ghLoggedIn || !status.repositoryExists || status.starred)
+    return
+
+  const starChoice = await pSelect({
+    message: `How would you like to support Capgo on GitHub?`,
+    options: [
+      { value: 'star-update', label: `Star ${status.repository}` },
+      { value: 'star-all', label: 'Star all Capgo repos (repositories starting with capacitor- in Cap-go org)' },
+      { value: 'skip', label: 'No, thanks' },
+    ],
+  })
+
+  if (pIsCancel(starChoice) || starChoice === 'skip') {
+    return
+  }
+
+  try {
+    if (starChoice === 'star-update') {
+      const result = starRepository(status.repository)
+      if (result.alreadyStarred) {
+        pLog.info(`🫶 ${result.repository} is already starred`)
+      }
+      else {
+        pLog.success(`🙏 Thanks for starring ${result.repository} 🎉`)
+      }
+    }
+    else if (starChoice === 'star-all') {
+      const result = await starAllRepositories()
+
+      for (const repository of result) {
+        if (repository.error) {
+          pLog.error(`⚠️ Could not star ${repository.repository}: ${repository.error}`)
+        }
+        else if (repository.alreadyStarred) {
+          pLog.info(`🫶 ${repository.repository} is already starred`)
+        }
+        else {
+          pLog.success(`🙏 Thanks for starring ${repository.repository} 🎉`)
+        }
+      }
+    }
+  }
+  catch (error) {
+    pLog.warn(`Cannot star ${status.repository} right now: ${formatError(error)}`)
+  }
+}
+
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
@@ -1428,6 +1481,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
   pLog.warn('Reason: cap sync puts your local build directly in the native app, which bypasses the Capgo OTA path.')
   pLog.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
+  await maybeStarCapgoRepo()
   pOutro(`Bye 👋`)
   exit()
 }
