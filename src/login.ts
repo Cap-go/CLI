@@ -1,8 +1,9 @@
-import { appendFileSync, existsSync, writeFileSync } from 'node:fs'
+import { existsSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { intro, isCancel, log, outro, password } from '@clack/prompts'
 import { checkAlerts } from './api/update'
 import { createSupabaseClient, sendEvent, verifyUser } from './utils'
+import { appendToSafeFile, writeFileAtomic } from './utils/safeWrites'
 
 interface Options {
   local: boolean
@@ -42,22 +43,24 @@ export async function loginInternal(apikey: string, options: Options, silent = f
   // write in file .capgo the apikey in home directory
   const { local } = options
 
-  if (local) {
-    if (!existsSync('.git')) {
-      if (!silent)
-        log.error('To use local you should be in a git repository')
-      throw new Error('Not in a git repository')
-    }
-    writeFileSync('.capgo', `${apikey}\n`)
-    appendFileSync('.gitignore', '.capgo\n')
-  }
-  else {
-    const userHomeDir = homedir()
-    writeFileSync(`${userHomeDir}/.capgo`, `${apikey}\n`)
+  if (local && !existsSync('.git')) {
+    if (!silent)
+      log.error('To use local you should be in a git repository')
+    throw new Error('Not in a git repository')
   }
 
   const supabase = await createSupabaseClient(apikey, options.supaHost, options.supaAnon)
   const userId = await verifyUser(supabase, apikey, ['write', 'all', 'upload'])
+
+  if (local) {
+    await writeFileAtomic('.capgo', `${apikey}\n`, { mode: 0o600 })
+    await appendToSafeFile('.gitignore', '.capgo\n', 0o600)
+  }
+  else {
+    const userHomeDir = homedir()
+    await writeFileAtomic(`${userHomeDir}/.capgo`, `${apikey}\n`, { mode: 0o600 })
+  }
+
   await sendEvent(apikey, {
     channel: 'user-login',
     event: 'User CLI login',

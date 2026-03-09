@@ -21,10 +21,11 @@
 
 import type { AllCredentials, CredentialFile, SavedCredentials } from '../schemas/build'
 import type { BuildCredentials } from './request'
-import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { readFile as readNodeFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 import { cwd, env } from 'node:process'
+import { ensureSecureDirectory, readSafeFile, writeFileAtomic } from '../utils/safeWrites'
 
 const CREDENTIALS_DIR = join(homedir(), '.capgo-credentials')
 const CREDENTIALS_FILE = join(CREDENTIALS_DIR, 'credentials.json')
@@ -93,7 +94,7 @@ export function parseOptionalBoolean(value: boolean | string | undefined): boole
  * Convert a file to base64 string
  */
 async function fileToBase64(filePath: string): Promise<string> {
-  const buffer = await readFile(filePath)
+  const buffer = await readNodeFile(filePath)
   return buffer.toString('base64')
 }
 
@@ -103,7 +104,7 @@ async function fileToBase64(filePath: string): Promise<string> {
 async function loadAllCredentials(local?: boolean): Promise<AllCredentials> {
   try {
     const filePath = getCredentialsPath(local)
-    const content = await readFile(filePath, 'utf-8')
+    const content = await readSafeFile(filePath)
     return JSON.parse(content) as AllCredentials
   }
   catch {
@@ -159,10 +160,10 @@ async function saveAllCredentials(credentials: AllCredentials, local?: boolean):
 
   // Create directory only for global storage
   if (dir) {
-    await mkdir(dir, { recursive: true })
+    await ensureSecureDirectory(dir, 0o700)
   }
 
-  await writeFile(filePath, JSON.stringify(credentials, null, 2), 'utf-8')
+  await writeFileAtomic(filePath, JSON.stringify(credentials, null, 2), { mode: 0o600 })
 }
 
 function readRuntimeEnv(name: string): string | undefined {
