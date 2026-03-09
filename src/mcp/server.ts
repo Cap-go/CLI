@@ -3,7 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { z } from 'zod'
 import pack from '../../package.json'
-import { addAppOptionsSchema, cleanupOptionsSchema, getStatsOptionsSchema, updateAppOptionsSchema, updateChannelOptionsSchema, uploadOptionsSchema } from '../schemas/sdk'
+import { addAppOptionsSchema, cleanupOptionsSchema, getStatsOptionsSchema, starAllRepositoriesOptionsSchema, starRepoOptionsSchema, updateAppOptionsSchema, updateChannelOptionsSchema, uploadOptionsSchema } from '../schemas/sdk'
 import { CapgoSDK } from '../sdk'
 import { findSavedKey } from '../utils'
 
@@ -146,6 +146,45 @@ export async function startMcpServer(): Promise<void> {
             skipped: result.skipped,
             reason: result.reason,
           }, null, 2),
+        }],
+      }
+    },
+  )
+
+  server.tool(
+    'capgo_star_repository',
+    'Star a GitHub repository to support Capgo',
+    starRepoOptionsSchema.shape,
+    async ({ repository }) => {
+      const result = await sdk.starRepo({ repository })
+      if (!result.success) {
+        return formatMcpError(result)
+      }
+
+      const status = result.data?.alreadyStarred ? 'already starred' : 'starred successfully'
+      return {
+        content: [{
+          type: 'text' as const,
+          text: `Repository ${result.data?.repository} is ${status}.`,
+        }],
+      }
+    },
+  )
+
+  server.tool(
+    'capgo_star_all_repositories',
+    'Star the default Capgo repositories on GitHub with a random delay between requests',
+    starAllRepositoriesOptionsSchema.shape,
+    async ({ repositories, minDelayMs, maxDelayMs }) => {
+      const result = await sdk.starAllRepositories({ repositories, minDelayMs, maxDelayMs })
+      if (!result.success) {
+        return formatMcpError(result)
+      }
+
+      return {
+        content: [{
+          type: 'text' as const,
+          text: JSON.stringify(result.data, null, 2),
         }],
       }
     },

@@ -1,6 +1,6 @@
 import { exit } from 'node:process'
 import { Option, program } from 'commander'
-import { log } from '@clack/prompts'
+import { log, spinner as spinnerC } from '@clack/prompts'
 import pack from '../package.json'
 import { addApp } from './app/add'
 import { debugApp } from './app/debug'
@@ -27,6 +27,7 @@ import { listChannels } from './channel/list'
 import { setChannel } from './channel/set'
 import { generateDocs } from './docs'
 import { initApp } from './init'
+import { defaultStarRepo, starAllRepositories, starRepository } from './github'
 import { createKey, deleteOldKey, saveKeyCommand } from './key'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
@@ -70,6 +71,86 @@ Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
 program
+  .command('star [repository]')
+  .description(`⭐ Star a Capgo GitHub repository to support the project.
+
+If you do not pass a repository name, this defaults to ${defaultStarRepo} in the Cap-go org.`)
+  .action((repository?: string) => {
+    const { repository: fullRepo, alreadyStarred } = starRepository(repository)
+    if (alreadyStarred) {
+      log.info(`🫶 ${fullRepo} is already starred`)
+    }
+    else {
+      log.success(`🙏 Thanks for starring ${fullRepo} 🎉`)
+    }
+  })
+
+program
+  .command('star-all [repositories...]')
+  .description(`⭐ Star all Capgo GitHub repositories with a small random delay between each request.
+
+If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with \`capacitor-\`.`)
+  .option('--min-delay-ms <ms>', 'Minimum delay in ms between each star action (default: 20)')
+  .option('--max-delay-ms <ms>', 'Maximum delay in ms between each star action (default: 180)')
+  .action(async (repositories: string[], options: { minDelayMs?: string; maxDelayMs?: string }) => {
+    const parseDelay = (value: string | undefined, fallback: number) => {
+      const parsed = Number.parseInt(value ?? String(fallback), 10)
+      return Number.isNaN(parsed) ? fallback : parsed
+    }
+
+    const actionSpinner = spinnerC()
+    actionSpinner.start('🚀 Preparing star-all')
+    const explicitRepositoryCount = repositories?.length ? repositories.length : 0
+    let step = 0
+    let discoverySteps = 0
+    let totalSteps = explicitRepositoryCount
+    const parsePreparedCount = (message: string) => {
+      const match = message.match(/Prepared (\d+) repositories to process/i)
+      return match ? Number.parseInt(match[1], 10) : null
+    }
+    const formatStep = (message: string) => {
+      step += 1
+      const totalSuffix = totalSteps > 0 ? `/${totalSteps}` : '/?'
+      return `[${step}${totalSuffix}] ${message}`
+    }
+    let hasResult = false
+    const result = await starAllRepositories({
+      repositories: repositories && repositories.length > 0 ? repositories : undefined,
+      minDelayMs: parseDelay(options?.minDelayMs, 20),
+      maxDelayMs: parseDelay(options?.maxDelayMs, 180),
+      onDiscovery: (message) => {
+        discoverySteps += 1
+        const preparedCount = parsePreparedCount(message)
+        if (preparedCount !== null)
+          totalSteps = discoverySteps + preparedCount
+
+        actionSpinner.message(formatStep(`🔎 ${message}`))
+      },
+      onProgress: (entry) => {
+        hasResult = true
+        const statusMessage = entry.alreadyStarred
+          ? `🫶 ${entry.repository} is already starred`
+          : `🙏 Thanks for starring ${entry.repository} 🎉`
+
+        actionSpinner.message(formatStep(entry.error ? `⚠️ Could not star ${entry.repository}: ${entry.error}` : statusMessage))
+        if (entry.error) {
+          log.error(`⚠️ Could not star ${entry.repository}: ${entry.error}`)
+        }
+      },
+    })
+
+    if (!hasResult) {
+      actionSpinner.stop('⚪ No repositories were processed.')
+    }
+    else if (repositories?.length === 0 || !repositories.length) {
+      actionSpinner.stop(`✅ Completed ${result.length} repository(s).`)
+    }
+    else {
+      actionSpinner.stop(`✅ Completed ${result.length} repository(s).`)
+    }
+  })
+
+program
   .command('doctor')
   .description(`👨‍⚕️ Check if your Capgo app installation is up-to-date and gather information useful for bug reports.
 
@@ -110,7 +191,9 @@ External option: Store only a URL link (useful for apps >200MB or privacy requir
 Capgo never inspects external content. Add encryption for trustless security.
 
 Example: npx @capgo/cli@latest bundle upload com.example.app --path ./dist --channel production`)
-  .action(uploadBundle)
+  .action(async (...args: Parameters<typeof uploadBundle>): Promise<void> => {
+    await uploadBundle(...args)
+  })
   .option('-a, --apikey <apikey>', optionDescriptions.apikey)
   .option('-p, --path <path>', `Path of the folder to upload, if not provided it will use the webDir set in capacitor.config`)
   .option('-c, --channel <channel>', `Channel to link to`)
@@ -945,6 +1028,8 @@ Available tools exposed via MCP:
   - capgo_list_channels, capgo_add_channel, capgo_update_channel, capgo_delete_channel
   - capgo_get_current_bundle, capgo_check_compatibility
   - capgo_list_organizations, capgo_add_organization
+  - capgo_star_repository
+  - capgo_star_all_repositories
   - capgo_get_account_id, capgo_doctor, capgo_get_stats
   - capgo_request_build, capgo_generate_encryption_keys
 
