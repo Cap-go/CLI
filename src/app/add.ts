@@ -5,7 +5,7 @@ import type { Database } from '../types/supabase.types'
 import type { Organization } from '../utils'
 import { existsSync, readFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExists, newIconPath } from '../api/app'
+import { checkAppExists, defaultAppIconPath, getAppIconStoragePath, newIconPath } from '../api/app'
 import { checkAlerts } from '../api/update'
 import {
   createSupabaseClient,
@@ -132,13 +132,16 @@ export async function addAppInternal(
     log.warn(`Cannot find app icon in any of the following locations: ${icon}, ${newIconPath}`)
   }
 
-  const fileName = 'icon'
-  let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
+  const iconPath = getAppIconStoragePath(organizationUid, appId)
+  let iconUrl = defaultAppIconPath
 
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/org/${organizationUid}/${appId}`)
-      .upload(fileName, iconBuff, { contentType: iconType })
+      .from('images')
+      .upload(iconPath, iconBuff, {
+        contentType: iconType,
+        upsert: true,
+      })
 
     if (error) {
       if (!silent)
@@ -146,17 +149,13 @@ export async function addAppInternal(
       throw new Error(`Could not add app ${formatError(error)}`)
     }
 
-    const { data: signedURLData } = await supabase.storage
-      .from(`images/org/${organizationUid}/${appId}`)
-      .getPublicUrl(fileName)
-
-    signedURL = signedURLData?.publicUrl || signedURL
+    iconUrl = iconPath
   }
 
   const { error: dbError } = await supabase
     .from('apps')
     .insert({
-      icon_url: signedURL,
+      icon_url: iconUrl,
       owner_org: organizationUid,
       user_id: userId,
       name,
@@ -191,7 +190,8 @@ export async function addAppInternal(
     organizationUid,
     userId,
     name,
-    signedURL,
+    iconUrl,
+    signedURL: iconUrl,
   }
 }
 

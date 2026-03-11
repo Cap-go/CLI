@@ -1,6 +1,6 @@
 import type { OptionsBase } from '../schemas/base'
 import { intro, isCancel, log, outro, select } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr, getAppIconStoragePath } from '../api/app'
 import {
   createSupabaseClient,
   findSavedKey,
@@ -77,10 +77,12 @@ export async function deleteAppInternal(
     log.warn(`Cannot get the app owner ${formatError(appOwnerError)}`)
   }
 
-  const { error: storageError } = await supabase
-    .storage
-    .from('images')
-    .remove([`org/${appOwner?.owner_org.id}/${appId}/icon`])
+  const { error: storageError } = appOwner?.owner_org.id
+    ? await supabase
+        .storage
+        .from('images')
+        .remove([getAppIconStoragePath(appOwner.owner_org.id, appId)])
+    : { error: null }
 
   if (storageError && !silent) {
     log.error('Could not delete app logo')

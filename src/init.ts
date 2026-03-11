@@ -14,10 +14,10 @@ import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
 import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
+import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRepository } from './github'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { showReplicationProgress } from './replicationProgress'
-import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRepository } from './github'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
