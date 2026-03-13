@@ -448,6 +448,12 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
     // Save credentials for this specific app
     await updateSavedCredentials(appId, platform, fileCredentials, options.local)
 
+    // When --android-flavor is omitted during save, remove any previously saved
+    // flavor so it doesn't silently carry over to future builds.
+    if (platform === 'android' && !options.androidFlavor) {
+      await removeSavedCredentialKeys(appId, platform, ['CAPGO_ANDROID_FLAVOR'], options.local)
+    }
+
     // Send analytics event
     try {
       const apikey = findSavedKey(true)
