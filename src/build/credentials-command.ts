@@ -336,8 +336,14 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
       }
 
       if (options.androidFlavor) {
-        credentials.CAPGO_ANDROID_FLAVOR = options.androidFlavor
-        log.info(`✓ Android flavor: ${options.androidFlavor}`)
+        const trimmedFlavor = options.androidFlavor.trim()
+        if (trimmedFlavor) {
+          credentials.CAPGO_ANDROID_FLAVOR = trimmedFlavor
+          log.info(`✓ Android flavor: ${trimmedFlavor}`)
+        }
+        else {
+          log.warn('Ignoring whitespace-only --android-flavor value')
+        }
       }
       else {
         log.info('ℹ️  --android-flavor not specified, no product flavor will be used')
@@ -648,7 +654,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
       || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
-      || options.keystoreStorePassword || options.playConfig)
+      || options.keystoreStorePassword || options.playConfig || options.androidFlavor)
     const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
 
     let platform = options.platform
@@ -832,8 +838,14 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         log.info('✓ Updating keystore store password')
       }
       if (options.androidFlavor) {
-        credentials.CAPGO_ANDROID_FLAVOR = options.androidFlavor
-        log.info(`✓ Updating Android flavor: ${options.androidFlavor}`)
+        const trimmedFlavor = options.androidFlavor.trim()
+        if (trimmedFlavor) {
+          credentials.CAPGO_ANDROID_FLAVOR = trimmedFlavor
+          log.info(`✓ Updating Android flavor: ${trimmedFlavor}`)
+        }
+        else {
+          log.warn('Ignoring whitespace-only --android-flavor value')
+        }
       }
     }
 
