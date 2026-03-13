@@ -1198,6 +1198,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Log defaults for output control fields when not explicitly set
     if (!silent) {
+      if (!options.buildMode) {
+        log.info('ℹ️  --build-mode not specified, defaulting to release')
+      }
       if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
         log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
       }

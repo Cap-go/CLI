@@ -340,7 +340,7 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         log.info(`✓ Android flavor: ${options.androidFlavor}`)
       }
       else {
-        log.info('Android flavor not specified (defaulting to Release build without flavor)')
+        log.info('ℹ️  --android-flavor not specified, no product flavor will be used')
       }
     }
 
