@@ -348,6 +348,38 @@ await test('CAPGO_ANDROID_FLAVOR empty string is not loaded', async () => {
   await cleanupTestEnv()
 })
 
+// Test 10b: CAPGO_ANDROID_FLAVOR whitespace-only env var is trimmed and ignored
+await test('CAPGO_ANDROID_FLAVOR whitespace-only env var is ignored', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = '   '
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assert(!creds.CAPGO_ANDROID_FLAVOR, 'Whitespace-only CAPGO_ANDROID_FLAVOR should not be in result')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 10c: CAPGO_ANDROID_FLAVOR env var with surrounding whitespace is trimmed
+await test('CAPGO_ANDROID_FLAVOR env var is trimmed', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = '  dev  '
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assertEquals(creds.CAPGO_ANDROID_FLAVOR, 'dev', 'CAPGO_ANDROID_FLAVOR should be trimmed')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
 // Test 11: CAPGO_ANDROID_FLAVOR participates in credential merge precedence
 await test('CAPGO_ANDROID_FLAVOR follows CLI > Env > Saved precedence', async () => {
   await setupTestEnv()
