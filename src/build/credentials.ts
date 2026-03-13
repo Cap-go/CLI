@@ -186,6 +186,7 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
   const capgoIosScheme = readRuntimeEnv('CAPGO_IOS_SCHEME')
   const capgoIosTarget = readRuntimeEnv('CAPGO_IOS_TARGET')
   const capgoIosProvisioningMap = readRuntimeEnv('CAPGO_IOS_PROVISIONING_MAP')
+  const capgoAndroidFlavor = readRuntimeEnv('CAPGO_ANDROID_FLAVOR')
   const androidKeystoreFile = readRuntimeEnv('ANDROID_KEYSTORE_FILE')
   const keystoreKeyAlias = readRuntimeEnv('KEYSTORE_KEY_ALIAS')
   const keystoreKeyPassword = readRuntimeEnv('KEYSTORE_KEY_PASSWORD')
@@ -219,6 +220,8 @@ export function loadCredentialsFromEnv(): Partial<BuildCredentials> {
     credentials.CAPGO_IOS_PROVISIONING_MAP = capgoIosProvisioningMap
 
   // Android credentials
+  if (capgoAndroidFlavor)
+    credentials.CAPGO_ANDROID_FLAVOR = capgoAndroidFlavor
   if (androidKeystoreFile)
     credentials.ANDROID_KEYSTORE_FILE = androidKeystoreFile
   if (keystoreKeyAlias)

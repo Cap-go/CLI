@@ -47,6 +47,7 @@ interface SaveCredentialsOptions {
   keystoreKeyPassword?: string
   keystoreStorePassword?: string
   playConfig?: string
+  androidFlavor?: string
 }
 
 /**
@@ -332,6 +333,14 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         // Both provided, use separately
         credentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+      }
+
+      if (options.androidFlavor) {
+        credentials.CAPGO_ANDROID_FLAVOR = options.androidFlavor
+        log.info(`✓ Android flavor: ${options.androidFlavor}`)
+      }
+      else {
+        log.info('Android flavor not specified (defaulting to Release build without flavor)')
       }
     }
 
@@ -815,6 +824,10 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       if (options.keystoreStorePassword) {
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
         log.info('✓ Updating keystore store password')
+      }
+      if (options.androidFlavor) {
+        credentials.CAPGO_ANDROID_FLAVOR = options.androidFlavor
+        log.info(`✓ Updating Android flavor: ${options.androidFlavor}`)
       }
     }
 
