@@ -52,7 +52,7 @@ export const buildRequestOptionsSchema = optionsBaseSchema.extend({
   keystoreKeyPassword: z.string().optional(),
   keystoreStorePassword: z.string().optional(),
   playConfigJson: z.string().optional(),
-  androidFlavor: z.string().optional(),
+  androidFlavor: z.string().trim().min(1).optional(),
   // Output control
   outputUpload: z.boolean().optional(),
   outputRetention: z.string().optional(),
@@ -107,7 +107,7 @@ export const buildOptionsPayloadSchema = z.object({
   androidSourceDir: z.string().optional(),
   androidAppDir: z.string().optional(),
   androidProjectDir: z.string().optional(),
-  androidFlavor: z.string().optional(),
+  androidFlavor: z.string().trim().min(1).optional(),
   outputUploadEnabled: z.boolean(),
   outputRetentionSeconds: z.number(),
   skipBuildNumberBump: z.boolean(),
