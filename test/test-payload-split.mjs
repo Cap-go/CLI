@@ -246,6 +246,7 @@ await test('NON_CREDENTIAL_KEYS covers all non-secret fields', async () => {
     'CAPGO_ANDROID_APP_DIR',
     'CAPGO_ANDROID_PROJECT_DIR',
     'ANDROID_PROJECT_DIR',
+    'CAPGO_ANDROID_FLAVOR',
   ]
 
   assertEquals(NON_CREDENTIAL_KEYS.size, expectedKeys.length,
