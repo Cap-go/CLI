@@ -837,6 +837,9 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
         log.info('✓ Updating keystore store password')
       }
+      // Note: unlike `save` (which clears CAPGO_ANDROID_FLAVOR when --android-flavor
+      // is omitted), `update` intentionally leaves it untouched — partial-update
+      // semantics mean "only change what I explicitly pass."
       if (options.androidFlavor) {
         const trimmedFlavor = options.androidFlavor.trim()
         if (trimmedFlavor) {
