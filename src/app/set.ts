@@ -1,9 +1,8 @@
 import type { Buffer } from 'node:buffer'
 import type { Options } from '../api/app'
-import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
 import { intro, log, outro } from '@clack/prompts'
-import { checkAppExistsAndHasPermissionOrgErr, newIconPath } from '../api/app'
+import { checkAppExistsAndHasPermissionOrgErr, defaultAppIconPath, getAppIconStoragePath, newIconPath } from '../api/app'
 import {
   createSupabaseClient,
   findSavedKey,
@@ -65,8 +64,8 @@ export async function setAppInternal(appId: string, options: Options, silent = f
 
   let iconBuff: Buffer | undefined
   let iconType: string | undefined
-  const fileName = `icon_${randomUUID()}`
-  let signedURL = 'https://xvwzpoazmxkqosrdewyv.supabase.co/storage/v1/object/public/images/capgo.png'
+  const iconPath = getAppIconStoragePath(organizationUid, appId)
+  let iconUrl: string | undefined = defaultAppIconPath
 
   if (icon && existsSync(icon)) {
     iconBuff = readFileSync(icon)
@@ -88,8 +87,11 @@ export async function setAppInternal(appId: string, options: Options, silent = f
 
   if (iconBuff && iconType) {
     const { error } = await supabase.storage
-      .from(`images/org/${organizationUid}/${appId}`)
-      .upload(fileName, iconBuff, { contentType: iconType })
+      .from('images')
+      .upload(iconPath, iconBuff, {
+        contentType: iconType,
+        upsert: true,
+      })
 
     if (error) {
       if (!silent)
@@ -97,17 +99,13 @@ export async function setAppInternal(appId: string, options: Options, silent = f
       throw new Error(`Could not set app: ${formatError(error)}`)
     }
 
-    const { data: signedURLData } = await supabase.storage
-      .from(`images/org/${organizationUid}/${appId}`)
-      .getPublicUrl(fileName)
-
-    signedURL = signedURLData?.publicUrl || signedURL
+    iconUrl = iconPath
   }
 
   const { error: dbError } = await supabase
     .from('apps')
     .update({
-      icon_url: signedURL,
+      icon_url: iconUrl,
       name,
       retention: !retention ? undefined : retention * 24 * 60 * 60,
       expose_metadata: exposeMetadata,

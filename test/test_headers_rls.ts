@@ -1,6 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supaUrl = 'https://aucsybvnhavogdmzwtcw.supabase.co'
+const supaUrl = 'https://sb.capgo.app'
 const apikey = '***'
 const anonKey = '***'
 const init = async () => {
