@@ -14,6 +14,7 @@ on:
 env:
   DENO_DIR: my_cache_directory
   CLICOLOR: 1
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   cli-node-compatibility:
