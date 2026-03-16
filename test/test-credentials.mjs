@@ -439,6 +439,40 @@ await test('CAPGO_ANDROID_FLAVOR is isolated to android platform', async () => {
   await cleanupTestEnv()
 })
 
+// ─── Test: --no-playstore-upload nulls out PLAY_CONFIG_JSON ──────────────────
+
+await test('--no-playstore-upload: deleting PLAY_CONFIG_JSON removes it from credentials', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { updateSavedCredentials, mergeCredentials } = await importCredentials()
+
+  // Save android credentials including PLAY_CONFIG_JSON
+  await updateSavedCredentials('com.test.app', 'android', {
+    ANDROID_KEYSTORE_FILE: 'keystoredata',
+    KEYSTORE_KEY_ALIAS: 'myalias',
+    KEYSTORE_KEY_PASSWORD: 'keypass',
+    KEYSTORE_STORE_PASSWORD: 'storepass',
+    PLAY_CONFIG_JSON: '{"type":"service_account"}',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
+  })
+
+  const merged = await mergeCredentials('com.test.app', 'android')
+
+  // Verify PLAY_CONFIG_JSON is present before deletion
+  assert(merged.PLAY_CONFIG_JSON === '{"type":"service_account"}', 'PLAY_CONFIG_JSON should be present before deletion')
+
+  // Simulate --no-playstore-upload: delete PLAY_CONFIG_JSON
+  delete merged.PLAY_CONFIG_JSON
+
+  assert(!('PLAY_CONFIG_JSON' in merged), 'PLAY_CONFIG_JSON should not be in credentials after deletion')
+  assertEquals(merged.ANDROID_KEYSTORE_FILE, 'keystoredata', 'Other credentials should remain')
+  assertEquals(merged.BUILD_OUTPUT_UPLOAD_ENABLED, 'true', 'Output upload should still be enabled')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
 // Print summary
 console.log('\n' + '='.repeat(50))
 console.log(`\n📊 Test Results:`)
