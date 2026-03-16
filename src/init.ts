@@ -797,11 +797,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
 
   pLog.info(`🔐 End-to-end encryption`)
-  pLog.info(`   ✅ Use this for: Banking, healthcare, or apps with legal encryption requirements`)
-  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if you don't need it`)
+  pLog.info(`   📦 Uploaded bundles should be treated as public assets, even on private channels`)
+  pLog.info(`   🔎 Without encryption, anyone who can fetch the bundle can read your JS, HTML, and CSS`)
+  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if public bundles are fine`)
 
   const doEncrypt = await pConfirm({
-    message: `Enable end-to-end encryption for ${appId} updates?`,
+    message: `Enable end-to-end encryption so ${appId} bundle contents are not readable when fetched?`,
     initialValue: false,
   })
   await cancelCommand(doEncrypt, orgId, apikey)
