@@ -1032,6 +1032,14 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
     )
 
+    // --no-playstore-upload: null out PLAY_CONFIG_JSON so it never reaches the builder
+    if (options.playstoreUpload === false && mergedCredentials) {
+      delete mergedCredentials.PLAY_CONFIG_JSON
+      if (!silent) {
+        log.info('ℹ️  --no-playstore-upload specified, Play Store upload disabled for this build')
+      }
+    }
+
     const nativeProjectDir = getPlatformDirFromCapacitorConfig(config?.config, options.platform)
     if (mergedCredentials && nativeProjectDir) {
       if (options.platform === 'ios') {
