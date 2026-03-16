@@ -23,6 +23,7 @@ import type {
   DeviceStats,
   DoctorOptions,
   EncryptBundleOptions,
+  StarAllRepositoriesOptions,
   GenerateKeyOptions,
   GetStatsOptions,
   ListOrganizationsOptions,
@@ -33,6 +34,7 @@ import type {
   SaveKeyOptions,
   SDKResult,
   SetSettingOptions,
+  StarRepoOptions,
   UpdateAppOptions,
   UpdateChannelOptions,
   UpdateOrganizationOptions,
@@ -55,6 +57,8 @@ import { decryptZipInternal } from './bundle/decrypt'
 import { deleteBundleInternal } from './bundle/delete'
 import { encryptZipInternal } from './bundle/encrypt'
 import { uploadBundleInternal } from './bundle/upload'
+import type { StarAllRepositoryResult } from './github'
+import { starAllRepositories as starAllRepositoriesInternal, starRepository } from './github'
 import { zipBundleInternal } from './bundle/zip'
 import { addChannelInternal } from './channel/add'
 import { currentBundleInternal } from './channel/currentBundle'
@@ -328,6 +332,56 @@ export class CapgoSDK {
       return {
         success: true,
         data: userId,
+      }
+    }
+    catch (error) {
+      return createErrorResult(error)
+    }
+  }
+
+  /**
+   * Star the Capgo repository on GitHub
+   *
+   * @example
+   * ```typescript
+   * const result = await sdk.starRepo({ repository: 'Cap-go/capacitor-updater' })
+   * if (result.success) {
+   *   console.log(`${result.data?.repository} starred`)
+   * }
+   * ```
+   */
+  async starRepo(options?: StarRepoOptions): Promise<SDKResult<{ repository: string, alreadyStarred: boolean }>> {
+    try {
+      const { repository, alreadyStarred } = starRepository(options?.repository)
+      return {
+        success: true,
+        data: { repository, alreadyStarred },
+      }
+    }
+    catch (error) {
+      return createErrorResult(error)
+    }
+  }
+
+  /**
+   * Star the Capgo-related repositories on GitHub
+   *
+   * @example
+   * ```typescript
+   * const result = await sdk.starAllRepositories()
+   * if (result.success) {
+   *   for (const entry of result.data ?? []) {
+   *     console.log(entry.repository, entry.status)
+   *   }
+   * }
+   * ```
+   */
+  async starAllRepositories(options?: StarAllRepositoriesOptions): Promise<SDKResult<StarAllRepositoryResult[]>> {
+    try {
+      const data = await starAllRepositoriesInternal(options)
+      return {
+        success: true,
+        data,
       }
     }
     catch (error) {
@@ -1201,6 +1255,16 @@ export async function zipBundle(options: ZipBundleOptions): Promise<SDKResult<Zi
   return sdk.zipBundle(options)
 }
 
+export async function starRepo(options?: StarRepoOptions): Promise<SDKResult<{ repository: string, alreadyStarred: boolean }>> {
+  const sdk = new CapgoSDK()
+  return sdk.starRepo(options)
+}
+
+export async function starAllRepositories(options?: StarAllRepositoriesOptions): Promise<SDKResult<StarAllRepositoryResult[]>> {
+  const sdk = new CapgoSDK()
+  return sdk.starAllRepositories(options)
+}
+
 export async function generateEncryptionKeys(options?: GenerateKeyOptions): Promise<SDKResult> {
   const sdk = new CapgoSDK()
   return sdk.generateEncryptionKeys(options)
@@ -1476,6 +1540,8 @@ export type {
   SaveKeyOptions,
   SDKResult,
   SetSettingOptions,
+  StarAllRepositoriesOptions,
+  StarRepoOptions,
   StatsOrder,
   UpdateAppOptions,
   UpdateChannelOptions,

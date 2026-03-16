@@ -14,6 +14,7 @@ import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
 import { uploadBundleInternal } from './bundle/upload'
 import { addChannelInternal } from './channel/add'
+import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRepository } from './github'
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { showReplicationProgress } from './replicationProgress'
@@ -796,11 +797,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
 
   pLog.info(`🔐 End-to-end encryption`)
-  pLog.info(`   ✅ Use this for: Banking, healthcare, or apps with legal encryption requirements`)
-  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if you don't need it`)
+  pLog.info(`   📦 Uploaded bundles should be treated as public assets, even on private channels`)
+  pLog.info(`   🔎 Without encryption, anyone who can fetch the bundle can read your JS, HTML, and CSS`)
+  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if public bundles are fine`)
 
   const doEncrypt = await pConfirm({
-    message: `Enable end-to-end encryption for ${appId} updates?`,
+    message: `Enable end-to-end encryption so ${appId} bundle contents are not readable when fetched?`,
     initialValue: false,
   })
   await cancelCommand(doEncrypt, orgId, apikey)
@@ -1269,6 +1271,58 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
   await markStep(orgId, apikey, 'test-update', appId)
 }
 
+async function maybeStarCapgoRepo(repository?: string) {
+  if (!stdin.isTTY || !stdout.isTTY)
+    return
+
+  const status = getRepoStarStatus(repository)
+  if (isRepoStarredInSession(status.repository) || !status.ghInstalled || !status.ghLoggedIn || !status.repositoryExists || status.starred)
+    return
+
+  const starChoice = await pSelect({
+    message: `How would you like to support Capgo on GitHub?`,
+    options: [
+      { value: 'star-update', label: `Star ${status.repository}` },
+      { value: 'star-all', label: 'Star all Capgo repos (repositories starting with capacitor- in Cap-go org)' },
+      { value: 'skip', label: 'No, thanks' },
+    ],
+  })
+
+  if (pIsCancel(starChoice) || starChoice === 'skip') {
+    return
+  }
+
+  try {
+    if (starChoice === 'star-update') {
+      const result = starRepository(status.repository)
+      if (result.alreadyStarred) {
+        pLog.info(`🫶 ${result.repository} is already starred`)
+      }
+      else {
+        pLog.success(`🙏 Thanks for starring ${result.repository} 🎉`)
+      }
+    }
+    else if (starChoice === 'star-all') {
+      const result = await starAllRepositories()
+
+      for (const repository of result) {
+        if (repository.error) {
+          pLog.error(`⚠️ Could not star ${repository.repository}: ${repository.error}`)
+        }
+        else if (repository.alreadyStarred) {
+          pLog.info(`🫶 ${repository.repository} is already starred`)
+        }
+        else {
+          pLog.success(`🙏 Thanks for starring ${repository.repository} 🎉`)
+        }
+      }
+    }
+  }
+  catch (error) {
+    pLog.warn(`Cannot star ${status.repository} right now: ${formatError(error)}`)
+  }
+}
+
 export async function initApp(apikeyCommand: string, appId: string, options: SuperOptions) {
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
@@ -1428,6 +1482,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
   pLog.warn('Reason: cap sync puts your local build directly in the native app, which bypasses the Capgo OTA path.')
   pLog.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
+  await maybeStarCapgoRepo()
   pOutro(`Bye 👋`)
   exit()
 }

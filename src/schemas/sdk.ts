@@ -60,6 +60,20 @@ export const appInfoSchema = z.object({
 
 export type AppInfo = z.infer<typeof appInfoSchema>
 
+export const starRepoOptionsSchema = z.object({
+  repository: z.string().optional(),
+})
+
+export type StarRepoOptions = z.infer<typeof starRepoOptionsSchema>
+
+export const starAllRepositoriesOptionsSchema = z.object({
+  repositories: z.array(z.string().min(1)).optional(),
+  minDelayMs: z.number().int().min(0).optional(),
+  maxDelayMs: z.number().int().min(0).optional(),
+})
+
+export type StarAllRepositoriesOptions = z.infer<typeof starAllRepositoriesOptionsSchema>
+
 // ============================================================================
 // SDK Bundle Schemas
 // ============================================================================

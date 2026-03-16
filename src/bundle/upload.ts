@@ -18,6 +18,7 @@ import { calcKeyId, encryptChecksum, encryptChecksumV3, encryptSource, generateS
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { showReplicationProgress } from '../replicationProgress'
+import { getRepoStarStatus, isRepoStarredInSession, starRepository } from '../github'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
@@ -1313,10 +1314,40 @@ function checkValidOptions(options: OptionsUpload) {
   }
 }
 
+async function maybePromptStarCapgoRepo() {
+  if (!stdin.isTTY || !stdout.isTTY)
+    return
+
+  const status = getRepoStarStatus()
+  if (isRepoStarredInSession(status.repository) || !status.ghInstalled || !status.ghLoggedIn || !status.repositoryExists || status.starred)
+    return
+
+  const doStar = await pConfirm({ message: `Would you like to star ${status.repository} on GitHub to support Capgo?` })
+  if (pIsCancel(doStar) || !doStar) {
+    return
+  }
+
+  try {
+    const result = starRepository(status.repository)
+    if (result.alreadyStarred) {
+      log.info(`🫶 ${result.repository} is already starred`)
+    }
+    else {
+      log.success(`🙏 Thanks for starring ${result.repository} 🎉`)
+    }
+  }
+  catch (error) {
+    log.warn(`Cannot star ${status.repository} right now: ${formatError(error)}`)
+  }
+}
+
 export async function uploadBundle(appid: string, options: OptionsUpload) {
   try {
     checkValidOptions(options)
-    await uploadBundleInternal(appid, options)
+    const result = await uploadBundleInternal(appid, options)
+    if (!result.skipped)
+      await maybePromptStarCapgoRepo()
+    return result
   }
   catch (error) {
     // Show simple message by default, full error details only with --verbose

@@ -24,6 +24,8 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 ## 📋 Table of Contents
 
 - 🚀 [Init](#init)
+- 🔹 [Star](#star)
+- 🔹 [Star-all](#star-all)
 - 👨‍⚕️ [Doctor](#doctor)
 - 🔑 [Login](#login)
 - 📦 [Bundle](#bundle)
@@ -82,6 +84,7 @@ npx @capgo/cli@latest init
 
 🚀 Initialize a new app in Capgo Cloud with step-by-step guidance.
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
+Uploaded bundles should be treated as public assets; use encryption if you do not want their contents to be readable when fetched.
 
 **Example:**
 
@@ -97,6 +100,33 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+
+## <a id="star"></a> 🔹 **Star**
+
+```bash
+npx @capgo/cli@latest star
+```
+
+⭐ Star a Capgo GitHub repository to support the project.
+If you do not pass a repository name, this defaults to capacitor-updater in the Cap-go org.
+
+
+## <a id="star-all"></a> 🔹 **Star-all**
+
+```bash
+npx @capgo/cli@latest star-all
+```
+
+⭐ Star all Capgo GitHub repositories with a small random delay between each request.
+If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with `capacitor-`.
+
+## <a id="options"></a> Options
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **--min-delay-ms** | <code>string</code> | Minimum delay in ms between each star action (default: 20) |
+| **--max-delay-ms** | <code>string</code> | Maximum delay in ms between each star action (default: 180) |
 
 
 ## <a id="doctor"></a> 👨‍⚕️ **Doctor**
@@ -1195,6 +1225,8 @@ Available tools exposed via MCP:
   - capgo_list_channels, capgo_add_channel, capgo_update_channel, capgo_delete_channel
   - capgo_get_current_bundle, capgo_check_compatibility
   - capgo_list_organizations, capgo_add_organization
+  - capgo_star_repository
+  - capgo_star_all_repositories
   - capgo_get_account_id, capgo_doctor, capgo_get_stats
   - capgo_request_build, capgo_generate_encryption_keys
 Example usage with Claude Desktop:
