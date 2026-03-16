@@ -47,6 +47,7 @@ interface SaveCredentialsOptions {
   keystoreKeyPassword?: string
   keystoreStorePassword?: string
   playConfig?: string
+  androidFlavor?: string
 }
 
 /**
@@ -333,6 +334,20 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
         credentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
       }
+
+      if (options.androidFlavor) {
+        const trimmedFlavor = options.androidFlavor.trim()
+        if (trimmedFlavor) {
+          credentials.CAPGO_ANDROID_FLAVOR = trimmedFlavor
+          log.info(`✓ Android flavor: ${trimmedFlavor}`)
+        }
+        else {
+          log.warn('Ignoring whitespace-only --android-flavor value')
+        }
+      }
+      else {
+        log.info('ℹ️  --android-flavor not specified, no product flavor will be used')
+      }
     }
 
     // Convert files to base64 and merge with other credentials
@@ -438,6 +453,12 @@ export async function saveCredentialsCommand(options: SaveCredentialsOptions): P
 
     // Save credentials for this specific app
     await updateSavedCredentials(appId, platform, fileCredentials, options.local)
+
+    // When --android-flavor is omitted during save, remove any previously saved
+    // flavor so it doesn't silently carry over to future builds.
+    if (platform === 'android' && !options.androidFlavor) {
+      await removeSavedCredentialKeys(appId, platform, ['CAPGO_ANDROID_FLAVOR'], options.local)
+    }
 
     // Send analytics event
     try {
@@ -633,7 +654,7 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       || options.p12Password || options.appleKey || options.appleKeyId || options.appleIssuerId
       || options.appleTeamId)
     const hasAndroidOptions = !!(options.keystore || options.keystoreAlias || options.keystoreKeyPassword
-      || options.keystoreStorePassword || options.playConfig)
+      || options.keystoreStorePassword || options.playConfig || options.androidFlavor)
     const hasCrossPlatformOptions = options.outputUpload !== undefined || options.outputRetention !== undefined || options.skipBuildNumberBump !== undefined
 
     let platform = options.platform
@@ -815,6 +836,19 @@ export async function updateCredentialsCommand(options: SaveCredentialsOptions):
       if (options.keystoreStorePassword) {
         credentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
         log.info('✓ Updating keystore store password')
+      }
+      // Note: unlike `save` (which clears CAPGO_ANDROID_FLAVOR when --android-flavor
+      // is omitted), `update` intentionally leaves it untouched — partial-update
+      // semantics mean "only change what I explicitly pass."
+      if (options.androidFlavor) {
+        const trimmedFlavor = options.androidFlavor.trim()
+        if (trimmedFlavor) {
+          credentials.CAPGO_ANDROID_FLAVOR = trimmedFlavor
+          log.info(`✓ Updating Android flavor: ${trimmedFlavor}`)
+        }
+        else {
+          log.warn('Ignoring whitespace-only --android-flavor value')
+        }
       }
     }
 

@@ -871,6 +871,7 @@ export const NON_CREDENTIAL_KEYS = new Set([
   'CAPGO_ANDROID_APP_DIR',
   'CAPGO_ANDROID_PROJECT_DIR',
   'ANDROID_PROJECT_DIR',
+  'CAPGO_ANDROID_FLAVOR',
 ])
 
 /**
@@ -897,6 +898,7 @@ export function splitPayload(
     androidSourceDir: mergedCredentials.CAPGO_ANDROID_SOURCE_DIR,
     androidAppDir: mergedCredentials.CAPGO_ANDROID_APP_DIR,
     androidProjectDir: mergedCredentials.CAPGO_ANDROID_PROJECT_DIR,
+    androidFlavor: mergedCredentials.CAPGO_ANDROID_FLAVOR,
     outputUploadEnabled: mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'true',
     outputRetentionSeconds: mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS
       ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10) || MIN_OUTPUT_RETENTION_SECONDS
@@ -1006,6 +1008,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
     }
 
+    if (typeof options.androidFlavor === 'string') {
+      const androidFlavorTrimmed = options.androidFlavor.trim()
+      if (androidFlavorTrimmed)
+        cliCredentials.CAPGO_ANDROID_FLAVOR = androidFlavorTrimmed
+    }
     if (options.playConfigJson)
       cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
     if (options.outputUpload !== undefined) {
@@ -1027,6 +1034,14 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       options.platform,
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
     )
+
+    // --no-playstore-upload: null out PLAY_CONFIG_JSON so it never reaches the builder
+    if (options.playstoreUpload === false && mergedCredentials) {
+      delete mergedCredentials.PLAY_CONFIG_JSON
+      if (!silent) {
+        log.info('ℹ️  --no-playstore-upload specified, Play Store upload disabled for this build')
+      }
+    }
 
     const nativeProjectDir = getPlatformDirFromCapacitorConfig(config?.config, options.platform)
     if (mergedCredentials && nativeProjectDir) {
@@ -1194,6 +1209,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Log defaults for output control fields when not explicitly set
     if (!silent) {
+      if (!options.buildMode) {
+        log.info('ℹ️  --build-mode not specified, defaulting to release')
+      }
       if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
         log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
       }
