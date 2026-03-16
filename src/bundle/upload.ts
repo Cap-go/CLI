@@ -626,6 +626,37 @@ async function deleteLinkedBundleOnUpload(supabase: SupabaseType, appid: string,
   log.info('Linked bundle deleted')
 }
 
+export async function resolveVersionIdForChannelUpdate(
+  supabase: SupabaseType,
+  apikey: string,
+  appid: string,
+  bundle: string,
+  currentVersionId?: number | null,
+) {
+  let versionId = typeof currentVersionId === 'number' ? currentVersionId : null
+
+  if (versionId === null) {
+    const { data: versionRecord } = await supabase
+      .from('app_versions')
+      .select('id')
+      .eq('app_id', appid)
+      .eq('name', bundle)
+      .single()
+
+    versionId = versionRecord?.id ?? null
+  }
+
+  if (versionId === null) {
+    const { data: rpcVersionId } = await supabase
+      .rpc('get_app_versions', { apikey, name_version: bundle, appid })
+      .single()
+
+    versionId = rpcVersionId ?? null
+  }
+
+  return versionId
+}
+
 async function setVersionInChannel(
   supabase: SupabaseType,
   apikey: string,
@@ -636,11 +667,10 @@ async function setVersionInChannel(
   orgId: string,
   appid: string,
   localConfig: localConfigType,
+  currentVersionId?: number | null,
   selfAssign?: boolean,
 ) {
-  const { data: versionId } = await supabase
-    .rpc('get_app_versions', { apikey, name_version: bundle, appid })
-    .single()
+  const versionId = await resolveVersionIdForChannelUpdate(supabase, apikey, appid, bundle, currentVersionId)
 
   if (!versionId)
     uploadFail('Cannot get version id, cannot set channel')
@@ -1027,6 +1057,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     log.info(`[Verbose] Preparing delta/partial update manifest...`)
 
   const manifest: manifestType = options.delta ? await prepareBundlePartialFiles(path, apikey, orgId, appid, options.encryptPartial ? encryptionMethod : 'none', finalKeyData, supportsHexChecksum) : []
+  let uploadedVersionId: number | null = null
 
   if (options.verbose && options.delta)
     log.info(`[Verbose] Delta manifest prepared with ${manifest.length} files`)
@@ -1034,9 +1065,10 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (options.verbose)
     log.info(`[Verbose] Creating version record in database...`)
 
-  const { error: dbError } = await updateOrCreateVersion(supabase, versionData)
+  const { error: dbError, data: createdVersion } = await updateOrCreateVersion(supabase, versionData)
   if (dbError)
     uploadFail(`Cannot add bundle ${formatError(dbError)}`)
+  uploadedVersionId = createdVersion?.id ?? uploadedVersionId
 
   if (options.verbose)
     log.info(`[Verbose] Version record created successfully`)
@@ -1154,9 +1186,10 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
     if (options.verbose)
       log.info(`[Verbose] Updating version record with storage provider and manifest...`)
 
-    const { error: dbError2 } = await updateOrCreateVersion(supabase, versionData)
+    const { error: dbError2, data: updatedVersion } = await updateOrCreateVersion(supabase, versionData)
     if (dbError2)
       uploadFail(`Cannot update bundle ${formatError(dbError2)}`)
+    uploadedVersionId = updatedVersion?.id ?? uploadedVersionId
 
     if (options.verbose)
       log.info(`[Verbose] Version record updated successfully`)
@@ -1187,7 +1220,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (hasOrganizationPerm(permissions, OrganizationPerm.write)) {
     if (options.verbose)
       log.info(`[Verbose] Setting bundle ${bundle} to channel ${channel}...`)
-    await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, options.selfAssign)
+    await setVersionInChannel(supabase, apikey, !!options.bundleUrl, bundle, channel, userId, orgId, appid, localConfig, uploadedVersionId, options.selfAssign)
     if (options.verbose)
       log.info(`[Verbose] Channel updated successfully`)
   }

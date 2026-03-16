@@ -1103,6 +1103,8 @@ export async function updateOrCreateVersion(supabase: SupabaseClient<Database>, 
     .upsert(update, { onConflict: 'name,app_id' })
     .eq('app_id', update.app_id)
     .eq('name', update.name)
+    .select('id')
+    .single()
 }
 
 export async function uploadUrl(supabase: SupabaseClient<Database>, appId: string, name: string): Promise<string> {
