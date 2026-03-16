@@ -1008,8 +1008,11 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
     }
 
-    if (options.androidFlavor)
-      cliCredentials.CAPGO_ANDROID_FLAVOR = options.androidFlavor
+    if (typeof options.androidFlavor === 'string') {
+      const androidFlavorTrimmed = options.androidFlavor.trim()
+      if (androidFlavorTrimmed)
+        cliCredentials.CAPGO_ANDROID_FLAVOR = androidFlavorTrimmed
+    }
     if (options.playConfigJson)
       cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
     if (options.outputUpload !== undefined) {
