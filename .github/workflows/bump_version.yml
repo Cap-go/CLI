@@ -14,6 +14,7 @@ jobs:
   test:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     uses: ./.github/workflows/test.yml
+    timeout-minutes: 30
 
   # Only bump version and create tag if all tests pass
   bump-version:
@@ -21,6 +22,7 @@ jobs:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
     name: Bump version and create tag
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -79,6 +81,7 @@ jobs:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     runs-on: ubuntu-latest
     name: Create global cache on main branch
+    timeout-minutes: 30
     steps:
       - name: Checkoutpsuh
         uses: actions/checkout@v6
