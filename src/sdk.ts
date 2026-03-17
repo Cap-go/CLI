@@ -3,6 +3,7 @@ import type { BuildRequestOptions as InternalBuildRequestOptions } from './build
 import type { DecryptResult } from './bundle/decrypt'
 import type { EncryptResult } from './bundle/encrypt'
 import type { ZipResult } from './bundle/zip'
+import type { StarAllRepositoryResult } from './github'
 import type { ProbeInternalResult } from './probe'
 import type { AppOptions } from './schemas/app'
 import type { OptionsUpload } from './schemas/bundle'
@@ -23,7 +24,6 @@ import type {
   DeviceStats,
   DoctorOptions,
   EncryptBundleOptions,
-  StarAllRepositoriesOptions,
   GenerateKeyOptions,
   GetStatsOptions,
   ListOrganizationsOptions,
@@ -34,6 +34,7 @@ import type {
   SaveKeyOptions,
   SDKResult,
   SetSettingOptions,
+  StarAllRepositoriesOptions,
   StarRepoOptions,
   UpdateAppOptions,
   UpdateChannelOptions,
@@ -57,14 +58,13 @@ import { decryptZipInternal } from './bundle/decrypt'
 import { deleteBundleInternal } from './bundle/delete'
 import { encryptZipInternal } from './bundle/encrypt'
 import { uploadBundleInternal } from './bundle/upload'
-import type { StarAllRepositoryResult } from './github'
-import { starAllRepositories as starAllRepositoriesInternal, starRepository } from './github'
 import { zipBundleInternal } from './bundle/zip'
 import { addChannelInternal } from './channel/add'
 import { currentBundleInternal } from './channel/currentBundle'
 import { deleteChannelInternal } from './channel/delete'
 import { listChannelsInternal } from './channel/list'
 import { setChannelInternal } from './channel/set'
+import { starAllRepositories as starAllRepositoriesInternal, starRepository } from './github'
 import { createKeyInternal, deleteOldPrivateKeyInternal, saveKeyInternal } from './key'
 import { loginInternal } from './login'
 import { addOrganizationInternal } from './organization/add'

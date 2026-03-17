@@ -1,8 +1,8 @@
-import { chmod, lstat, mkdir, readFile, rename, rm, writeFile, appendFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
+import { appendFile, chmod, lstat, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 
-type WriteOptions = {
+interface WriteOptions {
   mode?: number
   encoding?: BufferEncoding
 }

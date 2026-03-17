@@ -256,9 +256,9 @@ function returnVersion(version: string) {
 export async function getInstalledVersion(packageName: string, rootDir: string = cwd(), packageJsonPath?: string): Promise<string | null> {
   const providedPackageJsonFiles = packageJsonPath
     ? packageJsonPath
-      .split(',')
-      .map(packageJsonPathItem => packageJsonPathItem.trim())
-      .filter(Boolean)
+        .split(',')
+        .map(packageJsonPathItem => packageJsonPathItem.trim())
+        .filter(Boolean)
     : []
 
   const candidateBaseDirs: string[] = []
@@ -379,10 +379,10 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
   try {
     const normalizedPackageJsonPath = packageJsonPath
       ? packageJsonPath
-        .split(',')
-        .map(path => path.trim())
-        .filter(Boolean)
-        .join(',')
+          .split(',')
+          .map(path => path.trim())
+          .filter(Boolean)
+          .join(',')
       : packageJsonPath
     const dependencies = await getAllPackagesDependencies(rootDir, normalizedPackageJsonPath)
     const version = dependencies.get(packageName)
@@ -1689,9 +1689,9 @@ async function calculatePlatformChecksums(dependencyFolderPath: string): Promise
 export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString
     ? nodeModulesString
-      .split(',')
-      .map(nodeModulesPath => nodeModulesPath.trim())
-      .filter(Boolean)
+        .split(',')
+        .map(nodeModulesPath => nodeModulesPath.trim())
+        .filter(Boolean)
     : []
   let dependencies
   try {

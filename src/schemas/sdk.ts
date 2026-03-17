@@ -70,6 +70,7 @@ export const starAllRepositoriesOptionsSchema = z.object({
   repositories: z.array(z.string().min(1)).optional(),
   minDelayMs: z.number().int().min(0).optional(),
   maxDelayMs: z.number().int().min(0).optional(),
+  maxConcurrency: z.number().int().min(1).max(16).optional(),
 })
 
 export type StarAllRepositoriesOptions = z.infer<typeof starAllRepositoriesOptionsSchema>
