@@ -127,6 +127,7 @@ If you do not pass repositories, this defaults to all Cap-go repositories whose 
 | -------------- | ------------- | -------------------- |
 | **--min-delay-ms** | <code>string</code> | Minimum delay in ms between each star action (default: 20) |
 | **--max-delay-ms** | <code>string</code> | Maximum delay in ms between each star action (default: 180) |
+| **--max-concurrency** | <code>string</code> | Maximum number of star requests running in parallel (default: 4) |
 
 
 ## <a id="doctor"></a> 👨‍⚕️ **Doctor**

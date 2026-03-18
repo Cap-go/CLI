@@ -12,7 +12,7 @@ sidebar:
 npx @capgo/cli@latest star-all
 ```
 
-If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with `capacitor-`, plus `Cap-go/CLI`, `Cap-go/capgo`, and `Cap-go/capgo-skills` for the Capgo CLI, console, and skills repo.
+If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with `capacitor-`.
 
 ## <a id="options"></a> Options
 
@@ -20,4 +20,5 @@ If you do not pass repositories, this defaults to all Cap-go repositories whose 
 | -------------- | ------------- | -------------------- |
 | **--min-delay-ms** | <code>string</code> | Minimum delay in ms between each star action (default: 20) |
 | **--max-delay-ms** | <code>string</code> | Maximum delay in ms between each star action (default: 180) |
+| **--max-concurrency** | <code>string</code> | Maximum number of star requests running in parallel (default: 4) |
 
