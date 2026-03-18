@@ -1,4 +1,4 @@
-import { spawnSync } from 'node:child_process'
+import { spawn, spawnSync } from 'node:child_process'
 
 const defaultStarOwner = 'Cap-go'
 export const defaultStarRepo = 'capacitor-updater'
@@ -7,9 +7,10 @@ const defaultStarPrefix = 'capacitor-'
 const fallbackStarRepositories = [defaultStarTarget] as const
 const defaultMinStarDelayMs = 20
 const defaultMaxStarDelayMs = 180
+const defaultMaxStarConcurrency = 4
 const starredRepoSessionCache = new Set<string>()
 
-type GhCommandResult = {
+interface GhCommandResult {
   status: number
   stderr: string
   stdout: string
@@ -29,8 +30,20 @@ export interface StarAllRepositoriesOptions {
   repositories?: string[]
   minDelayMs?: number
   maxDelayMs?: number
+  maxConcurrency?: number
   onProgress?: (result: StarAllRepositoryResult) => void
   onDiscovery?: (message: string) => void
+  signal?: AbortSignal
+}
+
+export class StarAllRepositoriesAbortedError extends Error {
+  results: StarAllRepositoryResult[]
+
+  constructor(results: StarAllRepositoryResult[] = []) {
+    super('Star-all interrupted by user.')
+    this.name = 'StarAllRepositoriesAbortedError'
+    this.results = results
+  }
 }
 
 function normalizeRepositoryForCache(repository: string) {
@@ -74,10 +87,52 @@ function getRandomDelayMs(minDelayMs: number, maxDelayMs: number) {
   return Math.floor(Math.random() * (maxDelayMs - minDelayMs + 1)) + minDelayMs
 }
 
-async function sleep(ms: number) {
+function normalizeConcurrency(value: number | undefined, fallback: number) {
+  if (typeof value !== 'number')
+    return fallback
+
+  if (!Number.isFinite(value))
+    return fallback
+
+  if (value < 1)
+    return fallback
+
+  return Math.min(Math.floor(value), 16)
+}
+
+function createAbortedError(results: StarAllRepositoryResult[] = []) {
+  return new StarAllRepositoriesAbortedError(results)
+}
+
+function throwIfAborted(signal?: AbortSignal, results: StarAllRepositoryResult[] = []): void {
+  if (signal?.aborted)
+    throw createAbortedError(results)
+}
+
+async function sleep(ms: number, signal?: AbortSignal) {
   if (ms <= 0)
     return
-  return new Promise(resolve => setTimeout(resolve, ms))
+  if (!signal)
+    return new Promise(resolve => setTimeout(resolve, ms))
+  if (signal.aborted)
+    throw createAbortedError()
+
+  return new Promise<void>((resolve, reject) => {
+    let timeout: ReturnType<typeof setTimeout>
+
+    const onAbort = () => {
+      clearTimeout(timeout)
+      signal.removeEventListener('abort', onAbort)
+      reject(createAbortedError())
+    }
+
+    timeout = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort)
+      resolve()
+    }, ms)
+
+    signal.addEventListener('abort', onAbort, { once: true })
+  })
 }
 
 function dedupeRepositories(repositories: string[]) {
@@ -96,8 +151,9 @@ function dedupeRepositories(repositories: string[]) {
   return result
 }
 
-async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) => void): Promise<string[]> {
-  onDiscovery?.(`🔎 Discovering repositories in ${defaultStarOwner} org...`)
+async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) => void, signal?: AbortSignal): Promise<string[]> {
+  throwIfAborted(signal)
+  onDiscovery?.(`Discovering repositories in the ${defaultStarOwner} organization.`)
 
   const apiResult = executeGhCommand([
     'api',
@@ -114,26 +170,26 @@ async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) =
       .filter(repo => repo.length > 0)
 
     if (repositories.length > 0) {
-      onDiscovery?.(`✅ Found ${repositories.length} matching repositories with API pagination.`)
+      onDiscovery?.(`Found ${repositories.length} matching repositories from the GitHub API.`)
       return dedupeRepositories(repositories)
     }
 
-    onDiscovery?.(`⚠️ No matching repositories found with paginated API, trying fallback query.`)
+    onDiscovery?.('No matching repositories were returned from the paginated GitHub API. Trying a fallback request.')
   }
   else {
-    onDiscovery?.('⚠️ Could not use paginated API, trying fallback query.')
+    onDiscovery?.('Paginated GitHub API request failed. Trying a fallback request.')
   }
 
   const fallbackResult = executeGhCommand(['api', `orgs/${defaultStarOwner}/repos?per_page=100`])
   if (fallbackResult.status !== 0) {
-    onDiscovery?.('⚠️ Fallback query failed, using default starred repository list.')
+    onDiscovery?.('Fallback request failed. Using the default repository list instead.')
     return [...fallbackStarRepositories]
   }
 
   try {
     const parsed = JSON.parse(fallbackResult.stdout)
     if (!Array.isArray(parsed)) {
-      onDiscovery?.('⚠️ Fallback response was not an array, using default starred repository list.')
+      onDiscovery?.('Fallback response format was invalid. Using the default repository list instead.')
       return [...fallbackStarRepositories]
     }
 
@@ -144,17 +200,78 @@ async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) =
       .map(name => `${defaultStarOwner}/${name}`)
 
     if (repositories.length > 0) {
-      onDiscovery?.(`✅ Found ${repositories.length} matching repositories with fallback query.`)
+      onDiscovery?.(`Found ${repositories.length} matching repositories from the fallback request.`)
       return dedupeRepositories(repositories)
     }
   }
   catch {
-    onDiscovery?.('⚠️ Fallback query response could not be parsed, using default starred repository list.')
+    onDiscovery?.('Fallback response could not be parsed. Using the default repository list instead.')
     return [...fallbackStarRepositories]
   }
 
-  onDiscovery?.('⚠️ No matching repositories found, using default starred repository list.')
+  onDiscovery?.('No matching repositories were found. Using the default repository list instead.')
   return [...fallbackStarRepositories]
+}
+
+function executeGhCommandAsync(args: string[], signal?: AbortSignal): Promise<GhCommandResult> {
+  return new Promise((resolve) => {
+    let stdout = ''
+    let stderr = ''
+    let settled = false
+    let child: ReturnType<typeof spawn> | undefined
+    let onAbort = () => {}
+
+    const finish = (result: GhCommandResult) => {
+      if (settled)
+        return
+      settled = true
+      signal?.removeEventListener('abort', onAbort)
+      resolve(result)
+    }
+
+    onAbort = () => {
+      child?.kill('SIGINT')
+      finish({
+        status: 130,
+        stderr: 'GitHub command interrupted by user.',
+        stdout,
+      })
+    }
+
+    child = spawn('gh', args, {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    child.stdout?.setEncoding('utf8')
+    child.stdout?.on('data', (chunk) => {
+      stdout += chunk
+    })
+
+    child.stderr?.setEncoding('utf8')
+    child.stderr?.on('data', (chunk) => {
+      stderr += chunk
+    })
+
+    child.on('error', () => {
+      finish({ status: 1, stderr: '`gh` command is not available in PATH.', stdout: '' })
+    })
+
+    child.on('close', (status) => {
+      finish({
+        status: status ?? 1,
+        stderr,
+        stdout,
+      })
+    })
+
+    if (signal) {
+      if (signal.aborted) {
+        onAbort()
+        return
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+    }
+  })
 }
 
 function executeGhCommand(args: string[]): GhCommandResult {
@@ -173,6 +290,107 @@ function executeGhCommand(args: string[]): GhCommandResult {
   catch {
     return { status: 1, stderr: '`gh` command is not available in PATH.', stdout: '' }
   }
+}
+
+function ensureGhReady() {
+  if (!isGhInstalled())
+    throw new Error('GitHub CLI (`gh`) is not installed. Install it from https://cli.github.com/')
+
+  if (!isGhLoggedIn())
+    throw new Error('GitHub CLI is not logged in. Run `gh auth login` first.')
+}
+
+async function getAlreadyStarredRepositories(
+  repositories: string[],
+  onDiscovery?: (message: string) => void,
+  signal?: AbortSignal,
+) {
+  if (repositories.length === 0)
+    return new Set<string>()
+
+  const starredRepositories = new Set<string>()
+  onDiscovery?.(`Checking ${repositories.length} target repositories against your GitHub stars.`)
+
+  await processInParallel(
+    repositories,
+    Math.min(repositories.length, 8),
+    signal,
+    () => [],
+    async (repository) => {
+      const result = await executeGhCommandAsync(['api', '-X', 'GET', `/user/starred/${repository}`], signal)
+      if (result.status === 0) {
+        starredRepositories.add(normalizeRepositoryForCache(repository))
+        return
+      }
+
+      if (result.status === 1) {
+        return
+      }
+
+      if (result.status === 130 && signal?.aborted) {
+        throw createAbortedError()
+      }
+
+      throw new Error(`Unable to check star status for ${repository}. ${result.stderr || result.stdout}`.trim())
+    },
+  )
+
+  onDiscovery?.(`Found ${starredRepositories.size} repositories already starred.`)
+  return starredRepositories
+}
+
+async function processInParallel<T>(
+  items: T[],
+  maxConcurrency: number,
+  signal: AbortSignal | undefined,
+  getResults: () => StarAllRepositoryResult[],
+  handler: (item: T, index: number) => Promise<void>,
+) {
+  let nextIndex = 0
+
+  async function worker() {
+    while (true) {
+      throwIfAborted(signal, getResults())
+      const currentIndex = nextIndex
+      nextIndex += 1
+
+      if (currentIndex >= items.length)
+        return
+
+      await handler(items[currentIndex], currentIndex)
+    }
+  }
+
+  const workerCount = Math.min(maxConcurrency, items.length)
+  await Promise.all(Array.from({ length: workerCount }, () => worker()))
+}
+
+function createStartRateLimiter(minDelayMs: number, maxDelayMs: number, signal?: AbortSignal) {
+  let scheduled = Promise.resolve()
+
+  return async () => {
+    throwIfAborted(signal)
+    let release: (() => void) | undefined
+    const previous = scheduled
+    scheduled = new Promise<void>((resolve) => {
+      release = resolve
+    })
+
+    await previous
+    await sleep(getRandomDelayMs(minDelayMs, maxDelayMs), signal)
+    release?.()
+  }
+}
+
+function starRepositoryWithoutStatusChecks(repository: string) {
+  const starResult = executeGhCommand(['api', '-X', 'PUT', `/user/starred/${repository}`])
+  if (starResult.status !== 0) {
+    const message = starResult.stderr || starResult.stdout || `GitHub returned status ${starResult.status}`
+    throw new Error(`Failed to star ${repository}: ${message.trim()}`)
+  }
+
+  markRepoStarredInSession(repository)
+  return { repository, alreadyStarred: false }
 }
 
 export interface RepoStarStatus {
@@ -288,70 +506,93 @@ export function getRepoStarStatus(repositoryInput?: string): RepoStarStatus {
 }
 
 export async function starAllRepositories(options: StarAllRepositoriesOptions = {}): Promise<StarAllRepositoryResult[]> {
+  ensureGhReady()
+  throwIfAborted(options.signal)
+
   const repositoriesToStar = options.repositories?.length
     ? options.repositories
-    : await getDefaultCapgoStarRepositories(options.onDiscovery)
+    : await getDefaultCapgoStarRepositories(options.onDiscovery, options.signal)
 
-  options.onDiscovery?.(`🧮 Prepared ${repositoriesToStar.length} repositories to process.`)
+  options.onDiscovery?.(`Prepared ${repositoriesToStar.length} repositories to process.`)
 
   const delayRange = getDelayRange(options.minDelayMs, options.maxDelayMs)
   const normalizedRepositories = dedupeRepositories(repositoriesToStar)
+  const maxConcurrency = normalizeConcurrency(options.maxConcurrency, defaultMaxStarConcurrency)
+  throwIfAborted(options.signal)
+  const alreadyStarredRepositories = await getAlreadyStarredRepositories(normalizedRepositories, options.onDiscovery, options.signal)
 
-  const results: StarAllRepositoryResult[] = []
+  const results = Array.from({ length: normalizedRepositories.length })
+  const getCompletedResults = () => results.filter((result): result is StarAllRepositoryResult => !!result)
+  const repositoriesToProcess: Array<{ index: number, repository: string }> = []
 
   for (let i = 0; i < normalizedRepositories.length; i++) {
+    throwIfAborted(options.signal, getCompletedResults())
     const repository = normalizedRepositories[i]
+    const normalizedRepository = normalizeRepositoryForCache(repository)
     if (isRepoStarredInSession(repository)) {
-      const result = {
+      const result: StarAllRepositoryResult = {
         repository,
         alreadyStarred: true,
         skipped: true,
-        status: 'already_starred' as const,
+        status: 'already_starred',
       }
       options.onProgress?.(result)
-      results.push(result as StarAllRepositoryResult)
+      results[i] = result
       continue
     }
 
+    if (alreadyStarredRepositories.has(normalizedRepository)) {
+      markRepoStarredInSession(repository)
+      const result: StarAllRepositoryResult = {
+        repository,
+        alreadyStarred: true,
+        skipped: true,
+        status: 'already_starred',
+      }
+      options.onProgress?.(result)
+      results[i] = result
+      continue
+    }
+
+    repositoriesToProcess.push({ index: i, repository })
+  }
+
+  const waitForNextStart = createStartRateLimiter(delayRange.min, delayRange.max, options.signal)
+  await processInParallel(repositoriesToProcess, maxConcurrency, options.signal, getCompletedResults, async ({ index, repository }) => {
+    await waitForNextStart()
+    throwIfAborted(options.signal, getCompletedResults())
+
     try {
-      const result = starRepository(repository)
-      const starResult = {
+      const result = starRepositoryWithoutStatusChecks(repository)
+      const starResult: StarAllRepositoryResult = {
         repository: result.repository,
-        alreadyStarred: result.alreadyStarred,
+        alreadyStarred: false,
         skipped: false,
-        status: result.alreadyStarred ? 'already_starred' as const : 'starred' as const,
+        status: 'starred',
       }
       options.onProgress?.(starResult)
-      results.push(starResult as StarAllRepositoryResult)
+      results[index] = starResult
     }
     catch (error) {
-      const failedResult = {
+      const failedResult: StarAllRepositoryResult = {
         repository,
         alreadyStarred: false,
         skipped: false,
-        status: 'failed' as const,
+        status: 'failed',
         error: error instanceof Error ? error.message : String(error),
       }
       options.onProgress?.(failedResult)
-      results.push(failedResult as StarAllRepositoryResult)
+      results[index] = failedResult
     }
+  })
 
-    if (i + 1 < normalizedRepositories.length)
-      await sleep(getRandomDelayMs(delayRange.min, delayRange.max))
-  }
-
-  return results
+  return getCompletedResults()
 }
 
-export function starRepository(repositoryInput?: string): { repository: string; alreadyStarred: boolean } {
+export function starRepository(repositoryInput?: string): { repository: string, alreadyStarred: boolean } {
   const repository = normalizeGithubRepo(repositoryInput)
+  ensureGhReady()
   const status = getRepoStarStatus(repository)
-
-  if (!status.ghInstalled)
-    throw new Error('GitHub CLI (`gh`) is not installed. Install it from https://cli.github.com/')
-
-  if (!status.ghLoggedIn)
-    throw new Error('GitHub CLI is not logged in. Run `gh auth login` first.')
 
   if (!status.repositoryExists)
     throw new Error(`Cannot star ${repository}: repository is not reachable or does not exist.`)
@@ -361,12 +602,5 @@ export function starRepository(repositoryInput?: string): { repository: string; 
     return { repository, alreadyStarred: true }
   }
 
-  const starResult = executeGhCommand(['api', '-X', 'PUT', `/user/starred/${repository}`])
-  if (starResult.status !== 0) {
-    const message = starResult.stderr || starResult.stdout || `GitHub returned status ${starResult.status}`
-    throw new Error(`Failed to star ${repository}: ${message.trim()}`)
-  }
-
-  markRepoStarredInSession(repository)
-  return { repository, alreadyStarred: false }
+  return starRepositoryWithoutStatusChecks(repository)
 }

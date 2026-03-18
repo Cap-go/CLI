@@ -46,6 +46,7 @@ function clearCredentialEnvVars() {
     'PLAY_CONFIG_JSON',
     'BUILD_OUTPUT_UPLOAD_ENABLED',
     'BUILD_OUTPUT_RETENTION_SECONDS',
+    'CAPGO_ANDROID_FLAVOR',
   ]
   for (const key of credKeys) {
     delete process.env[key]
@@ -310,6 +311,163 @@ await test('Environment output retention with unit is normalized to seconds', as
   const creds = loadCredentialsFromEnv()
 
   assertEquals(creds.BUILD_OUTPUT_RETENTION_SECONDS, '10800', 'Env output retention should be normalized to seconds')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 9: CAPGO_ANDROID_FLAVOR is loaded from environment
+await test('CAPGO_ANDROID_FLAVOR is loaded from environment', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = 'dev'
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assertEquals(creds.CAPGO_ANDROID_FLAVOR, 'dev', 'CAPGO_ANDROID_FLAVOR should be loaded from env')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 10: CAPGO_ANDROID_FLAVOR empty string is not loaded
+await test('CAPGO_ANDROID_FLAVOR empty string is not loaded', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = ''
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assert(!creds.CAPGO_ANDROID_FLAVOR, 'Empty CAPGO_ANDROID_FLAVOR should not be in result')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 10b: CAPGO_ANDROID_FLAVOR whitespace-only env var is trimmed and ignored
+await test('CAPGO_ANDROID_FLAVOR whitespace-only env var is ignored', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = '   '
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assert(!creds.CAPGO_ANDROID_FLAVOR, 'Whitespace-only CAPGO_ANDROID_FLAVOR should not be in result')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 10c: CAPGO_ANDROID_FLAVOR env var with surrounding whitespace is trimmed
+await test('CAPGO_ANDROID_FLAVOR env var is trimmed', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  process.env.CAPGO_ANDROID_FLAVOR = '  dev  '
+
+  const { loadCredentialsFromEnv } = await importCredentials()
+  const creds = loadCredentialsFromEnv()
+
+  assertEquals(creds.CAPGO_ANDROID_FLAVOR, 'dev', 'CAPGO_ANDROID_FLAVOR should be trimmed')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 11: CAPGO_ANDROID_FLAVOR participates in credential merge precedence
+await test('CAPGO_ANDROID_FLAVOR follows CLI > Env > Saved precedence', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { updateSavedCredentials, mergeCredentials } = await importCredentials()
+
+  // Saved: flavor1
+  await updateSavedCredentials('com.test.app', 'android', {
+    CAPGO_ANDROID_FLAVOR: 'saved_flavor',
+    KEYSTORE_KEY_ALIAS: 'alias',
+  })
+
+  // Env: flavor2
+  process.env.CAPGO_ANDROID_FLAVOR = 'env_flavor'
+
+  // No CLI override — env should win over saved
+  const merged = await mergeCredentials('com.test.app', 'android')
+  assertEquals(merged.CAPGO_ANDROID_FLAVOR, 'env_flavor', 'Env CAPGO_ANDROID_FLAVOR should override saved')
+
+  // CLI override — CLI should win
+  const mergedWithCli = await mergeCredentials('com.test.app', 'android', {
+    CAPGO_ANDROID_FLAVOR: 'cli_flavor',
+  })
+  assertEquals(mergedWithCli.CAPGO_ANDROID_FLAVOR, 'cli_flavor', 'CLI CAPGO_ANDROID_FLAVOR should override env and saved')
+
+  clearCredentialEnvVars()
+  await cleanupTestEnv()
+})
+
+// Test 12: CAPGO_ANDROID_FLAVOR is isolated to android platform
+await test('CAPGO_ANDROID_FLAVOR is isolated to android platform', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { updateSavedCredentials, mergeCredentials } = await importCredentials()
+
+  // Save flavor in android credentials
+  await updateSavedCredentials('com.test.app', 'android', {
+    CAPGO_ANDROID_FLAVOR: 'dev',
+    KEYSTORE_KEY_ALIAS: 'alias',
+  })
+
+  // Save some iOS credentials
+  await updateSavedCredentials('com.test.app', 'ios', {
+    APPLE_KEY_ID: 'IOSKEY12345',
+  })
+
+  // iOS merge should not contain CAPGO_ANDROID_FLAVOR
+  const iosCreds = await mergeCredentials('com.test.app', 'ios')
+  assert(!iosCreds.CAPGO_ANDROID_FLAVOR, 'CAPGO_ANDROID_FLAVOR should not leak into iOS credentials')
+
+  // Android merge should contain it
+  const androidCreds = await mergeCredentials('com.test.app', 'android')
+  assertEquals(androidCreds.CAPGO_ANDROID_FLAVOR, 'dev', 'CAPGO_ANDROID_FLAVOR should be in Android credentials')
+
+  await cleanupTestEnv()
+})
+
+// ─── Test: --no-playstore-upload nulls out PLAY_CONFIG_JSON ──────────────────
+
+await test('--no-playstore-upload: deleting PLAY_CONFIG_JSON removes it from credentials', async () => {
+  await setupTestEnv()
+  clearCredentialEnvVars()
+
+  const { updateSavedCredentials, mergeCredentials } = await importCredentials()
+
+  // Save android credentials including PLAY_CONFIG_JSON
+  await updateSavedCredentials('com.test.app', 'android', {
+    ANDROID_KEYSTORE_FILE: 'keystoredata',
+    KEYSTORE_KEY_ALIAS: 'myalias',
+    KEYSTORE_KEY_PASSWORD: 'keypass',
+    KEYSTORE_STORE_PASSWORD: 'storepass',
+    PLAY_CONFIG_JSON: '{"type":"service_account"}',
+    BUILD_OUTPUT_UPLOAD_ENABLED: 'true',
+  })
+
+  const merged = await mergeCredentials('com.test.app', 'android')
+
+  // Verify PLAY_CONFIG_JSON is present before deletion
+  assert(merged.PLAY_CONFIG_JSON === '{"type":"service_account"}', 'PLAY_CONFIG_JSON should be present before deletion')
+
+  // Simulate --no-playstore-upload: delete PLAY_CONFIG_JSON
+  delete merged.PLAY_CONFIG_JSON
+
+  assert(!('PLAY_CONFIG_JSON' in merged), 'PLAY_CONFIG_JSON should not be in credentials after deletion')
+  assertEquals(merged.ANDROID_KEYSTORE_FILE, 'keystoredata', 'Other credentials should remain')
+  assertEquals(merged.BUILD_OUTPUT_UPLOAD_ENABLED, 'true', 'Output upload should still be enabled')
 
   clearCredentialEnvVars()
   await cleanupTestEnv()

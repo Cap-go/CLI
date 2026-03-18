@@ -256,9 +256,9 @@ function returnVersion(version: string) {
 export async function getInstalledVersion(packageName: string, rootDir: string = cwd(), packageJsonPath?: string): Promise<string | null> {
   const providedPackageJsonFiles = packageJsonPath
     ? packageJsonPath
-      .split(',')
-      .map(packageJsonPathItem => packageJsonPathItem.trim())
-      .filter(Boolean)
+        .split(',')
+        .map(packageJsonPathItem => packageJsonPathItem.trim())
+        .filter(Boolean)
     : []
 
   const candidateBaseDirs: string[] = []
@@ -379,10 +379,10 @@ export async function getInstalledVersion(packageName: string, rootDir: string =
   try {
     const normalizedPackageJsonPath = packageJsonPath
       ? packageJsonPath
-        .split(',')
-        .map(path => path.trim())
-        .filter(Boolean)
-        .join(',')
+          .split(',')
+          .map(path => path.trim())
+          .filter(Boolean)
+          .join(',')
       : packageJsonPath
     const dependencies = await getAllPackagesDependencies(rootDir, normalizedPackageJsonPath)
     const version = dependencies.get(packageName)
@@ -1689,9 +1689,9 @@ async function calculatePlatformChecksums(dependencyFolderPath: string): Promise
 export async function getLocalDependencies(packageJsonPath: string | undefined, nodeModulesString: string | undefined) {
   const nodeModules = nodeModulesString
     ? nodeModulesString
-      .split(',')
-      .map(nodeModulesPath => nodeModulesPath.trim())
-      .filter(Boolean)
+        .split(',')
+        .map(nodeModulesPath => nodeModulesPath.trim())
+        .filter(Boolean)
     : []
   let dependencies
   try {
@@ -2270,11 +2270,9 @@ export async function promptAndSyncCapacitor(
           log.error(detail)
         }
         log.error('Stop here to avoid testing on a broken native iOS project.')
-        log.warn('Best fix: reset the iOS folder, then run sync again.')
-        log.info(`1. ${pm.runner} cap rm ios`)
-        log.info(`2. ${pm.runner} cap add ios`)
-        log.info(`3. ${pm.runner} cap sync ios`)
-        throw new Error('iOS sync validation failed. Reset your iOS folder and retry.')
+        log.warn('Best fix: run this in your terminal to reset iOS and sync again.')
+        log.info(`${pm.runner} cap rm ios && ${pm.runner} cap add ios && ${pm.runner} cap sync ios`)
+        throw new Error('iOS sync validation failed. Reset your iOS folder with the one-line command above and retry.')
       }
     }
 

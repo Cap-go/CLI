@@ -1,6 +1,6 @@
 import { exit } from 'node:process'
+import { log } from '@clack/prompts'
 import { Option, program } from 'commander'
-import { log, spinner as spinnerC } from '@clack/prompts'
 import pack from '../package.json'
 import { addApp } from './app/add'
 import { debugApp } from './app/debug'
@@ -26,8 +26,9 @@ import { deleteChannel } from './channel/delete'
 import { listChannels } from './channel/list'
 import { setChannel } from './channel/set'
 import { generateDocs } from './docs'
+import { defaultStarRepo } from './github'
+import { starAllRepositoriesCommand, starRepositoryCommand } from './github-command'
 import { initApp } from './init'
-import { defaultStarRepo, starAllRepositories, starRepository } from './github'
 import { createKey, deleteOldKey, saveKeyCommand } from './key'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
@@ -62,7 +63,7 @@ program
   .description(`🚀 Initialize a new app in Capgo Cloud with step-by-step guidance.
 
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
-Uploaded bundles should be treated as public assets; use encryption if you do not want their contents to be readable when fetched.
+Capgo bundles are web assets and can be fetched by anyone who knows the URL. Use encryption for banking, regulated, or other high-security apps.
 
 Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .action(initApp)
@@ -76,15 +77,7 @@ program
   .description(`⭐ Star a Capgo GitHub repository to support the project.
 
 If you do not pass a repository name, this defaults to ${defaultStarRepo} in the Cap-go org.`)
-  .action((repository?: string) => {
-    const { repository: fullRepo, alreadyStarred } = starRepository(repository)
-    if (alreadyStarred) {
-      log.info(`🫶 ${fullRepo} is already starred`)
-    }
-    else {
-      log.success(`🙏 Thanks for starring ${fullRepo} 🎉`)
-    }
-  })
+  .action(starRepositoryCommand)
 
 program
   .command('star-all [repositories...]')
@@ -93,63 +86,8 @@ program
 If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with \`capacitor-\`.`)
   .option('--min-delay-ms <ms>', 'Minimum delay in ms between each star action (default: 20)')
   .option('--max-delay-ms <ms>', 'Maximum delay in ms between each star action (default: 180)')
-  .action(async (repositories: string[], options: { minDelayMs?: string; maxDelayMs?: string }) => {
-    const parseDelay = (value: string | undefined, fallback: number) => {
-      const parsed = Number.parseInt(value ?? String(fallback), 10)
-      return Number.isNaN(parsed) ? fallback : parsed
-    }
-
-    const actionSpinner = spinnerC()
-    actionSpinner.start('🚀 Preparing star-all')
-    const explicitRepositoryCount = repositories?.length ? repositories.length : 0
-    let step = 0
-    let discoverySteps = 0
-    let totalSteps = explicitRepositoryCount
-    const parsePreparedCount = (message: string) => {
-      const match = message.match(/Prepared (\d+) repositories to process/i)
-      return match ? Number.parseInt(match[1], 10) : null
-    }
-    const formatStep = (message: string) => {
-      step += 1
-      const totalSuffix = totalSteps > 0 ? `/${totalSteps}` : '/?'
-      return `[${step}${totalSuffix}] ${message}`
-    }
-    let hasResult = false
-    const result = await starAllRepositories({
-      repositories: repositories && repositories.length > 0 ? repositories : undefined,
-      minDelayMs: parseDelay(options?.minDelayMs, 20),
-      maxDelayMs: parseDelay(options?.maxDelayMs, 180),
-      onDiscovery: (message) => {
-        discoverySteps += 1
-        const preparedCount = parsePreparedCount(message)
-        if (preparedCount !== null)
-          totalSteps = discoverySteps + preparedCount
-
-        actionSpinner.message(formatStep(`🔎 ${message}`))
-      },
-      onProgress: (entry) => {
-        hasResult = true
-        const statusMessage = entry.alreadyStarred
-          ? `🫶 ${entry.repository} is already starred`
-          : `🙏 Thanks for starring ${entry.repository} 🎉`
-
-        actionSpinner.message(formatStep(entry.error ? `⚠️ Could not star ${entry.repository}: ${entry.error}` : statusMessage))
-        if (entry.error) {
-          log.error(`⚠️ Could not star ${entry.repository}: ${entry.error}`)
-        }
-      },
-    })
-
-    if (!hasResult) {
-      actionSpinner.stop('⚪ No repositories were processed.')
-    }
-    else if (repositories?.length === 0 || !repositories.length) {
-      actionSpinner.stop(`✅ Completed ${result.length} repository(s).`)
-    }
-    else {
-      actionSpinner.stop(`✅ Completed ${result.length} repository(s).`)
-    }
-  })
+  .option('--max-concurrency <count>', 'Maximum number of star requests running in parallel (default: 4)')
+  .action(starAllRepositoriesCommand)
 
 program
   .command('doctor')
@@ -828,6 +766,8 @@ Example: npx @capgo/cli@latest build request com.example.app --platform ios --pa
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')
   .option('--play-config-json <json>', 'Android: Base64-encoded Google Play service account JSON')
+  .option('--android-flavor <flavor>', 'Android: Product flavor to build (e.g. production). Required if your project has multiple flavors.')
+  .option('--no-playstore-upload', 'Skip Play Store upload for this build (nulls out saved play config). Requires --output-upload.')
   .option('--output-upload', 'Override output upload behavior for this build only (enable). Precedence: CLI > env > saved credentials')
   .option('--no-output-upload', 'Override output upload behavior for this build only (disable). Precedence: CLI > env > saved credentials')
   .option('--output-retention <duration>', 'Override output link TTL for this build only (1h to 7d). Examples: 1h, 6h, 2d. Precedence: CLI > env > saved credentials')
@@ -910,6 +850,7 @@ Local storage (per-project):
   .option('--keystore-key-password <password>', 'Android: Keystore key password')
   .option('--keystore-store-password <password>', 'Android: Keystore store password')
   .option('--play-config <path>', 'Android: Path to Play Store service account JSON')
+  .option('--android-flavor <flavor>', 'Android: Product flavor to build (e.g. production). Required if your project has multiple flavors.')
   // Storage option
   .option('--local', 'Save to .capgo-credentials.json in project root instead of global ~/.capgo-credentials/')
   .option('--output-upload', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
@@ -977,6 +918,7 @@ Examples:
   .option('--keystore-key-password <password>', 'Keystore key password')
   .option('--keystore-store-password <password>', 'Keystore store password')
   .option('--play-config <path>', 'Path to Google Play service account JSON')
+  .option('--android-flavor <flavor>', 'Android: Product flavor to build (e.g. production). Required if your project has multiple flavors.')
   .option('--output-upload', 'Upload build outputs (IPA/APK/AAB) to Capgo storage and print download links')
   .option('--no-output-upload', 'Do not upload build outputs (IPA/APK/AAB) to Capgo storage')
   .option('--output-retention <duration>', 'Output link TTL: 1h to 7d. Examples: 1h, 6h, 2d')
