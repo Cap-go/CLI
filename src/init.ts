@@ -818,6 +818,9 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     if (doEncrypt) {
       pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
       pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
+      pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
+      pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
+      pLog.info(`   That still only lets the app trust updates you encrypted with your private key.`)
       if (coreVersion === 'latest') {
         pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
         return
