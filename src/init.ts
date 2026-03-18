@@ -193,10 +193,8 @@ function stopForBrokenIosSync(platformRunner: string, details: string[]): never 
     pLog.error(detail)
   }
   pLog.error('Stop here to avoid testing on a broken native iOS project.')
-  pLog.warn('Best fix: reset the iOS folder, then run sync again.')
-  pLog.info(`1. ${platformRunner} cap rm ios`)
-  pLog.info(`2. ${platformRunner} cap add ios`)
-  pLog.info(`3. ${platformRunner} cap sync ios`)
+  pLog.warn('Best fix: run this in your terminal to reset iOS and sync again.')
+  pLog.info(`${platformRunner} cap rm ios && ${platformRunner} cap add ios && ${platformRunner} cap sync ios`)
   pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
   exit(1)
 }
