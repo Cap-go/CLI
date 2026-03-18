@@ -1291,19 +1291,98 @@ async function testCapgoUpdateStep(orgId: string, apikey: string, appId: string,
   await markStep(orgId, apikey, 'test-update', appId)
 }
 
-async function maybeStarCapgoRepo(repository?: string) {
+const capgoSkillsRepository = 'https://github.com/Cap-go/capgo-skills'
+const capgoSkillsStarRepository = 'Cap-go/capgo-skills'
+
+function formatGithubRepositoryList(repositories: string[]) {
+  if (repositories.length === 0)
+    return ''
+  if (repositories.length === 1)
+    return repositories[0]
+  if (repositories.length === 2)
+    return `${repositories[0]} and ${repositories[1]}`
+
+  return `${repositories.slice(0, -1).join(', ')}, and ${repositories[repositories.length - 1]}`
+}
+
+async function maybeInstallCapgoSkills() {
+  if (!stdin.isTTY || !stdout.isTTY)
+    return false
+
+  const pm = getPMAndCommand()
+  const installCommand = `${pm.runner} skills add ${capgoSkillsRepository} -g -y`
+  const shouldInstall = await pConfirm({
+    message: 'Install Capgo capacitor skills (capgo-skills) for your coding agent?',
+    initialValue: true,
+  })
+
+  if (pIsCancel(shouldInstall) || !shouldInstall)
+    return false
+
+  pLog.info(`Running command: ${installCommand}`)
+
+  const spinner = pSpinner()
+  spinner.start(`Running: ${installCommand}`)
+
+  try {
+    const result = spawnSync(pm.runner, ['skills', 'add', capgoSkillsRepository, '-g', '-y'], {
+      stdio: 'pipe',
+      encoding: 'utf8',
+    })
+
+    if (result.status === 0) {
+      spinner.stop('Capgo skills install Done ✅')
+      return true
+    }
+
+    spinner.stop('Capgo skills install failed ❌')
+    const commandError = [result.stderr, result.stdout]
+      .find(value => typeof value === 'string' && value.trim().length > 0)
+      ?.trim()
+    pLog.warn(`Could not install Capgo skills automatically: ${commandError || 'Unknown error'}`)
+    pLog.info(`Run it yourself with: "${installCommand}"`)
+    return true
+  }
+  catch (error) {
+    spinner.stop('Capgo skills install failed ❌')
+    pLog.warn(`Could not install Capgo skills automatically: ${formatError(error)}`)
+    pLog.info(`Run it yourself with: "${installCommand}"`)
+    return true
+  }
+}
+
+async function maybeStarCapgoRepo(includeSkillsRepository = false, repository?: string) {
   if (!stdin.isTTY || !stdout.isTTY)
     return
 
   const status = getRepoStarStatus(repository)
-  if (isRepoStarredInSession(status.repository) || !status.ghInstalled || !status.ghLoggedIn || !status.repositoryExists || status.starred)
+  if (!status.ghInstalled || !status.ghLoggedIn)
     return
+
+  const directRepositories = [status.repository]
+  if (includeSkillsRepository)
+    directRepositories.push(capgoSkillsStarRepository)
+
+  const availableDirectRepositories = directRepositories.filter((repo) => {
+    const repoStatus = getRepoStarStatus(repo)
+    return repoStatus.repositoryExists && !repoStatus.starred && !isRepoStarredInSession(repoStatus.repository)
+  })
+
+  if (availableDirectRepositories.length === 0 && (!status.repositoryExists || status.starred || isRepoStarredInSession(status.repository)))
+    return
+
+  const directLabel = availableDirectRepositories.length > 0
+    ? `Star ${formatGithubRepositoryList(availableDirectRepositories)}`
+    : `Star ${status.repository}`
+  const allLabel = includeSkillsRepository
+    ? 'Star all Capgo repos and Cap-go/capgo-skills'
+    : 'Star all Capgo repos (repositories starting with capacitor- in Cap-go org)'
 
   const starChoice = await pSelect({
     message: `How would you like to support Capgo on GitHub?`,
     options: [
-      { value: 'star-update', label: `Star ${status.repository}` },
-      { value: 'star-all', label: 'Star all Capgo repos (repositories starting with capacitor- in Cap-go org)' },
+      { value: 'star-update', label: directLabel },
+      { value: 'star-all', label: allLabel },
       { value: 'skip', label: 'No, thanks' },
     ],
   })
@@ -1314,12 +1393,14 @@ async function maybeStarCapgoRepo(repository?: string) {
 
   try {
     if (starChoice === 'star-update') {
-      const result = starRepository(status.repository)
-      if (result.alreadyStarred) {
-        pLog.info(`🫶 ${result.repository} is already starred`)
-      }
-      else {
-        pLog.success(`🙏 Thanks for starring ${result.repository} 🎉`)
+      for (const repositoryToStar of availableDirectRepositories) {
+        const result = starRepository(repositoryToStar)
+        if (result.alreadyStarred) {
+          pLog.info(`🫶 ${result.repository} is already starred`)
+        }
+        else {
+          pLog.success(`🙏 Thanks for starring ${result.repository} 🎉`)
+        }
       }
     }
     else if (starChoice === 'star-all') {
@@ -1334,6 +1415,16 @@ async function maybeStarCapgoRepo(repository?: string) {
         }
         else {
           pLog.success(`🙏 Thanks for starring ${repository.repository} 🎉`)
+        }
+      }
+
+      if (includeSkillsRepository) {
+        const skillsResult = starRepository(capgoSkillsStarRepository)
+        if (skillsResult.alreadyStarred) {
+          pLog.info(`🫶 ${skillsResult.repository} is already starred`)
+        }
+        else {
+          pLog.success(`🙏 Thanks for starring ${skillsResult.repository} 🎉`)
         }
       }
     }
@@ -1502,7 +1593,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pLog.warn(`Do not run "${pm.runner} cap sync" before validating the OTA update.`)
   pLog.warn('Reason: cap sync puts your local build directly in the native app, which bypasses the Capgo OTA path.')
   pLog.info(`If you have any issue try to use the debug command \`${pm.runner} @capgo/cli@latest app debug\``)
-  await maybeStarCapgoRepo()
+  const didChooseSkills = await maybeInstallCapgoSkills()
+  await maybeStarCapgoRepo(didChooseSkills)
   pOutro(`Bye 👋`)
   exit()
 }

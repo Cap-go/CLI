@@ -23,7 +23,8 @@
     "cli",
     "upload",
     "capgo-cli",
-    "sdk"
+    "sdk",
+    "tanstack-intent"
   ],
   "exports": {
     ".": {
@@ -40,6 +41,11 @@
   "bin": {
     "capgo": "dist/index.js"
   },
+  "files": [
+    "!skills/_artifacts",
+    "dist",
+    "skills"
+  ],
   "engines": {
     "npm": ">=8.0.0",
     "node": ">=20.0.0"
@@ -83,6 +89,7 @@
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver@1.0.8",
     "@supabase/supabase-js": "^2.79.0",
+    "@tanstack/intent": "^0.0.23",
     "@types/adm-zip": "^0.5.7",
     "@types/node": "^25.0.0",
     "@types/prettyjson": "^0.0.33",
@@ -97,11 +104,11 @@
     "is-wsl": "^3.1.0",
     "micromatch": "^4.0.8",
     "open": "^11.0.0",
+    "partysocket": "^1.1.11",
     "prettyjson": "^1.2.5",
     "tmp": "^0.2.5",
     "tus-js-client": "^4.3.1",
     "typescript": "^5.9.3",
-    "partysocket": "^1.1.11",
     "ws": "^8.18.3",
     "zod": "^4.3.6"
   }

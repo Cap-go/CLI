@@ -7,6 +7,7 @@
 - Keep `src/index.ts` limited to CLI command registration, options, and wiring.
 - Put command implementation logic in dedicated modules/handlers instead of inline `.action(...)` bodies in `src/index.ts`.
 - When adding or changing a CLI command, prefer an exported command handler function in a dedicated module and wire it from `src/index.ts`.
+- When adding or changing a CLI command, command option, or CLI-facing workflow, update the TanStack Intent skill docs in `skills/` as part of the same change so the published skills stay aligned with `webdocs/` and `src/index.ts`.
 - Reuse shared option descriptions from `src/index.ts` when an option already exists instead of introducing slightly different wording.
 - For CLI-facing output, use `@clack/prompts` (`log`, `spinner`, `intro`, `outro`, `confirm`, `select`) to stay consistent with the rest of the CLI UX.
 - If a command may run in non-interactive mode, do not rely on spinner-only output; provide plain log output or a non-TTY fallback.

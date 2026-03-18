@@ -4,7 +4,8 @@ const defaultStarOwner = 'Cap-go'
 export const defaultStarRepo = 'capacitor-updater'
 const defaultStarTarget = `${defaultStarOwner}/${defaultStarRepo}`
 const defaultStarPrefix = 'capacitor-'
-const fallbackStarRepositories = [defaultStarTarget] as const
+const additionalDefaultStarRepositories = [`${defaultStarOwner}/CLI`, `${defaultStarOwner}/capgo`, `${defaultStarOwner}/capgo-skills`] as const
+const fallbackStarRepositories = [defaultStarTarget, ...additionalDefaultStarRepositories] as const
 const defaultMinStarDelayMs = 20
 const defaultMaxStarDelayMs = 180
 const defaultMaxStarConcurrency = 4
@@ -170,8 +171,9 @@ async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) =
       .filter(repo => repo.length > 0)
 
     if (repositories.length > 0) {
-      onDiscovery?.(`Found ${repositories.length} matching repositories from the GitHub API.`)
-      return dedupeRepositories(repositories)
+      const mergedRepositories = dedupeRepositories([...repositories, ...additionalDefaultStarRepositories])
+      onDiscovery?.(`Found ${mergedRepositories.length} matching repositories from the GitHub API.`)
+      return mergedRepositories
     }
 
     onDiscovery?.('No matching repositories were returned from the paginated GitHub API. Trying a fallback request.')
@@ -200,8 +202,9 @@ async function getDefaultCapgoStarRepositories(onDiscovery?: (message: string) =
       .map(name => `${defaultStarOwner}/${name}`)
 
     if (repositories.length > 0) {
-      onDiscovery?.(`Found ${repositories.length} matching repositories from the fallback request.`)
-      return dedupeRepositories(repositories)
+      const mergedRepositories = dedupeRepositories([...repositories, ...additionalDefaultStarRepositories])
+      onDiscovery?.(`Found ${mergedRepositories.length} matching repositories from the fallback request.`)
+      return mergedRepositories
     }
   }
   catch {
