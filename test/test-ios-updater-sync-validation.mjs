@@ -60,6 +60,69 @@ await test('valid iOS project returns shouldCheck=true and valid=true', () => {
   }
 })
 
+await test('spm iOS project with packageClassList returns shouldCheck=true and valid=true', () => {
+  const root = makeProjectDir()
+  try {
+    writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: {
+        '@capgo/capacitor-updater': '^7.0.0',
+      },
+    }))
+
+    const iosRoot = join(root, 'ios', 'App')
+    writeFile(
+      join(iosRoot, 'CapApp-SPM', 'Package.swift'),
+            `.package(name: "CapgoCapacitorUpdater", path: "../../../node_modules/@capgo/capacitor-updater"),\n`,
+    )
+    writeFile(
+      join(iosRoot, 'App', 'capacitor.config.json'),
+      JSON.stringify({
+        packageClassList: ['CapacitorUpdaterPlugin'],
+      }),
+    )
+
+    const result = validateIosUpdaterSync(root)
+    assert(result.shouldCheck === true, 'Expected shouldCheck=true')
+    assert(result.valid === true, 'Expected valid=true')
+    assert(result.details.length === 0, 'Expected no details')
+  }
+  finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
+await test('spm iOS project ignores CapacitorUpdaterPlugin outside packageClassList', () => {
+  const root = makeProjectDir()
+  try {
+    writeFile(join(root, 'package.json'), JSON.stringify({
+      dependencies: {
+        '@capgo/capacitor-updater': '^7.0.0',
+      },
+    }))
+
+    const iosRoot = join(root, 'ios', 'App')
+    writeFile(
+      join(iosRoot, 'CapApp-SPM', 'Package.swift'),
+      `.package(name: "CapgoCapacitorUpdater", path: "../../../node_modules/@capgo/capacitor-updater"),\n`,
+    )
+    writeFile(
+      join(iosRoot, 'App', 'capacitor.config.json'),
+      JSON.stringify({
+        packageClassList: ['OtherPlugin'],
+        note: 'CapacitorUpdaterPlugin',
+      }),
+    )
+
+    const result = validateIosUpdaterSync(root)
+    assert(result.shouldCheck === true, 'Expected shouldCheck=true')
+    assert(result.valid === false, 'Expected valid=false')
+    assert(result.details.some(detail => detail.includes('native project outputs')), 'Expected native-outputs detail')
+  }
+  finally {
+    rmSync(root, { recursive: true, force: true })
+  }
+})
+
 await test('missing dependency file entries fails validation', () => {
   const root = makeProjectDir()
   try {

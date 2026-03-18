@@ -2127,6 +2127,15 @@ function hasUpdaterInText(content: string | undefined): boolean {
   return /@capgo\/capacitor-updater|CapgoCapacitorUpdater|CapacitorUpdaterPlugin/.test(content)
 }
 
+function hasUpdaterInCapacitorConfigJson(filePath: string): boolean {
+  const config = readJsonFileSafely(filePath)
+  if (!config)
+    return false
+
+  const packageClassList = config.packageClassList
+  return Array.isArray(packageClassList) && packageClassList.includes('CapacitorUpdaterPlugin')
+}
+
 function resolvePackageJsonLocation(rootDir: string, packageJsonPath?: string): string {
   if (!packageJsonPath)
     return join(rootDir, PACKNAME)
@@ -2140,7 +2149,8 @@ function resolvePackageJsonLocation(rootDir: string, packageJsonPath?: string): 
  * (no dependency declaration, installed package, or native references). `shouldCheck` is `true`
  * as soon as any signal indicates updater should be wired, then both dependency definitions
  * (`Podfile` or SPM `Package.swift`) and generated native outputs (`Podfile.lock`,
- * `Package.resolved`, or `capacitor.plugins.json`) must include updater markers for `valid` to be `true`.
+ * `capacitor.plugins.json`, or `ios/App/App/capacitor.config.json`) must include
+ * updater markers for `valid` to be `true`.
  */
 export function validateIosUpdaterSync(
   rootDir: string = cwd(),
@@ -2176,14 +2186,13 @@ export function validateIosUpdaterSync(
   const hasDependencyEntry = hasUpdaterInText(podfileContent) || hasUpdaterInText(spmPackageContent)
 
   const podfileLockPath = join(iosAppPath, 'Podfile.lock')
-  const packageResolvedPath = join(iosAppPath, 'App.xcworkspace', 'xcshareddata', 'swiftpm', 'Package.resolved')
   const capacitorPluginsPath = join(iosAppPath, 'App', 'capacitor.plugins.json')
+  const capacitorConfigJsonPath = join(iosAppPath, 'App', 'capacitor.config.json')
   const podfileLockContent = existsSync(podfileLockPath) ? readFileSync(podfileLockPath, 'utf-8') : undefined
-  const packageResolvedContent = existsSync(packageResolvedPath) ? readFileSync(packageResolvedPath, 'utf-8') : undefined
   const capacitorPluginsContent = existsSync(capacitorPluginsPath) ? readFileSync(capacitorPluginsPath, 'utf-8') : undefined
   const hasNativeProjectEntry = hasUpdaterInText(podfileLockContent)
-    || hasUpdaterInText(packageResolvedContent)
     || hasUpdaterInText(capacitorPluginsContent)
+    || hasUpdaterInCapacitorConfigJson(capacitorConfigJsonPath)
 
   const shouldCheck = updaterDeclaredInPackageJson
     || updaterPresentInNodeModules
@@ -2203,7 +2212,7 @@ export function validateIosUpdaterSync(
     details.push(`Missing @capgo/capacitor-updater in iOS dependency files (${podfilePath} or ${spmPackagePath})`)
   }
   if (!hasNativeProjectEntry) {
-    details.push(`Missing @capgo/capacitor-updater in iOS native project outputs (${podfileLockPath}, ${packageResolvedPath}, or ${capacitorPluginsPath})`)
+    details.push(`Missing @capgo/capacitor-updater in iOS native project outputs (${podfileLockPath}, ${capacitorPluginsPath}, or ${capacitorConfigJsonPath})`)
   }
 
   return {
