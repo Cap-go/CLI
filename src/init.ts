@@ -18,7 +18,7 @@ import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRep
 import { createKeyInternal } from './key'
 import { doLoginExists, loginInternal } from './login'
 import { showReplicationProgress } from './replicationProgress'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getOrganization, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from './utils'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -188,13 +188,14 @@ async function saveAppIdToCapacitorConfig(appId: string) {
 }
 
 function stopForBrokenIosSync(platformRunner: string, details: string[]): never {
+  const resetAdvice = getNativeProjectResetAdvice(platformRunner, 'ios')
   pLog.error('Capgo iOS dependency sync verification failed.')
   for (const detail of details) {
     pLog.error(detail)
   }
   pLog.error('Stop here to avoid testing on a broken native iOS project.')
-  pLog.warn('Best fix: run this in your terminal to reset iOS and sync again.')
-  pLog.info(`${platformRunner} cap rm ios && ${platformRunner} cap add ios && ${platformRunner} cap sync ios`)
+  pLog.warn(resetAdvice.summary)
+  pLog.info(resetAdvice.command)
   pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
   exit(1)
 }

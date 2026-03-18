@@ -1550,6 +1550,14 @@ export function getPMAndCommand() {
   return { pm, command: pmCommand, installCommand: `${pm} ${pmCommand}`, runner: pmRunner }
 }
 
+export function getNativeProjectResetAdvice(platformRunner: string, nativePlatform: 'ios' | 'android') {
+  const nativeLabel = nativePlatform === 'ios' ? 'iOS' : 'Android'
+  return {
+    summary: `Best fix: recreate and sync ${nativeLabel} with this one-line command.`,
+    command: `rm -rf ${nativePlatform} && ${platformRunner} cap add ${nativePlatform} && ${platformRunner} cap sync ${nativePlatform}`,
+  }
+}
+
 function readDirRecursively(dir: string): string[] {
   const entries = readdirSync(dir, { withFileTypes: true })
   const files = entries.flatMap((entry) => {
@@ -2264,15 +2272,16 @@ export async function promptAndSyncCapacitor(
     if (options?.validateIosUpdater) {
       const syncValidation = validateIosUpdaterSync(cwd(), options.packageJsonPath)
       if (syncValidation.shouldCheck && !syncValidation.valid) {
+        const resetAdvice = getNativeProjectResetAdvice(pm.runner, 'ios')
         s.stop('iOS sync check failed ❌')
         log.error('Capgo iOS dependency sync verification failed.')
         for (const detail of syncValidation.details) {
           log.error(detail)
         }
         log.error('Stop here to avoid testing on a broken native iOS project.')
-        log.warn('Best fix: run this in your terminal to reset iOS and sync again.')
-        log.info(`${pm.runner} cap rm ios && ${pm.runner} cap add ios && ${pm.runner} cap sync ios`)
-        throw new Error('iOS sync validation failed. Reset your iOS folder with the one-line command above and retry.')
+        log.warn(resetAdvice.summary)
+        log.info(resetAdvice.command)
+        throw new Error('iOS sync validation failed. Delete your iOS folder, then rerun the add and sync commands above and retry.')
       }
     }
 
