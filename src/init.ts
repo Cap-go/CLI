@@ -820,7 +820,9 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
       pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
       pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
-      pLog.info(`   That still only lets the app trust updates you encrypted with your private key.`)
+      pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
+      pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
+      pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
       if (coreVersion === 'latest') {
         pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
         return
