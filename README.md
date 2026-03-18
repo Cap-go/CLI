@@ -84,7 +84,7 @@ npx @capgo/cli@latest init
 
 🚀 Initialize a new app in Capgo Cloud with step-by-step guidance.
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
-Uploaded bundles should be treated as public assets; use encryption if you do not want their contents to be readable when fetched.
+Capgo bundles are web assets and can be fetched by anyone who knows the URL. Use encryption for banking, regulated, or other high-security apps.
 
 **Example:**
 

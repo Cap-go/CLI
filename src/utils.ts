@@ -2270,11 +2270,9 @@ export async function promptAndSyncCapacitor(
           log.error(detail)
         }
         log.error('Stop here to avoid testing on a broken native iOS project.')
-        log.warn('Best fix: reset the iOS folder, then run sync again.')
-        log.info(`1. ${pm.runner} cap rm ios`)
-        log.info(`2. ${pm.runner} cap add ios`)
-        log.info(`3. ${pm.runner} cap sync ios`)
-        throw new Error('iOS sync validation failed. Reset your iOS folder and retry.')
+        log.warn('Best fix: run this in your terminal to reset iOS and sync again.')
+        log.info(`${pm.runner} cap rm ios && ${pm.runner} cap add ios && ${pm.runner} cap sync ios`)
+        throw new Error('iOS sync validation failed. Reset your iOS folder with the one-line command above and retry.')
       }
     }
 

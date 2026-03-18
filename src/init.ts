@@ -193,10 +193,8 @@ function stopForBrokenIosSync(platformRunner: string, details: string[]): never 
     pLog.error(detail)
   }
   pLog.error('Stop here to avoid testing on a broken native iOS project.')
-  pLog.warn('Best fix: reset the iOS folder, then run sync again.')
-  pLog.info(`1. ${platformRunner} cap rm ios`)
-  pLog.info(`2. ${platformRunner} cap add ios`)
-  pLog.info(`3. ${platformRunner} cap sync ios`)
+  pLog.warn('Best fix: run this in your terminal to reset iOS and sync again.')
+  pLog.info(`${platformRunner} cap rm ios && ${platformRunner} cap add ios && ${platformRunner} cap sync ios`)
   pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
   exit(1)
 }
@@ -797,38 +795,60 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
 
   pLog.info(`🔐 End-to-end encryption`)
-  pLog.info(`   📦 Uploaded bundles should be treated as public assets, even on private channels`)
-  pLog.info(`   🔎 Without encryption, anyone who can fetch the bundle can read your JS, HTML, and CSS`)
-  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if public bundles are fine`)
-
-  const doEncrypt = await pConfirm({
-    message: `Enable end-to-end encryption so ${appId} bundle contents are not readable when fetched?`,
+  const isSecurityCritical = await pConfirm({
+    message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
     initialValue: false,
   })
-  await cancelCommand(doEncrypt, orgId, apikey)
-  if (doEncrypt) {
-    if (coreVersion === 'latest') {
-      pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
-      return
-    }
-    if (coreVersion && lessThan(parse(coreVersion), parse('6.0.0'))) {
-      pLog.warn(`Encryption is not supported in Capacitor V5.`)
-      return
-    }
+  await cancelCommand(isSecurityCritical, orgId, apikey)
+  if (!isSecurityCritical) {
+    pLog.info(`⏭️  We didn't enable encryption.`)
+    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
+    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
+  }
+  else {
+    pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
+    pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
+    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
 
-    const s = pSpinner()
-    s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKeyInternal({ force: true }, false)
-    if (!keyRes) {
-      s.stop('Error')
-      pLog.warn(`Cannot create key ❌`)
-      pOutro(`Bye 👋`)
-      exit(1)
+    const doEncrypt = await pConfirm({
+      message: `Do you want to use encryption for ${appId}?`,
+      initialValue: true,
+    })
+    await cancelCommand(doEncrypt, orgId, apikey)
+    if (doEncrypt) {
+      pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
+      pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
+      pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
+      pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
+      pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
+      pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
+      pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
+      if (coreVersion === 'latest') {
+        pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
+        return
+      }
+      if (coreVersion && lessThan(parse(coreVersion), parse('6.0.0'))) {
+        pLog.warn(`Encryption is not supported in Capacitor V5.`)
+        return
+      }
+
+      const s = pSpinner()
+      s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
+      const keyRes = await createKeyInternal({ force: true }, false)
+      if (!keyRes) {
+        s.stop('Error')
+        pLog.warn(`Cannot create key ❌`)
+        pOutro(`Bye 👋`)
+        exit(1)
+      }
+      else {
+        s.stop(`key created 🔑`)
+      }
+      await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
     }
     else {
-      s.stop(`key created 🔑`)
+      pLog.info(`⏭️  We didn't enable encryption.`)
     }
-    await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
