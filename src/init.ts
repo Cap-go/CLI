@@ -797,16 +797,18 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
 
   pLog.info(`🔐 End-to-end encryption`)
-  pLog.info(`   📦 Uploaded bundles should be treated as public assets, even on private channels`)
-  pLog.info(`   🔎 Without encryption, anyone who can fetch the bundle can read your JS, HTML, and CSS`)
-  pLog.info(`   ⚠️  Note: Makes debugging harder - skip if public bundles are fine`)
+  pLog.info(`   TL;DR: use this for banking, regulated, or high-security apps.`)
+  pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
+  pLog.info(`   🔑 Do not put private API keys in a mobile app; encrypt when you need to protect shipped code or secrets.`)
 
   const doEncrypt = await pConfirm({
-    message: `Enable end-to-end encryption so ${appId} bundle contents are not readable when fetched?`,
+    message: `Is ${appId} a banking app or a high-security app that should use encryption?`,
     initialValue: false,
   })
   await cancelCommand(doEncrypt, orgId, apikey)
   if (doEncrypt) {
+    pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
+    pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
     if (coreVersion === 'latest') {
       pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
       return
@@ -829,6 +831,9 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.stop(`key created 🔑`)
     }
     await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+  }
+  else {
+    pLog.info(`⏭️  Skipping encryption - your bundle can stay unencrypted for normal app use.`)
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
