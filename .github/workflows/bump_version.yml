@@ -14,7 +14,6 @@ jobs:
   test:
     if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
     uses: ./.github/workflows/test.yml
-    timeout-minutes: 30
 
   # Only bump version and create tag if all tests pass
   bump-version:
