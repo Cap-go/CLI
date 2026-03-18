@@ -31,31 +31,31 @@ import type {
   BuildOptionsPayload,
   BuildRequestOptions,
   BuildRequestResult,
-} from "../schemas/build";
-import { Buffer } from "node:buffer";
+} from '../schemas/build'
+import { Buffer } from 'node:buffer'
 import {
   existsSync,
   lstatSync,
   readdirSync,
   readFileSync,
   statSync,
-} from "node:fs";
+} from 'node:fs'
 import {
   mkdir,
   readFile as readFileAsync,
   rm,
   stat,
   writeFile,
-} from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { basename, join, resolve } from "node:path";
-import process, { chdir, cwd, exit } from "node:process";
-import { log, spinner as spinnerC } from "@clack/prompts";
-import AdmZip from "adm-zip";
-import { WebSocket as PartySocket } from "partysocket";
-import * as tus from "tus-js-client";
-import WS from "ws"; // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
-import pack from "../../package.json";
+} from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { basename, join, resolve } from 'node:path'
+import process, { chdir, cwd, exit } from 'node:process'
+import { log, spinner as spinnerC } from '@clack/prompts'
+import AdmZip from 'adm-zip'
+import { WebSocket as PartySocket } from 'partysocket'
+import * as tus from 'tus-js-client'
+import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
+import pack from '../../package.json'
 import {
   createSupabaseClient,
   findSavedKey,
@@ -63,17 +63,17 @@ import {
   getOrganizationId,
   sendEvent,
   verifyUser,
-} from "../utils";
+} from '../utils'
 import {
   mergeCredentials,
   MIN_OUTPUT_RETENTION_SECONDS,
   parseOptionalBoolean,
   parseOutputRetentionSeconds,
-} from "./credentials";
-import { buildProvisioningMap } from "./credentials-command";
-import { getPlatformDirFromCapacitorConfig } from "./platform-paths";
+} from './credentials'
+import { buildProvisioningMap } from './credentials-command'
+import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
-let cwdQueue: Promise<unknown> = Promise.resolve();
+let cwdQueue: Promise<unknown> = Promise.resolve()
 
 /**
  * Run an async function with the process working directory temporarily set to `dir`.
@@ -83,32 +83,35 @@ let cwdQueue: Promise<unknown> = Promise.resolve();
  */
 async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
   const run = async () => {
-    const previous = cwd();
+    const previous = cwd()
     try {
-      chdir(dir);
-    } catch (error) {
+      chdir(dir)
+    }
+    catch (error) {
       throw new Error(
         `Failed to change working directory to "${dir}": ${(error as Error).message}`,
-      );
+      )
     }
 
     try {
-      return await fn();
-    } finally {
+      return await fn()
+    }
+    finally {
       try {
-        chdir(previous);
-      } catch {
+        chdir(previous)
+      }
+      catch {
         // Best-effort restore; ignore to avoid masking original errors.
       }
     }
-  };
+  }
 
-  const p = cwdQueue.then(run, run);
+  const p = cwdQueue.then(run, run)
   cwdQueue = p.then(
     () => undefined,
     () => undefined,
-  );
-  return p;
+  )
+  return p
 }
 
 /**
@@ -128,70 +131,73 @@ async function fetchWithRetry(
   maxRetries = 3,
   silent = false,
 ): Promise<Response> {
-  const retryDelays = [1000, 3000, 5000]; // 1s, 3s, 5s delays between retries
+  const retryDelays = [1000, 3000, 5000] // 1s, 3s, 5s delays between retries
 
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const response = await fetch(url, options);
+      const response = await fetch(url, options)
 
       // If response is OK or it's a client error (4xx), don't retry
       // Only retry on server errors (5xx) or network failures
       if (response.ok || (response.status >= 400 && response.status < 500)) {
-        return response;
+        return response
       }
 
       // Server error (5xx) - log and retry
-      const errorText = await response.text().catch(() => "unknown error");
+      const errorText = await response.text().catch(() => 'unknown error')
       if (!silent) {
         log.warn(
           `Build request attempt ${attempt}/${maxRetries} failed: ${response.status} - ${errorText}`,
-        );
+        )
       }
 
       if (attempt < maxRetries) {
-        const delay = retryDelays[attempt - 1] || 5000;
+        const delay = retryDelays[attempt - 1] || 5000
         if (!silent) {
-          log.info(`Retrying in ${delay / 1000}s...`);
+          log.info(`Retrying in ${delay / 1000}s...`)
         }
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+      else {
         // Last attempt failed, throw error
         throw new Error(
           `Failed to request build after ${maxRetries} attempts: ${response.status} - ${errorText}`,
-        );
+        )
       }
-    } catch (error) {
+    }
+    catch (error) {
       // Network error or other fetch failure
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorMessage
+        = error instanceof Error ? error.message : String(error)
 
       // Don't retry if we already threw our own error
-      if (errorMessage.startsWith("Failed to request build after")) {
-        throw error;
+      if (errorMessage.startsWith('Failed to request build after')) {
+        throw error
       }
 
       if (!silent) {
         log.warn(
           `Build request attempt ${attempt}/${maxRetries} failed: ${errorMessage}`,
-        );
+        )
       }
 
       if (attempt < maxRetries) {
-        const delay = retryDelays[attempt - 1] || 5000;
+        const delay = retryDelays[attempt - 1] || 5000
         if (!silent) {
-          log.info(`Retrying in ${delay / 1000}s...`);
+          log.info(`Retrying in ${delay / 1000}s...`)
         }
-        await new Promise((resolve) => setTimeout(resolve, delay));
-      } else {
+        await new Promise(resolve => setTimeout(resolve, delay))
+      }
+      else {
         throw new Error(
           `Failed to request build after ${maxRetries} attempts: ${errorMessage}`,
-        );
+        )
       }
     }
   }
 
   // This should never be reached, but TypeScript needs it
-  throw new Error("Unexpected error in fetchWithRetry");
+  throw new Error('Unexpected error in fetchWithRetry')
 }
 
 export type {
@@ -199,22 +205,22 @@ export type {
   BuildRequestOptions,
   BuildRequestResponse,
   BuildRequestResult,
-} from "../schemas/build";
+} from '../schemas/build'
 
 /**
  * Stream build logs from the server via WebSocket.
  * Returns the final status if detected from the stream, or null if stream ended without status.
  */
-type StatusCheckFn = () => Promise<string | null>;
+type StatusCheckFn = () => Promise<string | null>
 
 const TERMINAL_STATUSES = [
-  "succeeded",
-  "failed",
-  "expired",
-  "released",
-  "cancelled",
-] as const;
-const TERMINAL_STATUS_SET = new Set<string>(TERMINAL_STATUSES);
+  'succeeded',
+  'failed',
+  'expired',
+  'released',
+  'cancelled',
+] as const
+const TERMINAL_STATUS_SET = new Set<string>(TERMINAL_STATUSES)
 
 async function streamBuildLogs(
   silent: boolean,
@@ -225,336 +231,369 @@ async function streamBuildLogs(
   abortSignal?: AbortSignal,
   onStreamingGiveUp?: () => void,
 ): Promise<string | null> {
-  if (silent) return null;
+  if (silent)
+    return null
 
-  let finalStatus: string | null = null;
-  let hasReceivedLogs = false;
+  let finalStatus: string | null = null
+  let hasReceivedLogs = false
   const processLogMessage = (message: string) => {
-    if (!message.trim()) return;
+    if (!message.trim())
+      return
 
     // Don't display logs after we've received a final status (e.g., cleanup messages after failure)
-    if (finalStatus) return;
+    if (finalStatus)
+      return
 
     // Print log line directly to console (no spinner to avoid _events errors)
     if (!hasReceivedLogs) {
-      hasReceivedLogs = true;
+      hasReceivedLogs = true
       // eslint-disable-next-line no-console
-      console.log(""); // Add blank line before first log
+      console.log('') // Add blank line before first log
     }
     // eslint-disable-next-line no-console
-    console.log(message);
-  };
+    console.log(message)
+  }
 
   const streamViaLogsWorker = async (): Promise<string | null> => {
-    if (!logsUrl || !logsToken) return null;
+    if (!logsUrl || !logsToken)
+      return null
 
-    const baseUrl = logsUrl.replace(/\/+$/, "");
-    const startUrl = `${baseUrl}/start`;
-    const streamUrl = `${baseUrl}/stream?token=${encodeURIComponent(logsToken)}`;
+    const baseUrl = logsUrl.replace(/\/+$/, '')
+    const startUrl = `${baseUrl}/start`
+    const streamUrl = `${baseUrl}/stream?token=${encodeURIComponent(logsToken)}`
     const websocketUrl = streamUrl
-      .replace(/^https:/, "wss:")
-      .replace(/^http:/, "ws:");
+      .replace(/^https:/, 'wss:')
+      .replace(/^http:/, 'ws:')
 
     if (!silent) {
       // eslint-disable-next-line no-console
-      console.log("Connecting to log streaming...");
+      console.log('Connecting to log streaming...')
     }
 
     const startResponse = await fetch(startUrl, {
-      method: "POST",
+      method: 'POST',
       headers: {
-        "x-capgo-log-token": logsToken,
+        'x-capgo-log-token': logsToken,
       },
-    });
+    })
     if (!startResponse.ok) {
-      const errorText = await startResponse.text().catch(() => "unknown error");
-      if (!silent)
+      const errorText = await startResponse.text().catch(() => 'unknown error')
+      if (!silent) {
         console.warn(
           `Could not start log session (${startResponse.status}): ${errorText}`,
-        );
-      return null;
+        )
+      }
+      return null
     }
 
     return await new Promise((resolve) => {
-      let settled = false;
-      const maxRetries = 10;
-      let retryCount = 0;
-      let gaveUp = false;
+      let settled = false
+      const maxRetries = 10
+      let retryCount = 0
+      let gaveUp = false
       const ws = new PartySocket(websocketUrl, undefined, {
         maxRetries,
         WebSocket: WS,
-      });
-      let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
-      let lastConfirmedId = 0;
-      let lastMessageAt = Date.now();
-      let statusCheckInFlight = false;
-      const HEARTBEAT_INTERVAL_MS = 2000;
-      const HEARTBEAT_MISSES_BEFORE_STATUS = 4;
-      const terminalStatuses = TERMINAL_STATUS_SET;
-      let abortListener: (() => void) | null = null;
-      let timeout: ReturnType<typeof setTimeout> | null = null;
+      })
+      let heartbeatTimer: ReturnType<typeof setInterval> | null = null
+      let lastConfirmedId = 0
+      let lastMessageAt = Date.now()
+      let statusCheckInFlight = false
+      const HEARTBEAT_INTERVAL_MS = 2000
+      const HEARTBEAT_MISSES_BEFORE_STATUS = 4
+      const terminalStatuses = TERMINAL_STATUS_SET
+      let abortListener: (() => void) | null = null
+      let timeout: ReturnType<typeof setTimeout> | null = null
 
       const finish = (status: string | null) => {
-        if (settled) return;
-        settled = true;
+        if (settled)
+          return
+        settled = true
         if (timeout) {
-          clearTimeout(timeout);
-          timeout = null;
+          clearTimeout(timeout)
+          timeout = null
         }
         if (heartbeatTimer) {
-          clearInterval(heartbeatTimer);
-          heartbeatTimer = null;
+          clearInterval(heartbeatTimer)
+          heartbeatTimer = null
         }
         if (abortSignal && abortListener) {
-          abortSignal.removeEventListener("abort", abortListener);
-          abortListener = null;
+          abortSignal.removeEventListener('abort', abortListener)
+          abortListener = null
         }
         try {
-          ws.close();
-        } catch {
+          ws.close()
+        }
+        catch {
           // ignore
         }
-        resolve(status);
-      };
+        resolve(status)
+      }
 
       timeout = setTimeout(
         () => {
           if (!settled) {
-            if (!silent) console.warn("Log streaming timed out after 3 hours");
-            finish(null);
+            if (!silent)
+              console.warn('Log streaming timed out after 3 hours')
+            finish(null)
           }
         },
         3 * 60 * 60 * 1000,
-      );
+      )
 
       const startHeartbeat = () => {
-        if (heartbeatTimer) return;
+        if (heartbeatTimer)
+          return
         heartbeatTimer = setInterval(async () => {
           try {
             if (ws.readyState === PartySocket.OPEN) {
               ws.send(
-                JSON.stringify({ type: "heartbeat", lastId: lastConfirmedId }),
-              );
+                JSON.stringify({ type: 'heartbeat', lastId: lastConfirmedId }),
+              )
             }
-            const now = Date.now();
+            const now = Date.now()
             if (
-              statusCheck &&
-              !statusCheckInFlight &&
-              now - lastMessageAt >=
-                HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES_BEFORE_STATUS
+              statusCheck
+              && !statusCheckInFlight
+              && now - lastMessageAt
+              >= HEARTBEAT_INTERVAL_MS * HEARTBEAT_MISSES_BEFORE_STATUS
             ) {
-              statusCheckInFlight = true;
+              statusCheckInFlight = true
               try {
-                const status = await statusCheck();
+                const status = await statusCheck()
                 if (status && terminalStatuses.has(status)) {
-                  finalStatus = status;
-                  finish(finalStatus);
+                  finalStatus = status
+                  finish(finalStatus)
                 }
-              } finally {
-                statusCheckInFlight = false;
+              }
+              finally {
+                statusCheckInFlight = false
               }
             }
-          } catch (error) {
-            if (!silent)
+          }
+          catch (error) {
+            if (!silent) {
               log.warn(
                 `Heartbeat encountered an error, continuing... ${String(error)}`,
-              );
+              )
+            }
           }
-        }, HEARTBEAT_INTERVAL_MS);
-      };
+        }, HEARTBEAT_INTERVAL_MS)
+      }
 
-      startHeartbeat();
+      startHeartbeat()
 
       if (abortSignal) {
         abortListener = () => {
-          if (!settled) finish("cancelled");
-        };
-        if (abortSignal.aborted) {
-          finish("cancelled");
-          return;
+          if (!settled)
+            finish('cancelled')
         }
-        abortSignal.addEventListener("abort", abortListener);
+        if (abortSignal.aborted) {
+          finish('cancelled')
+          return
+        }
+        abortSignal.addEventListener('abort', abortListener)
       }
 
-      ws.addEventListener("message", (event: MessageEvent) => {
-        let raw = "";
-        if (typeof event.data === "string") {
-          raw = event.data;
-        } else if (event.data instanceof ArrayBuffer) {
-          raw = new TextDecoder().decode(event.data);
-        } else if (ArrayBuffer.isView(event.data)) {
-          const view = event.data as ArrayBufferView;
+      ws.addEventListener('message', (event: MessageEvent) => {
+        let raw = ''
+        if (typeof event.data === 'string') {
+          raw = event.data
+        }
+        else if (event.data instanceof ArrayBuffer) {
+          raw = new TextDecoder().decode(event.data)
+        }
+        else if (ArrayBuffer.isView(event.data)) {
+          const view = event.data as ArrayBufferView
           raw = new TextDecoder().decode(
             new Uint8Array(view.buffer, view.byteOffset, view.byteLength),
-          );
-        } else if (
-          event.data &&
-          typeof (event.data as { toString?: () => string }).toString ===
-            "function"
+          )
+        }
+        else if (
+          event.data
+          && typeof (event.data as { toString?: () => string }).toString
+          === 'function'
         ) {
-          raw = (event.data as { toString: () => string }).toString();
+          raw = (event.data as { toString: () => string }).toString()
         }
 
         let parsed: {
-          id?: number;
-          message?: string;
-          type?: string;
-          status?: string;
+          id?: number
+          message?: string
+          type?: string
+          status?: string
           messages?: Array<{
-            id?: number;
-            message?: string;
-            type?: string;
-            status?: string;
-          }>;
-        } | null = null;
+            id?: number
+            message?: string
+            type?: string
+            status?: string
+          }>
+        } | null = null
         try {
-          parsed = JSON.parse(raw);
-        } catch {
-          parsed = null;
+          parsed = JSON.parse(raw)
+        }
+        catch {
+          parsed = null
         }
 
         const handleEntry = (entry: {
-          id?: number;
-          message?: string;
-          type?: string;
-          status?: string;
+          id?: number
+          message?: string
+          type?: string
+          status?: string
         }) => {
-          if (entry.type === "status" && typeof entry.status === "string") {
-            const status = entry.status.toLowerCase();
-            lastMessageAt = Date.now();
+          if (entry.type === 'status' && typeof entry.status === 'string') {
+            const status = entry.status.toLowerCase()
+            lastMessageAt = Date.now()
             if (terminalStatuses.has(status)) {
-              finalStatus = status;
+              finalStatus = status
             }
-            return;
+            return
           }
-          if (entry.type === "log" && typeof entry.message === "string") {
-            lastMessageAt = Date.now();
-            processLogMessage(entry.message);
-            return;
+          if (entry.type === 'log' && typeof entry.message === 'string') {
+            lastMessageAt = Date.now()
+            processLogMessage(entry.message)
+            return
           }
-          if (typeof entry.message === "string") {
-            lastMessageAt = Date.now();
-            processLogMessage(entry.message);
+          if (typeof entry.message === 'string') {
+            lastMessageAt = Date.now()
+            processLogMessage(entry.message)
           }
-        };
+        }
 
-        if (parsed?.type === "heartbeat_response") {
-          return;
+        if (parsed?.type === 'heartbeat_response') {
+          return
         }
 
         if (
-          parsed?.type === "batch_messages" &&
-          Array.isArray(parsed.messages)
+          parsed?.type === 'batch_messages'
+          && Array.isArray(parsed.messages)
         ) {
-          let maxId = lastConfirmedId;
+          let maxId = lastConfirmedId
           for (const entry of parsed.messages) {
-            handleEntry(entry);
-            if (typeof entry.id === "number") maxId = Math.max(maxId, entry.id);
+            handleEntry(entry)
+            if (typeof entry.id === 'number')
+              maxId = Math.max(maxId, entry.id)
           }
           if (maxId > lastConfirmedId) {
-            lastConfirmedId = maxId;
+            lastConfirmedId = maxId
             if (ws.readyState === PartySocket.OPEN) {
               try {
                 ws.send(
-                  JSON.stringify({ type: "confirmed_received", lastId: maxId }),
-                );
-              } catch (error) {
-                if (!silent)
+                  JSON.stringify({ type: 'confirmed_received', lastId: maxId }),
+                )
+              }
+              catch (error) {
+                if (!silent) {
                   log.warn(
                     `Failed to send log confirmation, continuing... ${String(error)}`,
-                  );
+                  )
+                }
               }
             }
           }
-        } else {
+        }
+        else {
           if (parsed) {
-            handleEntry(parsed);
-          } else if (raw) {
-            lastMessageAt = Date.now();
-            processLogMessage(raw);
+            handleEntry(parsed)
+          }
+          else if (raw) {
+            lastMessageAt = Date.now()
+            processLogMessage(raw)
           }
 
-          if (parsed && typeof parsed.id === "number") {
-            lastConfirmedId = parsed.id;
+          if (parsed && typeof parsed.id === 'number') {
+            lastConfirmedId = parsed.id
             if (ws.readyState === PartySocket.OPEN) {
               try {
                 ws.send(
                   JSON.stringify({
-                    type: "confirmed_received",
+                    type: 'confirmed_received',
                     lastId: parsed.id,
                   }),
-                );
-              } catch (error) {
-                if (!silent)
+                )
+              }
+              catch (error) {
+                if (!silent) {
                   log.warn(
                     `Failed to send log confirmation, continuing... ${String(error)}`,
-                  );
+                  )
+                }
               }
             }
           }
         }
 
         if (finalStatus) {
-          finish(finalStatus);
+          finish(finalStatus)
         }
-      });
+      })
 
-      ws.addEventListener("error", () => {
-        retryCount += 1;
-        if (!silent)
+      ws.addEventListener('error', () => {
+        retryCount += 1
+        if (!silent) {
           console.warn(
             `Log stream encountered an error, retrying (${retryCount}/${maxRetries})...`,
-          );
+          )
+        }
         if (!gaveUp && retryCount >= maxRetries) {
-          gaveUp = true;
-          if (!silent)
+          gaveUp = true
+          if (!silent) {
             log.warn(
-              "Log stream retry limit reached. Falling back to status checks.",
-            );
-          if (onStreamingGiveUp) onStreamingGiveUp();
-          finish(null);
+              'Log stream retry limit reached. Falling back to status checks.',
+            )
+          }
+          if (onStreamingGiveUp)
+            onStreamingGiveUp()
+          finish(null)
         }
-      });
+      })
 
-      ws.addEventListener("close", () => {
-        if (settled) return;
+      ws.addEventListener('close', () => {
+        if (settled)
+          return
         if (finalStatus) {
-          finish(finalStatus);
-          return;
+          finish(finalStatus)
+          return
         }
-        if (!silent) log.warn("Log stream closed, waiting for reconnect...");
-      });
-    });
-  };
-
-  try {
-    const directStatus = await streamViaLogsWorker();
-    if (directStatus || finalStatus) return directStatus || finalStatus;
-  } catch (err) {
-    if (!silent)
-      log.warn(
-        `Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ""}`,
-      );
+        if (!silent)
+          log.warn('Log stream closed, waiting for reconnect...')
+      })
+    })
   }
 
-  return finalStatus;
+  try {
+    const directStatus = await streamViaLogsWorker()
+    if (directStatus || finalStatus)
+      return directStatus || finalStatus
+  }
+  catch (err) {
+    if (!silent) {
+      log.warn(
+        `Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ''}`,
+      )
+    }
+  }
+
+  return finalStatus
 }
 
 async function pollBuildStatus(
   host: string,
   jobId: string,
   appId: string,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   apikey: string,
   silent: boolean,
   showStatusChecks = false,
   abortSignal?: AbortSignal,
 ): Promise<string> {
-  const maxAttempts = 120; // 10 minutes max (5 second intervals)
-  let attempts = 0;
+  const maxAttempts = 120 // 10 minutes max (5 second intervals)
+  let attempts = 0
 
   while (attempts < maxAttempts) {
-    if (abortSignal?.aborted) return "cancelled";
+    if (abortSignal?.aborted)
+      return 'cancelled'
     try {
       const response = await fetch(
         `${host}/build/status?job_id=${encodeURIComponent(jobId)}&app_id=${encodeURIComponent(appId)}&platform=${platform}`,
@@ -564,156 +603,163 @@ async function pollBuildStatus(
           },
           signal: abortSignal,
         },
-      );
+      )
 
       if (!response.ok) {
-        if (!silent) log.warn(`Status check failed: ${response.status}`);
-        await new Promise((resolve) => setTimeout(resolve, 5000));
-        attempts++;
-        continue;
+        if (!silent)
+          log.warn(`Status check failed: ${response.status}`)
+        await new Promise(resolve => setTimeout(resolve, 5000))
+        attempts++
+        continue
       }
 
       const status = (await response.json()) as {
-        status: string;
-        build_time_seconds?: number | null;
-        error?: string | null;
-      };
+        status: string
+        build_time_seconds?: number | null
+        error?: string | null
+      }
 
-      const normalized = status.status?.toLowerCase?.() ?? "";
+      const normalized = status.status?.toLowerCase?.() ?? ''
 
       if (!silent && showStatusChecks)
-        log.info(`Build status: ${normalized || status.status}`);
+        log.info(`Build status: ${normalized || status.status}`)
 
       if (TERMINAL_STATUS_SET.has(normalized)) {
-        return normalized;
+        return normalized
       }
 
       // Still running, wait and retry
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
-    } catch (error) {
-      if (abortSignal?.aborted) return "cancelled";
-      if (!silent) log.warn(`Status check error: ${error}`);
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-      attempts++;
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      attempts++
+    }
+    catch (error) {
+      if (abortSignal?.aborted)
+        return 'cancelled'
+      if (!silent)
+        log.warn(`Status check error: ${error}`)
+      await new Promise(resolve => setTimeout(resolve, 5000))
+      attempts++
     }
   }
 
-  if (!silent) log.warn("Build status polling timed out");
-  return "timeout";
+  if (!silent)
+    log.warn('Build status polling timed out')
+  return 'timeout'
 }
 
 /**
  * Extract native node_modules roots that contain platform folders.
  */
 interface NativeDependencies {
-  packages: Set<string>; // Package paths like @capacitor/app
-  usesSPM: boolean;
-  usesCocoaPods: boolean;
+  packages: Set<string> // Package paths like @capacitor/app
+  usesSPM: boolean
+  usesCocoaPods: boolean
 }
 
 async function extractNativeDependencies(
   projectDir: string,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   platformDir: string,
 ): Promise<NativeDependencies> {
-  const packages = new Set<string>();
-  let usesSPM = false;
-  let usesCocoaPods = false;
+  const packages = new Set<string>()
+  let usesSPM = false
+  let usesCocoaPods = false
 
-  if (platform === "ios") {
+  if (platform === 'ios') {
     // Detect Swift Package Manager dependencies from CapApp-SPM/Package.swift when present.
     const spmPackagePath = join(
       projectDir,
       platformDir,
-      "App",
-      "CapApp-SPM",
-      "Package.swift",
-    );
+      'App',
+      'CapApp-SPM',
+      'Package.swift',
+    )
     if (existsSync(spmPackagePath)) {
-      usesSPM = true;
-      const spmContent = await readFileAsync(spmPackagePath, "utf-8");
+      usesSPM = true
+      const spmContent = await readFileAsync(spmPackagePath, 'utf-8')
       // Match lines like: .package(name: "CapacitorApp", path: "../../../node_modules/@capacitor/app")
       // The path can have varying numbers of ../ depending on project structure
       const spmMatches = spmContent.matchAll(
         /\.package\s*\([^)]*path:\s*["'](?:\.\.\/)*node_modules\/([^"']+)["']\s*\)/g,
-      );
+      )
       for (const match of spmMatches) {
-        let pkgPath = match[1];
-        const lastNmIdx = pkgPath.lastIndexOf("node_modules/");
+        let pkgPath = match[1]
+        const lastNmIdx = pkgPath.lastIndexOf('node_modules/')
         if (lastNmIdx !== -1)
-          pkgPath = pkgPath.substring(lastNmIdx + "node_modules/".length);
-        packages.add(pkgPath);
+          pkgPath = pkgPath.substring(lastNmIdx + 'node_modules/'.length)
+        packages.add(pkgPath)
       }
     }
 
     // Detect CocoaPods dependencies from Podfile(s). SPM and CocoaPods may coexist.
-    const iosDir = join(projectDir, platformDir);
+    const iosDir = join(projectDir, platformDir)
     if (existsSync(iosDir)) {
       const candidates: string[] = [
-        join(iosDir, "App", "Podfile"),
-        join(iosDir, "Podfile"),
-      ];
+        join(iosDir, 'App', 'Podfile'),
+        join(iosDir, 'Podfile'),
+      ]
 
       for (const child of readdirSync(iosDir, { withFileTypes: true })) {
         if (child.isDirectory()) {
-          candidates.push(join(iosDir, child.name, "Podfile"));
+          candidates.push(join(iosDir, child.name, 'Podfile'))
         }
       }
 
-      const uniqPodfiles = [...new Set(candidates)].filter((candidate) =>
+      const uniqPodfiles = [...new Set(candidates)].filter(candidate =>
         existsSync(candidate),
-      );
-      if (uniqPodfiles.length > 0) usesCocoaPods = true;
+      )
+      if (uniqPodfiles.length > 0)
+        usesCocoaPods = true
 
       for (const podfilePath of uniqPodfiles) {
-        const podfileContent = await readFileAsync(podfilePath, "utf-8");
+        const podfileContent = await readFileAsync(podfilePath, 'utf-8')
         // Match lines like: pod 'CapacitorApp', :path => '../../node_modules/@capacitor/app'
         const podMatches = podfileContent.matchAll(
           /pod\s+['"][^'"]+['"],\s*:path\s*=>\s*['"](?:\.\.\/)+node_modules\/([^'"]+)['"]/g,
-        );
+        )
         for (const match of podMatches) {
-          let pkgPath = match[1];
-          const lastNmIdx = pkgPath.lastIndexOf("node_modules/");
+          let pkgPath = match[1]
+          const lastNmIdx = pkgPath.lastIndexOf('node_modules/')
           if (lastNmIdx !== -1)
-            pkgPath = pkgPath.substring(lastNmIdx + "node_modules/".length);
-          packages.add(pkgPath);
+            pkgPath = pkgPath.substring(lastNmIdx + 'node_modules/'.length)
+          packages.add(pkgPath)
         }
       }
     }
-  } else if (platform === "android") {
+  }
+  else if (platform === 'android') {
     // Parse Android capacitor.settings.gradle
     const settingsGradlePath = join(
       projectDir,
       platformDir,
-      "capacitor.settings.gradle",
-    );
+      'capacitor.settings.gradle',
+    )
     if (existsSync(settingsGradlePath)) {
-      const settingsContent = await readFileAsync(settingsGradlePath, "utf-8");
+      const settingsContent = await readFileAsync(settingsGradlePath, 'utf-8')
       // Match lines like: project(':capacitor-app').projectDir = new File('../node_modules/@capacitor/app/android')
       // Also matches pnpm paths: new File('../node_modules/.pnpm/@pkg@ver/node_modules/@scope/pkg/android')
       const gradleMatches = settingsContent.matchAll(
         /new\s+File\s*\(\s*['"]\.\.\/node_modules\/([^'"]+)['"]\s*\)/g,
-      );
+      )
       for (const match of gradleMatches) {
-        let fullPath = match[1];
+        let fullPath = match[1]
 
         // Normalize pnpm paths: .pnpm/@pkg+name@ver/node_modules/@scope/pkg/android → @scope/pkg
-        const lastNodeModulesIdx = fullPath.lastIndexOf("node_modules/");
+        const lastNodeModulesIdx = fullPath.lastIndexOf('node_modules/')
         if (lastNodeModulesIdx !== -1) {
           fullPath = fullPath.substring(
-            lastNodeModulesIdx + "node_modules/".length,
-          );
+            lastNodeModulesIdx + 'node_modules/'.length,
+          )
         }
 
         // Strip platform directory suffixes (android, capacitor for @capacitor/android)
-        const packagePath = fullPath.replace(/\/(android|capacitor)$/, "");
-        packages.add(packagePath);
+        const packagePath = fullPath.replace(/\/(android|capacitor)$/, '')
+        packages.add(packagePath)
       }
     }
   }
 
-  return { packages, usesSPM, usesCocoaPods };
+  return { packages, usesSPM, usesCocoaPods }
 }
 
 /**
@@ -721,69 +767,80 @@ async function extractNativeDependencies(
  */
 export function shouldIncludeFile(
   filePath: string,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   nativeDeps: NativeDependencies,
   platformDir: string,
 ): boolean {
   // Normalize path separators
-  const normalizedPath = filePath.replace(/\\/g, "/");
+  const normalizedPath = filePath.replace(/\\/g, '/')
 
   // Always include platform folder
-  if (normalizedPath.startsWith(`${platformDir}/`)) return true;
+  if (normalizedPath.startsWith(`${platformDir}/`))
+    return true
 
   // Always include config files at root
   if (
-    normalizedPath === "package.json" ||
-    normalizedPath === "package-lock.json" ||
-    normalizedPath.startsWith("capacitor.config.")
-  )
-    return true;
+    normalizedPath === 'package.json'
+    || normalizedPath === 'package-lock.json'
+    || normalizedPath.startsWith('capacitor.config.')
+  ) {
+    return true
+  }
 
   // Include resources folder
-  if (normalizedPath.startsWith("resources/")) return true;
+  if (normalizedPath.startsWith('resources/'))
+    return true
 
   // Include @capacitor core for the platform
   if (
-    platform === "ios" &&
-    normalizedPath.startsWith("node_modules/@capacitor/ios/")
-  )
-    return true;
+    platform === 'ios'
+    && normalizedPath.startsWith('node_modules/@capacitor/ios/')
+  ) {
+    return true
+  }
   if (
-    platform === "android" &&
-    normalizedPath.startsWith("node_modules/@capacitor/android/")
-  )
-    return true;
+    platform === 'android'
+    && normalizedPath.startsWith('node_modules/@capacitor/android/')
+  ) {
+    return true
+  }
 
   // Check if file is in one of the native dependencies
   for (const packagePath of nativeDeps.packages) {
-    const packagePrefix = `node_modules/${packagePath}/`;
+    const packagePrefix = `node_modules/${packagePath}/`
 
     // Native dependency package metadata used by some podspecs/gradle scripts.
-    if (normalizedPath === `${packagePrefix}package.json`) return true;
+    if (normalizedPath === `${packagePrefix}package.json`)
+      return true
 
-    if (platform === "android") {
+    if (platform === 'android') {
       // For Android, only include the android/ subfolder
-      if (normalizedPath.startsWith(`${packagePrefix}android/`)) return true;
-    } else if (platform === "ios") {
+      if (normalizedPath.startsWith(`${packagePrefix}android/`))
+        return true
+    }
+    else if (platform === 'ios') {
       // For iOS, include ios/ folder and either Package.swift (SPM) or *.podspec (CocoaPods)
-      if (normalizedPath.startsWith(`${packagePrefix}ios/`)) return true;
+      if (normalizedPath.startsWith(`${packagePrefix}ios/`))
+        return true
 
       if (nativeDeps.usesSPM) {
         // SPM: include Package.swift
-        if (normalizedPath === `${packagePrefix}Package.swift`) return true;
+        if (normalizedPath === `${packagePrefix}Package.swift`)
+          return true
       }
       if (nativeDeps.usesCocoaPods || !nativeDeps.usesSPM) {
         // CocoaPods: include *.podspec files (also when neither manager is explicitly detected)
         if (
-          normalizedPath.startsWith(packagePrefix) &&
-          normalizedPath.endsWith(".podspec")
-        )
-          return true;
+          normalizedPath.startsWith(packagePrefix)
+          && normalizedPath.endsWith('.podspec')
+        ) {
+          return true
+        }
       }
     }
   }
 
-  return false;
+  return false
 }
 
 /**
@@ -793,29 +850,30 @@ function addDirectoryToZip(
   zip: AdmZip,
   dirPath: string,
   zipPath: string,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   nativeDeps: NativeDependencies,
   platformDir: string,
 ) {
-  const items = readdirSync(dirPath);
+  const items = readdirSync(dirPath)
 
   for (const item of items) {
-    const itemPath = join(dirPath, item);
-    const itemZipPath = zipPath ? `${zipPath}/${item}` : item;
-    const lstats = lstatSync(itemPath);
-    const isSymbolicLink = lstats.isSymbolicLink();
-    let stats = lstats;
+    const itemPath = join(dirPath, item)
+    const itemZipPath = zipPath ? `${zipPath}/${item}` : item
+    const lstats = lstatSync(itemPath)
+    const isSymbolicLink = lstats.isSymbolicLink()
+    let stats = lstats
 
     if (isSymbolicLink) {
       try {
-        stats = statSync(itemPath);
-      } catch (error) {
-        const code = (error as NodeJS.ErrnoException).code;
-        if (code === "ENOENT" || code === "ENOTDIR") {
+        stats = statSync(itemPath)
+      }
+      catch (error) {
+        const code = (error as NodeJS.ErrnoException).code
+        if (code === 'ENOENT' || code === 'ENOTDIR') {
           // Broken symlink: skip gracefully to avoid failing the whole zip.
-          continue;
+          continue
         }
-        throw error;
+        throw error
       }
     }
     const shouldInclude = shouldIncludeFile(
@@ -823,7 +881,7 @@ function addDirectoryToZip(
       platform,
       nativeDeps,
       platformDir,
-    );
+    )
 
     if (stats.isDirectory()) {
       // Skip excluded directories
@@ -832,19 +890,20 @@ function addDirectoryToZip(
       // .gradle, .idea: Android build cache and IDE settings
       // .swiftpm: Swift Package Manager cache
       if (
-        item === ".git" ||
-        item === "dist" ||
-        item === "build" ||
-        item === ".angular" ||
-        item === ".vite" ||
-        item === ".gradle" ||
-        item === ".idea" ||
-        item === ".swiftpm"
-      )
-        continue;
+        item === '.git'
+        || item === 'dist'
+        || item === 'build'
+        || item === '.angular'
+        || item === '.vite'
+        || item === '.gradle'
+        || item === '.idea'
+        || item === '.swiftpm'
+      ) {
+        continue
+      }
 
       // Always recurse into node_modules (we filter inside)
-      if (item === "node_modules") {
+      if (item === 'node_modules') {
         addDirectoryToZip(
           zip,
           itemPath,
@@ -852,12 +911,12 @@ function addDirectoryToZip(
           platform,
           nativeDeps,
           platformDir,
-        );
-        continue;
+        )
+        continue
       }
 
       // For resources folder, always recurse
-      if (item === "resources") {
+      if (item === 'resources') {
         addDirectoryToZip(
           zip,
           itemPath,
@@ -865,30 +924,31 @@ function addDirectoryToZip(
           platform,
           nativeDeps,
           platformDir,
-        );
-        continue;
+        )
+        continue
       }
 
       // For other directories, check if we need to recurse into them
       // We should recurse if:
       // 1. This directory itself should be included (matches a pattern)
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
-      const normalizedItemPath = itemZipPath.replace(/\\/g, "/");
-      const shouldRecurse =
-        shouldInclude ||
+      const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
+      const shouldRecurse
+        = shouldInclude
         // Ensure we can reach nested platform directories like projects/app/android.
-        platformDir === normalizedItemPath ||
-        platformDir.startsWith(`${normalizedItemPath}/`) ||
-        Array.from(nativeDeps.packages).some((pkg) => {
-          const depPath = `node_modules/${pkg}/`;
-          return (
-            depPath.startsWith(`${normalizedItemPath}/`) ||
-            normalizedItemPath.startsWith(`node_modules/${pkg}`)
-          );
-        });
+          || platformDir === normalizedItemPath
+          || platformDir.startsWith(`${normalizedItemPath}/`)
+          || Array.from(nativeDeps.packages).some((pkg) => {
+            const depPath = `node_modules/${pkg}/`
+            return (
+              depPath.startsWith(`${normalizedItemPath}/`)
+              || normalizedItemPath.startsWith(`node_modules/${pkg}`)
+            )
+          })
 
       // Skip unrelated symlinks instead of failing hard.
-      if (isSymbolicLink && !shouldRecurse) continue;
+      if (isSymbolicLink && !shouldRecurse)
+        continue
 
       if (shouldRecurse) {
         addDirectoryToZip(
@@ -898,17 +958,20 @@ function addDirectoryToZip(
           platform,
           nativeDeps,
           platformDir,
-        );
+        )
       }
-    } else if (stats.isFile()) {
-      if (isSymbolicLink) continue;
+    }
+    else if (stats.isFile()) {
+      if (isSymbolicLink)
+        continue
 
       // Skip excluded files
-      if (item === ".DS_Store" || item.endsWith(".log")) continue;
+      if (item === '.DS_Store' || item.endsWith('.log'))
+        continue
 
       // Check if we should include this file
       if (shouldInclude) {
-        zip.addLocalFile(itemPath, zipPath || undefined);
+        zip.addLocalFile(itemPath, zipPath || undefined)
       }
     }
   }
@@ -923,78 +986,80 @@ function addDirectoryToZip(
 export async function zipDirectory(
   projectDir: string,
   outputPath: string,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   capConfig: any,
 ): Promise<void> {
-  const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform);
+  const platformDir = getPlatformDirFromCapacitorConfig(capConfig, platform)
 
   // Extract which node_modules have native code for this platform
   const nativeDeps = await extractNativeDependencies(
     projectDir,
     platform,
     platformDir,
-  );
+  )
 
-  const zip = new AdmZip();
+  const zip = new AdmZip()
 
   // Add files with filtering
-  addDirectoryToZip(zip, projectDir, "", platform, nativeDeps, platformDir);
+  addDirectoryToZip(zip, projectDir, '', platform, nativeDeps, platformDir)
 
   // Rewrite pnpm store paths (node_modules/.pnpm/…/node_modules/@scope/pkg)
   // to standard flat paths (node_modules/@scope/pkg).
   // Scan all text-based entries because pnpm paths leak into Podfile, Podfile.lock,
   // Pods.xcodeproj/project.pbxproj, .xcconfig files, Manifest.lock, settings.gradle, etc.
-  const pnpmPathPattern =
-    /node_modules\/\.pnpm\/[^/\n\r]+(?:\/[^/\n\r]+)*\/node_modules\//g;
+  const pnpmPathPattern
+    = /node_modules\/\.pnpm\/[^/\n\r]+(?:\/[^/\n\r]+)*\/node_modules\//g
   const textExtensions = new Set([
-    "",
-    ".gradle",
-    ".swift",
-    ".json",
-    ".lock",
-    ".xml",
-    ".properties",
-    ".pbxproj",
-    ".xcconfig",
-    ".plist",
-    ".podspec",
-    ".rb",
-    ".yaml",
-    ".yml",
-  ]);
+    '',
+    '.gradle',
+    '.swift',
+    '.json',
+    '.lock',
+    '.xml',
+    '.properties',
+    '.pbxproj',
+    '.xcconfig',
+    '.plist',
+    '.podspec',
+    '.rb',
+    '.yaml',
+    '.yml',
+  ])
   for (const entry of zip.getEntries()) {
-    if (entry.isDirectory) continue;
-    const ext = entry.entryName.includes(".")
-      ? `.${entry.entryName.split(".").pop()}`
-      : "";
-    const basename = entry.entryName.split("/").pop() || "";
-    if (!textExtensions.has(ext) && basename !== "Podfile") continue;
-    const original = entry.getData().toString("utf-8");
-    let rewritten = original.replace(pnpmPathPattern, "node_modules/");
+    if (entry.isDirectory)
+      continue
+    const ext = entry.entryName.includes('.')
+      ? `.${entry.entryName.split('.').pop()}`
+      : ''
+    const basename = entry.entryName.split('/').pop() || ''
+    if (!textExtensions.has(ext) && basename !== 'Podfile')
+      continue
+    const original = entry.getData().toString('utf-8')
+    let rewritten = original.replace(pnpmPathPattern, 'node_modules/')
 
     // pod install with pnpm resolves symlinks, producing deep relative paths
     // like ../../../../../../ios/App/Pods/ (6 levels) instead of ../../../ios/App/Pods/ (3 levels).
     // Collapse any excessive ../ before the platform directory back to 3 levels
     // (node_modules/@scope/pkg → 3 levels up to project root).
-    if (platform === "ios") {
-      rewritten = rewritten.replace(/(?:\.\.\/){4,}(ios\/)/g, "../../../$1");
+    if (platform === 'ios') {
+      rewritten = rewritten.replace(/(?:\.\.\/){4,}(ios\/)/g, '../../../$1')
     }
 
     if (rewritten !== original) {
-      zip.updateFile(entry.entryName, Buffer.from(rewritten, "utf-8"));
+      zip.updateFile(entry.entryName, Buffer.from(rewritten, 'utf-8'))
     }
   }
 
   // Cloud builders may only parse JSON configs. Ensure a resolved JSON exists even if the project
   // uses capacitor.config.ts/js, so android.path/ios.path is visible remotely.
-  const configJsonPath = join(projectDir, "capacitor.config.json");
+  const configJsonPath = join(projectDir, 'capacitor.config.json')
   if (capConfig && !existsSync(configJsonPath)) {
-    const json = `${JSON.stringify(capConfig, null, 2)}\n`;
-    zip.addFile("capacitor.config.json", Buffer.from(json, "utf-8"));
+    const json = `${JSON.stringify(capConfig, null, 2)}\n`
+    zip.addFile('capacitor.config.json', Buffer.from(json, 'utf-8'))
   }
 
   // Write zip to file
-  await writeFile(outputPath, zip.toBuffer());
+  await writeFile(outputPath, zip.toBuffer())
 }
 
 /**
@@ -1041,23 +1106,23 @@ export const NON_CREDENTIAL_KEYS = new Set([
  */
 export function splitPayload(
   mergedCredentials: Record<string, string | undefined>,
-  platform: "ios" | "android",
+  platform: 'ios' | 'android',
   buildMode: string,
   cliVersion: string,
 ): {
-  buildOptions: BuildOptionsPayload;
-  buildCredentials: Record<string, string>;
+  buildOptions: BuildOptionsPayload
+  buildCredentials: Record<string, string>
 } {
   const buildOptions: BuildOptionsPayload = {
     platform,
-    buildMode: buildMode as "debug" | "release",
+    buildMode: buildMode as 'debug' | 'release',
     cliVersion,
     iosScheme: mergedCredentials.CAPGO_IOS_SCHEME,
     iosTarget: mergedCredentials.CAPGO_IOS_TARGET,
     iosDistribution: mergedCredentials.CAPGO_IOS_DISTRIBUTION as
-      | "app_store"
-      | "ad_hoc"
-      | undefined,
+    | 'app_store'
+    | 'ad_hoc'
+    | undefined,
     iosSourceDir: mergedCredentials.CAPGO_IOS_SOURCE_DIR,
     iosAppDir: mergedCredentials.CAPGO_IOS_APP_DIR,
     iosProjectDir: mergedCredentials.CAPGO_IOS_PROJECT_DIR,
@@ -1067,20 +1132,20 @@ export function splitPayload(
     androidFlavor: mergedCredentials.CAPGO_ANDROID_FLAVOR,
     outputUploadEnabled: mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED === 'true',
     outputRetentionSeconds: mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS
-      ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10) ||
-        MIN_OUTPUT_RETENTION_SECONDS
+      ? Number.parseInt(mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS, 10)
+      || MIN_OUTPUT_RETENTION_SECONDS
       : MIN_OUTPUT_RETENTION_SECONDS,
-    skipBuildNumberBump: mergedCredentials.SKIP_BUILD_NUMBER_BUMP === "true",
-  };
+    skipBuildNumberBump: mergedCredentials.SKIP_BUILD_NUMBER_BUMP === 'true',
+  }
 
-  const buildCredentials: Record<string, string> = {};
+  const buildCredentials: Record<string, string> = {}
   for (const [key, value] of Object.entries(mergedCredentials)) {
     if (!NON_CREDENTIAL_KEYS.has(key) && value !== undefined) {
-      buildCredentials[key] = value;
+      buildCredentials[key] = value
     }
   }
 
-  return { buildOptions, buildCredentials };
+  return { buildOptions, buildCredentials }
 }
 
 export async function requestBuildInternal(
@@ -1089,104 +1154,110 @@ export async function requestBuildInternal(
   silent = false,
 ): Promise<BuildRequestResult> {
   // Track build time
-  const buildStartTime = Date.now();
-  const verbose = options.verbose ?? false;
+  const buildStartTime = Date.now()
+  const verbose = options.verbose ?? false
 
   try {
-    options.apikey = options.apikey || findSavedKey(silent);
-    const projectDir = resolve(options.path || cwd());
+    options.apikey = options.apikey || findSavedKey(silent)
+    const projectDir = resolve(options.path || cwd())
 
     // @capacitor/cli loadConfig() is cwd-based; honor --path for monorepos/workspaces.
-    const config = await withCwd(projectDir, () => getConfig());
-    appId = appId || config?.config?.appId;
+    const config = await withCwd(projectDir, () => getConfig())
+    appId = appId || config?.config?.appId
 
     if (!appId) {
       throw new Error(
-        "Missing argument, you need to provide a appId, or be in a capacitor project",
-      );
+        'Missing argument, you need to provide a appId, or be in a capacitor project',
+      )
     }
 
     if (!options.platform) {
-      throw new Error("Missing required argument: --platform <ios|android>");
+      throw new Error('Missing required argument: --platform <ios|android>')
     }
 
-    if (options.platform !== "ios" && options.platform !== "android") {
+    if (options.platform !== 'ios' && options.platform !== 'android') {
       throw new Error(
         `Invalid platform "${options.platform}". Must be "ios" or "android"`,
-      );
+      )
     }
 
-    const host = options.supaHost || "https://api.capgo.app";
+    const host = options.supaHost || 'https://api.capgo.app'
 
     const supabase = await createSupabaseClient(
       options.apikey,
       options.supaHost,
       options.supaAnon,
-    );
-    await verifyUser(supabase, options.apikey, ["write", "all"]);
+    )
+    await verifyUser(supabase, options.apikey, ['write', 'all'])
 
     // Get organization ID for analytics
-    const orgId = await getOrganizationId(supabase, appId);
+    const orgId = await getOrganizationId(supabase, appId)
 
     if (!silent) {
-      log.info(`Requesting native build for ${appId}`);
-      log.info(`Platform: ${options.platform}`);
-      log.info(`Project: ${projectDir}`);
-      log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`);
-      log.info(`   They are used only during build and deleted after`);
+      log.info(`Requesting native build for ${appId}`)
+      log.info(`Platform: ${options.platform}`)
+      log.info(`Project: ${projectDir}`)
+      log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
+      log.info(`   They are used only during build and deleted after`)
       log.info(
         `   Build outputs can optionally be uploaded for time-limited download links\n`,
-      );
+      )
     }
     if (verbose) {
-      log.info(`API host: ${host}`);
+      log.info(`API host: ${host}`)
     }
 
     // Collect credentials from CLI args (if provided)
-    const cliCredentials: Partial<BuildCredentials> = {};
+    const cliCredentials: Partial<BuildCredentials> = {}
     if (options.buildCertificateBase64)
-      cliCredentials.BUILD_CERTIFICATE_BASE64 = options.buildCertificateBase64;
-    if (options.p12Password) cliCredentials.P12_PASSWORD = options.p12Password;
-    if (options.appleKeyId) cliCredentials.APPLE_KEY_ID = options.appleKeyId;
+      cliCredentials.BUILD_CERTIFICATE_BASE64 = options.buildCertificateBase64
+    if (options.p12Password)
+      cliCredentials.P12_PASSWORD = options.p12Password
+    if (options.appleKeyId)
+      cliCredentials.APPLE_KEY_ID = options.appleKeyId
     if (options.appleIssuerId)
-      cliCredentials.APPLE_ISSUER_ID = options.appleIssuerId;
+      cliCredentials.APPLE_ISSUER_ID = options.appleIssuerId
     if (options.appleKeyContent)
-      cliCredentials.APPLE_KEY_CONTENT = options.appleKeyContent;
+      cliCredentials.APPLE_KEY_CONTENT = options.appleKeyContent
     if (options.appStoreConnectTeamId)
-      cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId;
-    if (options.iosScheme) cliCredentials.CAPGO_IOS_SCHEME = options.iosScheme;
-    if (options.iosTarget) cliCredentials.CAPGO_IOS_TARGET = options.iosTarget;
+      cliCredentials.APP_STORE_CONNECT_TEAM_ID = options.appStoreConnectTeamId
+    if (options.iosScheme)
+      cliCredentials.CAPGO_IOS_SCHEME = options.iosScheme
+    if (options.iosTarget)
+      cliCredentials.CAPGO_IOS_TARGET = options.iosTarget
     if (options.iosDistribution)
-      cliCredentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution;
+      cliCredentials.CAPGO_IOS_DISTRIBUTION = options.iosDistribution
     if (
-      options.iosProvisioningProfile &&
-      options.iosProvisioningProfile.length > 0
+      options.iosProvisioningProfile
+      && options.iosProvisioningProfile.length > 0
     ) {
       const provMap = buildProvisioningMap(
         options.iosProvisioningProfile,
         resolve(options.path || cwd()),
-      );
-      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap);
+      )
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = JSON.stringify(provMap)
     }
     if (options.iosProvisioningMap)
-      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = options.iosProvisioningMap;
+      cliCredentials.CAPGO_IOS_PROVISIONING_MAP = options.iosProvisioningMap
     if (options.androidKeystoreFile)
-      cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile;
+      cliCredentials.ANDROID_KEYSTORE_FILE = options.androidKeystoreFile
     if (options.keystoreKeyAlias)
-      cliCredentials.KEYSTORE_KEY_ALIAS = options.keystoreKeyAlias;
+      cliCredentials.KEYSTORE_KEY_ALIAS = options.keystoreKeyAlias
 
     // For Android: if only one password is provided, use it for both key and store
-    const hasKeyPassword = !!options.keystoreKeyPassword;
-    const hasStorePassword = !!options.keystoreStorePassword;
+    const hasKeyPassword = !!options.keystoreKeyPassword
+    const hasStorePassword = !!options.keystoreStorePassword
     if (hasKeyPassword && !hasStorePassword) {
-      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword;
-      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreKeyPassword;
-    } else if (!hasKeyPassword && hasStorePassword) {
-      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreStorePassword;
-      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword;
-    } else if (hasKeyPassword && hasStorePassword) {
-      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword;
-      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword;
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreKeyPassword
+    }
+    else if (!hasKeyPassword && hasStorePassword) {
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreStorePassword
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
+    }
+    else if (hasKeyPassword && hasStorePassword) {
+      cliCredentials.KEYSTORE_KEY_PASSWORD = options.keystoreKeyPassword
+      cliCredentials.KEYSTORE_STORE_PASSWORD = options.keystoreStorePassword
     }
 
     if (typeof options.androidFlavor === 'string') {
@@ -1195,25 +1266,25 @@ export async function requestBuildInternal(
         cliCredentials.CAPGO_ANDROID_FLAVOR = androidFlavorTrimmed
     }
     if (options.playConfigJson)
-      cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson;
+      cliCredentials.PLAY_CONFIG_JSON = options.playConfigJson
     if (options.outputUpload !== undefined) {
       cliCredentials.BUILD_OUTPUT_UPLOAD_ENABLED = parseOptionalBoolean(
         options.outputUpload,
       )
-        ? "true"
-        : "false";
+        ? 'true'
+        : 'false'
     }
     if (options.outputRetention) {
       cliCredentials.BUILD_OUTPUT_RETENTION_SECONDS = String(
         parseOutputRetentionSeconds(options.outputRetention),
-      );
+      )
     }
     if (options.skipBuildNumberBump !== undefined) {
       cliCredentials.SKIP_BUILD_NUMBER_BUMP = parseOptionalBoolean(
         options.skipBuildNumberBump,
       )
-        ? "true"
-        : "false";
+        ? 'true'
+        : 'false'
     }
 
     // Merge credentials from all three sources:
@@ -1224,7 +1295,7 @@ export async function requestBuildInternal(
       appId,
       options.platform,
       Object.keys(cliCredentials).length > 0 ? cliCredentials : undefined,
-    );
+    )
 
     // --no-playstore-upload: null out PLAY_CONFIG_JSON so it never reaches the builder
     if (options.playstoreUpload === false && mergedCredentials) {
@@ -1236,16 +1307,17 @@ export async function requestBuildInternal(
 
     const nativeProjectDir = getPlatformDirFromCapacitorConfig(config?.config, options.platform)
     if (mergedCredentials && nativeProjectDir) {
-      if (options.platform === "ios") {
-        mergedCredentials.CAPGO_IOS_SOURCE_DIR = nativeProjectDir;
-        mergedCredentials.CAPGO_IOS_APP_DIR = nativeProjectDir;
-        mergedCredentials.CAPGO_IOS_PROJECT_DIR = nativeProjectDir;
-        mergedCredentials.IOS_PROJECT_DIR = nativeProjectDir;
-      } else {
-        mergedCredentials.CAPGO_ANDROID_SOURCE_DIR = nativeProjectDir;
-        mergedCredentials.CAPGO_ANDROID_APP_DIR = nativeProjectDir;
-        mergedCredentials.CAPGO_ANDROID_PROJECT_DIR = nativeProjectDir;
-        mergedCredentials.ANDROID_PROJECT_DIR = nativeProjectDir;
+      if (options.platform === 'ios') {
+        mergedCredentials.CAPGO_IOS_SOURCE_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_IOS_APP_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_IOS_PROJECT_DIR = nativeProjectDir
+        mergedCredentials.IOS_PROJECT_DIR = nativeProjectDir
+      }
+      else {
+        mergedCredentials.CAPGO_ANDROID_SOURCE_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_ANDROID_APP_DIR = nativeProjectDir
+        mergedCredentials.CAPGO_ANDROID_PROJECT_DIR = nativeProjectDir
+        mergedCredentials.ANDROID_PROJECT_DIR = nativeProjectDir
       }
     }
 
@@ -1255,209 +1327,220 @@ export async function requestBuildInternal(
     // Validate required credentials for the platform
     if (!mergedCredentials) {
       if (!silent) {
-        log.error("❌ No credentials found for this app and platform");
-        log.error("");
-        log.error("You must provide credentials via:");
-        log.error("  1. CLI arguments (--apple-key-id, --p12-password, etc.)");
+        log.error('❌ No credentials found for this app and platform')
+        log.error('')
+        log.error('You must provide credentials via:')
+        log.error('  1. CLI arguments (--apple-key-id, --p12-password, etc.)')
         log.error(
-          "  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)",
-        );
-        log.error("  3. Saved credentials file:");
+          '  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)',
+        )
+        log.error('  3. Saved credentials file:')
         log.error(
           `     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`,
-        );
-        log.error("");
-        log.error("Documentation:");
-        log.error("  https://capgo.app/docs/cli/cloud-build/credentials/");
+        )
+        log.error('')
+        log.error('Documentation:')
+        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/')
       }
       throw new Error(
-        "No credentials found. Please provide credentials before building.",
-      );
+        'No credentials found. Please provide credentials before building.',
+      )
     }
 
     // Validate platform-specific required credentials
-    const missingCreds: string[] = [];
+    const missingCreds: string[] = []
 
-    if (options.platform === "ios") {
-      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION;
-      const validModes = ["app_store", "ad_hoc"] as const;
+    if (options.platform === 'ios') {
+      const rawDistributionMode = mergedCredentials.CAPGO_IOS_DISTRIBUTION
+      const validModes = ['app_store', 'ad_hoc'] as const
       if (
-        rawDistributionMode &&
-        !validModes.includes(rawDistributionMode as any)
+        rawDistributionMode
+        && !validModes.includes(rawDistributionMode as any)
       ) {
         missingCreds.push(
-          `Invalid CAPGO_IOS_DISTRIBUTION value: '${rawDistributionMode}'. Must be one of: ${validModes.join(", ")}`,
-        );
+          `Invalid CAPGO_IOS_DISTRIBUTION value: '${rawDistributionMode}'. Must be one of: ${validModes.join(', ')}`,
+        )
       }
-      const distributionMode =
-        rawDistributionMode && validModes.includes(rawDistributionMode as any)
+      const distributionMode
+        = rawDistributionMode && validModes.includes(rawDistributionMode as any)
           ? rawDistributionMode
-          : "app_store";
+          : 'app_store'
       if (!rawDistributionMode && !silent) {
         log.info(
-          "ℹ️  --ios-distribution not specified, defaulting to app_store",
-        );
+          'ℹ️  --ios-distribution not specified, defaulting to app_store',
+        )
       }
       // Write normalized value back so splitPayload picks it up
-      mergedCredentials.CAPGO_IOS_DISTRIBUTION = distributionMode;
+      mergedCredentials.CAPGO_IOS_DISTRIBUTION = distributionMode
 
       // iOS minimum requirements (all modes)
-      if (!mergedCredentials.BUILD_CERTIFICATE_BASE64)
+      if (!mergedCredentials.BUILD_CERTIFICATE_BASE64) {
         missingCreds.push(
-          "BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)",
-        );
+          'BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)',
+        )
+      }
       // Note: P12_PASSWORD is optional - certificates can have no password
       // But we warn if it's missing in case the user forgot
       if (!mergedCredentials.P12_PASSWORD && !silent) {
         log.warn(
-          "⚠️  P12_PASSWORD not provided - assuming certificate has no password",
-        );
+          '⚠️  P12_PASSWORD not provided - assuming certificate has no password',
+        )
         log.warn(
-          "   If your certificate requires a password, provide it with --p12-password",
-        );
+          '   If your certificate requires a password, provide it with --p12-password',
+        )
       }
 
       // Legacy detection: old provisioning keys without new provisioning map
       const hasLegacyProvisioning = !!(
-        mergedCredentials.BUILD_PROVISION_PROFILE_BASE64 ||
-        mergedCredentials.APPLE_PROFILE_NAME
-      );
+        mergedCredentials.BUILD_PROVISION_PROFILE_BASE64
+        || mergedCredentials.APPLE_PROFILE_NAME
+      )
       if (
-        hasLegacyProvisioning &&
-        !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP
+        hasLegacyProvisioning
+        && !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP
       ) {
         if (!silent) {
-          log.error("❌ Legacy provisioning profile format detected. Run:");
+          log.error('❌ Legacy provisioning profile format detected. Run:')
           log.error(
-            "     npx @capgo/cli build credentials migrate --platform ios",
-          );
-          log.error("");
+            '     npx @capgo/cli build credentials migrate --platform ios',
+          )
+          log.error('')
           log.error(
-            "   This will convert your existing provisioning profile to the new multi-target format.",
-          );
+            '   This will convert your existing provisioning profile to the new multi-target format.',
+          )
         }
         throw new Error(
-          "Legacy provisioning profile format detected. Run: npx @capgo/cli build credentials migrate --platform ios",
-        );
+          'Legacy provisioning profile format detected. Run: npx @capgo/cli build credentials migrate --platform ios',
+        )
       }
 
-      if (!mergedCredentials.CAPGO_IOS_PROVISIONING_MAP)
+      if (!mergedCredentials.CAPGO_IOS_PROVISIONING_MAP) {
         missingCreds.push(
           'CAPGO_IOS_PROVISIONING_MAP (use --ios-provisioning-profile or save via "build credentials save")',
-        );
+        )
+      }
 
       // App Store Connect API key: only required for app_store mode
-      if (distributionMode === "app_store") {
-        const hasAppleKeyId = !!mergedCredentials.APPLE_KEY_ID;
-        const hasAppleIssuerId = !!mergedCredentials.APPLE_ISSUER_ID;
-        const hasAppleKeyContent = !!mergedCredentials.APPLE_KEY_CONTENT;
-        const anyAppleApiField =
-          hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent;
-        const hasCompleteAppleApiKey =
-          hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent;
+      if (distributionMode === 'app_store') {
+        const hasAppleKeyId = !!mergedCredentials.APPLE_KEY_ID
+        const hasAppleIssuerId = !!mergedCredentials.APPLE_ISSUER_ID
+        const hasAppleKeyContent = !!mergedCredentials.APPLE_KEY_CONTENT
+        const anyAppleApiField
+          = hasAppleKeyId || hasAppleIssuerId || hasAppleKeyContent
+        const hasCompleteAppleApiKey
+          = hasAppleKeyId && hasAppleIssuerId && hasAppleKeyContent
 
         if (!hasCompleteAppleApiKey) {
           if (anyAppleApiField) {
             // Partial API key — tell the user exactly which fields are missing
-            const missingAppleFields: string[] = [];
+            const missingAppleFields: string[] = []
             if (!hasAppleKeyId)
-              missingAppleFields.push("APPLE_KEY_ID (or --apple-key-id)");
+              missingAppleFields.push('APPLE_KEY_ID (or --apple-key-id)')
             if (!hasAppleIssuerId)
-              missingAppleFields.push("APPLE_ISSUER_ID (or --apple-issuer-id)");
-            if (!hasAppleKeyContent)
+              missingAppleFields.push('APPLE_ISSUER_ID (or --apple-issuer-id)')
+            if (!hasAppleKeyContent) {
               missingAppleFields.push(
-                "APPLE_KEY_CONTENT (or --apple-key-content)",
-              );
+                'APPLE_KEY_CONTENT (or --apple-key-content)',
+              )
+            }
             missingCreds.push(
-              `Incomplete App Store Connect API key - missing: ${missingAppleFields.join(", ")}`,
-            );
-          } else if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== "true") {
+              `Incomplete App Store Connect API key - missing: ${missingAppleFields.join(', ')}`,
+            )
+          }
+          else if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
             missingCreds.push(
-              "APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (or --output-upload) (build has no output destination - enable either TestFlight upload or Capgo download link)",
-            );
-          } else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== "true") {
+              'APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or BUILD_OUTPUT_UPLOAD_ENABLED=true (or --output-upload) (build has no output destination - enable either TestFlight upload or Capgo download link)',
+            )
+          }
+          else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
             missingCreds.push(
-              "APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump (App Store Connect API key not provided - build numbers cannot be auto-incremented without it)",
-            );
-          } else if (!silent) {
+              'APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump (App Store Connect API key not provided - build numbers cannot be auto-incremented without it)',
+            )
+          }
+          else if (!silent) {
             log.warn(
-              "⚠️  App Store Connect API key not provided - build will succeed but cannot auto-upload to TestFlight",
-            );
+              '⚠️  App Store Connect API key not provided - build will succeed but cannot auto-upload to TestFlight',
+            )
           }
         }
-      } else if (distributionMode === "ad_hoc") {
+      }
+      else if (distributionMode === 'ad_hoc') {
         // ad_hoc: no API key required. TestFlight upload skipped automatically.
         // Build number falls back to timestamp-based increment.
         if (!silent) {
           log.info(
-            "📦 Ad-hoc distribution mode: App Store Connect API key not required",
-          );
-          log.info("   Build number will use timestamp-based fallback");
+            '📦 Ad-hoc distribution mode: App Store Connect API key not required',
+          )
+          log.info('   Build number will use timestamp-based fallback')
         }
       }
 
-      if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
+      if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID) {
         missingCreds.push(
-          "APP_STORE_CONNECT_TEAM_ID (or --app-store-connect-team-id)",
-        );
-    } else if (options.platform === "android") {
+          'APP_STORE_CONNECT_TEAM_ID (or --app-store-connect-team-id)',
+        )
+      }
+    }
+    else if (options.platform === 'android') {
       // Android minimum requirements
       if (!mergedCredentials.ANDROID_KEYSTORE_FILE)
-        missingCreds.push("ANDROID_KEYSTORE_FILE (or --android-keystore-file)");
+        missingCreds.push('ANDROID_KEYSTORE_FILE (or --android-keystore-file)')
       if (!mergedCredentials.KEYSTORE_KEY_ALIAS)
-        missingCreds.push("KEYSTORE_KEY_ALIAS (or --keystore-key-alias)");
+        missingCreds.push('KEYSTORE_KEY_ALIAS (or --keystore-key-alias)')
 
       // For Android, we need at least one password (will be used for both if only one provided)
       // The merging logic above handles using one password for both
       if (
-        !mergedCredentials.KEYSTORE_KEY_PASSWORD &&
-        !mergedCredentials.KEYSTORE_STORE_PASSWORD
-      )
+        !mergedCredentials.KEYSTORE_KEY_PASSWORD
+        && !mergedCredentials.KEYSTORE_STORE_PASSWORD
+      ) {
         missingCreds.push(
-          "KEYSTORE_KEY_PASSWORD or KEYSTORE_STORE_PASSWORD (at least one password required)",
-        );
+          'KEYSTORE_KEY_PASSWORD or KEYSTORE_STORE_PASSWORD (at least one password required)',
+        )
+      }
 
       // PLAY_CONFIG_JSON is optional for build, but required for upload to Play Store
       if (!mergedCredentials.PLAY_CONFIG_JSON) {
-        if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== "true") {
+        if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
           missingCreds.push(
-            "PLAY_CONFIG_JSON or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either Play Store upload or Capgo download link)",
-          );
-        } else if (!silent) {
+            'PLAY_CONFIG_JSON or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either Play Store upload or Capgo download link)',
+          )
+        }
+        else if (!silent) {
           log.warn(
-            "⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store",
-          );
+            '⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store',
+          )
         }
       }
     }
 
     if (missingCreds.length > 0) {
       if (!silent) {
-        log.error(`❌ Missing required credentials for ${options.platform}:`);
-        log.error("");
+        log.error(`❌ Missing required credentials for ${options.platform}:`)
+        log.error('')
         for (const cred of missingCreds) {
-          log.error(`  • ${cred}`);
+          log.error(`  • ${cred}`)
         }
-        log.error("");
-        log.error("Provide credentials via:");
+        log.error('')
+        log.error('Provide credentials via:')
         log.error(
           '  1. CLI arguments: npx @capgo/cli build request --platform ios --apple-id "..." --p12-password "..."',
-        );
+        )
         log.error(
           '  2. Environment variables: export APPLE_ID="..." P12_PASSWORD="..."',
-        );
+        )
         log.error(
-          "  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...",
-        );
-        log.error("");
-        log.error("Documentation:");
+          '  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...',
+        )
+        log.error('')
+        log.error('Documentation:')
         log.error(
           `  https://capgo.app/docs/cli/cloud-build/${options.platform}/`,
-        );
+        )
       }
       throw new Error(
-        `Missing required credentials for ${options.platform}: ${missingCreds.join(", ")}`,
-      );
+        `Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`,
+      )
     }
 
     // Log defaults for output control fields when not explicitly set
@@ -1467,18 +1550,18 @@ export async function requestBuildInternal(
       }
       if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
         log.info(
-          "ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)",
-        );
+          'ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)',
+        )
       }
       if (!mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS) {
         log.info(
           `ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`,
-        );
+        )
       }
       if (!mergedCredentials.SKIP_BUILD_NUMBER_BUMP) {
         log.info(
-          "ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)",
-        );
+          'ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)',
+        )
       }
     }
 
@@ -1488,118 +1571,121 @@ export async function requestBuildInternal(
     } = splitPayload(
       mergedCredentials,
       options.platform,
-      options.buildMode || "release",
+      options.buildMode || 'release',
       pack.version,
-    );
+    )
 
     const requestPayload = {
       app_id: appId,
       platform: options.platform,
-      build_mode: options.buildMode || "release",
+      build_mode: options.buildMode || 'release',
       build_options: buildOptionsPayload,
       build_credentials: buildCredentialsPayload,
-    };
+    }
 
     if (!silent) {
       log.info(
-        "✓ Using credentials (merged from CLI args, env vars, and saved file)",
-      );
+        '✓ Using credentials (merged from CLI args, env vars, and saved file)',
+      )
     }
     if (verbose) {
-      const credentialKeys = Object.keys(buildCredentialsPayload);
-      log.info(`Credentials provided: ${credentialKeys.join(", ")}`);
+      const credentialKeys = Object.keys(buildCredentialsPayload)
+      log.info(`Credentials provided: ${credentialKeys.join(', ')}`)
       log.info(
         `Build options: platform=${buildOptionsPayload.platform}, mode=${buildOptionsPayload.buildMode}, cliVersion=${buildOptionsPayload.cliVersion}`,
-      );
+      )
     }
 
     // Request build from Capgo backend (POST /build/request)
-    if (!silent) log.info("Requesting build from Capgo...");
+    if (!silent)
+      log.info('Requesting build from Capgo...')
 
-    const maxRetries = 3;
+    const maxRetries = 3
     const response = await fetchWithRetry(
       `${host}/build/request`,
       {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          authorization: options.apikey,
+          'Content-Type': 'application/json',
+          'authorization': options.apikey,
         },
         body: JSON.stringify(requestPayload),
       },
       maxRetries,
       silent,
-    );
+    )
 
     if (!response.ok) {
-      const errorText = await response.text();
+      const errorText = await response.text()
       throw new Error(
         `Failed to request build: ${response.status} - ${errorText}`,
-      );
+      )
     }
 
     const buildRequest = (await response.json()) as {
-      job_id: string;
-      upload_url: string;
-      upload_expires_at: string;
-      status: string;
-    };
+      job_id: string
+      upload_url: string
+      upload_expires_at: string
+      status: string
+    }
 
     if (!silent) {
-      log.success(`Build job created: ${buildRequest.job_id}`);
-      log.info(`Status: ${buildRequest.status}`);
+      log.success(`Build job created: ${buildRequest.job_id}`)
+      log.info(`Status: ${buildRequest.status}`)
     }
     if (verbose) {
-      log.info(`Upload URL: ${buildRequest.upload_url}`);
-      log.info(`Upload expires: ${buildRequest.upload_expires_at}`);
+      log.info(`Upload URL: ${buildRequest.upload_url}`)
+      log.info(`Upload expires: ${buildRequest.upload_expires_at}`)
     }
 
     // Send analytics event for build request
     await sendEvent(options.apikey, {
-      channel: "native-builder",
-      event: "Build requested",
-      icon: "🏗️",
+      channel: 'native-builder',
+      event: 'Build requested',
+      icon: '🏗️',
       user_id: orgId,
       tags: {
-        "app-id": appId,
-        platform: options.platform,
+        'app-id': appId,
+        'platform': options.platform,
       },
       notify: false,
-    }).catch();
+    }).catch()
 
     // Create temporary directory for zip
-    const tempDir = join(tmpdir(), `capgo-build-${Date.now()}`);
-    await mkdir(tempDir, { recursive: true });
-    const zipPath = join(tempDir, `${basename(projectDir)}.zip`);
+    const tempDir = join(tmpdir(), `capgo-build-${Date.now()}`)
+    await mkdir(tempDir, { recursive: true })
+    const zipPath = join(tempDir, `${basename(projectDir)}.zip`)
 
     try {
       // Zip the project directory
       if (!silent)
-        log.info(`Zipping ${options.platform} project from ${projectDir}...`);
+        log.info(`Zipping ${options.platform} project from ${projectDir}...`)
 
-      await zipDirectory(projectDir, zipPath, options.platform, config?.config);
+      await zipDirectory(projectDir, zipPath, options.platform, config?.config)
 
-      const zipStats = await stat(zipPath);
-      const sizeMB = (zipStats.size / 1024 / 1024).toFixed(2);
+      const zipStats = await stat(zipPath)
+      const sizeMB = (zipStats.size / 1024 / 1024).toFixed(2)
 
-      if (!silent) log.success(`Created zip: ${zipPath} (${sizeMB} MB)`);
+      if (!silent)
+        log.success(`Created zip: ${zipPath} (${sizeMB} MB)`)
 
       // Upload to builder using TUS protocol
       if (!silent) {
-        log.info("Uploading to builder...");
+        log.info('Uploading to builder...')
       }
       if (verbose) {
-        log.info(`Upload endpoint: ${buildRequest.upload_url}`);
-        log.info(`File size: ${sizeMB} MB`);
-        log.info(`Job ID: ${buildRequest.job_id}`);
+        log.info(`Upload endpoint: ${buildRequest.upload_url}`)
+        log.info(`File size: ${sizeMB} MB`)
+        log.info(`Job ID: ${buildRequest.job_id}`)
       }
 
       // Read zip file into buffer for TUS upload
-      const zipBuffer = readFileSync(zipPath);
+      const zipBuffer = readFileSync(zipPath)
 
       // Upload using TUS protocol
-      const spinner = spinnerC();
-      if (!silent) spinner.start("Uploading bundle");
+      const spinner = spinnerC()
+      if (!silent)
+        spinner.start('Uploading bundle')
 
       await new Promise<void>((resolve, reject) => {
         const upload = new tus.Upload(zipBuffer as any, {
@@ -1607,7 +1693,7 @@ export async function requestBuildInternal(
           chunkSize: 5 * 1024 * 1024, // 5MB chunks
           metadata: {
             filename: basename(zipPath),
-            filetype: "application/zip",
+            filetype: 'application/zip',
           },
           headers: {
             authorization: options.apikey,
@@ -1615,159 +1701,168 @@ export async function requestBuildInternal(
           // Callback before request is sent
           onBeforeRequest(req) {
             if (verbose) {
-              log.info(`[TUS] ${req.getMethod()} ${req.getURL()}`);
-              const authHeader = req.getHeader("authorization");
-              log.info(`[TUS] Authorization header present: ${!!authHeader}`);
+              log.info(`[TUS] ${req.getMethod()} ${req.getURL()}`)
+              const authHeader = req.getHeader('authorization')
+              log.info(`[TUS] Authorization header present: ${!!authHeader}`)
             }
           },
           // Callback after response is received
           onAfterResponse(_req, res) {
             if (verbose) {
-              log.info(`[TUS] Response status: ${res.getStatus()}`);
-              const uploadOffset = res.getHeader("upload-offset");
-              const tusResumable = res.getHeader("tus-resumable");
+              log.info(`[TUS] Response status: ${res.getStatus()}`)
+              const uploadOffset = res.getHeader('upload-offset')
+              const tusResumable = res.getHeader('tus-resumable')
               log.info(
                 `[TUS] Upload-Offset: ${uploadOffset}, Tus-Resumable: ${tusResumable}`,
-              );
+              )
             }
           },
           // Callback for errors which cannot be fixed using retries
           onError(error) {
             if (!silent) {
-              spinner.stop("Upload failed");
-              log.error(`Upload error: ${error.message}`);
+              spinner.stop('Upload failed')
+              log.error(`Upload error: ${error.message}`)
             }
             if (error instanceof tus.DetailedError) {
-              const body = error.originalResponse?.getBody();
-              const status = error.originalResponse?.getStatus();
-              const url = error.originalRequest?.getURL();
+              const body = error.originalResponse?.getBody()
+              const status = error.originalResponse?.getStatus()
+              const url = error.originalRequest?.getURL()
 
               if (verbose) {
-                log.error(`[TUS] Request URL: ${url}`);
-                log.error(`[TUS] Response status: ${status}`);
-                log.error(`[TUS] Response body: ${body}`);
+                log.error(`[TUS] Request URL: ${url}`)
+                log.error(`[TUS] Response status: ${status}`)
+                log.error(`[TUS] Response body: ${body}`)
               }
 
-              let errorMsg = "Unknown error";
+              let errorMsg = 'Unknown error'
               try {
                 const jsonBody = JSON.parse(
                   body || '{"error": "unknown error"}',
-                );
-                errorMsg =
-                  jsonBody.status ||
-                  jsonBody.error ||
-                  jsonBody.message ||
-                  "unknown error";
-              } catch {
-                errorMsg = body || error.message;
+                )
+                errorMsg
+                  = jsonBody.status
+                    || jsonBody.error
+                    || jsonBody.message
+                    || 'unknown error'
               }
-              reject(new Error(`TUS upload failed: ${errorMsg}`));
-            } else {
+              catch {
+                errorMsg = body || error.message
+              }
+              reject(new Error(`TUS upload failed: ${errorMsg}`))
+            }
+            else {
               reject(
                 new Error(
                   `TUS upload failed: ${error.message || error.toString()}`,
                 ),
-              );
+              )
             }
           },
           // Callback for reporting upload progress
           onProgress(bytesUploaded, bytesTotal) {
-            const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2);
-            if (!silent) spinner.message(`Uploading ${percentage}%`);
+            const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
+            if (!silent)
+              spinner.message(`Uploading ${percentage}%`)
           },
           // Callback for once the upload is completed
           onSuccess() {
             if (!silent) {
-              spinner.stop("Upload complete!");
+              spinner.stop('Upload complete!')
             }
             if (verbose) {
-              log.success("TUS upload completed successfully");
+              log.success('TUS upload completed successfully')
             }
-            resolve();
+            resolve()
           },
-        });
+        })
 
         // Start the upload
-        if (verbose) log.info("[TUS] Starting upload...");
-        upload.start();
-      });
+        if (verbose)
+          log.info('[TUS] Starting upload...')
+        upload.start()
+      })
 
       // Start the build job via Capgo backend
-      if (!silent) log.info("Starting build job...");
+      if (!silent)
+        log.info('Starting build job...')
 
       const startResponse = await fetch(
         `${host}/build/start/${buildRequest.job_id}`,
         {
-          method: "POST",
+          method: 'POST',
           headers: {
-            "Content-Type": "application/json",
-            authorization: options.apikey,
+            'Content-Type': 'application/json',
+            'authorization': options.apikey,
           },
           body: JSON.stringify({ app_id: appId }),
         },
-      );
+      )
 
       if (!startResponse.ok) {
-        const errorText = await startResponse.text();
+        const errorText = await startResponse.text()
         throw new Error(
           `Failed to start build: ${startResponse.status} - ${errorText}`,
-        );
+        )
       }
 
       const startResult = (await startResponse.json()) as {
-        status?: string;
-        logs_url?: string;
-        logs_token?: string;
-      };
-
-      if (!silent) {
-        log.success("Build started!");
-        log.info("Streaming build logs...");
+        status?: string
+        logs_url?: string
+        logs_token?: string
       }
 
-      const abortController = new AbortController();
-      let cancelRequested = false;
+      if (!silent) {
+        log.success('Build started!')
+        log.info('Streaming build logs...')
+      }
+
+      const abortController = new AbortController()
+      let cancelRequested = false
       const cancelBuild = async () => {
-        if (cancelRequested) return;
-        cancelRequested = true;
-        const cancelAbort = new AbortController();
-        const timeout = setTimeout(() => cancelAbort.abort(), 4000);
+        if (cancelRequested)
+          return
+        cancelRequested = true
+        const cancelAbort = new AbortController()
+        const timeout = setTimeout(() => cancelAbort.abort(), 4000)
         try {
           await fetch(`${host}/build/cancel/${buildRequest.job_id}`, {
-            method: "POST",
+            method: 'POST',
             headers: {
-              "Content-Type": "application/json",
-              authorization: options.apikey,
+              'Content-Type': 'application/json',
+              'authorization': options.apikey,
             },
             body: JSON.stringify({ app_id: appId }),
             signal: cancelAbort.signal,
-          });
-        } catch {
-          // ignore cancellation errors
-        } finally {
-          clearTimeout(timeout);
+          })
         }
-      };
+        catch {
+          // ignore cancellation errors
+        }
+        finally {
+          clearTimeout(timeout)
+        }
+      }
 
       const onSigint = async () => {
         try {
           if (cancelRequested) {
-            process.exit(1);
+            process.exit(1)
           }
           if (!silent)
-            log.warn("Canceling build... (press Ctrl+C again to force quit)");
-          await cancelBuild();
-          abortController.abort();
-        } catch {
+            log.warn('Canceling build... (press Ctrl+C again to force quit)')
+          await cancelBuild()
+          abortController.abort()
+        }
+        catch {
           // Prevent unhandled rejection from crashing the process
         }
-      };
+      }
 
-      process.on("SIGINT", onSigint);
+      process.on('SIGINT', onSigint)
 
-      let finalStatus: string;
+      let finalStatus: string
       // Stream logs from the build - returns final status if detected from stream
-      let showStatusChecks = false;
+      let showStatusChecks = false
       const statusCheck = async (): Promise<string | null> => {
         try {
           const response = await fetch(
@@ -1777,24 +1872,25 @@ export async function requestBuildInternal(
                 authorization: options.apikey,
               },
             },
-          );
+          )
           if (!response.ok) {
-            return null;
+            return null
           }
-          const status = (await response.json()) as { status: string };
-          const normalized = status.status?.toLowerCase?.() ?? "";
+          const status = (await response.json()) as { status: string }
+          const normalized = status.status?.toLowerCase?.() ?? ''
           if (!silent && showStatusChecks)
-            log.info(`Build status: ${normalized || status.status}`);
+            log.info(`Build status: ${normalized || status.status}`)
           if (TERMINAL_STATUS_SET.has(normalized)) {
-            return normalized;
+            return normalized
           }
-          return null;
-        } catch {
-          return null;
+          return null
         }
-      };
+        catch {
+          return null
+        }
+      }
 
-      let streamStatus: string | null = null;
+      let streamStatus: string | null = null
       try {
         streamStatus = await streamBuildLogs(
           silent,
@@ -1804,22 +1900,24 @@ export async function requestBuildInternal(
           statusCheck,
           abortController.signal,
           () => {
-            showStatusChecks = true;
+            showStatusChecks = true
           },
-        );
-      } finally {
-        process.removeListener("SIGINT", onSigint);
+        )
+      }
+      finally {
+        process.removeListener('SIGINT', onSigint)
       }
 
       // Only poll if we didn't get the final status from the stream
       if (streamStatus) {
-        finalStatus = streamStatus;
+        finalStatus = streamStatus
         // Persist terminal status to the database via /build/status.
         // The WebSocket only delivers status to the CLI — calling the API
         // endpoint triggers the backend to write status + last_error into build_requests.
         if (TERMINAL_STATUS_SET.has(streamStatus))
-          await statusCheck().catch(() => {});
-      } else {
+          await statusCheck().catch(() => {})
+      }
+      else {
         // Fall back to polling if stream ended without final status
         finalStatus = await pollBuildStatus(
           host,
@@ -1830,55 +1928,60 @@ export async function requestBuildInternal(
           silent,
           showStatusChecks,
           abortController.signal,
-        );
+        )
       }
 
       if (!silent) {
-        if (finalStatus === "succeeded") {
-          log.success(`Build completed successfully!`);
-        } else if (finalStatus === "failed") {
-          log.error(`Build failed`);
-        } else {
-          log.warn(`Build finished with status: ${finalStatus}`);
+        if (finalStatus === 'succeeded') {
+          log.success(`Build completed successfully!`)
+        }
+        else if (finalStatus === 'failed') {
+          log.error(`Build failed`)
+        }
+        else {
+          log.warn(`Build finished with status: ${finalStatus}`)
         }
       }
 
       // Calculate build time (in seconds with 2 decimal places, matching upload behavior)
-      const buildTime = ((Date.now() - buildStartTime) / 1000).toFixed(2);
+      const buildTime = ((Date.now() - buildStartTime) / 1000).toFixed(2)
 
       // Send analytics event for build result (includes build time)
       await sendEvent(options.apikey, {
-        channel: "native-builder",
-        event: finalStatus === "succeeded" ? "Build succeeded" : "Build failed",
-        icon: finalStatus === "succeeded" ? "✅" : "❌",
+        channel: 'native-builder',
+        event: finalStatus === 'succeeded' ? 'Build succeeded' : 'Build failed',
+        icon: finalStatus === 'succeeded' ? '✅' : '❌',
         user_id: orgId,
         tags: {
-          "app-id": appId,
-          platform: options.platform,
-          status: finalStatus || "unknown",
-          time: buildTime,
+          'app-id': appId,
+          'platform': options.platform,
+          'status': finalStatus || 'unknown',
+          'time': buildTime,
         },
         notify: false,
-      }).catch();
+      }).catch()
 
       return {
-        success: finalStatus === "succeeded",
+        success: finalStatus === 'succeeded',
         jobId: buildRequest.job_id,
         uploadUrl: buildRequest.upload_url,
         status: finalStatus || startResult.status || buildRequest.status,
-      };
-    } finally {
-      // Clean up temp directory
-      await rm(tempDir, { recursive: true, force: true });
+      }
     }
-  } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    if (!silent) log.error(errorMessage);
+    finally {
+      // Clean up temp directory
+      await rm(tempDir, { recursive: true, force: true })
+    }
+  }
+  catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error)
+    if (!silent)
+      log.error(errorMessage)
 
     return {
       success: false,
       error: errorMessage,
-    };
+    }
   }
 }
 
@@ -1886,9 +1989,9 @@ export async function requestBuildCommand(
   appId: string,
   options: BuildRequestOptions,
 ): Promise<void> {
-  const result = await requestBuildInternal(appId, options, false);
+  const result = await requestBuildInternal(appId, options, false)
 
   if (!result.success) {
-    exit(1);
+    exit(1)
   }
 }
