@@ -17,6 +17,8 @@ npx @capgo/cli@latest init
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
 Capgo bundles are web assets and can be fetched by anyone who knows the URL. Use encryption for banking, regulated, or other high-security apps.
 
+If iOS sync validation fails during onboarding, the CLI can offer to run a one-line reset command for the native iOS folder, wait for you to type `ready` after a manual fix, and offer cancellation every third failed retry.
+
 At the end of onboarding, the CLI can also offer to install the Capgo agent skills package from GitHub using the Skills CLI before showing the GitHub support prompt.
 
 **Example:**

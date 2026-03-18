@@ -24,7 +24,7 @@ TanStack Intent skills should stay focused and under the validator line limit, s
 
 ### Project setup and diagnostics
 
-- `init [apikey] [appId]`: guided first-time setup for Capgo in a Capacitor app. In interactive use, onboarding can also offer a final `npx skills add https://github.com/Cap-go/capgo-skills -g -y` install step before the GitHub support prompt; if accepted, the support menu includes `Cap-go/capgo-skills` alongside the updater-only and all-Capgo choices.
+- `init [apikey] [appId]`: guided first-time setup for Capgo in a Capacitor app. In interactive use, onboarding can also offer a final `npx skills add https://github.com/Cap-go/capgo-skills -g -y` install step before the GitHub support prompt; if accepted, the support menu includes `Cap-go/capgo-skills` alongside the updater-only and all-Capgo choices. If iOS sync validation fails during onboarding, the CLI can offer to run a one-line native reset command, wait for you to type `ready` after a manual fix, and offer cancellation every third failed retry.
 - `login [apikey]`: store an API key locally.
 - `doctor`: inspect installation health and gather troubleshooting details.
 - `probe`: test whether the update endpoint would deliver an update.

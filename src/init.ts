@@ -187,17 +187,70 @@ async function saveAppIdToCapacitorConfig(appId: string) {
   }
 }
 
-function stopForBrokenIosSync(platformRunner: string, details: string[]): never {
+async function handleBrokenIosSync(platformRunner: string, details: string[], orgId: string, apikey: string, failureCount: number) {
   const resetAdvice = getNativeProjectResetAdvice(platformRunner, 'ios')
   pLog.error('Capgo iOS dependency sync verification failed.')
   for (const detail of details) {
     pLog.error(detail)
   }
-  pLog.error('Stop here to avoid testing on a broken native iOS project.')
+  pLog.error('The native iOS project is still broken, so this build step cannot continue yet.')
   pLog.warn(resetAdvice.summary)
   pLog.info(resetAdvice.command)
-  pOutro('After reset, run the same `capgo init ...` command to resume onboarding from where you left off (no need to redo previous steps).')
-  exit(1)
+
+  if (failureCount % 3 === 0) {
+    const cancelInit = await pConfirm({
+      message: `iOS sync has failed ${failureCount} times. Do you want to cancel init?`,
+      initialValue: false,
+    })
+    await cancelCommand(cancelInit, orgId, apikey)
+    if (cancelInit) {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+      pOutro('Bye 👋\n💡 You can resume the onboarding anytime by running the same command again')
+      exit(1)
+    }
+  }
+
+  const runResetNow = await pConfirm({
+    message: 'Would you like me to run this reset command for you now?',
+    initialValue: true,
+  })
+  await cancelCommand(runResetNow, orgId, apikey)
+
+  if (runResetNow) {
+    const resetSpinner = pSpinner()
+    resetSpinner.start(`Running: ${resetAdvice.command}`)
+    try {
+      execSync(resetAdvice.command, execOption as ExecSyncOptions)
+      resetSpinner.stop('iOS folder recreated and synced ✅')
+    }
+    catch (err) {
+      resetSpinner.stop('iOS folder reset failed ❌')
+      pLog.error(formatError(err))
+    }
+    return
+  }
+
+  pLog.info('We will wait while you fix the iOS folder yourself.')
+  pLog.info('When you are ready, type "ready" and I will retry this step.')
+
+  while (true) {
+    const ready = await pText({
+      message: 'Type "ready" when the iOS folder is fixed.',
+      placeholder: 'ready',
+      validate: (value) => {
+        if (!value?.trim())
+          return 'Type "ready" to retry.'
+        if (value.trim().toLowerCase() !== 'ready')
+          return 'Type "ready" to retry.'
+      },
+    })
+    if (pIsCancel(ready)) {
+      await cancelCommand(ready, orgId, apikey)
+    }
+    if ((ready as string).trim().toLowerCase() === 'ready') {
+      return
+    }
+  }
 }
 
 function validateAppId(value: string | undefined): string | undefined {
@@ -589,7 +642,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     const coreVersion = dependencies.get('@capacitor/core')
     if (!coreVersion) {
       s.stop('Error')
-      pLog.warn(`Cannot find @capacitor/core in package.json, please run \`capgo init\` in a capacitor project`)
+      pLog.warn(`Cannot find @capacitor/core in package.json, please run \`@capgo/cli init\` in a capacitor project`)
       pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
@@ -626,7 +679,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     }
     if (pm.pm === 'unknown') {
       s.stop('Error')
-      pLog.warn(`Cannot recognize package manager, please run \`capgo init\` in a capacitor project with npm, pnpm, bun or yarn`)
+      pLog.warn(`Cannot recognize package manager, please run \`@capgo/cli init\` in a capacitor project with npm, pnpm, bun or yarn`)
       pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
@@ -859,14 +912,13 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
   const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
-    const s = pSpinner()
-    s.start(`Checking project type`)
     const projectType = await findProjectType()
     const buildCommand = await findBuildCommandForProjectType(projectType)
-    s.message(`Running: ${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`)
     const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
+      const s = pSpinner()
+      s.start(`Checking project type`)
       s.stop('Missing build script')
       pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
       pLog.info(`💡 Your package.json needs a "${buildCommand}" script to build the app`)
@@ -886,17 +938,30 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
       pOutro(`Bye 👋\n💡 Add a "${buildCommand}" script to package.json and run the command again`)
       exit()
     }
-    execSync(`${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`, execOption as ExecSyncOptions)
 
-    if (platform === 'ios') {
-      const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
-      if (syncValidation.shouldCheck && !syncValidation.valid) {
-        s.stop('iOS sync check failed ❌')
-        stopForBrokenIosSync(pm.runner, syncValidation.details)
+    const buildAndSyncCommand = `${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`
+    let iosSyncFailureCount = 0
+
+    while (true) {
+      const s = pSpinner()
+      s.start('Checking project type')
+      s.message(`Running: ${buildAndSyncCommand}`)
+      execSync(buildAndSyncCommand, execOption as ExecSyncOptions)
+
+      if (platform === 'ios') {
+        const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
+        if (syncValidation.shouldCheck && !syncValidation.valid) {
+          iosSyncFailureCount += 1
+          s.stop('iOS sync check failed ❌')
+          await handleBrokenIosSync(pm.runner, syncValidation.details, orgId, apikey, iosSyncFailureCount)
+          pLog.info(`Retrying build and sync for iOS (attempt ${iosSyncFailureCount + 1})`)
+          continue
+        }
       }
-    }
 
-    s.stop(`Build & Sync Done ✅`)
+      s.stop('Build & Sync Done ✅')
+      break
+    }
   }
   else {
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
@@ -1439,7 +1504,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const pm = getPMAndCommand()
   pIntro(`Capgo onboarding 🛫`)
   pLog.info(`📖 See the complete onboarding guide: https://capgo.app/docs/getting-started/onboarding/`)
-  pLog.info(`⏱️  Estimated time: 10-20 minutes`)
+  pLog.info(`⏱️  Estimated time: 2-10 minutes`)
   await warnIfNotInCapacitorRoot()
   await checkAlerts()
 
