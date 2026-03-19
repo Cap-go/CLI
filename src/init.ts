@@ -1,5 +1,5 @@
 import type { ExecSyncOptions } from 'node:child_process'
-import type { Options } from './api/app'
+import type { Options, PendingOnboardingApp } from './api/app'
 import type { Organization } from './utils'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -8,7 +8,7 @@ import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from '@clack/prompts'
 import { format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
-import { checkAppIdsExist } from './api/app'
+import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from './api/app'
 import { checkAlerts } from './api/update'
 import { addAppInternal } from './app/add'
 import { markSnag, waitLog } from './app/debug'
@@ -97,7 +97,7 @@ function cleanupStepsDone() {
   }
 }
 
-async function cancelCommand(command: boolean | symbol, orgId: string, apikey: string) {
+async function cancelCommand(command: boolean | string | symbol, orgId: string, apikey: string) {
   if (pIsCancel(command)) {
     await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
@@ -275,6 +275,141 @@ async function askForAppId(message = 'Enter your appId:'): Promise<string> {
   }
 
   return appId as string
+}
+
+async function ensureCapacitorProjectReady(
+  orgId: string,
+  apikey: string,
+  appId: string,
+  pendingApp?: PendingOnboardingApp,
+) {
+  const nearestConfig = findNearestCapacitorConfig(cwd())
+  if (nearestConfig?.dir === cwd()) {
+    return
+  }
+
+  if (nearestConfig) {
+    await warnIfNotInCapacitorRoot()
+    return
+  }
+
+  if (pendingApp?.existing_app === false) {
+    const pm = getPMAndCommand()
+    const appName = pendingApp.name?.trim() || appId
+    pLog.info(`No Capacitor config was found for ${appId}.`)
+    pLog.info('This app was created from the web onboarding as a new app.')
+
+    const shouldInitCapacitor = await pConfirm({
+      message: `Do you want me to run "${pm.runner} cap init \\"${appName}\\" \\"${appId}\\"" now?`,
+      initialValue: true,
+    })
+    await cancelCommand(shouldInitCapacitor, orgId, apikey)
+
+    if (shouldInitCapacitor) {
+      const spinner = pSpinner()
+      spinner.start(`Running: ${pm.runner} cap init "${appName}" "${appId}"`)
+      try {
+        execSync(`${pm.runner} cap init "${appName}" "${appId}"`, execOption as ExecSyncOptions)
+        spinner.stop('Capacitor init done ✅')
+        await saveAppIdToCapacitorConfig(appId)
+        return
+      }
+      catch (error) {
+        spinner.stop('Capacitor init failed ❌')
+        throw error
+      }
+    }
+  }
+
+  await warnIfNotInCapacitorRoot()
+}
+
+async function selectPendingOnboardingApp(
+  orgId: string,
+  apikey: string,
+  requestedAppId: string | undefined,
+  pendingApps: PendingOnboardingApp[],
+) {
+  const requestedApp = requestedAppId
+    ? pendingApps.find(app => app.app_id === requestedAppId)
+    : undefined
+
+  if (requestedApp) {
+    const useRequestedApp = await pConfirm({
+      message: `Use the pending onboarding app "${requestedApp.name || requestedApp.app_id}" (${requestedApp.app_id}) from the web console?`,
+      initialValue: true,
+    })
+    await cancelCommand(useRequestedApp, orgId, apikey)
+    return useRequestedApp ? requestedApp : undefined
+  }
+
+  if (pendingApps.length === 0) {
+    return undefined
+  }
+
+  const selectedAppId = await pSelect({
+    message: 'A pending onboarding app already exists in Capgo. What do you want to do?',
+    options: [
+      ...pendingApps.map(app => ({
+        value: app.app_id,
+        label: `${app.name || app.app_id} (${app.app_id})`,
+        hint: app.existing_app ? 'Existing app' : 'New app created from web onboarding',
+      })),
+      { value: '__create_new__', label: 'Create a new app from the CLI' },
+    ],
+  })
+
+  await cancelCommand(selectedAppId, orgId, apikey)
+
+  if (selectedAppId === '__create_new__') {
+    return undefined
+  }
+
+  return pendingApps.find(app => app.app_id === selectedAppId)
+}
+
+async function maybeReusePendingOnboardingApp(
+  organization: Organization,
+  apikey: string,
+  appId: string | undefined,
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+) {
+  const pendingApps = await listPendingOnboardingApps(supabase, organization.gid)
+  const selectedApp = await selectPendingOnboardingApp(organization.gid, apikey, appId, pendingApps)
+
+  if (!selectedApp) {
+    return {
+      appId,
+      pendingApp: undefined,
+      reusedPendingApp: false,
+    }
+  }
+
+  const selectedAppId = selectedApp.app_id
+  pLog.info(`Using pending onboarding app ${selectedAppId}`)
+
+  if (findNearestCapacitorConfig(cwd())) {
+    await saveAppIdToCapacitorConfig(selectedAppId)
+  }
+
+  const cleanupSpinner = pSpinner()
+  cleanupSpinner.start(`Preparing ${selectedAppId} for real onboarding`)
+  try {
+    await completePendingOnboardingApp(supabase, organization.gid, selectedAppId)
+    cleanupSpinner.stop('Pending onboarding app prepared ✅')
+  }
+  catch (error) {
+    cleanupSpinner.stop('Could not prepare pending onboarding app ❌')
+    throw error
+  }
+
+  await markStep(organization.gid, apikey, 'add-app', selectedAppId)
+
+  return {
+    appId: selectedAppId,
+    pendingApp: selectedApp,
+    reusedPendingApp: true,
+  }
 }
 
 async function checkPrerequisitesStep(orgId: string, apikey: string) {
@@ -1303,6 +1438,8 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
       deltaOnly: delta,
       bundle: newVersion,
       ignoreChecksumCheck: true,
+      // Onboarding owns replication UX after the upload spinner stops.
+      showReplicationProgress: false,
     }, false)
     if (!uploadRes?.success) {
       s.stop('Error')
@@ -1505,20 +1642,28 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pIntro(`Capgo onboarding 🛫`)
   pLog.info(`📖 See the complete onboarding guide: https://capgo.app/docs/getting-started/onboarding/`)
   pLog.info(`⏱️  Estimated time: 2-10 minutes`)
-  await warnIfNotInCapacitorRoot()
   await checkAlerts()
 
-  const extConfig = (!options.supaAnon || !options.supaHost)
-    ? await getConfig()
-    : await updateConfigUpdater({
-        statsUrl: `${options.supaHost}/functions/v1/stats`,
-        channelUrl: `${options.supaHost}/functions/v1/channel_self`,
-        updateUrl: `${options.supaHost}/functions/v1/updates`,
-        localApiFiles: `${options.supaHost}/functions/v1`,
-        localS3: true,
-        localSupa: options.supaHost,
-        localSupaAnon: options.supaAnon,
-      })
+  let extConfig: Awaited<ReturnType<typeof getConfig>> | undefined
+  if (!options.supaAnon || !options.supaHost) {
+    try {
+      extConfig = await getConfig()
+    }
+    catch {
+      extConfig = undefined
+    }
+  }
+  else {
+    extConfig = await updateConfigUpdater({
+      statsUrl: `${options.supaHost}/functions/v1/stats`,
+      channelUrl: `${options.supaHost}/functions/v1/channel_self`,
+      updateUrl: `${options.supaHost}/functions/v1/updates`,
+      localApiFiles: `${options.supaHost}/functions/v1`,
+      localS3: true,
+      localSupa: options.supaHost,
+      localSupaAnon: options.supaAnon,
+    })
+  }
   const localConfig = await getLocalConfig()
   appId = getAppId(appId, extConfig?.config)
   options.apikey = apikeyCommand || findSavedKey()
@@ -1546,8 +1691,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   const organization = await getOrganization(supabase, ['admin', 'super_admin'])
   const orgId = organization.gid
+  const pendingOnboardingSelection = await maybeReusePendingOnboardingApp(organization, options.apikey, appId, supabase)
+  appId = pendingOnboardingSelection.appId ?? appId
+  await ensureCapacitorProjectReady(orgId, options.apikey, appId, pendingOnboardingSelection.pendingApp)
 
-  const stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
+  let stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
+  if (pendingOnboardingSelection.reusedPendingApp) {
+    stepToSkip = Math.max(stepToSkip, 2)
+  }
   let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
   let delta = false
   let currentVersion = pkgVersion
