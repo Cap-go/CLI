@@ -15,6 +15,27 @@ export type PendingOnboardingApp = Pick<
   'app_id' | 'name' | 'icon_url' | 'need_onboarding' | 'existing_app' | 'ios_store_url' | 'android_store_url'
 >
 
+function isMissingOnboardingSchemaError(error: { message?: string, details?: string, hint?: string, code?: string | null } | null) {
+  if (!error)
+    return false
+
+  const text = [error.message, error.details, error.hint, error.code]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return [
+    'need_onboarding',
+    'existing_app',
+    'ios_store_url',
+    'android_store_url',
+    'column',
+    'schema cache',
+    'pgrst204',
+    '42703',
+  ].some(token => text.includes(token))
+}
+
 export async function listPendingOnboardingApps(
   supabase: SupabaseClient<Database>,
   orgId: string,
@@ -27,6 +48,10 @@ export async function listPendingOnboardingApps(
     .order('created_at', { ascending: false })
 
   if (error) {
+    if (isMissingOnboardingSchemaError(error)) {
+      return []
+    }
+
     throw new Error(`Could not load pending onboarding apps: ${error.message}`)
   }
 
