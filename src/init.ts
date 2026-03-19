@@ -309,7 +309,14 @@ async function ensureCapacitorProjectReady(
       const spinner = pSpinner()
       spinner.start(`Running: ${pm.runner} cap init "${appName}" "${appId}"`)
       try {
-        execSync(`${pm.runner} cap init "${appName}" "${appId}"`, execOption as ExecSyncOptions)
+        const initResult = spawnSync(pm.runner, ['cap', 'init', appName, appId], { stdio: 'pipe' as const })
+        if (initResult.error)
+          throw initResult.error
+        if (initResult.status !== 0) {
+          const stderr = initResult.stderr?.toString().trim()
+          const stdout = initResult.stdout?.toString().trim()
+          throw new Error(stderr || stdout || `cap init exited with code ${initResult.status}`)
+        }
         spinner.stop('Capacitor init done ✅')
         await saveAppIdToCapacitorConfig(appId)
         return

@@ -63,15 +63,20 @@ export async function completePendingOnboardingApp(
   orgId: string,
   appId: string,
 ): Promise<void> {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('apps')
     .update({ need_onboarding: false })
+    .select('app_id')
     .eq('owner_org', orgId)
     .eq('app_id', appId)
     .eq('need_onboarding', true)
 
   if (error) {
     throw new Error(`Could not complete onboarding for app ${appId}: ${error.message}`)
+  }
+
+  if (!data?.length) {
+    throw new Error(`Could not complete onboarding for app ${appId} in org ${orgId}: app was not found or is no longer pending onboarding`)
   }
 }
 
