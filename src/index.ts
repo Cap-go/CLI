@@ -10,6 +10,7 @@ import { listApp } from './app/list'
 import { setApp } from './app/set'
 import { setSetting } from './app/setting'
 import { clearCredentialsCommand, listCredentialsCommand, migrateCredentialsCommand, saveCredentialsCommand, updateCredentialsCommand } from './build/credentials-command'
+import { onboardingCommand } from './build/onboarding/command'
 import { requestBuildCommand } from './build/request'
 import { cleanupBundle } from './bundle/cleanup'
 import { checkCompatibility } from './bundle/compatibility'
@@ -728,6 +729,11 @@ const build = program
    Save your credentials first:
    npx @capgo/cli build credentials save --appId <your-app-id> --platform ios
    npx @capgo/cli build credentials save --appId <your-app-id> --platform android`)
+
+build
+  .command('onboarding')
+  .description('Set up iOS build credentials interactively (creates certificates and profiles automatically)')
+  .action(onboardingCommand)
 
 build
   .command('request [appId]')
