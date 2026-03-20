@@ -1056,13 +1056,19 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
               🎉  You're all set!
             </Text>
             <Newline />
-            <Text>Your iOS app is building in the cloud.</Text>
-            {buildUrl && (
-              <Text>Track it at <Text color="cyan" underline>{buildUrl}</Text></Text>
-            )}
+            {buildUrl
+              ? (
+                <>
+                  <Text>Your iOS app is building in the cloud.</Text>
+                  <Text>Track it at <Text color="cyan" underline>{buildUrl}</Text></Text>
+                </>
+                )
+              : (
+                <Text>Your iOS credentials are saved and ready to use.</Text>
+                )}
             <Newline />
             <Text dimColor>
-              Run <Text bold color="white">npx @capgo/cli@latest build request --platform ios</Text> anytime for future builds.
+              Run <Text bold color="white">npx @capgo/cli@latest build request --platform ios</Text> anytime to start a build.
             </Text>
           </Box>
           <Newline />
