@@ -1,5 +1,5 @@
 // src/build/onboarding/progress.ts
-import { readFile, readdir, unlink } from 'node:fs/promises'
+import { readFile, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type { OnboardingProgress, OnboardingStep } from './types.js'
