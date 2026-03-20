@@ -33,7 +33,7 @@ import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/p
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process, { chdir, cwd, exit } from 'node:process'
-import { log as clackLog } from '@clack/prompts'
+import { log as clackLog, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
@@ -90,14 +90,21 @@ function createDefaultLogger(silent: boolean): BuildLogger {
       }
     },
     uploadProgress: (() => {
-      let lastLogged = -1
+      const s = silent ? null : spinnerC()
+      let started = false
       return (percent: number) => {
-        if (!silent) {
-          const rounded = Math.floor(percent / 10) * 10
-          if (rounded > lastLogged) {
-            lastLogged = rounded
-            clackLog.info(`Uploading: ${rounded}%`)
-          }
+        if (silent || !s) {
+          return
+        }
+        if (!started) {
+          s.start('Uploading bundle')
+          started = true
+        }
+        if (percent >= 100) {
+          s.stop('Upload complete!')
+        }
+        else {
+          s.message(`Uploading ${percent.toFixed(0)}%`)
         }
       }
     })(),
