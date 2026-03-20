@@ -54,11 +54,22 @@ export interface BuildLogger {
 /** Default logger that uses @clack/prompts (used by CLI command) */
 function createDefaultLogger(silent: boolean): BuildLogger {
   return {
-    info: (msg: string) => { if (!silent) clackLog.info(msg) },
-    error: (msg: string) => { if (!silent) clackLog.error(msg) },
-    warn: (msg: string) => { if (!silent) clackLog.warn(msg) },
-    success: (msg: string) => { if (!silent) clackLog.success(msg) },
-    buildLog: (msg: string) => { if (!silent) console.log(msg) },
+    info: (msg: string) => {
+      if (!silent) { clackLog.info(msg) }
+    },
+    error: (msg: string) => {
+      if (!silent) { clackLog.error(msg) }
+    },
+    warn: (msg: string) => {
+      if (!silent) { clackLog.warn(msg) }
+    },
+    success: (msg: string) => {
+      if (!silent) { clackLog.success(msg) }
+    },
+    buildLog: (msg: string) => {
+      // eslint-disable-next-line no-console
+      if (!silent) { console.log(msg) }
+    },
     uploadProgress: (_percent: number) => {},
   }
 }
@@ -1237,9 +1248,9 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
       log.error('')
       log.error('Provide credentials via:')
-      log.error('  1. CLI arguments: npx @capgo/cli build request --platform ios --apple-id "..." --p12-password "..."')
-      log.error('  2. Environment variables: export APPLE_ID="..." P12_PASSWORD="..."')
-      log.error('  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...')
+      log.error(`  1. CLI arguments: npx @capgo/cli build request --platform ${options.platform} ${options.platform === 'ios' ? '--apple-key-id "..." --apple-issuer-id "..." --apple-key-content "..."' : '--android-keystore-file "..." --keystore-key-alias "..."'}`)
+      log.error(`  2. Environment variables: ${options.platform === 'ios' ? 'export APPLE_KEY_ID="..." APPLE_ISSUER_ID="..." APPLE_KEY_CONTENT="..."' : 'export ANDROID_KEYSTORE_FILE="..." KEYSTORE_KEY_ALIAS="..."'}`)
+      log.error(`  3. Saved credentials: npx @capgo/cli build credentials save --platform ${options.platform} ...`)
       log.error('')
       log.error('Documentation:')
       log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
