@@ -538,14 +538,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
     }
 
     if (step === 'build-complete') {
-      // Clear build output to prevent Ink cursor tracking issues
-      // (large height change between requesting-build and build-complete
-      // causes Ink to lose its render position and draw duplicates)
       setBuildOutput([])
+      // Exit immediately after rendering the final screen
       const timer = setTimeout(() => {
         if (!cancelled)
           exit()
-      }, 4000)
+      }, 100)
       return () => { cancelled = true; clearTimeout(timer) }
     }
 
