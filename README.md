@@ -69,6 +69,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
   - [Set](#organisation-set)
   - [Delete](#organisation-delete)
 - 🔹 [Build](#build)
+  - [Onboarding](#build-onboarding)
   - [Request](#build-request)
   - [Credentials](#build-credentials)
 - 🔹 [Probe](#probe)
@@ -1116,6 +1117,14 @@ npx @capgo/cli@latest organisation delete
    Save your credentials first:
    npx @capgo/cli build credentials save --appId <your-app-id> --platform ios
    npx @capgo/cli build credentials save --appId <your-app-id> --platform android
+
+### <a id="build-onboarding"></a> 🔹 **Onboarding**
+
+```bash
+npx @capgo/cli@latest build onboarding
+```
+
+Set up iOS build credentials interactively (creates certificates and profiles automatically)
 
 ### <a id="build-request"></a> 🔹 **Request**
 
