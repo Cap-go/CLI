@@ -8,6 +8,14 @@ import { loadProgress } from './progress.js'
 import OnboardingApp from './ui/app.js'
 
 export async function onboardingCommand(): Promise<void> {
+  // Ink requires an interactive terminal — fail fast in CI/pipes
+  if (!process.stdin.isTTY || !process.stdout.isTTY) {
+    console.error('Error: `build onboarding` requires an interactive terminal.')
+    console.error('It cannot run in CI, pipes, or non-TTY environments.')
+    console.error('Use `build credentials save` for non-interactive credential setup.')
+    process.exit(1)
+  }
+
   // Detect app ID from capacitor.config.ts
   let appId: string | undefined
   try {
