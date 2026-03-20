@@ -115,7 +115,7 @@ async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
  * @param url - The URL to fetch
  * @param options - Fetch options
  * @param maxRetries - Maximum number of retry attempts (default: 3)
- * @param silent - Suppress log output
+ * @param logger - Optional BuildLogger for log output
  * @returns The fetch Response if successful
  * @throws Error if all retries are exhausted
  */

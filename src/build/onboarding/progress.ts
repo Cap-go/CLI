@@ -29,8 +29,11 @@ export async function loadProgress(
     const content = await readFile(filePath, 'utf-8')
     return JSON.parse(content) as OnboardingProgress
   }
-  catch {
-    return null
+  catch (error: unknown) {
+    if (error instanceof Error && 'code' in error && (error as NodeJS.ErrnoException).code === 'ENOENT') {
+      return null
+    }
+    throw error
   }
 }
 

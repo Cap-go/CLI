@@ -888,6 +888,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                 setAskOverwrite(false)
               }
               else {
+                void deleteProgress(appId).catch(() => {})
                 setAskOverwrite(false)
                 addLog('Skipped saving — existing credentials preserved.', 'yellow')
                 setStep('ask-build')

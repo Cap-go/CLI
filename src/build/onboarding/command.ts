@@ -1,6 +1,8 @@
 // src/build/onboarding/command.ts
-import React from 'react'
 import { render } from 'ink'
+import process from 'node:process'
+import React from 'react'
+import { log } from '@clack/prompts'
 import { getAppId, getConfig } from '../../utils.js'
 import { loadProgress } from './progress.js'
 import OnboardingApp from './ui/app.js'
@@ -17,8 +19,7 @@ export async function onboardingCommand(): Promise<void> {
   }
 
   if (!appId) {
-    console.error('Could not detect app ID from capacitor.config.ts')
-    console.error('Make sure you are in a Capacitor project directory.')
+    log.error('Could not detect app ID from capacitor.config.ts. Make sure you are in a Capacitor project directory.')
     process.exit(1)
   }
 
