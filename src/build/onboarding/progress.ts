@@ -78,8 +78,16 @@ export function getResumeStep(progress: OnboardingProgress | null): OnboardingSt
 
   const { completedSteps } = progress
 
-  if (!completedSteps.apiKeyVerified)
+  if (!completedSteps.apiKeyVerified) {
+    // Resume at the furthest partial input step
+    if (progress.issuerId && progress.keyId && progress.p8Path)
+      return 'verifying-key'
+    if (progress.keyId && progress.p8Path)
+      return 'input-issuer-id'
+    if (progress.p8Path)
+      return 'input-key-id'
     return 'api-key-instructions'
+  }
   if (!completedSteps.certificateCreated)
     return 'creating-certificate'
   if (!completedSteps.profileCreated)

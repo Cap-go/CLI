@@ -12,9 +12,10 @@ import { loadProgress, saveProgress, deleteProgress, getResumeStep } from '../pr
 import { generateCsr, createP12, DEFAULT_P12_PASSWORD } from '../csr.js'
 import { generateJwt, verifyApiKey, createCertificate, ensureBundleId, createProfile, deleteProfile, revokeCertificate, DuplicateProfileError, CertificateLimitError } from '../apple-api.js'
 import { canUseFilePicker, openFilePicker } from '../file-picker.js'
-import { readFile } from 'node:fs/promises'
+import { readFile, copyFile } from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
+import { homedir } from 'node:os'
 import open from 'open'
 import { updateSavedCredentials, loadSavedCredentials } from '../../credentials.js'
 import { requestBuildInternal, type BuildLogger } from '../../request.js'
@@ -36,12 +37,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const [retryStep, setRetryStep] = useState<OnboardingStep | null>(null)
-  const [askOverwrite, setAskOverwrite] = useState(false)
+  // askOverwrite removed — credential check happens at start now
   const [duplicateProfiles, setDuplicateProfiles] = useState<Array<{ id: string, name: string, profileType: string }>>([])
   const [existingCerts, setExistingCerts] = useState<Array<{ id: string, name: string, serialNumber: string, expirationDate: string }>>([])
   const [certToRevoke, setCertToRevoke] = useState<string | null>(null)
   const pickerOpenedRef = useRef(false)
-  const overwriteConfirmedRef = useRef(false)
+  // overwriteConfirmedRef removed — credential check happens at start now
 
   // Open browser on Ctrl+O (FilteredTextInput ignores ctrl keys, so no conflict)
   useInput((input, key) => {
@@ -53,8 +54,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
   // Collected data — restore p8Path from progress if resuming
   const [p8Path, setP8Path] = useState(initialProgress?.p8Path || '')
   const [p8Content, _setP8Content] = useState('')
-  const [keyId, setKeyId] = useState(initialProgress?.completedSteps.apiKeyVerified?.keyId || '')
-  const [issuerId, setIssuerId] = useState(initialProgress?.completedSteps.apiKeyVerified?.issuerId || '')
+  const [keyId, setKeyId] = useState(initialProgress?.completedSteps.apiKeyVerified?.keyId || initialProgress?.keyId || '')
+  const [issuerId, setIssuerId] = useState(initialProgress?.completedSteps.apiKeyVerified?.issuerId || initialProgress?.issuerId || '')
 
   // Get terminal height for build output sizing
   const { stdout } = useStdout()
@@ -86,6 +87,20 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
     setLog(prev => [...prev, { text, color }])
   }, [])
 
+
+  /** Save partial progress so the user can resume mid-flow */
+  const savePartialProgress = useCallback(async (updates: { p8Path?: string, keyId?: string, issuerId?: string }) => {
+    const existing = await loadProgress(appId) || {
+      platform: 'ios' as const,
+      appId,
+      startedAt: new Date().toISOString(),
+      completedSteps: {},
+    }
+    if (updates.p8Path !== undefined) existing.p8Path = updates.p8Path
+    if (updates.keyId !== undefined) existing.keyId = updates.keyId
+    if (updates.issuerId !== undefined) existing.issuerId = updates.issuerId
+    await saveProgress(appId, existing)
+  }, [appId])
 
   // Extract Key ID from .p8 filename (e.g. "AuthKey_ABC123.p8" or "ApiKey_ABC123.p8")
   function extractKeyIdFromPath(filePath: string): string {
@@ -119,10 +134,21 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
     return generateJwt(keyIdRef.current, issuerIdRef.current, content)
   }
 
-  // Populate log with already-completed steps from progress
+  // Populate log with already-completed steps from progress (including partial input)
   useEffect(() => {
     if (!initialProgress)
       return
+    // Show partial input steps
+    if (initialProgress.p8Path) {
+      addLog(`✔ Key file selected · ${initialProgress.p8Path}`)
+    }
+    if (initialProgress.keyId && !initialProgress.completedSteps.apiKeyVerified) {
+      addLog(`✔ Key ID · ${initialProgress.keyId}`)
+    }
+    if (initialProgress.issuerId && !initialProgress.completedSteps.apiKeyVerified) {
+      addLog(`✔ Issuer ID · ${initialProgress.issuerId}`)
+    }
+    // Show fully completed steps
     const { completedSteps } = initialProgress
     if (completedSteps.apiKeyVerified) {
       addLog(`✔ API Key verified — Key: ${completedSteps.apiKeyVerified.keyId}`)
@@ -203,6 +229,24 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
       setTimeout(() => { if (!cancelled) setStep('platform-select') }, 800)
     }
 
+    if (step === 'backing-up') {
+      ;(async () => {
+        const credPath = join(homedir(), '.capgo-credentials', 'credentials.json')
+        const date = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        const backupPath = join(homedir(), '.capgo-credentials', `credentials-${date}.copy.json`)
+        try {
+          await copyFile(credPath, backupPath)
+          if (cancelled) return
+          addLog(`✔ Backup saved · ${backupPath}`)
+        }
+        catch {
+          if (cancelled) return
+          addLog('⚠ Could not backup credentials (file may not exist yet)', 'yellow')
+        }
+        setStep('api-key-instructions')
+      })()
+    }
+
     if (step === 'platform-select') {
       // Check if ios/ exists — if not, skip Select and go straight to error
       if (!existsSync(join(process.cwd(), 'ios'))) {
@@ -234,6 +278,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
             if (extracted)
               setKeyId(extracted)
             addLog(`✔ Key file selected · ${selected}`)
+            void savePartialProgress({ p8Path: selected })
             setStep('input-key-id')
           }
           else {
@@ -411,18 +456,9 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
       })()
     }
 
-    if (step === 'saving-credentials' && !askOverwrite) {
+    if (step === 'saving-credentials') {
       ;(async () => {
         try {
-          // Only check for existing credentials if user hasn't already confirmed overwrite
-          if (!overwriteConfirmedRef.current) {
-            const existing = await loadSavedCredentials(appId)
-            if (existing?.ios) {
-              setAskOverwrite(true)
-              return
-            }
-          }
-          overwriteConfirmedRef.current = false // Reset for next time
           await doSaveCredentials()
           if (cancelled)
             return
@@ -514,7 +550,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
     }
 
     return () => { cancelled = true }
-  }, [step, askOverwrite])
+  }, [step])
 
   // ── Render ──
 
@@ -567,8 +603,15 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
             options={[
               { label: '  iOS', value: 'ios' },
             ]}
-            onChange={() => {
-              setStep('api-key-instructions')
+            onChange={async () => {
+              // Check for existing credentials before proceeding
+              const existing = await loadSavedCredentials(appId)
+              if (existing?.ios) {
+                setStep('credentials-exist')
+              }
+              else {
+                setStep('api-key-instructions')
+              }
             }}
           />
           <Newline />
@@ -582,6 +625,38 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
           <ErrorLine text="No ios/ directory found." />
           <Newline />
           <Text>Run <Text bold color="white">npx cap add ios</Text> first, then re-run onboarding.</Text>
+        </Box>
+      )}
+
+      {/* Existing credentials warning */}
+      {step === 'credentials-exist' && (
+        <Box flexDirection="column" marginTop={1}>
+          <Text bold color="yellow">⚠ iOS credentials already exist for {appId}</Text>
+          <Newline />
+          <Text>Onboarding will create new certificates and profiles, replacing your existing credentials.</Text>
+          <Newline />
+          <Select
+            options={[
+              { label: '📦  Start fresh (backup existing credentials first)', value: 'backup' },
+              { label: '✖  Exit onboarding', value: 'exit' },
+            ]}
+            onChange={(value) => {
+              if (value === 'backup') {
+                setStep('backing-up')
+              }
+              else {
+                process.stderr.write('\nExiting onboarding.\n')
+                process.exit(0)
+              }
+            }}
+          />
+        </Box>
+      )}
+
+      {/* Backing up credentials */}
+      {step === 'backing-up' && (
+        <Box flexDirection="column" marginTop={1}>
+          <SpinnerLine text="Backing up existing credentials..." />
         </Box>
       )}
 
@@ -643,6 +718,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                       if (extracted)
                         setKeyId(extracted)
                       addLog(`✔ Key file found · ${filePath}`)
+                      void savePartialProgress({ p8Path: filePath })
                       setStep('input-key-id')
                     }
                     catch {
@@ -682,6 +758,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                   if (extracted)
                     setKeyId(extracted)
                   addLog(`✔ Key file found · ${filePath}`)
+                  void savePartialProgress({ p8Path: filePath })
                   setStep('input-key-id')
                 }
                 catch {
@@ -715,6 +792,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                       const finalKeyId = (value || keyId).trim()
                       setKeyId(finalKeyId)
                       addLog(`✔ Key ID · ${finalKeyId}`)
+                      void savePartialProgress({ keyId: finalKeyId })
                       setStep('input-issuer-id')
                     }}
                   />
@@ -733,6 +811,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                       if (!cleaned) return
                       setKeyId(cleaned)
                       addLog(`✔ Key ID · ${cleaned}`)
+                      void savePartialProgress({ keyId: cleaned })
                       setStep('input-issuer-id')
                     }}
                   />
@@ -760,6 +839,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
                 if (!cleaned) return
                 setIssuerId(cleaned)
                 addLog(`✔ Issuer ID · ${cleaned}`)
+                void savePartialProgress({ issuerId: cleaned })
                 setStep('verifying-key')
               }}
             />
@@ -865,36 +945,9 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
       )}
 
       {/* Saving credentials */}
-      {step === 'saving-credentials' && !askOverwrite && (
+      {step === 'saving-credentials' && (
         <Box flexDirection="column" marginTop={1}>
           <SpinnerLine text="Saving credentials..." />
-        </Box>
-      )}
-
-      {/* Overwrite confirmation */}
-      {step === 'saving-credentials' && askOverwrite && (
-        <Box flexDirection="column" marginTop={1}>
-          <Text bold color="yellow">⚠ iOS credentials already exist for {appId}</Text>
-          <Newline />
-          <Select
-            options={[
-              { label: '✔  Overwrite with new credentials', value: 'overwrite' },
-              { label: '⏭  Keep existing and continue', value: 'skip' },
-            ]}
-            onChange={(value) => {
-              if (value === 'overwrite') {
-                // Mark that user confirmed, then clear the prompt — useEffect handles the save
-                overwriteConfirmedRef.current = true
-                setAskOverwrite(false)
-              }
-              else {
-                void deleteProgress(appId).catch(() => {})
-                setAskOverwrite(false)
-                addLog('Skipped saving — existing credentials preserved.', 'yellow')
-                setStep('ask-build')
-              }
-            }}
-          />
         </Box>
       )}
 

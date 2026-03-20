@@ -5,6 +5,8 @@ export type Platform = 'ios' | 'android'
 export type OnboardingStep
   = | 'welcome'
     | 'platform-select'
+    | 'credentials-exist'
+    | 'backing-up'
     | 'api-key-instructions'
     | 'p8-method-select'
     | 'input-p8-path'
@@ -48,6 +50,9 @@ export interface OnboardingProgress {
   startedAt: string
   /** Path to the .p8 file on disk (content is NOT stored, only the path) */
   p8Path?: string
+  /** Partial input — saved incrementally so resume works mid-flow */
+  keyId?: string
+  issuerId?: string
   completedSteps: {
     apiKeyVerified?: ApiKeyData
     certificateCreated?: CertificateData
@@ -61,6 +66,8 @@ export interface OnboardingProgress {
 export const STEP_PROGRESS: Record<OnboardingStep, number> = {
   'welcome': 0,
   'platform-select': 0,
+  'credentials-exist': 0,
+  'backing-up': 0,
   'api-key-instructions': 5,
   'p8-method-select': 8,
   'input-p8-path': 10,
@@ -85,6 +92,8 @@ export function getPhaseLabel(step: OnboardingStep): string {
   switch (step) {
     case 'welcome':
     case 'platform-select':
+    case 'credentials-exist':
+    case 'backing-up':
       return ''
     case 'api-key-instructions':
     case 'p8-method-select':
