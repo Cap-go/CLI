@@ -10,6 +10,76 @@ export async function checkAppExists(supabase: SupabaseClient<Database>, appid: 
   return !!app
 }
 
+export type PendingOnboardingApp = Pick<
+  Database['public']['Tables']['apps']['Row'],
+  'app_id' | 'name' | 'icon_url' | 'need_onboarding' | 'existing_app' | 'ios_store_url' | 'android_store_url'
+>
+
+function isMissingOnboardingSchemaError(error: { message?: string, details?: string, hint?: string, code?: string | null } | null) {
+  if (!error)
+    return false
+
+  const text = [error.message, error.details, error.hint, error.code]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  return [
+    'need_onboarding',
+    'existing_app',
+    'ios_store_url',
+    'android_store_url',
+    'column',
+    'schema cache',
+    'pgrst204',
+    '42703',
+  ].some(token => text.includes(token))
+}
+
+export async function listPendingOnboardingApps(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+): Promise<PendingOnboardingApp[]> {
+  const { data, error } = await supabase
+    .from('apps')
+    .select('app_id, name, icon_url, need_onboarding, existing_app, ios_store_url, android_store_url')
+    .eq('owner_org', orgId)
+    .eq('need_onboarding', true)
+    .order('created_at', { ascending: false })
+
+  if (error) {
+    if (isMissingOnboardingSchemaError(error)) {
+      return []
+    }
+
+    throw new Error(`Could not load pending onboarding apps: ${error.message}`)
+  }
+
+  return data ?? []
+}
+
+export async function completePendingOnboardingApp(
+  supabase: SupabaseClient<Database>,
+  orgId: string,
+  appId: string,
+): Promise<void> {
+  const { data, error } = await supabase
+    .from('apps')
+    .update({ need_onboarding: false })
+    .select('app_id')
+    .eq('owner_org', orgId)
+    .eq('app_id', appId)
+    .eq('need_onboarding', true)
+
+  if (error) {
+    throw new Error(`Could not complete onboarding for app ${appId}: ${error.message}`)
+  }
+
+  if (!data?.length) {
+    throw new Error(`Could not complete onboarding for app ${appId} in org ${orgId}: app was not found or is no longer pending onboarding`)
+  }
+}
+
 /**
  * Check multiple app IDs at once for batch validation (e.g., for suggestions)
  */
