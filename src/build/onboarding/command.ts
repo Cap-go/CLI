@@ -4,6 +4,7 @@ import process from 'node:process'
 import React from 'react'
 import { log } from '@clack/prompts'
 import { getAppId, getConfig } from '../../utils.js'
+import { getPlatformDirFromCapacitorConfig } from '../platform-paths.js'
 import { loadProgress } from './progress.js'
 import OnboardingApp from './ui/app.js'
 
@@ -16,11 +17,13 @@ export async function onboardingCommand(): Promise<void> {
     process.exit(1)
   }
 
-  // Detect app ID from capacitor.config.ts
+  // Detect app ID and iOS directory from capacitor.config.ts
   let appId: string | undefined
+  let iosDir = 'ios' // default
   try {
     const extConfig = await getConfig()
     appId = getAppId(undefined, extConfig?.config)
+    iosDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'ios')
   }
   catch {
     // getConfig may throw if not in a Capacitor project
@@ -36,7 +39,7 @@ export async function onboardingCommand(): Promise<void> {
 
   // Launch Ink app
   const { waitUntilExit } = render(
-    React.createElement(OnboardingApp, { appId, initialProgress: progress }),
+    React.createElement(OnboardingApp, { appId, initialProgress: progress, iosDir }),
   )
 
   await waitUntilExit()

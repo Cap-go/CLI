@@ -26,9 +26,11 @@ interface LogEntry { text: string, color?: string }
 interface AppProps {
   appId: string
   initialProgress: OnboardingProgress | null
+  /** Resolved iOS directory from capacitor.config (defaults to 'ios') */
+  iosDir: string
 }
 
-const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
+const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   const { exit } = useApp()
   const startStep = getResumeStep(initialProgress)
 
@@ -249,7 +251,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress }) => {
 
     if (step === 'platform-select') {
       // Check if ios/ exists — if not, skip Select and go straight to error
-      if (!existsSync(join(process.cwd(), 'ios'))) {
+      if (!existsSync(join(process.cwd(), iosDir))) {
         setStep('no-platform')
       }
     }
