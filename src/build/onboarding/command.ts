@@ -1,8 +1,8 @@
+import process from 'node:process'
+import { log } from '@clack/prompts'
 // src/build/onboarding/command.ts
 import { render } from 'ink'
-import process from 'node:process'
 import React from 'react'
-import { log } from '@clack/prompts'
 import { getAppId, getConfig } from '../../utils.js'
 import { getPlatformDirFromCapacitorConfig } from '../platform-paths.js'
 import { loadProgress } from './progress.js'

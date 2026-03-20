@@ -1,25 +1,30 @@
-// src/build/onboarding/ui/app.tsx
-import React, { useState, useEffect, useCallback, useRef, type FC } from 'react'
-import { Box, Text, Newline, useApp, useInput, useStdout } from 'ink'
-import { Select, ProgressBar, Alert } from '@inkjs/ui'
-import { Header, Divider, SpinnerLine, SuccessLine, ErrorLine, FilteredTextInput } from './components.js'
-import {
-  type OnboardingStep, type OnboardingProgress, type ApiKeyData,
-  type CertificateData, type ProfileData,
-  STEP_PROGRESS, getPhaseLabel,
-} from '../types.js'
-import { loadProgress, saveProgress, deleteProgress, getResumeStep } from '../progress.js'
-import { generateCsr, createP12, DEFAULT_P12_PASSWORD } from '../csr.js'
-import { generateJwt, verifyApiKey, createCertificate, ensureBundleId, createProfile, deleteProfile, revokeCertificate, DuplicateProfileError, CertificateLimitError } from '../apple-api.js'
-import { canUseFilePicker, openFilePicker } from '../file-picker.js'
-import { readFile, copyFile } from 'node:fs/promises'
+import type { FC } from 'react'
+import type { BuildLogger } from '../../request.js'
+import type { ApiKeyData, CertificateData, OnboardingProgress, OnboardingStep, ProfileData } from '../types.js'
+import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
-import { join } from 'node:path'
+import { copyFile, readFile } from 'node:fs/promises'
 import { homedir } from 'node:os'
+import { join } from 'node:path'
+import process from 'node:process'
+import { Alert, ProgressBar, Select } from '@inkjs/ui'
+import { Box, Newline, Text, useApp, useInput, useStdout } from 'ink'
 import open from 'open'
-import { updateSavedCredentials, loadSavedCredentials } from '../../credentials.js'
-import { requestBuildInternal, type BuildLogger } from '../../request.js'
+// src/build/onboarding/ui/app.tsx
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { findSavedKey } from '../../../utils.js'
+import { loadSavedCredentials, updateSavedCredentials } from '../../credentials.js'
+import { requestBuildInternal } from '../../request.js'
+import { CertificateLimitError, createCertificate, createProfile, deleteProfile, DuplicateProfileError, ensureBundleId, generateJwt, revokeCertificate, verifyApiKey } from '../apple-api.js'
+import { createP12, DEFAULT_P12_PASSWORD, generateCsr } from '../csr.js'
+import { canUseFilePicker, openFilePicker } from '../file-picker.js'
+import { deleteProgress, getResumeStep, loadProgress, saveProgress } from '../progress.js'
+import {
+  getPhaseLabel,
+
+  STEP_PROGRESS,
+} from '../types.js'
+import { Divider, ErrorLine, FilteredTextInput, Header, SpinnerLine, SuccessLine } from './components.js'
 
 interface LogEntry { text: string, color?: string }
 
@@ -76,9 +81,15 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   }, [])
 
   // Keep refs in sync when state changes (for state set directly)
-  useEffect(() => { p8PathRef.current = p8Path }, [p8Path])
-  useEffect(() => { keyIdRef.current = keyId }, [keyId])
-  useEffect(() => { issuerIdRef.current = issuerId }, [issuerId])
+  useEffect(() => {
+    p8PathRef.current = p8Path
+  }, [p8Path])
+  useEffect(() => {
+    keyIdRef.current = keyId
+  }, [keyId])
+  useEffect(() => {
+    issuerIdRef.current = issuerId
+  }, [issuerId])
   const [teamId, setTeamId] = useState(initialProgress?.completedSteps.certificateCreated?.teamId || '')
   const [certData, setCertData] = useState<CertificateData | null>(initialProgress?.completedSteps.certificateCreated || null)
   const [profileData, setProfileData] = useState<ProfileData | null>(initialProgress?.completedSteps.profileCreated || null)
@@ -89,7 +100,6 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     setLog(prev => [...prev, { text, color }])
   }, [])
 
-
   /** Save partial progress so the user can resume mid-flow */
   const savePartialProgress = useCallback(async (updates: { p8Path?: string, keyId?: string, issuerId?: string }) => {
     const existing = await loadProgress(appId) || {
@@ -98,9 +108,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
       startedAt: new Date().toISOString(),
       completedSteps: {},
     }
-    if (updates.p8Path !== undefined) existing.p8Path = updates.p8Path
-    if (updates.keyId !== undefined) existing.keyId = updates.keyId
-    if (updates.issuerId !== undefined) existing.issuerId = updates.issuerId
+    if (updates.p8Path !== undefined)
+      existing.p8Path = updates.p8Path
+    if (updates.keyId !== undefined)
+      existing.keyId = updates.keyId
+    if (updates.issuerId !== undefined)
+      existing.issuerId = updates.issuerId
     await saveProgress(appId, existing)
   }, [appId])
 
@@ -228,7 +241,10 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     let cancelled = false
 
     if (step === 'welcome') {
-      setTimeout(() => { if (!cancelled) setStep('platform-select') }, 800)
+      setTimeout(() => {
+        if (!cancelled)
+          setStep('platform-select')
+      }, 800)
     }
 
     if (step === 'backing-up') {
@@ -238,11 +254,13 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         const backupPath = join(homedir(), '.capgo-credentials', `credentials-${date}.copy.json`)
         try {
           await copyFile(credPath, backupPath)
-          if (cancelled) return
+          if (cancelled)
+            return
           addLog(`✔ Backup saved · ${backupPath}`)
         }
         catch {
-          if (cancelled) return
+          if (cancelled)
+            return
           addLog('⚠ Could not backup credentials (file may not exist yet)', 'yellow')
         }
         setStep('api-key-instructions')
@@ -546,10 +564,15 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         if (!cancelled)
           exit()
       }, 100)
-      return () => { cancelled = true; clearTimeout(timer) }
+      return () => {
+        cancelled = true
+        clearTimeout(timer)
+      }
     }
 
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [step])
 
   // ── Render ──
@@ -570,7 +593,11 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
           <Text bold color="cyan">{phaseLabel}</Text>
           <Box marginTop={1}>
             <ProgressBar value={progress} />
-            <Text dimColor> {progress}%</Text>
+            <Text dimColor>
+              {' '}
+              {progress}
+              %
+            </Text>
           </Box>
           <Divider />
         </Box>
@@ -615,7 +642,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             }}
           />
           <Newline />
-          <Text dimColor>Android onboarding coming soon. Use <Text bold color="white">capgo build credentials save</Text> for Android.</Text>
+          <Text dimColor>
+            Android onboarding coming soon. Use
+            <Text bold color="white">capgo build credentials save</Text>
+            {' '}
+            for Android.
+          </Text>
         </Box>
       )}
 
@@ -624,14 +656,22 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         <Box flexDirection="column" marginTop={1}>
           <ErrorLine text="No ios/ directory found." />
           <Newline />
-          <Text>Run <Text bold color="white">npx cap add ios</Text> first, then re-run onboarding.</Text>
+          <Text>
+            Run
+            <Text bold color="white">npx cap add ios</Text>
+            {' '}
+            first, then re-run onboarding.
+          </Text>
         </Box>
       )}
 
       {/* Existing credentials warning */}
       {step === 'credentials-exist' && (
         <Box flexDirection="column" marginTop={1}>
-          <Text bold color="yellow">⚠ iOS credentials already exist for {appId}</Text>
+          <Text bold color="yellow">
+            ⚠ iOS credentials already exist for
+            {appId}
+          </Text>
           <Newline />
           <Text>Onboarding will create new certificates and profiles, replacing your existing credentials.</Text>
           <Newline />
@@ -668,10 +708,40 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
           </Alert>
           <Newline />
           <Box flexDirection="column" marginLeft={2}>
-            <Text><Text bold color="white">1.</Text> Go to <Text color="cyan" underline>appstoreconnect.apple.com/access/integrations/api</Text></Text>
-            <Text><Text bold color="white">2.</Text> Click <Text bold>"Generate API Key"</Text></Text>
-            <Text><Text bold color="white">3.</Text> Name it <Text color="yellow">"Capgo Builder"</Text> · Access: <Text bold color="green">"Admin"</Text></Text>
-            <Text><Text bold color="white">4.</Text> Download the <Text bold>.p8</Text> file</Text>
+            <Text>
+              <Text bold color="white">1.</Text>
+              {' '}
+              Go to
+              {' '}
+              <Text color="cyan" underline>appstoreconnect.apple.com/access/integrations/api</Text>
+            </Text>
+            <Text>
+              <Text bold color="white">2.</Text>
+              {' '}
+              Click
+              {' '}
+              <Text bold>"Generate API Key"</Text>
+            </Text>
+            <Text>
+              <Text bold color="white">3.</Text>
+              {' '}
+              Name it
+              {' '}
+              <Text color="yellow">"Capgo Builder"</Text>
+              {' '}
+              · Access:
+              {' '}
+              <Text bold color="green">"Admin"</Text>
+            </Text>
+            <Text>
+              <Text bold color="white">4.</Text>
+              {' '}
+              Download the
+              {' '}
+              <Text bold>.p8</Text>
+              {' '}
+              file
+            </Text>
           </Box>
           <Newline />
           <Box>
@@ -777,46 +847,55 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         <Box flexDirection="column" marginTop={1}>
           {keyId
             ? (
-              <>
-                <Text bold>Key ID <Text dimColor>(detected from filename)</Text>:</Text>
-                <Box marginTop={1}>
-                  <Text color="green">✔ </Text>
-                  <Text>{keyId}</Text>
-                  <Text dimColor> — press Enter to confirm, or type a different one</Text>
-                </Box>
-                <Box marginTop={1}>
-                  <Text color="cyan">❯ </Text>
-                  <FilteredTextInput
-                    placeholder={keyId}
-                    onSubmit={(value) => {
-                      const finalKeyId = (value || keyId).trim()
-                      setKeyId(finalKeyId)
-                      addLog(`✔ Key ID · ${finalKeyId}`)
-                      void savePartialProgress({ keyId: finalKeyId })
-                      setStep('input-issuer-id')
-                    }}
-                  />
-                </Box>
-              </>
+                <>
+                  <Text bold>
+                    Key ID
+                    <Text dimColor>(detected from filename)</Text>
+                    :
+                  </Text>
+                  <Box marginTop={1}>
+                    <Text color="green">✔ </Text>
+                    <Text>{keyId}</Text>
+                    <Text dimColor> — press Enter to confirm, or type a different one</Text>
+                  </Box>
+                  <Box marginTop={1}>
+                    <Text color="cyan">❯ </Text>
+                    <FilteredTextInput
+                      placeholder={keyId}
+                      onSubmit={(value) => {
+                        const finalKeyId = (value || keyId).trim()
+                        setKeyId(finalKeyId)
+                        addLog(`✔ Key ID · ${finalKeyId}`)
+                        void savePartialProgress({ keyId: finalKeyId })
+                        setStep('input-issuer-id')
+                      }}
+                    />
+                  </Box>
+                </>
               )
             : (
-              <>
-                <Text bold>Key ID <Text dimColor>(shown next to the key name in App Store Connect)</Text>:</Text>
-                <Box marginTop={1}>
-                  <Text color="cyan">❯ </Text>
-                  <FilteredTextInput
-                    placeholder="ABC123DEF"
-                    onSubmit={(value) => {
-                      const cleaned = value.trim()
-                      if (!cleaned) return
-                      setKeyId(cleaned)
-                      addLog(`✔ Key ID · ${cleaned}`)
-                      void savePartialProgress({ keyId: cleaned })
-                      setStep('input-issuer-id')
-                    }}
-                  />
-                </Box>
-              </>
+                <>
+                  <Text bold>
+                    Key ID
+                    <Text dimColor>(shown next to the key name in App Store Connect)</Text>
+                    :
+                  </Text>
+                  <Box marginTop={1}>
+                    <Text color="cyan">❯ </Text>
+                    <FilteredTextInput
+                      placeholder="ABC123DEF"
+                      onSubmit={(value) => {
+                        const cleaned = value.trim()
+                        if (!cleaned)
+                          return
+                        setKeyId(cleaned)
+                        addLog(`✔ Key ID · ${cleaned}`)
+                        void savePartialProgress({ keyId: cleaned })
+                        setStep('input-issuer-id')
+                      }}
+                    />
+                  </Box>
+                </>
               )}
         </Box>
       )}
@@ -824,7 +903,11 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
       {/* Issuer ID */}
       {step === 'input-issuer-id' && (
         <Box flexDirection="column" marginTop={1}>
-          <Text bold>Issuer ID <Text dimColor>(UUID at the very top of the API keys page, above the key list)</Text>:</Text>
+          <Text bold>
+            Issuer ID
+            <Text dimColor>(UUID at the very top of the API keys page, above the key list)</Text>
+            :
+          </Text>
           <Newline />
           <Box>
             <Text dimColor>Press </Text>
@@ -836,7 +919,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
               placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
               onSubmit={(value) => {
                 const cleaned = value.trim()
-                if (!cleaned) return
+                if (!cleaned)
+                  return
                 setIssuerId(cleaned)
                 addLog(`✔ Issuer ID · ${cleaned}`)
                 void savePartialProgress({ issuerId: cleaned })
@@ -871,7 +955,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
           <Newline />
           <Select
             options={[
-              ...existingCerts.map(c => {
+              ...existingCerts.map((c) => {
                 const ourCertId = certData?.certificateId || initialProgress?.completedSteps.certificateCreated?.certificateId
                 const isOurs = ourCertId === c.id
                 const creator = isOurs ? ' · 🔧 Created by Capgo' : ''
@@ -980,25 +1064,31 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         // 3 lines overhead: 1 divider + 1 spinner + 1 padding
         const visibleLines = Math.max(5, terminalRows - 3)
         return (
-        <Box flexDirection="column" marginTop={1}>
-          {buildOutput.slice(-visibleLines).map((line, i) => {
-            const isSuccess = line.startsWith('✔')
-            const isError = line.startsWith('✖') || line.startsWith('❌')
-            const isWarn = line.startsWith('⚠')
-            const isBold = line.startsWith('✔ Build') || line.startsWith('✔ Created') || line.startsWith('Uploading:')
-            const color = isSuccess ? 'green' : isError ? 'red' : isWarn ? 'yellow' : undefined
-            return (
-              <Text key={i} color={color} dimColor={!color && !isBold} bold={isBold}>
-                {line}
+          <Box flexDirection="column" marginTop={1}>
+            {buildOutput.slice(-visibleLines).map((line, i) => {
+              const isSuccess = line.startsWith('✔')
+              const isError = line.startsWith('✖') || line.startsWith('❌')
+              const isWarn = line.startsWith('⚠')
+              const isBold = line.startsWith('✔ Build') || line.startsWith('✔ Created') || line.startsWith('Uploading:')
+              const color = isSuccess ? 'green' : isError ? 'red' : isWarn ? 'yellow' : undefined
+              return (
+                <Text key={i} color={color} dimColor={!color && !isBold} bold={isBold}>
+                  {line}
+                </Text>
+              )
+            })}
+            <Divider />
+            <Box>
+              <SpinnerLine text="Building..." />
+              <Text dimColor>
+                {' '}
+                (
+                {buildOutput.length}
+                {' '}
+                lines)
               </Text>
-            )
-          })}
-          <Divider />
-          <Box>
-            <SpinnerLine text="Building..." />
-            <Text dimColor>  ({buildOutput.length} lines)</Text>
+            </Box>
           </Box>
-        </Box>
         )
       })()}
 
@@ -1058,17 +1148,24 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             <Newline />
             {buildUrl
               ? (
-                <>
-                  <Text>Your iOS app is building in the cloud.</Text>
-                  <Text>Track it at <Text color="cyan" underline>{buildUrl}</Text></Text>
-                </>
+                  <>
+                    <Text>Your iOS app is building in the cloud.</Text>
+                    <Text>
+                      Track it at
+                      <Text color="cyan" underline>{buildUrl}</Text>
+                    </Text>
+                  </>
                 )
               : (
-                <Text>Your iOS credentials are saved and ready to use.</Text>
+                  <Text>Your iOS credentials are saved and ready to use.</Text>
                 )}
             <Newline />
             <Text dimColor>
-              Run <Text bold color="white">npx @capgo/cli@latest build request --platform ios</Text> anytime to start a build.
+              Run
+              {' '}
+              <Text bold color="white">npx @capgo/cli@latest build request --platform ios</Text>
+              {' '}
+              anytime to start a build.
             </Text>
           </Box>
           <Newline />

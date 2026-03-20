@@ -1,9 +1,9 @@
+import type { OnboardingProgress, OnboardingStep } from './types.js'
 // src/build/onboarding/progress.ts
 import { readFile, unlink } from 'node:fs/promises'
-import { join } from 'node:path'
 import { homedir } from 'node:os'
-import type { OnboardingProgress, OnboardingStep } from './types.js'
-import { writeFileAtomic, ensureSecureDirectory } from '../../utils/safeWrites.js'
+import { join } from 'node:path'
+import { ensureSecureDirectory, writeFileAtomic } from '../../utils/safeWrites.js'
 
 const CREDENTIALS_DIR = '.capgo-credentials'
 const ONBOARDING_DIR = 'onboarding'

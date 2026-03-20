@@ -34,6 +34,15 @@ import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process, { chdir, cwd, exit } from 'node:process'
 import { log as clackLog } from '@clack/prompts'
+import AdmZip from 'adm-zip'
+import { WebSocket as PartySocket } from 'partysocket'
+import * as tus from 'tus-js-client'
+import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
+import pack from '../../package.json'
+import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
+import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
+import { buildProvisioningMap } from './credentials-command'
+import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 /**
  * Callback interface for build logging.
@@ -55,33 +64,34 @@ export interface BuildLogger {
 function createDefaultLogger(silent: boolean): BuildLogger {
   return {
     info: (msg: string) => {
-      if (!silent) { clackLog.info(msg) }
+      if (!silent) {
+        clackLog.info(msg)
+      }
     },
     error: (msg: string) => {
-      if (!silent) { clackLog.error(msg) }
+      if (!silent) {
+        clackLog.error(msg)
+      }
     },
     warn: (msg: string) => {
-      if (!silent) { clackLog.warn(msg) }
+      if (!silent) {
+        clackLog.warn(msg)
+      }
     },
     success: (msg: string) => {
-      if (!silent) { clackLog.success(msg) }
+      if (!silent) {
+        clackLog.success(msg)
+      }
     },
     buildLog: (msg: string) => {
-      // eslint-disable-next-line no-console
-      if (!silent) { console.log(msg) }
+      if (!silent) {
+        // eslint-disable-next-line no-console
+        console.log(msg)
+      }
     },
     uploadProgress: (_percent: number) => {},
   }
 }
-import AdmZip from 'adm-zip'
-import { WebSocket as PartySocket } from 'partysocket'
-import * as tus from 'tus-js-client'
-import WS from 'ws' // TODO: remove when min version nodejs 22 is bump, should do it in july 2026 as it become deprecated
-import pack from '../../package.json'
-import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendEvent, verifyUser } from '../utils'
-import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
-import { buildProvisioningMap } from './credentials-command'
-import { getPlatformDirFromCapacitorConfig } from './platform-paths'
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
 

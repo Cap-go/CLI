@@ -1,7 +1,8 @@
-// src/build/onboarding/ui/components.tsx
-import React, { useState, type FC } from 'react'
+import type { FC } from 'react'
 import { Box, Text, useInput } from 'ink'
 import Spinner from 'ink-spinner'
+// src/build/onboarding/ui/components.tsx
+import React, { useState } from 'react'
 
 export const Divider: FC<{ width?: number }> = ({ width = 60 }) => (
   <Text dimColor>{'─'.repeat(width)}</Text>
@@ -22,7 +23,13 @@ export const SuccessLine: FC<{ text: string, detail?: string }> = ({ text, detai
   <Box>
     <Text color="green">✔ </Text>
     <Text>{text}</Text>
-    {detail && <Text dimColor> · {detail}</Text>}
+    {detail && (
+      <Text dimColor>
+        {' '}
+        ·
+        {detail}
+      </Text>
+    )}
   </Box>
 )
 
