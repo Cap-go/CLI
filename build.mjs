@@ -254,6 +254,20 @@ const noopSupabaseNodeFetch = {
   },
 }
 
+// Stub react-devtools-core — Ink optionally imports it for dev mode
+const stubReactDevtools = {
+  name: 'stub-react-devtools',
+  setup(build) {
+    build.onResolve({ filter: /^react-devtools-core$/ }, args => ({
+      path: args.path,
+      namespace: 'stub-react-devtools',
+    }))
+    build.onLoad({ filter: /.*/, namespace: 'stub-react-devtools' }, () => ({
+      contents: 'export default {}; export const connectToDevTools = () => {};',
+    }))
+  },
+}
+
 // Fix for @capacitor/cli path assumptions in bundled builds
 // - __dirname gets baked in as the build machine path
 // - loadCLIConfig reads package.json from cliRootDir
@@ -309,6 +323,7 @@ const buildCLI = Bun.build({
     noopSupabaseRealtimeJs,
     stubPrompts,
     noopSupabaseAuthJs,
+    stubReactDevtools,
   ],
 })
 

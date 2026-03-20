@@ -33,7 +33,7 @@ import { mkdir, readFile as readFileAsync, rm, stat, writeFile } from 'node:fs/p
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import process, { chdir, cwd, exit } from 'node:process'
-import { log, spinner as spinnerC } from '@clack/prompts'
+import { log as clackLog, spinner as spinnerC } from '@clack/prompts'
 import AdmZip from 'adm-zip'
 import { WebSocket as PartySocket } from 'partysocket'
 import * as tus from 'tus-js-client'
@@ -43,6 +43,73 @@ import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendE
 import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { buildProvisioningMap } from './credentials-command'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
+
+/**
+ * Callback interface for build logging.
+ * Allows callers (like the onboarding UI) to capture log output
+ * without stdout/stderr interception hacks.
+ */
+export interface BuildLogger {
+  info: (msg: string) => void
+  error: (msg: string) => void
+  warn: (msg: string) => void
+  success: (msg: string) => void
+  /** Called with build log lines streamed from the builder */
+  buildLog: (msg: string) => void
+  /** Called with upload progress percentage (0-100) */
+  uploadProgress: (percent: number) => void
+}
+
+/** Default logger that uses @clack/prompts (used by CLI command) */
+function createDefaultLogger(silent: boolean): BuildLogger {
+  return {
+    info: (msg: string) => {
+      if (!silent) {
+        clackLog.info(msg)
+      }
+    },
+    error: (msg: string) => {
+      if (!silent) {
+        clackLog.error(msg)
+      }
+    },
+    warn: (msg: string) => {
+      if (!silent) {
+        clackLog.warn(msg)
+      }
+    },
+    success: (msg: string) => {
+      if (!silent) {
+        clackLog.success(msg)
+      }
+    },
+    buildLog: (msg: string) => {
+      if (!silent) {
+        // eslint-disable-next-line no-console
+        console.log(msg)
+      }
+    },
+    uploadProgress: (() => {
+      const s = silent ? null : spinnerC()
+      let started = false
+      return (percent: number) => {
+        if (silent || !s) {
+          return
+        }
+        if (!started) {
+          s.start('Uploading bundle')
+          started = true
+        }
+        if (percent >= 100) {
+          s.stop('Upload complete!')
+        }
+        else {
+          s.message(`Uploading ${percent.toFixed(0)}%`)
+        }
+      }
+    })(),
+  }
+}
 
 let cwdQueue: Promise<unknown> = Promise.resolve()
 
@@ -87,7 +154,7 @@ async function withCwd<T>(dir: string, fn: () => Promise<T>): Promise<T> {
  * @param url - The URL to fetch
  * @param options - Fetch options
  * @param maxRetries - Maximum number of retry attempts (default: 3)
- * @param silent - Suppress log output
+ * @param logger - Optional BuildLogger for log output
  * @returns The fetch Response if successful
  * @throws Error if all retries are exhausted
  */
@@ -95,7 +162,7 @@ async function fetchWithRetry(
   url: string,
   options: RequestInit,
   maxRetries = 3,
-  silent = false,
+  logger?: BuildLogger,
 ): Promise<Response> {
   const retryDelays = [1000, 3000, 5000] // 1s, 3s, 5s delays between retries
 
@@ -111,15 +178,11 @@ async function fetchWithRetry(
 
       // Server error (5xx) - log and retry
       const errorText = await response.text().catch(() => 'unknown error')
-      if (!silent) {
-        log.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${response.status} - ${errorText}`)
-      }
+      logger?.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${response.status} - ${errorText}`)
 
       if (attempt < maxRetries) {
         const delay = retryDelays[attempt - 1] || 5000
-        if (!silent) {
-          log.info(`Retrying in ${delay / 1000}s...`)
-        }
+        logger?.info(`Retrying in ${delay / 1000}s...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
       else {
@@ -136,15 +199,11 @@ async function fetchWithRetry(
         throw error
       }
 
-      if (!silent) {
-        log.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${errorMessage}`)
-      }
+      logger?.warn(`Build request attempt ${attempt}/${maxRetries} failed: ${errorMessage}`)
 
       if (attempt < maxRetries) {
         const delay = retryDelays[attempt - 1] || 5000
-        if (!silent) {
-          log.info(`Retrying in ${delay / 1000}s...`)
-        }
+        logger?.info(`Retrying in ${delay / 1000}s...`)
         await new Promise(resolve => setTimeout(resolve, delay))
       }
       else {
@@ -176,8 +235,9 @@ async function streamBuildLogs(
   statusCheck?: StatusCheckFn,
   abortSignal?: AbortSignal,
   onStreamingGiveUp?: () => void,
+  logger?: BuildLogger,
 ): Promise<string | null> {
-  if (silent)
+  if (silent && !logger)
     return null
 
   let finalStatus: string | null = null
@@ -193,11 +253,21 @@ async function streamBuildLogs(
     // Print log line directly to console (no spinner to avoid _events errors)
     if (!hasReceivedLogs) {
       hasReceivedLogs = true
-      // eslint-disable-next-line no-console
-      console.log('') // Add blank line before first log
+      if (logger) {
+        logger.buildLog('')
+      }
+      else {
+        // eslint-disable-next-line no-console
+        console.log('') // Add blank line before first log
+      }
     }
-    // eslint-disable-next-line no-console
-    console.log(message)
+    if (logger) {
+      logger.buildLog(message)
+    }
+    else {
+      // eslint-disable-next-line no-console
+      console.log(message)
+    }
   }
 
   const streamViaLogsWorker = async (): Promise<string | null> => {
@@ -211,7 +281,10 @@ async function streamBuildLogs(
       .replace(/^https:/, 'wss:')
       .replace(/^http:/, 'ws:')
 
-    if (!silent) {
+    if (logger) {
+      logger.info('Connecting to log streaming...')
+    }
+    else if (!silent) {
       // eslint-disable-next-line no-console
       console.log('Connecting to log streaming...')
     }
@@ -224,7 +297,9 @@ async function streamBuildLogs(
     })
     if (!startResponse.ok) {
       const errorText = await startResponse.text().catch(() => 'unknown error')
-      if (!silent)
+      if (logger)
+        logger.warn(`Could not start log session (${startResponse.status}): ${errorText}`)
+      else if (!silent)
         console.warn(`Could not start log session (${startResponse.status}): ${errorText}`)
       return null
     }
@@ -275,7 +350,9 @@ async function streamBuildLogs(
 
       timeout = setTimeout(() => {
         if (!settled) {
-          if (!silent)
+          if (logger)
+            logger.warn('Log streaming timed out after 3 hours')
+          else if (!silent)
             console.warn('Log streaming timed out after 3 hours')
           finish(null)
         }
@@ -309,8 +386,10 @@ async function streamBuildLogs(
             }
           }
           catch (error) {
-            if (!silent)
-              log.warn(`Heartbeat encountered an error, continuing... ${String(error)}`)
+            if (logger)
+              logger.warn(`Heartbeat encountered an error, continuing... ${String(error)}`)
+            else if (!silent)
+              clackLog.warn(`Heartbeat encountered an error, continuing... ${String(error)}`)
           }
         }, HEARTBEAT_INTERVAL_MS)
       }
@@ -397,8 +476,10 @@ async function streamBuildLogs(
                 ws.send(JSON.stringify({ type: 'confirmed_received', lastId: maxId }))
               }
               catch (error) {
-                if (!silent)
-                  log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+                if (logger)
+                  logger.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+                else if (!silent)
+                  clackLog.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
               }
             }
           }
@@ -419,8 +500,10 @@ async function streamBuildLogs(
                 ws.send(JSON.stringify({ type: 'confirmed_received', lastId: parsed.id }))
               }
               catch (error) {
-                if (!silent)
-                  log.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+                if (logger)
+                  logger.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+                else if (!silent)
+                  clackLog.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
               }
             }
           }
@@ -433,12 +516,16 @@ async function streamBuildLogs(
 
       ws.addEventListener('error', () => {
         retryCount += 1
-        if (!silent)
+        if (logger)
+          logger.warn(`Log stream encountered an error, retrying (${retryCount}/${maxRetries})...`)
+        else if (!silent)
           console.warn(`Log stream encountered an error, retrying (${retryCount}/${maxRetries})...`)
         if (!gaveUp && retryCount >= maxRetries) {
           gaveUp = true
-          if (!silent)
-            log.warn('Log stream retry limit reached. Falling back to status checks.')
+          if (logger)
+            logger.warn('Log stream retry limit reached. Falling back to status checks.')
+          else if (!silent)
+            clackLog.warn('Log stream retry limit reached. Falling back to status checks.')
           if (onStreamingGiveUp)
             onStreamingGiveUp()
           finish(null)
@@ -452,8 +539,10 @@ async function streamBuildLogs(
           finish(finalStatus)
           return
         }
-        if (!silent)
-          log.warn('Log stream closed, waiting for reconnect...')
+        if (logger)
+          logger.warn('Log stream closed, waiting for reconnect...')
+        else if (!silent)
+          clackLog.warn('Log stream closed, waiting for reconnect...')
       })
     })
   }
@@ -464,8 +553,10 @@ async function streamBuildLogs(
       return directStatus || finalStatus
   }
   catch (err) {
-    if (!silent)
-      log.warn(`Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ''}`)
+    if (logger)
+      logger.warn(`Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ''}`)
+    else if (!silent)
+      clackLog.warn(`Direct log streaming failed${err instanceof Error ? `: ${err.message}` : ''}`)
   }
 
   return finalStatus
@@ -480,6 +571,7 @@ async function pollBuildStatus(
   silent: boolean,
   showStatusChecks = false,
   abortSignal?: AbortSignal,
+  logger?: BuildLogger,
 ): Promise<string> {
   const maxAttempts = 120 // 10 minutes max (5 second intervals)
   let attempts = 0
@@ -496,8 +588,7 @@ async function pollBuildStatus(
       })
 
       if (!response.ok) {
-        if (!silent)
-          log.warn(`Status check failed: ${response.status}`)
+        logger?.warn(`Status check failed: ${response.status}`)
         await new Promise(resolve => setTimeout(resolve, 5000))
         attempts++
         continue
@@ -511,8 +602,8 @@ async function pollBuildStatus(
 
       const normalized = status.status?.toLowerCase?.() ?? ''
 
-      if (!silent && showStatusChecks)
-        log.info(`Build status: ${normalized || status.status}`)
+      if (showStatusChecks)
+        logger?.info(`Build status: ${normalized || status.status}`)
 
       if (TERMINAL_STATUS_SET.has(normalized)) {
         return normalized
@@ -525,15 +616,13 @@ async function pollBuildStatus(
     catch (error) {
       if (abortSignal?.aborted)
         return 'cancelled'
-      if (!silent)
-        log.warn(`Status check error: ${error}`)
+      logger?.warn(`Status check error: ${error}`)
       await new Promise(resolve => setTimeout(resolve, 5000))
       attempts++
     }
   }
 
-  if (!silent)
-    log.warn('Build status polling timed out')
+  logger?.warn('Build status polling timed out')
   return 'timeout'
 }
 
@@ -916,10 +1005,11 @@ export function splitPayload(
   return { buildOptions, buildCredentials }
 }
 
-export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false): Promise<BuildRequestResult> {
+export async function requestBuildInternal(appId: string, options: BuildRequestOptions, silent = false, logger?: BuildLogger): Promise<BuildRequestResult> {
   // Track build time
   const buildStartTime = Date.now()
   const verbose = options.verbose ?? false
+  const log = logger || createDefaultLogger(silent)
 
   try {
     options.apikey = options.apikey || findSavedKey(silent)
@@ -949,14 +1039,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     // Get organization ID for analytics
     const orgId = await getOrganizationId(supabase, appId)
 
-    if (!silent) {
-      log.info(`Requesting native build for ${appId}`)
-      log.info(`Platform: ${options.platform}`)
-      log.info(`Project: ${projectDir}`)
-      log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
-      log.info(`   They are used only during build and deleted after`)
-      log.info(`   Build outputs can optionally be uploaded for time-limited download links\n`)
-    }
+    log.info(`Requesting native build for ${appId}`)
+    log.info(`Platform: ${options.platform}`)
+    log.info(`Project: ${projectDir}`)
+    log.info(`\n🔒 Security: Credentials are never stored on Capgo servers`)
+    log.info(`   They are used only during build and deleted after`)
+    log.info(`   Build outputs can optionally be uploaded for time-limited download links\n`)
     if (verbose) {
       log.info(`API host: ${host}`)
     }
@@ -1038,9 +1126,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     // --no-playstore-upload: null out PLAY_CONFIG_JSON so it never reaches the builder
     if (options.playstoreUpload === false && mergedCredentials) {
       delete mergedCredentials.PLAY_CONFIG_JSON
-      if (!silent) {
-        log.info('ℹ️  --no-playstore-upload specified, Play Store upload disabled for this build')
-      }
+      log.info('ℹ️  --no-playstore-upload specified, Play Store upload disabled for this build')
     }
 
     const nativeProjectDir = getPlatformDirFromCapacitorConfig(config?.config, options.platform)
@@ -1064,18 +1150,16 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     // Validate required credentials for the platform
     if (!mergedCredentials) {
-      if (!silent) {
-        log.error('❌ No credentials found for this app and platform')
-        log.error('')
-        log.error('You must provide credentials via:')
-        log.error('  1. CLI arguments (--apple-key-id, --p12-password, etc.)')
-        log.error('  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)')
-        log.error('  3. Saved credentials file:')
-        log.error(`     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
-        log.error('')
-        log.error('Documentation:')
-        log.error('  https://capgo.app/docs/cli/cloud-build/credentials/')
-      }
+      log.error('❌ No credentials found for this app and platform')
+      log.error('')
+      log.error('You must provide credentials via:')
+      log.error('  1. CLI arguments (--apple-key-id, --p12-password, etc.)')
+      log.error('  2. Environment variables (APPLE_KEY_ID, P12_PASSWORD, etc.)')
+      log.error('  3. Saved credentials file:')
+      log.error(`     npx @capgo/cli build credentials save --appId ${appId} --platform ${options.platform}`)
+      log.error('')
+      log.error('Documentation:')
+      log.error('  https://capgo.app/docs/cli/cloud-build/credentials/')
       throw new Error('No credentials found. Please provide credentials before building.')
     }
 
@@ -1091,7 +1175,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       const distributionMode = (rawDistributionMode && validModes.includes(rawDistributionMode as any))
         ? rawDistributionMode
         : 'app_store'
-      if (!rawDistributionMode && !silent) {
+      if (!rawDistributionMode) {
         log.info('ℹ️  --ios-distribution not specified, defaulting to app_store')
       }
       // Write normalized value back so splitPayload picks it up
@@ -1102,7 +1186,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         missingCreds.push('BUILD_CERTIFICATE_BASE64 (or --build-certificate-base64)')
       // Note: P12_PASSWORD is optional - certificates can have no password
       // But we warn if it's missing in case the user forgot
-      if (!mergedCredentials.P12_PASSWORD && !silent) {
+      if (!mergedCredentials.P12_PASSWORD) {
         log.warn('⚠️  P12_PASSWORD not provided - assuming certificate has no password')
         log.warn('   If your certificate requires a password, provide it with --p12-password')
       }
@@ -1110,12 +1194,10 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       // Legacy detection: old provisioning keys without new provisioning map
       const hasLegacyProvisioning = !!(mergedCredentials.BUILD_PROVISION_PROFILE_BASE64 || mergedCredentials.APPLE_PROFILE_NAME)
       if (hasLegacyProvisioning && !mergedCredentials.CAPGO_IOS_PROVISIONING_MAP) {
-        if (!silent) {
-          log.error('❌ Legacy provisioning profile format detected. Run:')
-          log.error('     npx @capgo/cli build credentials migrate --platform ios')
-          log.error('')
-          log.error('   This will convert your existing provisioning profile to the new multi-target format.')
-        }
+        log.error('❌ Legacy provisioning profile format detected. Run:')
+        log.error('     npx @capgo/cli build credentials migrate --platform ios')
+        log.error('')
+        log.error('   This will convert your existing provisioning profile to the new multi-target format.')
         throw new Error('Legacy provisioning profile format detected. Run: npx @capgo/cli build credentials migrate --platform ios')
       }
 
@@ -1148,7 +1230,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           else if (mergedCredentials.SKIP_BUILD_NUMBER_BUMP !== 'true') {
             missingCreds.push('APPLE_KEY_ID/APPLE_ISSUER_ID/APPLE_KEY_CONTENT or --skip-build-number-bump (App Store Connect API key not provided - build numbers cannot be auto-incremented without it)')
           }
-          else if (!silent) {
+          else {
             log.warn('⚠️  App Store Connect API key not provided - build will succeed but cannot auto-upload to TestFlight')
           }
         }
@@ -1156,10 +1238,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       else if (distributionMode === 'ad_hoc') {
         // ad_hoc: no API key required. TestFlight upload skipped automatically.
         // Build number falls back to timestamp-based increment.
-        if (!silent) {
-          log.info('📦 Ad-hoc distribution mode: App Store Connect API key not required')
-          log.info('   Build number will use timestamp-based fallback')
-        }
+        log.info('📦 Ad-hoc distribution mode: App Store Connect API key not required')
+        log.info('   Build number will use timestamp-based fallback')
       }
 
       if (!mergedCredentials.APP_STORE_CONNECT_TEAM_ID)
@@ -1182,45 +1262,41 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         if (mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED !== 'true') {
           missingCreds.push('PLAY_CONFIG_JSON or BUILD_OUTPUT_UPLOAD_ENABLED=true (build has no output destination - enable either Play Store upload or Capgo download link)')
         }
-        else if (!silent) {
+        else {
           log.warn('⚠️  PLAY_CONFIG_JSON not provided - build will succeed but cannot auto-upload to Play Store')
         }
       }
     }
 
     if (missingCreds.length > 0) {
-      if (!silent) {
-        log.error(`❌ Missing required credentials for ${options.platform}:`)
-        log.error('')
-        for (const cred of missingCreds) {
-          log.error(`  • ${cred}`)
-        }
-        log.error('')
-        log.error('Provide credentials via:')
-        log.error('  1. CLI arguments: npx @capgo/cli build request --platform ios --apple-id "..." --p12-password "..."')
-        log.error('  2. Environment variables: export APPLE_ID="..." P12_PASSWORD="..."')
-        log.error('  3. Saved credentials: npx @capgo/cli build credentials save --platform ios ...')
-        log.error('')
-        log.error('Documentation:')
-        log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
+      log.error(`❌ Missing required credentials for ${options.platform}:`)
+      log.error('')
+      for (const cred of missingCreds) {
+        log.error(`  • ${cred}`)
       }
+      log.error('')
+      log.error('Provide credentials via:')
+      log.error(`  1. CLI arguments: npx @capgo/cli build request --platform ${options.platform} ${options.platform === 'ios' ? '--apple-key-id "..." --apple-issuer-id "..." --apple-key-content "..."' : '--android-keystore-file "..." --keystore-key-alias "..."'}`)
+      log.error(`  2. Environment variables: ${options.platform === 'ios' ? 'export APPLE_KEY_ID="..." APPLE_ISSUER_ID="..." APPLE_KEY_CONTENT="..."' : 'export ANDROID_KEYSTORE_FILE="..." KEYSTORE_KEY_ALIAS="..."'}`)
+      log.error(`  3. Saved credentials: npx @capgo/cli build credentials save --platform ${options.platform} ...`)
+      log.error('')
+      log.error('Documentation:')
+      log.error(`  https://capgo.app/docs/cli/cloud-build/${options.platform}/`)
       throw new Error(`Missing required credentials for ${options.platform}: ${missingCreds.join(', ')}`)
     }
 
     // Log defaults for output control fields when not explicitly set
-    if (!silent) {
-      if (!options.buildMode) {
-        log.info('ℹ️  --build-mode not specified, defaulting to release')
-      }
-      if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
-        log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
-      }
-      if (!mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS) {
-        log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
-      }
-      if (!mergedCredentials.SKIP_BUILD_NUMBER_BUMP) {
-        log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
-      }
+    if (!options.buildMode) {
+      log.info('ℹ️  --build-mode not specified, defaulting to release')
+    }
+    if (!mergedCredentials.BUILD_OUTPUT_UPLOAD_ENABLED) {
+      log.info('ℹ️  --output-upload not specified, defaulting to false (no Capgo download link)')
+    }
+    if (!mergedCredentials.BUILD_OUTPUT_RETENTION_SECONDS) {
+      log.info(`ℹ️  --output-retention not specified, defaulting to ${MIN_OUTPUT_RETENTION_SECONDS}s (1 hour)`)
+    }
+    if (!mergedCredentials.SKIP_BUILD_NUMBER_BUMP) {
+      log.info('ℹ️  --skip-build-number-bump not specified, build number will be auto-incremented (default)')
     }
 
     const { buildOptions: buildOptionsPayload, buildCredentials: buildCredentialsPayload } = splitPayload(
@@ -1238,9 +1314,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       build_credentials: buildCredentialsPayload,
     }
 
-    if (!silent) {
-      log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
-    }
+    log.info('✓ Using credentials (merged from CLI args, env vars, and saved file)')
     if (verbose) {
       const credentialKeys = Object.keys(buildCredentialsPayload)
       log.info(`Credentials provided: ${credentialKeys.join(', ')}`)
@@ -1248,8 +1322,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     }
 
     // Request build from Capgo backend (POST /build/request)
-    if (!silent)
-      log.info('Requesting build from Capgo...')
+    log.info('Requesting build from Capgo...')
 
     const maxRetries = 3
     const response = await fetchWithRetry(
@@ -1263,7 +1336,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
         body: JSON.stringify(requestPayload),
       },
       maxRetries,
-      silent,
+      log,
     )
 
     if (!response.ok) {
@@ -1278,10 +1351,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       status: string
     }
 
-    if (!silent) {
-      log.success(`Build job created: ${buildRequest.job_id}`)
-      log.info(`Status: ${buildRequest.status}`)
-    }
+    log.success(`Build job created: ${buildRequest.job_id}`)
+    log.info(`Status: ${buildRequest.status}`)
     if (verbose) {
       log.info(`Upload URL: ${buildRequest.upload_url}`)
       log.info(`Upload expires: ${buildRequest.upload_expires_at}`)
@@ -1307,21 +1378,17 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
     try {
       // Zip the project directory
-      if (!silent)
-        log.info(`Zipping ${options.platform} project from ${projectDir}...`)
+      log.info(`Zipping ${options.platform} project from ${projectDir}...`)
 
       await zipDirectory(projectDir, zipPath, options.platform, config?.config)
 
       const zipStats = await stat(zipPath)
       const sizeMB = (zipStats.size / 1024 / 1024).toFixed(2)
 
-      if (!silent)
-        log.success(`Created zip: ${zipPath} (${sizeMB} MB)`)
+      log.success(`Created zip: ${zipPath} (${sizeMB} MB)`)
 
       // Upload to builder using TUS protocol
-      if (!silent) {
-        log.info('Uploading to builder...')
-      }
+      log.info('Uploading to builder...')
       if (verbose) {
         log.info(`Upload endpoint: ${buildRequest.upload_url}`)
         log.info(`File size: ${sizeMB} MB`)
@@ -1332,9 +1399,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       const zipBuffer = readFileSync(zipPath)
 
       // Upload using TUS protocol
-      const spinner = spinnerC()
-      if (!silent)
-        spinner.start('Uploading bundle')
+      log.uploadProgress(0)
 
       await new Promise<void>((resolve, reject) => {
         const upload = new tus.Upload(zipBuffer as any, {
@@ -1366,10 +1431,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           },
           // Callback for errors which cannot be fixed using retries
           onError(error) {
-            if (!silent) {
-              spinner.stop('Upload failed')
-              log.error(`Upload error: ${error.message}`)
-            }
+            log.error(`Upload error: ${error.message}`)
             if (error instanceof tus.DetailedError) {
               const body = error.originalResponse?.getBody()
               const status = error.originalResponse?.getStatus()
@@ -1397,15 +1459,12 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           },
           // Callback for reporting upload progress
           onProgress(bytesUploaded, bytesTotal) {
-            const percentage = ((bytesUploaded / bytesTotal) * 100).toFixed(2)
-            if (!silent)
-              spinner.message(`Uploading ${percentage}%`)
+            const percentage = Number.parseFloat(((bytesUploaded / bytesTotal) * 100).toFixed(2))
+            log.uploadProgress(percentage)
           },
           // Callback for once the upload is completed
           onSuccess() {
-            if (!silent) {
-              spinner.stop('Upload complete!')
-            }
+            log.uploadProgress(100)
             if (verbose) {
               log.success('TUS upload completed successfully')
             }
@@ -1420,8 +1479,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       })
 
       // Start the build job via Capgo backend
-      if (!silent)
-        log.info('Starting build job...')
+      log.info('Starting build job...')
 
       const startResponse = await fetch(`${host}/build/start/${buildRequest.job_id}`, {
         method: 'POST',
@@ -1439,10 +1497,8 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
 
       const startResult = await startResponse.json() as { status?: string, logs_url?: string, logs_token?: string }
 
-      if (!silent) {
-        log.success('Build started!')
-        log.info('Streaming build logs...')
-      }
+      log.success('Build started!')
+      log.info('Streaming build logs...')
 
       const abortController = new AbortController()
       let cancelRequested = false
@@ -1476,8 +1532,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           if (cancelRequested) {
             process.exit(1)
           }
-          if (!silent)
-            log.warn('Canceling build... (press Ctrl+C again to force quit)')
+          log.warn('Canceling build... (press Ctrl+C again to force quit)')
           await cancelBuild()
           abortController.abort()
         }
@@ -1503,7 +1558,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           }
           const status = await response.json() as { status: string }
           const normalized = status.status?.toLowerCase?.() ?? ''
-          if (!silent && showStatusChecks)
+          if (showStatusChecks)
             log.info(`Build status: ${normalized || status.status}`)
           if (TERMINAL_STATUS_SET.has(normalized)) {
             return normalized
@@ -1527,6 +1582,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           () => {
             showStatusChecks = true
           },
+          silent && !logger ? undefined : log,
         )
       }
       finally {
@@ -1544,19 +1600,17 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
       }
       else {
         // Fall back to polling if stream ended without final status
-        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent, showStatusChecks, abortController.signal)
+        finalStatus = await pollBuildStatus(host, buildRequest.job_id, appId, options.platform, options.apikey, silent, showStatusChecks, abortController.signal, log)
       }
 
-      if (!silent) {
-        if (finalStatus === 'succeeded') {
-          log.success(`Build completed successfully!`)
-        }
-        else if (finalStatus === 'failed') {
-          log.error(`Build failed`)
-        }
-        else {
-          log.warn(`Build finished with status: ${finalStatus}`)
-        }
+      if (finalStatus === 'succeeded') {
+        log.success(`Build completed successfully!`)
+      }
+      else if (finalStatus === 'failed') {
+        log.error(`Build failed`)
+      }
+      else {
+        log.warn(`Build finished with status: ${finalStatus}`)
       }
 
       // Calculate build time (in seconds with 2 decimal places, matching upload behavior)
@@ -1591,8 +1645,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error)
-    if (!silent)
-      log.error(errorMessage)
+    log.error(errorMessage)
 
     return {
       success: false,

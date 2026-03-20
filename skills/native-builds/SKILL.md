@@ -1,11 +1,70 @@
 ---
 name: native-builds
-description: Use when working with Capgo Cloud native iOS and Android build requests, credential storage, credential updates, and build output upload settings.
+description: Use when working with Capgo Cloud native iOS and Android build requests, onboarding, credential storage, credential updates, and build output upload settings.
 ---
 
 # Capgo CLI Native Builds
 
 Use this skill for Capgo Cloud native iOS and Android build workflows.
+
+## Onboarding (automated iOS setup)
+
+### `build onboarding`
+
+- Interactive command that automates iOS certificate and provisioning profile creation.
+- Reduces iOS setup from ~10 manual steps to 1 manual step (creating an API key) + 1 command.
+- Example: `npx @capgo/cli@latest build onboarding`
+- Notes:
+  - Uses Ink (React for terminal) for the interactive UI — only command that uses Ink; all other commands use `@clack/prompts`.
+  - Requires running inside a Capacitor project directory with an `ios/` folder.
+  - The user creates ONE App Store Connect API key (.p8 file), then the CLI handles everything else.
+  - On macOS, offers a native file picker dialog for .p8 selection.
+  - Auto-detects Key ID from .p8 filename (e.g. `AuthKey_XXXX.p8`).
+  - Progress persists in `~/.capgo-credentials/onboarding/<appId>.json` — safe to interrupt and resume.
+  - Saves credentials to the same `~/.capgo-credentials/credentials.json` used by `build request`.
+  - Optionally kicks off the first build at the end.
+
+#### What it automates (iOS)
+
+1. Verifies the API key with Apple
+2. Generates CSR + creates an `IOS_DISTRIBUTION` certificate via the App Store Connect API
+3. Registers or reuses the bundle ID
+4. Creates an `IOS_APP_STORE` provisioning profile
+5. Saves all credentials (certificate as .p12, profile, API key, team ID)
+6. Requests the first cloud build
+
+#### Conflict resolution
+
+- **Certificate limit reached**: lists existing certs, tags ones created by Capgo onboarding, lets the user pick one to revoke, then retries.
+- **Duplicate provisioning profiles**: detects profiles matching the `Capgo <appId> AppStore` naming pattern, deletes them, and retries.
+- **Existing credentials**: offers to backup existing credentials before proceeding, or exit onboarding.
+
+#### Architecture
+
+- `src/build/onboarding/command.ts` — entry point, launches Ink
+- `src/build/onboarding/apple-api.ts` — JWT auth + App Store Connect API (verify, create cert, create profile, revoke, delete)
+- `src/build/onboarding/csr.ts` — CSR generation + P12 creation via `node-forge`
+- `src/build/onboarding/progress.ts` — per-app progress persistence
+- `src/build/onboarding/file-picker.ts` — macOS native file picker via `osascript`
+- `src/build/onboarding/ui/app.tsx` — Ink app (state machine)
+- `src/build/onboarding/ui/components.tsx` — reusable UI components
+
+#### BuildLogger callback interface
+
+`requestBuildInternal` accepts an optional `BuildLogger` to receive log output via callbacks instead of writing directly to stdout. This enables clean integration with the Ink UI:
+
+```typescript
+interface BuildLogger {
+  info: (msg: string) => void
+  error: (msg: string) => void
+  warn: (msg: string) => void
+  success: (msg: string) => void
+  buildLog: (msg: string) => void
+  uploadProgress: (percent: number) => void
+}
+```
+
+---
 
 ## Core build request
 
