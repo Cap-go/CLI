@@ -1543,7 +1543,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
           () => {
             showStatusChecks = true
           },
-          log,
+          silent && !logger ? undefined : log,
         )
       }
       finally {
