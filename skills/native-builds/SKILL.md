@@ -37,7 +37,7 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
 
 - **Certificate limit reached**: lists existing certs, tags ones created by Capgo onboarding, lets the user pick one to revoke, then retries.
 - **Duplicate provisioning profiles**: detects profiles matching the `Capgo <appId> AppStore` naming pattern, deletes them, and retries.
-- **Existing credentials**: asks to overwrite or keep existing.
+- **Existing credentials**: offers to backup existing credentials before proceeding, or exit onboarding.
 
 #### Architecture
 

@@ -685,8 +685,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                 setStep('backing-up')
               }
               else {
-                process.stderr.write('\nExiting onboarding.\n')
-                process.exit(0)
+                addLog('Exiting onboarding.', 'yellow')
+                setTimeout(() => exit(), 50)
               }
             }}
           />
@@ -859,7 +859,6 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     <Text dimColor> — press Enter to confirm, or type a different one</Text>
                   </Box>
                   <Box marginTop={1}>
-                    <Text color="cyan">❯ </Text>
                     <FilteredTextInput
                       placeholder={keyId}
                       onSubmit={(value) => {
@@ -881,7 +880,6 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     :
                   </Text>
                   <Box marginTop={1}>
-                    <Text color="cyan">❯ </Text>
                     <FilteredTextInput
                       placeholder="ABC123DEF"
                       onSubmit={(value) => {
@@ -968,8 +966,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             ]}
             onChange={(value) => {
               if (value === '__exit__') {
-                process.stderr.write('\nExiting. Revoke a certificate manually, then re-run onboarding.\n')
-                process.exit(0)
+                addLog('Exiting. Revoke a certificate manually, then re-run onboarding.', 'yellow')
+                setTimeout(() => exit(), 50)
               }
               else {
                 setCertToRevoke(value)
@@ -1013,8 +1011,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                 setStep('deleting-duplicate-profiles')
               }
               else {
-                process.stderr.write('\nExiting. Delete duplicate profiles manually in the Apple Developer Portal, then re-run onboarding.\n')
-                process.exit(0)
+                addLog('Exiting. Delete duplicate profiles manually in the Apple Developer Portal, then re-run onboarding.', 'yellow')
+                setTimeout(() => exit(), 50)
               }
             }}
           />
@@ -1120,8 +1118,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     setStep('welcome')
                   }
                   else {
-                    console.error('\n  Run `capgo build onboarding` to resume.\n')
-                    process.exit(1)
+                    setError('Run `capgo build onboarding` to resume.')
+                    setTimeout(() => exit(new Error('User exited onboarding')), 50)
                   }
                 }}
               />

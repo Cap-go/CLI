@@ -38,7 +38,7 @@ export function generateCsr(): CsrResult {
  * @param certificateContentBase64 - The `certificateContent` field from Apple's
  *   POST /v1/certificates response (base64-encoded DER certificate)
  * @param privateKeyPem - The PEM-encoded private key from generateCsr()
- * @param password - Optional password for the .p12 file (defaults to empty string)
+ * @param password - Optional password for the .p12 file (defaults to DEFAULT_P12_PASSWORD)
  */
 /**
  * Extract the Apple team ID from a certificate's subject OU field.

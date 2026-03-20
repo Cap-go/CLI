@@ -89,7 +89,18 @@ function createDefaultLogger(silent: boolean): BuildLogger {
         console.log(msg)
       }
     },
-    uploadProgress: (_percent: number) => {},
+    uploadProgress: (() => {
+      let lastLogged = -1
+      return (percent: number) => {
+        if (!silent) {
+          const rounded = Math.floor(percent / 10) * 10
+          if (rounded > lastLogged) {
+            lastLogged = rounded
+            clackLog.info(`Uploading: ${rounded}%`)
+          }
+        }
+      }
+    })(),
   }
 }
 

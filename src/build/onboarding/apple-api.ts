@@ -60,7 +60,7 @@ async function ascFetch(
     const errors: AppleApiError[] = body?.errors || []
     const first = errors[0]
     if (first) {
-      throw new Error(`Apple API error: ${first.title} — ${first.detail} (${first.code})`)
+      throw new Error(`Apple API error (${res.status}): ${first.title} — ${first.detail} (${first.code})`)
     }
     throw new Error(`Apple API error: HTTP ${res.status} ${res.statusText}`)
   }

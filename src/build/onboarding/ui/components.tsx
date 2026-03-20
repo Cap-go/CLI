@@ -65,9 +65,10 @@ export const FilteredTextInput: FC<{
     if (key.ctrl || key.meta || key.escape || key.upArrow || key.downArrow || key.leftArrow || key.rightArrow || key.tab) {
       return
     }
-    // Filter out the specified character
-    if (input && !filter.includes(input)) {
-      setValue(prev => prev + input)
+    // Append input then strip all forbidden characters (handles paste)
+    if (input) {
+      const filterRegex = new RegExp(`[${filter.replace(/[-\\^$*+?.()|[\]{}]/g, '\\$&')}]`, 'g')
+      setValue(prev => (prev + input).replace(filterRegex, ''))
     }
   })
 
