@@ -13,8 +13,18 @@ function getOnboardingDir(baseDir?: string): string {
   return join(base, ONBOARDING_DIR)
 }
 
+/** Sanitize appId to prevent path traversal (e.g. "../" or absolute paths) */
+function sanitizeAppId(appId: string): string {
+  // Strip path separators and traversal sequences, keep only safe chars
+  const sanitized = appId.replace(/[/\\]/g, '_').replace(/\.\./g, '_')
+  if (!sanitized || sanitized === '.' || sanitized === '..') {
+    throw new Error(`Invalid appId for progress file: "${appId}"`)
+  }
+  return sanitized
+}
+
 function getProgressPath(appId: string, baseDir?: string): string {
-  return join(getOnboardingDir(baseDir), `${appId}.json`)
+  return join(getOnboardingDir(baseDir), `${sanitizeAppId(appId)}.json`)
 }
 
 /**
