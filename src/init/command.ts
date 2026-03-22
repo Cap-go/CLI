@@ -2263,7 +2263,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   }
   const localConfig = await getLocalConfig()
   appId = getAppId(appId, extConfig?.config)
-  options.apikey = apikeyCommand || findSavedKey(true)
+  options.apikey = apikeyCommand
+  if (!options.apikey) {
+    try {
+      options.apikey = findSavedKey(true)
+    }
+    catch {
+    }
+  }
 
   if (appId === undefined) {
     // ask for the appId
