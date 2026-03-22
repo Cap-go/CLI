@@ -49,14 +49,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   const [existingCerts, setExistingCerts] = useState<Array<{ id: string, name: string, serialNumber: string, expirationDate: string }>>([])
   const [certToRevoke, setCertToRevoke] = useState<string | null>(null)
   const pickerOpenedRef = useRef(false)
+  const exitRequestedRef = useRef(false)
   // overwriteConfirmedRef removed — credential check happens at start now
-
-  // Open browser on Ctrl+O (FilteredTextInput ignores ctrl keys, so no conflict)
-  useInput((input, key) => {
-    if (key.ctrl && input === 'o' && (step === 'api-key-instructions' || step === 'input-issuer-id')) {
-      open('https://appstoreconnect.apple.com/access/integrations/api')
-    }
-  })
 
   // Collected data — restore p8Path from progress if resuming
   const [p8Path, setP8Path] = useState(initialProgress?.p8Path || '')
@@ -99,6 +93,27 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   const addLog = useCallback((text: string, color = 'green') => {
     setLog(prev => [...prev, { text, color }])
   }, [])
+
+  const exitOnboarding = useCallback((message?: string) => {
+    if (exitRequestedRef.current)
+      return
+    exitRequestedRef.current = true
+    if (message)
+      addLog(message, 'yellow')
+    setTimeout(() => exit(), 50)
+  }, [addLog, exit])
+
+  // Open browser on Ctrl+O (FilteredTextInput ignores ctrl keys, so no conflict)
+  useInput((input, key) => {
+    if (key.ctrl && input === 'c') {
+      process.kill(process.pid, 'SIGINT')
+      return
+    }
+
+    if (key.ctrl && input === 'o' && (step === 'api-key-instructions' || step === 'input-issuer-id')) {
+      open('https://appstoreconnect.apple.com/access/integrations/api')
+    }
+  })
 
   /** Save partial progress so the user can resume mid-flow */
   const savePartialProgress = useCallback(async (updates: { p8Path?: string, keyId?: string, issuerId?: string }) => {
@@ -193,10 +208,10 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     else {
       // Second failure — exit
       addLog(`✖ ${message}`, 'red')
-      addLog('Run `capgo build onboarding` to retry from where you left off.', 'yellow')
-      setTimeout(() => exit(), 100)
+      addLog('Run `capgo build init` to retry from where you left off.', 'yellow')
+      setTimeout(() => exitOnboarding(), 100)
     }
-  }, [retryCount, addLog, exit])
+  }, [retryCount, addLog, exitOnboarding])
 
   // ── Credential save logic ──
 
@@ -686,7 +701,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
               }
               else {
                 addLog('Exiting onboarding.', 'yellow')
-                setTimeout(() => exit(), 50)
+                exitOnboarding()
               }
             }}
           />
@@ -967,7 +982,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             onChange={(value) => {
               if (value === '__exit__') {
                 addLog('Exiting. Revoke a certificate manually, then re-run onboarding.', 'yellow')
-                setTimeout(() => exit(), 50)
+                exitOnboarding()
               }
               else {
                 setCertToRevoke(value)
@@ -1012,7 +1027,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
               }
               else {
                 addLog('Exiting. Delete duplicate profiles manually in the Apple Developer Portal, then re-run onboarding.', 'yellow')
-                setTimeout(() => exit(), 50)
+                exitOnboarding()
               }
             }}
           />
@@ -1118,8 +1133,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     setStep('welcome')
                   }
                   else {
-                    setError('Run `capgo build onboarding` to resume.')
-                    setTimeout(() => exit(new Error('User exited onboarding')), 50)
+                    setError('Run `capgo build init` to resume.')
+                    exitOnboarding()
                   }
                 }}
               />

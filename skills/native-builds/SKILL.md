@@ -9,13 +9,14 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
 
 ## Onboarding (automated iOS setup)
 
-### `build onboarding`
+### `build init` (alias: `build onboarding`)
 
 - Interactive command that automates iOS certificate and provisioning profile creation.
 - Reduces iOS setup from ~10 manual steps to 1 manual step (creating an API key) + 1 command.
-- Example: `npx @capgo/cli@latest build onboarding`
+- Example: `npx @capgo/cli@latest build init`
+- Backward compatibility: `npx @capgo/cli@latest build onboarding` still works.
 - Notes:
-  - Uses Ink (React for terminal) for the interactive UI — only command that uses Ink; all other commands use `@clack/prompts`.
+  - Uses Ink (React for terminal) for the interactive UI, alongside the main `init` onboarding flow.
   - Requires running inside a Capacitor project directory with an `ios/` folder.
   - The user creates ONE App Store Connect API key (.p8 file), then the CLI handles everything else.
   - On macOS, offers a native file picker dialog for .p8 selection.
