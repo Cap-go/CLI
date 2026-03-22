@@ -21,6 +21,7 @@ import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
+import { stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -35,6 +36,12 @@ const channelNameRegex = /^[\w.-]+$/
 const appIdRegex = /^[a-z0-9]+(?:\.[\w-]+)+$/i
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
+const capacitorGettingStartedUrl = 'https://capacitorjs.com/docs/getting-started'
+const frameworkSetupGuides = {
+  nextjs: 'https://capgo.app/blog/nextjs-mobile-app-capacitor-from-scratch/',
+  nuxtjs: 'https://capgo.app/blog/nuxt-mobile-app-capacitor-from-scratch/',
+  sveltekit: 'https://capgo.app/blog/creating-mobile-apps-with-sveltekit-and-capacitor/',
+} as const
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -46,6 +53,330 @@ function readTmpObj() {
     .find(obj => obj.name.startsWith('capgocli'))
     ?.full
     ?? tmp.fileSync({ prefix: 'capgocli' }).name
+}
+
+function findNearestNamedFile(startDir: string, fileNames: string[]) {
+  let currentDir = startDir
+  const rootDir = path.parse(currentDir).root
+
+  while (true) {
+    for (const fileName of fileNames) {
+      const candidate = join(currentDir, fileName)
+      if (existsSync(candidate))
+        return candidate
+    }
+
+    if (currentDir === rootDir)
+      break
+
+    const parent = dirname(currentDir)
+    if (parent === currentDir)
+      break
+    currentDir = parent
+  }
+
+  return undefined
+}
+
+function findNearestPackageJson(startDir: string) {
+  return findNearestNamedFile(startDir, [PACKNAME])
+}
+
+function readExistingFile(filePath: string | undefined) {
+  if (!filePath || !existsSync(filePath))
+    return undefined
+  return readFileSync(filePath, 'utf8')
+}
+
+function getFrameworkKind(projectType: string): keyof typeof frameworkSetupGuides | undefined {
+  if (projectType.startsWith('nextjs-'))
+    return 'nextjs'
+  if (projectType.startsWith('nuxtjs-'))
+    return 'nuxtjs'
+  if (projectType.startsWith('sveltekit-'))
+    return 'sveltekit'
+  return undefined
+}
+
+function getFrameworkDisplayName(projectType: string) {
+  const frameworkKind = getFrameworkKind(projectType)
+  if (frameworkKind === 'nextjs')
+    return 'Next.js'
+  if (frameworkKind === 'nuxtjs')
+    return 'Nuxt'
+  if (frameworkKind === 'sveltekit')
+    return 'SvelteKit'
+  return 'web'
+}
+
+function getSuggestedWebDir(projectType: string) {
+  const frameworkKind = getFrameworkKind(projectType)
+  if (frameworkKind === 'nextjs')
+    return 'out'
+  if (frameworkKind === 'nuxtjs')
+    return '.output/public'
+  if (frameworkKind === 'sveltekit')
+    return 'build'
+  return 'dist'
+}
+
+function getPackageJsonData(packageJsonPath: string | undefined) {
+  if (!packageJsonPath || !existsSync(packageJsonPath))
+    return undefined
+
+  try {
+    return JSON.parse(readFileSync(packageJsonPath, 'utf8')) as { name?: string }
+  }
+  catch {
+    return undefined
+  }
+}
+
+function getSuggestedAppName(projectDir: string) {
+  const packageJson = getPackageJsonData(findNearestPackageJson(projectDir))
+  const rawName = packageJson?.name?.split('/').pop() || path.basename(projectDir)
+  return rawName
+    .replace(/[-_]+/g, ' ')
+    .replace(/\b\w/g, char => char.toUpperCase())
+}
+
+function getFrameworkSetupIssues(projectType: string, projectDir: string, capacitorConfigPath?: string) {
+  const frameworkKind = getFrameworkKind(projectType)
+  if (!frameworkKind)
+    return []
+
+  const issues: string[] = []
+
+  if (frameworkKind === 'nextjs') {
+    const nextConfig = readExistingFile(findNearestNamedFile(projectDir, ['next.config.ts', 'next.config.js', 'next.config.mjs']))
+    if (!nextConfig?.includes('output') || !nextConfig.includes('export')) {
+      issues.push('Next.js must use static export (`output: \'export\'`).')
+    }
+    const capacitorConfig = readExistingFile(capacitorConfigPath)
+    if (capacitorConfig && !capacitorConfig.includes('webDir: \'out\'') && !capacitorConfig.includes('webDir: "out"')) {
+      issues.push('Capacitor `webDir` should point to `out` for Next.js.')
+    }
+  }
+
+  if (frameworkKind === 'nuxtjs') {
+    const nuxtConfig = readExistingFile(findNearestNamedFile(projectDir, ['nuxt.config.ts', 'nuxt.config.js']))
+    if (!nuxtConfig?.includes('preset') || !nuxtConfig.includes('static')) {
+      issues.push('Nuxt must use static Nitro output (`nitro.preset = \"static\"`).')
+    }
+    const capacitorConfig = readExistingFile(capacitorConfigPath)
+    if (capacitorConfig && !capacitorConfig.includes('webDir: \'.output/public\'') && !capacitorConfig.includes('webDir: ".output/public"')) {
+      issues.push('Capacitor `webDir` should point to `.output/public` for Nuxt.')
+    }
+  }
+
+  if (frameworkKind === 'sveltekit') {
+    const svelteConfig = readExistingFile(findNearestNamedFile(projectDir, ['svelte.config.js', 'svelte.config.ts']))
+    if (!svelteConfig?.includes('adapter-static')) {
+      issues.push('SvelteKit must use `@sveltejs/adapter-static` before Capacitor sync works reliably.')
+    }
+  }
+
+  return issues
+}
+
+function exitBeforeAuthenticatedOnboarding() {
+  pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+  exit(1)
+}
+
+function cancelBeforeAuthenticatedOnboarding(command: boolean | string | symbol) {
+  if (pIsCancel(command)) {
+    pCancel('Operation cancelled.')
+    exitBeforeAuthenticatedOnboarding()
+  }
+}
+
+async function waitUntilSetupIsDone(message = 'Type "ready" when the setup is done.') {
+  while (true) {
+    const ready = await pText({
+      message,
+      placeholder: 'ready',
+      validate: (value) => {
+        if (!value?.trim())
+          return 'Type "ready" when you are done.'
+        if (value.trim().toLowerCase() !== 'ready')
+          return 'Type "ready" when you are done.'
+      },
+    })
+    cancelBeforeAuthenticatedOnboarding(ready)
+    if ((ready as string).trim().toLowerCase() === 'ready')
+      return
+  }
+}
+
+async function askForAppName(message: string, initialValue: string) {
+  const appName = await pText({
+    message,
+    placeholder: initialValue,
+    validate: (value) => {
+      if (!value?.trim())
+        return 'App name is required'
+    },
+  })
+  cancelBeforeAuthenticatedOnboarding(appName)
+  return (appName as string).trim()
+}
+
+async function askForWebDir(projectType: string) {
+  const suggestedWebDir = getSuggestedWebDir(projectType)
+  const webDir = await pText({
+    message: 'Enter the web build directory to use for Capacitor:',
+    placeholder: suggestedWebDir,
+    validate: (value) => {
+      if (!value?.trim())
+        return 'Web directory is required'
+    },
+  })
+  cancelBeforeAuthenticatedOnboarding(webDir)
+  return (webDir as string).trim()
+}
+
+async function maybeRunCapacitorInit(projectDir: string, projectType: string, initialAppId?: string) {
+  const shouldInitCapacitor = await pConfirm({
+    message: 'Do you want me to install Capacitor here and run init now?',
+    initialValue: true,
+  })
+  cancelBeforeAuthenticatedOnboarding(shouldInitCapacitor)
+
+  if (!shouldInitCapacitor)
+    exitBeforeAuthenticatedOnboarding()
+
+  const appName = await askForAppName('App name for Capacitor:', getSuggestedAppName(projectDir))
+  const capacitorAppId = initialAppId || await askForAppId('Enter your appId for Capacitor:')
+  const webDir = await askForWebDir(projectType)
+  const spinner = pSpinner()
+  const pm = getPMAndCommand()
+
+  try {
+    spinner.start(`Installing Capacitor packages with ${pm.installCommand}`)
+    const installCoreResult = spawnSync(pm.pm, [pm.command, '@capacitor/core'], { stdio: 'pipe', cwd: projectDir })
+    if (installCoreResult.error)
+      throw installCoreResult.error
+    if (installCoreResult.status !== 0) {
+      const stderr = installCoreResult.stderr?.toString().trim()
+      const stdout = installCoreResult.stdout?.toString().trim()
+      throw new Error(stderr || stdout || `${pm.installCommand} @capacitor/core exited with code ${installCoreResult.status}`)
+    }
+
+    const installCliResult = spawnSync(pm.pm, [pm.command, '-D', '@capacitor/cli'], { stdio: 'pipe', cwd: projectDir })
+    if (installCliResult.error)
+      throw installCliResult.error
+    if (installCliResult.status !== 0) {
+      const stderr = installCliResult.stderr?.toString().trim()
+      const stdout = installCliResult.stdout?.toString().trim()
+      throw new Error(stderr || stdout || `${pm.installCommand} -D @capacitor/cli exited with code ${installCliResult.status}`)
+    }
+
+    spinner.message(`Running: ${pm.runner} cap init "${appName}" "${capacitorAppId}" --web-dir ${webDir}`)
+    const initResult = spawnSync(pm.runner, ['cap', 'init', appName, capacitorAppId, '--web-dir', webDir], { stdio: 'pipe', cwd: projectDir })
+    if (initResult.error)
+      throw initResult.error
+    if (initResult.status !== 0) {
+      const stderr = initResult.stderr?.toString().trim()
+      const stdout = initResult.stdout?.toString().trim()
+      throw new Error(stderr || stdout || `cap init exited with code ${initResult.status}`)
+    }
+    spinner.stop('Capacitor init done ✅')
+    pLog.info(`Capacitor was initialized with webDir ${webDir}.`)
+    return capacitorAppId
+  }
+  catch (error) {
+    spinner.stop('Capacitor init failed ❌')
+    pLog.error(formatError(error))
+    const retry = await pConfirm({
+      message: 'Capacitor init failed. Do you want to try again?',
+      initialValue: true,
+    })
+    cancelBeforeAuthenticatedOnboarding(retry)
+    if (retry)
+      return maybeRunCapacitorInit(projectDir, projectType, capacitorAppId)
+    exitBeforeAuthenticatedOnboarding()
+  }
+}
+
+function runCreateAppTemplate() {
+  stopInitInkSession({ text: 'Starting Capacitor app template creation...', tone: 'green' })
+  const result = spawnSync('npm', ['init', '@capacitor/app@latest'], { stdio: 'inherit' })
+  if (result.error || result.status !== 0) {
+    stdout.write('Capacitor app template creation failed. Run npm init @capacitor/app@latest manually and try again.\n')
+    exit(1)
+  }
+
+  stdout.write('Capacitor app template creation finished. Run init again from the new app folder.\n')
+  exit(0)
+}
+
+async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<string | undefined> {
+  while (true) {
+    const currentDir = cwd()
+    const nearestCapacitorConfig = findNearestCapacitorConfig(currentDir)
+    const nearestPackageJson = findNearestPackageJson(currentDir)
+    const projectDir = nearestCapacitorConfig?.dir || (nearestPackageJson ? dirname(nearestPackageJson) : currentDir)
+    const projectType = await findProjectType()
+    const frameworkKind = getFrameworkKind(projectType)
+
+    if (nearestCapacitorConfig?.dir === currentDir) {
+      const frameworkIssues = getFrameworkSetupIssues(projectType, projectDir, nearestCapacitorConfig.file)
+      if (frameworkIssues.length === 0)
+        return
+
+      pLog.warn(`${getFrameworkDisplayName(projectType)} is detected, but the Capacitor setup is not ready yet.`)
+      for (const issue of frameworkIssues) {
+        pLog.warn(issue)
+      }
+      if (frameworkKind) {
+        pLog.info(`Follow this guide to finish the setup: ${frameworkSetupGuides[frameworkKind]}`)
+      }
+      await waitUntilSetupIsDone()
+      continue
+    }
+
+    if (nearestCapacitorConfig) {
+      return
+    }
+
+    if (frameworkKind) {
+      const frameworkIssues = getFrameworkSetupIssues(projectType, projectDir)
+      if (frameworkIssues.length > 0) {
+        pLog.warn(`${getFrameworkDisplayName(projectType)} project detected, but the setup is not ready yet.`)
+        for (const issue of frameworkIssues) {
+          pLog.warn(issue)
+        }
+        pLog.info(`Follow this guide: ${frameworkSetupGuides[frameworkKind]}`)
+        await waitUntilSetupIsDone()
+        continue
+      }
+
+      const initializedAppId = await maybeRunCapacitorInit(projectDir, projectType, initialAppId)
+      return initializedAppId
+    }
+
+    if (nearestPackageJson) {
+      pLog.warn('This looks like a web app, but Capacitor is not initialized yet.')
+      pLog.info(`Follow the Capacitor getting started guide: ${capacitorGettingStartedUrl}`)
+      const initializedAppId = await maybeRunCapacitorInit(projectDir, projectType, initialAppId)
+      return initializedAppId
+    }
+
+    const createAppNow = await pConfirm({
+      message: 'This folder is not a web app yet. Do you want to start npm init @capacitor/app@latest now?',
+      initialValue: true,
+    })
+    cancelBeforeAuthenticatedOnboarding(createAppNow)
+    if (createAppNow) {
+      runCreateAppTemplate()
+    }
+    else {
+      pLog.info('Create a new Capacitor app first with: npm init @capacitor/app@latest')
+      pLog.info('Then run this onboarding again from the new app folder.')
+      exitBeforeAuthenticatedOnboarding()
+    }
+  }
 }
 
 function markStepDone(step: number, pathToPackageJson?: string, channelName?: string) {
@@ -1861,6 +2192,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const pm = getPMAndCommand()
   pIntro('Capgo onboarding')
   renderInitOnboardingWelcome(initOnboardingSteps.length)
+  appId = await ensureWorkspaceReadyForInit(appId) ?? appId
   await checkAlerts()
 
   let extConfig: Awaited<ReturnType<typeof getConfig>> | undefined
