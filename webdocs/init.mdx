@@ -16,6 +16,8 @@ npx @capgo/cli@latest init
 
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
 Capgo bundles are web assets and can be fetched by anyone who knows the URL. Use encryption for banking, regulated, or other high-security apps.
+The interactive experience now runs as a real Ink-based fullscreen onboarding, with a persistent dashboard, roadmap, progress cards for each onboarding step, and resume-aware checkpoints. On macOS, if dependency detection cannot find the right project automatically, `init` opens a native file picker for `package.json` before falling back to manual path entry.
+If you reuse a pending app that was already created in the Capgo web onboarding flow, `init` writes that selected dashboard app ID back into your Capacitor config before continuing. Outside that reused pending-app path, the CLI keeps using your local Capacitor app ID as before.
 
 **Example:**
 

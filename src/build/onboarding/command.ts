@@ -8,7 +8,7 @@ import { getPlatformDirFromCapacitorConfig } from '../platform-paths.js'
 import { loadProgress } from './progress.js'
 import OnboardingApp from './ui/app.js'
 
-export async function onboardingCommand(): Promise<void> {
+export async function onboardingBuilderCommand(): Promise<void> {
   // Ink requires an interactive terminal — fail fast in CI/pipes
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     console.error('Error: `build onboarding` requires an interactive terminal.')
