@@ -37,6 +37,8 @@ const appIdRegex = /^[a-z0-9]+(?:\.[\w-]+)+$/i
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
 const capacitorGettingStartedUrl = 'https://capacitorjs.com/docs/getting-started'
+const nextWebDirPattern = /["']?webDir["']?\s*:\s*["']out["']/
+const nuxtWebDirPattern = /["']?webDir["']?\s*:\s*["']\.output\/public["']/
 const frameworkSetupGuides = {
   nextjs: 'https://capgo.app/blog/nextjs-mobile-app-capacitor-from-scratch/',
   nuxtjs: 'https://capgo.app/blog/nuxt-mobile-app-capacitor-from-scratch/',
@@ -163,7 +165,7 @@ function getFrameworkSetupIssues(projectType: string, projectDir: string, capaci
       issues.push('Next.js must use static export (`output: \'export\'`).')
     }
     const capacitorConfig = readExistingFile(capacitorConfigPath)
-    if (capacitorConfig && !capacitorConfig.includes('webDir: \'out\'') && !capacitorConfig.includes('webDir: "out"')) {
+    if (capacitorConfig && !nextWebDirPattern.test(capacitorConfig)) {
       issues.push('Capacitor `webDir` should point to `out` for Next.js.')
     }
   }
@@ -174,7 +176,7 @@ function getFrameworkSetupIssues(projectType: string, projectDir: string, capaci
       issues.push('Nuxt must use static Nitro output (`nitro.preset = "static"`).')
     }
     const capacitorConfig = readExistingFile(capacitorConfigPath)
-    if (capacitorConfig && !capacitorConfig.includes('webDir: \'.output/public\'') && !capacitorConfig.includes('webDir: ".output/public"')) {
+    if (capacitorConfig && !nuxtWebDirPattern.test(capacitorConfig)) {
       issues.push('Capacitor `webDir` should point to `.output/public` for Nuxt.')
     }
   }
@@ -1311,7 +1313,9 @@ async function getAssistedDependencies(stepsDone: number) {
         pCancel('Operation cancelled.')
         exit(1)
       }
-      return { dependencies: await getAllPackagesDependencies(undefined, packageJsonPath), path: packageJsonPath }
+      const selectedPackageJsonPath = packageJsonPath.trim()
+      markStepDone(stepsDone, selectedPackageJsonPath)
+      return { dependencies: await getAllPackagesDependencies(undefined, selectedPackageJsonPath), path: selectedPackageJsonPath }
     }
   }
 
@@ -1354,6 +1358,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     while (true) {
       const s = pSpinner()
       let versionToInstall = 'latest'
+      let shouldOfferDirectInstall = false
       // 3 because this is the 4th step, ergo 3 steps have already been done
       const { dependencies, path } = await getAssistedDependencies(3)
       s.start(`Checking if @capgo/capacitor-updater is installed`)
@@ -1385,8 +1390,9 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         versionToInstall = '^7.0.0'
       }
       else {
-        pLog.info(`@capacitor/core version is ${coreVersion}, installing latest capacitor-updater v8+`)
-        versionToInstall = '^8.0.0'
+        pLog.info(`@capacitor/core version is ${coreVersion}, installing latest capacitor-updater`)
+        versionToInstall = 'latest'
+        shouldOfferDirectInstall = true
       }
 
       try {
@@ -1399,7 +1405,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
           await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: dirname(path) } as ExecSyncOptions)
           s.stop(`Install Done ✅`)
           let doDirectInstall: boolean | symbol = false
-          if (versionToInstall === 'latest') {
+          if (shouldOfferDirectInstall) {
             doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
             await cancelCommand(doDirectInstall, orgId, apikey)
           }
@@ -2063,7 +2069,15 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
     }
   }
   else {
-    pLog.info(`Upload yourself with command: ${pm.runner} @capgo/cli@latest bundle upload --channel ${globalChannelName}`)
+    const manualUploadCommandParts = [
+      `${pm.runner} @capgo/cli@latest bundle upload ${appId}`,
+      `--bundle ${newVersion}`,
+      `--channel ${globalChannelName}`,
+      delta ? '--delta-only' : '',
+      globalPathToPackageJson ? `--package-json ${globalPathToPackageJson}` : '',
+    ]
+    const manualUploadCommand = manualUploadCommandParts.filter(Boolean).join(' ')
+    pLog.info(`Upload yourself with command: ${manualUploadCommand}`)
   }
   await markStep(orgId, apikey, 'upload', appId)
 }
