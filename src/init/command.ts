@@ -58,6 +58,13 @@ function readTmpObj() {
     ?? tmp.fileSync({ prefix: 'capgocli' }).name
 }
 
+function getTmpObjectPath() {
+  readTmpObj()
+  if (!tmpObject)
+    throw new Error('Unable to allocate onboarding state file')
+  return tmpObject
+}
+
 function findNearestNamedFile(startDir: string, fileNames: string[]) {
   let currentDir = startDir
   const rootDir = path.parse(currentDir).root
@@ -139,8 +146,8 @@ function getSuggestedAppName(projectDir: string) {
   const packageJson = getPackageJsonData(findNearestPackageJson(projectDir))
   const rawName = packageJson?.name?.split('/').pop() || path.basename(projectDir)
   return rawName
-    .replace(/[-_]+/g, ' ')
-    .replace(/\b\w/g, char => char.toUpperCase())
+    .replaceAll(/[-_]+/g, ' ')
+    .replaceAll(/\b\w/g, char => char.toUpperCase())
 }
 
 function getFrameworkSetupIssues(projectType: string, projectDir: string, capacitorConfigPath?: string) {
@@ -164,7 +171,7 @@ function getFrameworkSetupIssues(projectType: string, projectDir: string, capaci
   if (frameworkKind === 'nuxtjs') {
     const nuxtConfig = readExistingFile(findNearestNamedFile(projectDir, ['nuxt.config.ts', 'nuxt.config.js']))
     if (!nuxtConfig?.includes('preset') || !nuxtConfig.includes('static')) {
-      issues.push('Nuxt must use static Nitro output (`nitro.preset = \"static\"`).')
+      issues.push('Nuxt must use static Nitro output (`nitro.preset = "static"`).')
     }
     const capacitorConfig = readExistingFile(capacitorConfigPath)
     if (capacitorConfig && !capacitorConfig.includes('webDir: \'.output/public\'') && !capacitorConfig.includes('webDir: ".output/public"')) {
@@ -384,8 +391,7 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
 
 function markStepDone(step: number, pathToPackageJson?: string, channelName?: string) {
   try {
-    readTmpObj()
-    writeFileSync(tmpObject!, JSON.stringify({
+    writeFileSync(getTmpObjectPath(), JSON.stringify({
       step_done: step,
       pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson,
       channelName: channelName ?? globalChannelName,
@@ -408,8 +414,7 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
 
 async function readStepsDone(orgId: string, apikey: string): Promise<number | undefined> {
   try {
-    readTmpObj()
-    const rawData = readFileSync(tmpObject!, 'utf-8')
+    const rawData = readFileSync(getTmpObjectPath(), 'utf-8')
     if (!rawData || rawData.length === 0)
       return undefined
 
@@ -478,7 +483,8 @@ async function selectRecoveryOption<T extends string>(
   message: string,
   options: RecoveryOption<T>[],
 ): Promise<T> {
-  const choice = await pSelect({
+  type RecoveryChoice = T | '__cancel__'
+  const choice = await pSelect<RecoveryChoice>({
     message,
     options: [
       ...options,
@@ -713,8 +719,8 @@ function normalizeConcreteVersion(version: string | undefined) {
   if (canParse(trimmedVersion))
     return format(parse(trimmedVersion))
 
-  const fallbackMatch = trimmedVersion.match(/\d+\.\d+\.\d+(?:-[0-9A-Z.-]+)?/i)
-  if (!fallbackMatch)
+  const fallbackMatch = /\d+\.\d+\.\d+(?:-[0-9A-Z.-]+)?/i.exec(trimmedVersion)
+  if (!fallbackMatch?.[0])
     return undefined
   if (!canParse(fallbackMatch[0]))
     return undefined
@@ -758,8 +764,9 @@ async function ensureCapacitorProjectReady(
     pLog.info(`No Capacitor config was found for ${appId}.`)
     pLog.info('This app was created from the web onboarding as a new app.')
 
+    const initCommand = `${pm.runner} cap init "${appName}" "${appId}"`
     const shouldInitCapacitor = await pConfirm({
-      message: `Do you want me to run "${pm.runner} cap init \\"${appName}\\" \\"${appId}\\"" now?`,
+      message: `Do you want me to run "${initCommand}" now?`,
       initialValue: true,
     })
     await cancelCommand(shouldInitCapacitor, orgId, apikey)
@@ -891,8 +898,8 @@ async function selectOrganizationForInit(
   }
 
   const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
-  const normalizedRoles = roles.map(role => normalizeRole(role))
-  const adminOrgs = allOrganizations.filter(org => normalizedRoles.includes(normalizeRole(org.role)))
+  const normalizedRoles = new Set(roles.map(role => normalizeRole(role)))
+  const adminOrgs = allOrganizations.filter(org => normalizedRoles.has(normalizeRole(org.role)))
 
   if (allOrganizations.length === 0) {
     pLog.error('Could not get organization please create an organization first')
@@ -1102,7 +1109,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
         ]
 
         // Validate suggestions against database to only show available ones
-        const supabase = await createSupabaseClient(options.apikey!, options.supaHost, options.supaAnon)
+        const supabase = await createSupabaseClient(options.apikey ?? apikey, options.supaHost, options.supaAnon)
         const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
         const availableSuggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
 
@@ -1224,7 +1231,8 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
 async function getAssistedDependencies(stepsDone: number) {
   // here we will assume that getAllPackagesDependencies uses 'findRoot(cwd())' for the first argument
   const root = join(findRoot(cwd()), PACKNAME)
-  const dependencies = !globalPathToPackageJson ? await getAllPackagesDependencies(undefined, root) : await getAllPackagesDependencies(undefined, globalPathToPackageJson)
+  const packageJsonPath = globalPathToPackageJson ?? root
+  const dependencies = await getAllPackagesDependencies(undefined, packageJsonPath)
   if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
     pLog.warn('No adequate dependencies found')
     const doSelect = await pConfirm({ message: 'Would you like to select the package.json file manually?' })
@@ -1244,7 +1252,7 @@ async function getAssistedDependencies(stepsDone: number) {
             pLog.error(`Path ${selectedPath} does not exist`)
           }
           else {
-            await markStepDone(stepsDone, selectedPath)
+            markStepDone(stepsDone, selectedPath)
             return { dependencies: await getAllPackagesDependencies(undefined, selectedPath), path: selectedPath }
           }
         }
@@ -1283,7 +1291,7 @@ async function getAssistedDependencies(stepsDone: number) {
               break
             }
           }
-          await markStepDone(stepsDone, currentPath)
+          markStepDone(stepsDone, currentPath)
           return { dependencies: await getAllPackagesDependencies(undefined, currentPath), path: currentPath }
         }
       }
@@ -1309,7 +1317,7 @@ async function getAssistedDependencies(stepsDone: number) {
 
   // even in the default case, let's mark the path to package.json
   // this will help with bundle upload
-  await markStepDone(stepsDone, root)
+  markStepDone(stepsDone, root)
   return { dependencies: await getAllPackagesDependencies(undefined, root), path: root }
 }
 
@@ -1483,7 +1491,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       }
       else {
         const isTypeScript = projectType.endsWith('-ts')
-        mainFilePath = await findMainFileForProjectType(projectType, isTypeScript)
+        mainFilePath = findMainFileForProjectType(projectType, isTypeScript)
       }
 
       // Open main file and inject codeInject
@@ -1562,12 +1570,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     initialValue: false,
   })
   await cancelCommand(isSecurityCritical, orgId, apikey)
-  if (!isSecurityCritical) {
-    pLog.info(`⏭️  We didn't enable encryption.`)
-    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
-  }
-  else {
+  if (isSecurityCritical) {
     pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
     pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
     pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
@@ -1597,7 +1600,11 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       const s = pSpinner()
       s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
       const keyRes = await createKeyInternal({ force: true }, false)
-      if (!keyRes) {
+      if (keyRes) {
+        s.stop(`key created 🔑`)
+        await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+      }
+      else {
         s.stop('Error', 'error')
         pLog.warn(`Cannot create key ❌`)
         const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
@@ -1611,14 +1618,15 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
         pLog.info(`⏭️  Continuing without encryption.`)
       }
-      else {
-        s.stop(`key created 🔑`)
-        await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
-      }
     }
     else {
       pLog.info(`⏭️  We didn't enable encryption.`)
     }
+  }
+  else {
+    pLog.info(`⏭️  We didn't enable encryption.`)
+    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
+    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
   }
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
@@ -2266,16 +2274,13 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   options.apikey = apikeyCommand
   if (!options.apikey) {
     try {
-      options.apikey = findSavedKey(true)
+      options.apikey ??= findSavedKey(true)
     }
     catch {
     }
   }
 
-  if (appId === undefined) {
-    // ask for the appId
-    appId = await askForAppId('Enter your appId:')
-  }
+  appId ??= await askForAppId('Enter your appId:')
 
   const log = pSpinner()
   if (!doLoginExists() || apikeyCommand) {

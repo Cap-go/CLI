@@ -9,13 +9,14 @@ interface InitInkAppProps {
   updatePromptError: (error?: string) => void
 }
 
-export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }: InitInkAppProps) {
+export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }: Readonly<InitInkAppProps>) {
   const [snapshot, setSnapshot] = useState(getSnapshot())
   const { stdout } = useStdout()
   const columns = stdout?.columns ?? 96
   const rows = stdout?.rows ?? 24
   const contentWidth = Math.max(0, columns - 6)
   const visibleLogs = snapshot.logs.slice(-Math.max(0, rows - 14))
+  const screen = snapshot.screen
 
   useEffect(() => {
     const unsubscribe = subscribe(() => setSnapshot(getSnapshot()))
@@ -28,13 +29,13 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
     <Box flexDirection="column" padding={1} width={columns}>
       <InitHeader />
 
-      {snapshot.screen?.introLines?.length || snapshot.screen?.title
-        ? <ScreenIntro screen={snapshot.screen!} />
+      {screen?.introLines?.length || screen?.title
+        ? <ScreenIntro screen={screen} />
         : null}
 
-      {snapshot.screen && <ProgressSection screen={snapshot.screen} />}
+      {screen && <ProgressSection screen={screen} />}
 
-      {snapshot.screen && <CurrentStepSection screen={snapshot.screen} />}
+      {screen && <CurrentStepSection screen={screen} />}
 
       {visibleLogs.length > 0 && (
         <Box flexDirection="column" marginTop={1} width={contentWidth}>

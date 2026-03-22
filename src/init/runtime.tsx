@@ -39,17 +39,17 @@ export interface TextPrompt {
   resolve: (value: string | symbol) => void
 }
 
-export interface SelectPromptOption<T = unknown> {
+export interface SelectPromptOption {
   label: string
   hint?: string
-  value: T
+  value: string
 }
 
 export interface SelectPrompt {
   kind: 'select'
   message: string
   options: SelectPromptOption[]
-  resolve: (value: unknown | symbol) => void
+  resolve: (value: string | symbol) => void
 }
 
 export type PromptRequest = ConfirmPrompt | TextPrompt | SelectPrompt
@@ -81,6 +81,17 @@ function emit() {
 function updateState(updater: (current: InitRuntimeState) => InitRuntimeState) {
   state = updater(state)
   emit()
+}
+
+function clearPrompt() {
+  updateState(current => ({ ...current, prompt: undefined }))
+}
+
+function createPromptResolver<T>(resolve: (value: T | symbol | PromiseLike<T | symbol>) => void): (value: T | symbol) => void {
+  return (value: T | symbol) => {
+    clearPrompt()
+    resolve(value)
+  }
 }
 
 export function subscribe(listener: () => void) {
@@ -152,10 +163,7 @@ export function requestInitConfirm(message: string, initialValue?: boolean): Pro
         kind: 'confirm',
         message,
         initialValue,
-        resolve: (value) => {
-          updateState(next => ({ ...next, prompt: undefined }))
-          resolve(value)
-        },
+        resolve: createPromptResolver(resolve),
       },
     }))
   })
@@ -171,16 +179,13 @@ export function requestInitText(message: string, placeholder?: string, validate?
         message,
         placeholder,
         validate,
-        resolve: (value) => {
-          updateState(next => ({ ...next, prompt: undefined }))
-          resolve(value)
-        },
+        resolve: createPromptResolver(resolve),
       },
     }))
   })
 }
 
-export function requestInitSelect<T = string>(message: string, options: SelectPromptOption<T>[]): Promise<T | symbol> {
+export function requestInitSelect(message: string, options: SelectPromptOption[]): Promise<string | symbol> {
   ensureInitInkSession()
   return new Promise((resolve) => {
     updateState(current => ({
@@ -189,10 +194,7 @@ export function requestInitSelect<T = string>(message: string, options: SelectPr
         kind: 'select',
         message,
         options,
-        resolve: (value) => {
-          updateState(next => ({ ...next, prompt: undefined }))
-          resolve(value as T | symbol)
-        },
+        resolve: createPromptResolver(resolve),
       },
     }))
   })
@@ -200,7 +202,7 @@ export function requestInitSelect<T = string>(message: string, options: SelectPr
 
 function updatePromptError(error?: string) {
   updateState((current) => {
-    if (!current.prompt || current.prompt.kind !== 'text')
+    if (current.prompt?.kind !== 'text')
       return current
     return {
       ...current,

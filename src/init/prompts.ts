@@ -16,13 +16,13 @@ interface TextOptions {
   validate?: (value: string | undefined) => string | undefined
 }
 
-interface SelectOption<T = string> {
+interface SelectOption<T extends string = string> {
   value: T
   label: string
   hint?: string
 }
 
-interface SelectOptions<T = string> {
+interface SelectOptions<T extends string = string> {
   message: string
   options: SelectOption<T>[]
 }
@@ -72,8 +72,8 @@ export function text(options: TextOptions): PromptResult<string> {
   return requestInitText(options.message, options.placeholder, options.validate)
 }
 
-export function select<T = string>(options: SelectOptions<T>): PromptResult<T> {
-  return requestInitSelect(options.message, options.options)
+export function select<T extends string = string>(options: SelectOptions<T>): PromptResult<T> {
+  return requestInitSelect(options.message, options.options) as PromptResult<T>
 }
 
 export function spinner(): SpinnerController {
@@ -82,17 +82,18 @@ export function spinner(): SpinnerController {
       setInitSpinner(message)
     },
     stop(message?: string, tone?: SpinnerTone) {
-      setInitSpinner(undefined)
+      setInitSpinner()
       if (!message)
         return
 
-      const resolvedTone = tone
-        ?? (message.includes('❌') ? 'error' : 'success')
-      const color = resolvedTone === 'error'
-        ? 'red'
-        : resolvedTone === 'neutral'
-          ? 'yellow'
-          : 'green'
+      const resolvedTone = tone ?? (message.includes('❌') ? 'error' : 'success')
+      let color: 'green' | 'yellow' | 'red'
+      if (resolvedTone === 'error')
+        color = 'red'
+      else if (resolvedTone === 'neutral')
+        color = 'yellow'
+      else
+        color = 'green'
       pushInitLog(message, color)
     },
     message(message: string) {

@@ -34,7 +34,7 @@ export function InitHeader() {
   )
 }
 
-export function ScreenIntro({ screen }: { screen: InitScreen }) {
+export function ScreenIntro({ screen }: Readonly<{ screen: InitScreen }>) {
   const color = colorForTone(screen.tone ?? 'cyan')
 
   return (
@@ -47,7 +47,7 @@ export function ScreenIntro({ screen }: { screen: InitScreen }) {
   )
 }
 
-export function ProgressSection({ screen }: { screen: InitScreen }) {
+export function ProgressSection({ screen }: Readonly<{ screen: InitScreen }>) {
   if (screen.progress === undefined || !screen.phaseLabel)
     return null
 
@@ -69,7 +69,7 @@ export function ProgressSection({ screen }: { screen: InitScreen }) {
   )
 }
 
-export function CurrentStepSection({ screen }: { screen: InitScreen }) {
+export function CurrentStepSection({ screen }: Readonly<{ screen: InitScreen }>) {
   if (!screen.stepLabel && !screen.completionLines?.length)
     return null
 
@@ -99,7 +99,7 @@ export function CurrentStepSection({ screen }: { screen: InitScreen }) {
   )
 }
 
-export function ConfirmPromptView({ prompt }: { prompt: ConfirmPrompt }) {
+export function ConfirmPromptView({ prompt }: Readonly<{ prompt: ConfirmPrompt }>) {
   const primaryOption = prompt.initialValue === false
     ? { label: 'No', value: 'no', hint: 'skip or stop here' }
     : { label: 'Yes', value: 'yes', hint: 'continue' }
@@ -131,7 +131,7 @@ export function ConfirmPromptView({ prompt }: { prompt: ConfirmPrompt }) {
   )
 }
 
-export function TextPromptView({ prompt, onError }: { prompt: TextPrompt, onError: (error?: string) => void }) {
+export function TextPromptView({ prompt, onError }: Readonly<{ prompt: TextPrompt, onError: (error?: string) => void }>) {
   const [value, setValue] = useState('')
 
   useEffect(() => {
@@ -160,7 +160,7 @@ export function TextPromptView({ prompt, onError }: { prompt: TextPrompt, onErro
       return
     if (input) {
       if (prompt.error)
-        onError(undefined)
+        onError()
       setValue(prev => prev + input)
     }
   })
@@ -186,7 +186,7 @@ export function TextPromptView({ prompt, onError }: { prompt: TextPrompt, onErro
   )
 }
 
-export function SelectPromptView({ prompt }: { prompt: SelectPrompt }) {
+export function SelectPromptView({ prompt }: Readonly<{ prompt: SelectPrompt }>) {
   const selectOptions = prompt.options.map((option, index) => ({
     label: option.hint ? `${option.label} · ${option.hint}` : option.label,
     value: String(index),
@@ -216,7 +216,7 @@ export function SelectPromptView({ prompt }: { prompt: SelectPrompt }) {
   )
 }
 
-export function PromptArea({ prompt, onTextError }: { prompt?: PromptRequest, onTextError: (error?: string) => void }) {
+export function PromptArea({ prompt, onTextError }: Readonly<{ prompt?: PromptRequest, onTextError: (error?: string) => void }>) {
   if (!prompt)
     return null
 
@@ -227,7 +227,7 @@ export function PromptArea({ prompt, onTextError }: { prompt?: PromptRequest, on
   return <SelectPromptView prompt={prompt} />
 }
 
-export function SpinnerArea({ text }: { text?: string }) {
+export function SpinnerArea({ text }: Readonly<{ text?: string }>) {
   if (!text)
     return null
 
