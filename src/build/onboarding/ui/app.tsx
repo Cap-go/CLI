@@ -106,7 +106,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   // Open browser on Ctrl+O (FilteredTextInput ignores ctrl keys, so no conflict)
   useInput((input, key) => {
     if (key.ctrl && input === 'c') {
-      exitOnboarding('Canceled onboarding.')
+      process.kill(process.pid, 'SIGINT')
       return
     }
 
@@ -208,7 +208,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     else {
       // Second failure — exit
       addLog(`✖ ${message}`, 'red')
-      addLog('Run `capgo build onboarding` to retry from where you left off.', 'yellow')
+      addLog('Run `capgo build init` to retry from where you left off.', 'yellow')
       setTimeout(() => exitOnboarding(), 100)
     }
   }, [retryCount, addLog, exitOnboarding])
@@ -1133,7 +1133,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     setStep('welcome')
                   }
                   else {
-                    setError('Run `capgo build onboarding` to resume.')
+                    setError('Run `capgo build init` to resume.')
                     exitOnboarding()
                   }
                 }}

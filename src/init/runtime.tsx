@@ -96,7 +96,7 @@ export function ensureInitInkSession() {
   if (started)
     return
   if (!process.stdin.isTTY || !process.stdout.isTTY)
-    return
+    throw new Error('`capgo init` requires an interactive terminal. It cannot run in CI, pipes, or non-TTY environments.')
 
   started = true
   inkApp = render(React.createElement(InitInkApp, {

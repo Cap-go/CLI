@@ -14,8 +14,8 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
   const { stdout } = useStdout()
   const columns = stdout?.columns ?? 96
   const rows = stdout?.rows ?? 24
-  const contentWidth = Math.max(60, columns - 6)
-  const visibleLogs = snapshot.logs.slice(-Math.max(6, rows - 14))
+  const contentWidth = Math.max(0, columns - 6)
+  const visibleLogs = snapshot.logs.slice(-Math.max(0, rows - 14))
 
   useEffect(() => {
     const unsubscribe = subscribe(() => setSnapshot(getSnapshot()))

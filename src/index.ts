@@ -732,6 +732,7 @@ const build = program
 
 build
   .command('init')
+  .alias('onboarding')
   .description('Set up iOS build credentials interactively (creates certificates and profiles automatically)')
   .action(onboardingBuilderCommand)
 

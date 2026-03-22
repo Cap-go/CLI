@@ -1,6 +1,7 @@
 import { ensureInitInkSession, INIT_CANCEL, pushInitLog, requestInitConfirm, requestInitSelect, requestInitText, setInitSpinner, stopInitInkSession } from './runtime'
 
 export const CANCEL = INIT_CANCEL
+type SpinnerTone = 'success' | 'neutral' | 'error'
 
 type PromptResult<T> = Promise<T | symbol>
 
@@ -28,7 +29,7 @@ interface SelectOptions<T = string> {
 
 interface SpinnerController {
   start: (message: string) => void
-  stop: (message?: string) => void
+  stop: (message?: string, tone?: SpinnerTone) => void
   message: (message: string) => void
 }
 
@@ -80,10 +81,19 @@ export function spinner(): SpinnerController {
     start(message: string) {
       setInitSpinner(message)
     },
-    stop(message?: string) {
+    stop(message?: string, tone?: SpinnerTone) {
       setInitSpinner(undefined)
-      if (message)
-        pushInitLog(message, message.includes('❌') ? 'red' : 'green')
+      if (!message)
+        return
+
+      const resolvedTone = tone
+        ?? (message.includes('❌') ? 'error' : 'success')
+      const color = resolvedTone === 'error'
+        ? 'red'
+        : resolvedTone === 'neutral'
+          ? 'yellow'
+          : 'green'
+      pushInitLog(message, color)
     },
     message(message: string) {
       setInitSpinner(message)

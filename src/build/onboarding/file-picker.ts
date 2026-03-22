@@ -1,5 +1,6 @@
 // src/build/onboarding/file-picker.ts
 import { execFile } from 'node:child_process'
+import { basename } from 'node:path'
 import { platform } from 'node:process'
 
 function openMacFilePicker(script: string): Promise<string | null> {
@@ -41,4 +42,9 @@ export function openFilePicker(): Promise<string | null> {
 
 export function openPackageJsonPicker(): Promise<string | null> {
   return openMacFilePicker('POSIX path of (choose file with prompt "Select your package.json file")')
+    .then((selectedPath) => {
+      if (!selectedPath)
+        return null
+      return basename(selectedPath).toLowerCase() === 'package.json' ? selectedPath : null
+    })
 }

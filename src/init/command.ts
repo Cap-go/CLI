@@ -5,7 +5,7 @@ import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
 import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
-import { format, increment, lessThan, parse } from '@std/semver'
+import { canParse, format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
 import { checkAlerts } from '../api/update'
@@ -46,6 +46,9 @@ const frameworkSetupGuides = {
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
 let globalChannelName = defaultChannel
+let globalPlatform: 'ios' | 'android' = 'ios'
+let globalDelta = false
+let globalCurrentVersion: string | undefined
 
 function readTmpObj() {
   tmpObject ??= readdirSync(tmp.tmpdir)
@@ -386,6 +389,9 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       step_done: step,
       pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson,
       channelName: channelName ?? globalChannelName,
+      platform: globalPlatform,
+      delta: globalDelta,
+      currentVersion: globalCurrentVersion,
     }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
@@ -407,7 +413,7 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, pathToPackageJson, channelName } = JSON.parse(rawData)
+    const { step_done, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
     pLog.info(formatInitResumeMessage(step_done, initOnboardingSteps.length))
     const skipSteps = await pConfirm({ message: 'Would you like to continue from where you left off?' })
     await cancelCommand(skipSteps, orgId, apikey)
@@ -417,6 +423,15 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
       }
       if (channelName) {
         globalChannelName = channelName
+      }
+      if (platform === 'ios' || platform === 'android') {
+        globalPlatform = platform
+      }
+      if (typeof delta === 'boolean') {
+        globalDelta = delta
+      }
+      if (typeof currentVersion === 'string' && currentVersion.length > 0) {
+        globalCurrentVersion = currentVersion
       }
       return step_done
     }
@@ -445,7 +460,7 @@ function cleanupStepsDone() {
 
 async function cancelCommand(command: boolean | string | symbol, orgId: string, apikey: string) {
   if (pIsCancel(command)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
@@ -472,7 +487,7 @@ async function selectRecoveryOption<T extends string>(
   })
 
   if (pIsCancel(choice) || choice === '__cancel__') {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit(1)
   }
@@ -622,7 +637,7 @@ async function handleBrokenIosSync(platformRunner: string, details: string[], or
     })
     await cancelCommand(cancelInit, orgId, apikey)
     if (cancelInit) {
-      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
       pOutro('Bye 👋\n💡 You can resume the onboarding anytime by running the same command again')
       exit(1)
     }
@@ -686,6 +701,24 @@ function validateChannelName(value: string | undefined): string | undefined {
     return 'Channel name is required'
   if (!channelNameRegex.test(trimmedValue))
     return 'Use only letters, numbers, dot, dash, or underscore'
+}
+
+function normalizeConcreteVersion(version: string | undefined) {
+  if (!version)
+    return undefined
+
+  const trimmedVersion = version.trim()
+  if (!trimmedVersion || trimmedVersion === 'latest')
+    return undefined
+  if (canParse(trimmedVersion))
+    return format(parse(trimmedVersion))
+
+  const fallbackMatch = trimmedVersion.match(/\d+\.\d+\.\d+(?:-[0-9A-Z.-]+)?/i)
+  if (!fallbackMatch)
+    return undefined
+  if (!canParse(fallbackMatch[0]))
+    return undefined
+  return format(parse(fallbackMatch[0]))
 }
 
 async function askForAppId(message = 'Enter your appId:'): Promise<string> {
@@ -1099,7 +1132,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
           })
 
           if (pIsCancel(choice)) {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', '🤷')
+            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', undefined, '🤷')
             pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
             exit()
           }
@@ -1292,10 +1325,11 @@ function getUpdaterInstallBlocker(dependencies: Map<string, string>, packageMana
   const coreVersion = dependencies.get('@capacitor/core')
   if (!coreVersion)
     return 'Cannot determine the installed @capacitor/core version.'
-  if (coreVersion === 'latest')
-    return '@capacitor/core is set to "latest". Use a concrete version before continuing.'
-  if (lessThan(parse(coreVersion), parse('5.0.0')))
-    return `@capacitor/core version is ${coreVersion}. Capgo requires Capacitor v5 or newer. Migration guide: ${urlMigrateV5}`
+  const normalizedCoreVersion = normalizeConcreteVersion(coreVersion)
+  if (!normalizedCoreVersion)
+    return `Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before continuing.`
+  if (lessThan(parse(normalizedCoreVersion), parse('5.0.0')))
+    return `@capacitor/core version is ${normalizedCoreVersion}. Capgo requires Capacitor v5 or newer. Migration guide: ${urlMigrateV5}`
   if (packageManager.pm === 'unknown')
     return 'Cannot recognize the package manager for this project. Use bun, pnpm, yarn, or npm in a Capacitor project root.'
 
@@ -1326,7 +1360,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         continue
       }
 
-      const coreVersion = dependencies.get('@capacitor/core')!
+      const coreVersion = normalizeConcreteVersion(dependencies.get('@capacitor/core'))!
       if (lessThan(parse(coreVersion), parse('6.0.0'))) {
         pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v5`)
         pLog.warn(`Consider upgrading to Capacitor v6 or higher to support the latest mobile OS features: ${urlMigrateV6}`)
@@ -1349,13 +1383,13 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
 
       try {
         const installedVersion = await getInstalledVersion('@capgo/capacitor-updater', dirname(path), path)
+        pkgVersion = getBundleVersion(undefined, path) || pkgVersion
         if (installedVersion) {
           s.stop(`Capgo already installed ✅`)
         }
         else {
           await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: dirname(path) } as ExecSyncOptions)
           s.stop(`Install Done ✅`)
-          pkgVersion = getBundleVersion(undefined, path) || '1.0.0'
           let doDirectInstall: boolean | symbol = false
           if (versionToInstall === 'latest') {
             doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
@@ -1454,7 +1488,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
 
       // Open main file and inject codeInject
       if (!mainFilePath || !existsSync(mainFilePath)) {
-        s.stop('Cannot find main file to install Updater plugin')
+        s.stop('Cannot find main file to install Updater plugin', 'neutral')
         const userProvidedPath = await pText({
           message: `Provide the correct relative path to your main file (JS or TS):`,
           validate: (value) => {
@@ -1474,7 +1508,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       const last = matches?.pop()
 
       if (!last) {
-        s.stop('Cannot auto-inject code')
+        s.stop('Cannot auto-inject code', 'neutral')
         pLog.warn(`❌ Cannot find import statements in ${mainFilePath}`)
         pLog.info(`💡 You'll need to add the code manually`)
         pLog.info(`📝 Add this to your main file:`)
@@ -1515,6 +1549,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
 async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const dependencies = await getAllPackagesDependencies()
   const coreVersion = dependencies.get('@capacitor/core')
+  const normalizedCoreVersion = normalizeConcreteVersion(coreVersion)
   if (!coreVersion) {
     pLog.warn(`Cannot find @capacitor/core in package.json. It is likely that you are using a monorepo. Please NOTE that encryption is not supported in Capacitor V5.`)
   }
@@ -1550,11 +1585,11 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
       pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
       pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
-      if (coreVersion === 'latest') {
-        pLog.error(`@capacitor/core version is ${coreVersion}, make sure to use a proper version, using Latest as value is not recommended and will lead to unexpected behavior`)
+      if (coreVersion && !normalizedCoreVersion) {
+        pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
         return
       }
-      if (coreVersion && lessThan(parse(coreVersion), parse('6.0.0'))) {
+      if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
         pLog.warn(`Encryption is not supported in Capacitor V5.`)
         return
       }
@@ -1563,7 +1598,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
       const keyRes = await createKeyInternal({ force: true }, false)
       if (!keyRes) {
-        s.stop('Error')
+        s.stop('Error', 'error')
         pLog.warn(`Cannot create key ❌`)
         const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
           { value: 'retry', label: 'Retry key creation' },
@@ -1600,7 +1635,7 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
     if (!packScripts[buildCommand]) {
       const s = pSpinner()
       s.start(`Checking project type`)
-      s.stop('Missing build script')
+      s.stop('Missing build script', 'neutral')
       pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
       pLog.info(`💡 Your package.json needs a "${buildCommand}" script to build the app`)
 
@@ -1662,7 +1697,7 @@ async function selectPlatformStep(orgId: string, apikey: string): Promise<'ios' 
     ],
   })
   if (pIsCancel(platformType)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
@@ -1727,7 +1762,7 @@ async function addCodeChangeStep(orgId: string, apikey: string, appId: string, p
     ],
   })
   if (pIsCancel(modificationType)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
@@ -1812,7 +1847,7 @@ ${content}`
     }
 
     if (!changed) {
-      s.stop('⚠️  Could not automatically modify files')
+      s.stop('⚠️  Could not automatically modify files', 'neutral')
       pLog.warn('Please make a visible change manually (like editing a text or color)')
       const continueManual = await pConfirm({ message: 'Continue after making your changes?' })
       await cancelCommand(continueManual, orgId, apikey)
@@ -1844,7 +1879,7 @@ ${content}`
     ],
   })
   if (pIsCancel(versionChoice)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
     pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
     exit()
   }
@@ -1872,7 +1907,7 @@ ${content}`
       },
     })
     if (pIsCancel(userVersion)) {
-      await markSnag('onboarding-v2', orgId, apikey, 'canceled', '🤷')
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
       pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
       exit()
     }
@@ -1902,7 +1937,7 @@ ${content}`
     const packScripts = getPackageScripts()
     // check in script build exist
     if (!packScripts[buildCommand]) {
-      s.stop('Missing build script')
+      s.stop('Missing build script', 'neutral')
       pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
       pLog.info(`💡 Build manually in another terminal, then come back and continue`)
       printManualOtaBuildInstructions()
@@ -1979,17 +2014,28 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
         }
       }
 
-      const uploadRes = await uploadBundleInternal(appId, {
-        channel: globalChannelName,
-        apikey,
-        packageJson: isMonorepo ? globalPathToPackageJson : undefined,
-        nodeModules: isMonorepo ? nodeModulesPath : undefined,
-        deltaOnly: delta,
-        bundle: newVersion,
-        ignoreChecksumCheck: true,
-        // Onboarding owns replication UX after the upload spinner stops.
-        showReplicationProgress: false,
-      }, false)
+      let uploadRes: Awaited<ReturnType<typeof uploadBundleInternal>> | undefined
+      try {
+        uploadRes = await uploadBundleInternal(appId, {
+          channel: globalChannelName,
+          apikey,
+          packageJson: isMonorepo ? globalPathToPackageJson : undefined,
+          nodeModules: isMonorepo ? nodeModulesPath : undefined,
+          deltaOnly: delta,
+          bundle: newVersion,
+          ignoreChecksumCheck: true,
+          // Onboarding owns replication UX after the upload spinner stops.
+          showReplicationProgress: false,
+        }, false)
+      }
+      catch (error) {
+        s.stop('Upload failed ❌')
+        pLog.error(formatError(error))
+        await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
+          { value: 'retry', label: 'Retry bundle upload' },
+        ])
+        continue
+      }
       if (!uploadRes?.success) {
         s.stop('Upload failed ❌')
         await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
@@ -2251,10 +2297,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     stepToSkip = Math.max(stepToSkip, 2)
   }
   let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
-  let delta = false
-  let currentVersion = pkgVersion
+  let delta = globalDelta
+  let currentVersion = globalCurrentVersion || pkgVersion
   let channelName = globalChannelName
-  let platform: 'ios' | 'android' = 'ios' // default
+  let platform: 'ios' | 'android' = globalPlatform
+
+  if (globalCurrentVersion && stepToSkip >= 4) {
+    pkgVersion = globalCurrentVersion
+  }
 
   const totalSteps = initOnboardingSteps.length
   let showResumeBanner = stepToSkip > 0
@@ -2290,6 +2340,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       pkgVersion = res.pkgVersion
       currentVersion = pkgVersion
       delta = res.delta
+      globalCurrentVersion = currentVersion
+      globalDelta = delta
       markStepDone(4)
     }
 
@@ -2308,6 +2360,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (stepToSkip < 7) {
       renderCurrentStep(7)
       platform = await selectPlatformStep(orgId, options.apikey)
+      globalPlatform = platform
       markStepDone(7)
     }
 
@@ -2326,6 +2379,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (stepToSkip < 10) {
       renderCurrentStep(10)
       currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
+      globalCurrentVersion = currentVersion
       markStepDone(10)
     }
 
