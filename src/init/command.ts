@@ -391,10 +391,15 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
   }
 }
 
+let globalOrgId: string | undefined
+let globalOrgName: string | undefined
+
 function markStepDone(step: number, pathToPackageJson?: string, channelName?: string) {
   try {
     writeFileSync(getTmpObjectPath(), JSON.stringify({
       step_done: step,
+      orgId: globalOrgId,
+      orgName: globalOrgName,
       pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson,
       channelName: channelName ?? globalChannelName,
       platform: globalPlatform,
@@ -414,14 +419,26 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
   }
 }
 
-async function readStepsDone(orgId: string, apikey: string): Promise<number | undefined> {
+interface ResumeResult {
+  stepDone: number
+  orgId: string
+  orgName: string
+}
+
+async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undefined> {
   try {
     const rawData = readFileSync(getTmpObjectPath(), 'utf-8')
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    if (!orgId || !step_done)
+      return undefined
+
     pLog.info(formatInitResumeMessage(step_done, initOnboardingSteps.length))
+    if (orgName) {
+      pLog.info(`   Organization: ${orgName}`)
+    }
     const resumeChoice = await pSelect({
       message: 'Would you like to continue from where you left off?',
       options: [
@@ -446,7 +463,7 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
       if (typeof currentVersion === 'string' && currentVersion.length > 0) {
         globalCurrentVersion = currentVersion
       }
-      return step_done
+      return { stepDone: step_done, orgId, orgName }
     }
 
     return undefined
@@ -2318,13 +2335,37 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   await verifyUser(supabase, options.apikey, ['upload', 'all', 'read', 'write'])
 
-  const organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+  // Try to resume from saved state before asking for org selection
+  const resumed = await tryResumeOnboarding(options.apikey)
+  let stepToSkip = resumed?.stepDone ?? 0
+
+  let organization: Organization
+  if (resumed) {
+    // Fetch orgs to find the saved one (we need the full Organization object)
+    const { data: allOrganizations } = await supabase.rpc('get_orgs_v7')
+    const savedOrg = allOrganizations?.find(org => org.gid === resumed.orgId)
+    if (savedOrg) {
+      organization = savedOrg
+      pLog.info(`Using organization "${savedOrg.name}"`)
+    }
+    else {
+      pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
+      organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+      stepToSkip = 0
+    }
+  }
+  else {
+    organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+  }
+
   const orgId = organization.gid
+  globalOrgId = orgId
+  globalOrgName = organization.name
+
   const pendingOnboardingSelection = await maybeReusePendingOnboardingApp(organization, options.apikey, appId, supabase)
   appId = pendingOnboardingSelection.appId ?? appId
   await ensureCapacitorProjectReady(orgId, options.apikey, appId, pendingOnboardingSelection.pendingApp)
 
-  let stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
   if (pendingOnboardingSelection.reusedPendingApp) {
     stepToSkip = Math.max(stepToSkip, 1)
   }
