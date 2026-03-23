@@ -1076,14 +1076,13 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
       try {
         await addAppInternal(currentAppId, options, organization, true)
-        s.stop(`App add Done ✅`)
+        s.stop()
       }
       catch (innerError) {
         s.stop(`App add failed ❌`)
         throw innerError
       }
 
-      pLog.info(`This app is accessible to all members of your organization based on their permissions`)
       await markStep(organization.gid, apikey, 'add-app', currentAppId)
       return currentAppId
     }
@@ -1171,6 +1170,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
 
 async function addChannelStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
+  pLog.success(`✅ App ${appId} added — accessible to all members of your organization`)
   pLog.info(`💡 Nothing goes to customers before the native app is in the store.`)
   pLog.info(`   This step only affects the test build on your phone.`)
   pLog.info(`   Choose Yes unless you already have your own channel setup.`)
