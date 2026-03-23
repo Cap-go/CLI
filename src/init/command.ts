@@ -422,9 +422,15 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
 
     const { step_done, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
     pLog.info(formatInitResumeMessage(step_done, initOnboardingSteps.length))
-    const skipSteps = await pConfirm({ message: 'Would you like to continue from where you left off?' })
-    await cancelCommand(skipSteps, orgId, apikey)
-    if (skipSteps) {
+    const resumeChoice = await pSelect({
+      message: 'Would you like to continue from where you left off?',
+      options: [
+        { value: 'yes', label: '✅ Yes, continue' },
+        { value: 'no', label: '❌ No, start over' },
+      ],
+    })
+    await cancelCommand(resumeChoice, orgId, apikey)
+    if (resumeChoice === 'yes') {
       if (pathToPackageJson) {
         globalPathToPackageJson = pathToPackageJson
       }
@@ -1170,17 +1176,21 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
 async function addChannelStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   pLog.success(`✅ App ${appId} added — accessible to all members of your organization`)
-  pLog.info(`💡 Nothing goes to customers before the native app is in the store.`)
-  pLog.info(`   This step only affects the test build on your phone.`)
-  pLog.info(`   Choose Yes unless you already have your own channel setup.`)
+  pLog.info(`💡 A channel is a release track — it controls which users get which updates.`)
+  pLog.info(`   Nothing goes live until you release a native build with Capacitor Updater to the stores.`)
+  pLog.info(`   Most apps just need one: "production". You can add more later.`)
+  pLog.info(`   Learn more: https://capgo.app/docs/live-updates/channels/`)
   let channelName = globalChannelName
-  const useCustomChannelName = await pConfirm({
-    message: `Do you want to choose a custom channel name instead of "${defaultChannel}"?`,
-    initialValue: false,
+  const channelChoice = await pSelect({
+    message: 'Which channel name do you want to use?',
+    options: [
+      { value: 'default', label: `✅ Use "${defaultChannel}"` },
+      { value: 'custom', label: '✏️ Choose a custom name' },
+    ],
   })
-  await cancelCommand(useCustomChannelName, orgId, apikey)
+  await cancelCommand(channelChoice, orgId, apikey)
 
-  if (useCustomChannelName) {
+  if (channelChoice === 'custom') {
     const selectedChannelName = await pText({
       message: 'Enter the channel name to use for onboarding:',
       placeholder: defaultChannel,
