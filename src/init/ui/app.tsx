@@ -1,4 +1,5 @@
 import type { InitRuntimeState } from '../runtime'
+import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
 import React, { useEffect, useState } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
@@ -28,6 +29,14 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
   return (
     <Box flexDirection="column" padding={1} width={columns}>
       <InitHeader />
+
+      {snapshot.versionWarning && (
+        <Box marginTop={1} width={contentWidth}>
+          <Alert variant="warning">
+            You are using @capgo/cli@{snapshot.versionWarning.currentVersion} — update to @capgo/cli@{snapshot.versionWarning.latestVersion} or @capgo/cli@{snapshot.versionWarning.majorVersion}
+          </Alert>
+        </Box>
+      )}
 
       {screen?.introLines?.length || screen?.title
         ? <ScreenIntro screen={screen} />
