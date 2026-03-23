@@ -80,7 +80,8 @@ export async function addAppInternal(
   if (!silent)
     intro('Adding')
 
-  await checkAlerts()
+  if (!silent)
+    await checkAlerts()
 
   options.apikey = options.apikey || findSavedKey()
   const extConfig = await getConfig()

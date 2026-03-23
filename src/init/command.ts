@@ -1056,25 +1056,19 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
   let currentAppId = appId
 
   while (true) {
-    const appIdCorrect = await pConfirm({
-      message: `Is ${currentAppId} the correct app ID?`,
-      initialValue: true,
+    const addChoice = await pSelect({
+      message: `Add ${currentAppId} to Capgo?`,
+      options: [
+        { value: 'yes', label: '✅ Yes, add it' },
+        { value: 'change', label: '❌ No, use a different app ID' },
+      ],
     })
-    await cancelCommand(appIdCorrect, organization.gid, apikey)
+    await cancelCommand(addChoice, organization.gid, apikey)
 
-    if (!appIdCorrect) {
+    if (addChoice === 'change') {
       currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
       await saveAppIdToCapacitorConfig(currentAppId)
       continue
-    }
-
-    const doAdd = await pConfirm({ message: `Add ${currentAppId} in Capgo?` })
-    await cancelCommand(doAdd, organization.gid, apikey)
-
-    if (!doAdd) {
-      pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest app add ${currentAppId}"`)
-      await markStep(organization.gid, apikey, 'add-app', currentAppId)
-      return currentAppId
     }
 
     try {
@@ -1097,7 +1091,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       const errorMessage = error instanceof Error ? error.message : String(error)
 
       // Check if the error is about app already existing
-      if (errorMessage.includes('already exist')) {
+      if (errorMessage.includes('already exist') || errorMessage.includes('duplicate key') || errorMessage.includes('23505')) {
         pLog.error(`❌ App ID "${currentAppId}" is already taken`)
 
         // Generate alternative suggestions with validation
