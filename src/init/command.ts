@@ -51,6 +51,7 @@ let globalChannelName = defaultChannel
 let globalPlatform: 'ios' | 'android' = 'ios'
 let globalDelta = false
 let globalCurrentVersion: string | undefined
+let globalAppId: string | undefined
 
 function readTmpObj() {
   tmpObject ??= readdirSync(tmp.tmpdir)
@@ -400,6 +401,7 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       step_done: step,
       orgId: globalOrgId,
       orgName: globalOrgName,
+      appId: globalAppId,
       pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson,
       channelName: channelName ?? globalChannelName,
       platform: globalPlatform,
@@ -423,6 +425,7 @@ interface ResumeResult {
   stepDone: number
   orgId: string
   orgName: string
+  appId?: string
 }
 
 async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undefined> {
@@ -431,7 +434,7 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, orgId, orgName, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
     if (!orgId || !step_done) {
       pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
       pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
@@ -466,7 +469,10 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       if (typeof currentVersion === 'string' && currentVersion.length > 0) {
         globalCurrentVersion = currentVersion
       }
-      return { stepDone: step_done, orgId, orgName }
+      if (savedAppId) {
+        globalAppId = savedAppId
+      }
+      return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
     return undefined
@@ -2365,6 +2371,11 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   globalOrgId = orgId
   globalOrgName = organization.name
 
+  if (resumed?.appId) {
+    appId = resumed.appId
+    globalAppId = appId
+  }
+
   const pendingOnboardingSelection = await maybeReusePendingOnboardingApp(organization, options.apikey, appId, supabase)
   appId = pendingOnboardingSelection.appId ?? appId
   await ensureCapacitorProjectReady(orgId, options.apikey, appId, pendingOnboardingSelection.pendingApp)
@@ -2395,6 +2406,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       renderCurrentStep(1)
       await checkPrerequisitesStep(orgId, options.apikey)
       appId = await addAppStep(organization, options.apikey, appId, options)
+      globalAppId = appId
       markStepDone(1)
     }
 
