@@ -1076,7 +1076,6 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
       try {
         await addAppInternal(currentAppId, options, organization, true)
-        s.stop()
       }
       catch (innerError) {
         s.stop(`App add failed ❌`)
