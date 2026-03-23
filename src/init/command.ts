@@ -1193,7 +1193,7 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
   if (channelChoice === 'custom') {
     const selectedChannelName = await pText({
       message: 'Enter the channel name to use for onboarding:',
-      placeholder: defaultChannel,
+      placeholder: 'e.g. staging, beta, dev',
       validate: validateChannelName,
     })
     await cancelCommand(selectedChannelName, orgId, apikey)
