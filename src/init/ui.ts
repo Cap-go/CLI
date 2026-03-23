@@ -1,4 +1,4 @@
-import { clearInitLogs, setInitScreen } from './runtime'
+import { clearInitLogs, setInitScreen, setInitSpinner } from './runtime'
 
 export interface InitOnboardingStepDefinition {
   title: string
@@ -105,6 +105,7 @@ export function renderInitOnboardingWelcome(totalSteps: number): void {
 
 export function renderInitOnboardingFrame(currentStepNumber: number, totalSteps: number, options?: { resumed?: boolean }): void {
   clearInitLogs()
+  setInitSpinner()
   const step = initOnboardingSteps[currentStepNumber - 1]
   const nextStep = initOnboardingSteps[currentStepNumber]
   if (!step) {
