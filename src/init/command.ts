@@ -2323,7 +2323,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   let stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
   if (pendingOnboardingSelection.reusedPendingApp) {
-    stepToSkip = Math.max(stepToSkip, 2)
+    stepToSkip = Math.max(stepToSkip, 1)
   }
   let pkgVersion = getBundleVersion(undefined, globalPathToPackageJson) || '1.0.0'
   let delta = globalDelta
@@ -2331,7 +2331,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let channelName = globalChannelName
   let platform: 'ios' | 'android' = globalPlatform
 
-  if (globalCurrentVersion && stepToSkip >= 4) {
+  if (globalCurrentVersion && stepToSkip >= 3) {
     pkgVersion = globalCurrentVersion
   }
 
@@ -2347,86 +2347,81 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (stepToSkip < 1) {
       renderCurrentStep(1)
       await checkPrerequisitesStep(orgId, options.apikey)
+      appId = await addAppStep(organization, options.apikey, appId, options)
       markStepDone(1)
     }
 
     if (stepToSkip < 2) {
       renderCurrentStep(2)
-      appId = await addAppStep(organization, options.apikey, appId, options)
-      markStepDone(2)
+      channelName = await addChannelStep(orgId, options.apikey, appId)
+      globalChannelName = channelName
+      markStepDone(2, undefined, channelName)
     }
 
     if (stepToSkip < 3) {
       renderCurrentStep(3)
-      channelName = await addChannelStep(orgId, options.apikey, appId)
-      globalChannelName = channelName
-      markStepDone(3, undefined, channelName)
-    }
-
-    if (stepToSkip < 4) {
-      renderCurrentStep(4)
       const res = await addUpdaterStep(orgId, options.apikey, appId)
       pkgVersion = res.pkgVersion
       currentVersion = pkgVersion
       delta = res.delta
       globalCurrentVersion = currentVersion
       globalDelta = delta
+      markStepDone(3)
+    }
+
+    if (stepToSkip < 4) {
+      renderCurrentStep(4)
+      await addCodeStep(orgId, options.apikey, appId)
       markStepDone(4)
     }
 
     if (stepToSkip < 5) {
       renderCurrentStep(5)
-      await addCodeStep(orgId, options.apikey, appId)
+      await addEncryptionStep(orgId, options.apikey, appId)
       markStepDone(5)
     }
 
     if (stepToSkip < 6) {
       renderCurrentStep(6)
-      await addEncryptionStep(orgId, options.apikey, appId)
+      platform = await selectPlatformStep(orgId, options.apikey)
+      globalPlatform = platform
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
       renderCurrentStep(7)
-      platform = await selectPlatformStep(orgId, options.apikey)
-      globalPlatform = platform
+      await buildProjectStep(orgId, options.apikey, appId, platform)
       markStepDone(7)
     }
 
     if (stepToSkip < 8) {
       renderCurrentStep(8)
-      await buildProjectStep(orgId, options.apikey, appId, platform)
+      await runDeviceStep(orgId, options.apikey, appId, platform)
       markStepDone(8)
     }
 
     if (stepToSkip < 9) {
       renderCurrentStep(9)
-      await runDeviceStep(orgId, options.apikey, appId, platform)
+      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
+      globalCurrentVersion = currentVersion
       markStepDone(9)
     }
 
     if (stepToSkip < 10) {
       renderCurrentStep(10)
-      currentVersion = await addCodeChangeStep(orgId, options.apikey, appId, pkgVersion, platform)
-      globalCurrentVersion = currentVersion
+      await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
       markStepDone(10)
     }
 
     if (stepToSkip < 11) {
       renderCurrentStep(11)
-      await uploadStep(orgId, options.apikey, appId, currentVersion, delta)
+      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(11)
     }
 
     if (stepToSkip < 12) {
       renderCurrentStep(12)
-      await testCapgoUpdateStep(orgId, options.apikey, appId, localConfig.hostWeb, delta)
       markStepDone(12)
-    }
-
-    if (stepToSkip < 13) {
-      renderCurrentStep(13)
-      markStepDone(13)
     }
 
     await markStep(orgId, options.apikey, 'done', appId)

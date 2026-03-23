@@ -8,11 +8,6 @@ export interface InitOnboardingStepDefinition {
 
 export const initOnboardingSteps: InitOnboardingStepDefinition[] = [
   {
-    title: 'Check Prerequisites',
-    summary: 'Inspect your local iOS and Android toolchain before we start wiring Capgo in.',
-    phase: 'Prepare',
-  },
-  {
     title: 'Add Your App',
     summary: 'Create the Capgo app for this project, or confirm the one you already use.',
     phase: 'Prepare',
