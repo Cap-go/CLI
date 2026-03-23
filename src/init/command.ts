@@ -432,8 +432,11 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       return undefined
 
     const { step_done, orgId, orgName, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
-    if (!orgId || !step_done)
+    if (!orgId || !step_done) {
+      pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
+      pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
       return undefined
+    }
 
     pLog.info(formatInitResumeMessage(step_done, initOnboardingSteps.length))
     if (orgName) {
