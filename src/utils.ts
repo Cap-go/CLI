@@ -951,7 +951,7 @@ export function getContentType(filename: string): string {
   return mimeTypes[ext] || 'application/octet-stream'
 }
 
-export async function findProjectType() {
+export async function findProjectType(options?: { quiet?: boolean }) {
   // for nuxtjs check if nuxt.config.js exists
   // for nextjs check if next.config.js exists
   // for angular check if angular.json exists
@@ -960,6 +960,7 @@ export async function findProjectType() {
   // for react check if package.json exists and react is in dependencies
   const pwd = cwd()
   let isTypeScript = false
+  const quiet = options?.quiet ?? false
 
   // Check for TypeScript configuration file
   const tsConfigPath = resolve(pwd, 'tsconfig.json')
@@ -970,27 +971,27 @@ export async function findProjectType() {
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     if (f.includes('angular.json')) {
-      log.info('Found angular project')
+      if (!quiet) log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js'
     }
     if (f.includes('nuxt.config.js') || f.includes('nuxt.config.ts')) {
-      log.info('Found nuxtjs project')
+      if (!quiet) log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
     if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
-      log.info('Found nextjs project')
+      if (!quiet) log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js'
     }
     if (f.includes('svelte.config.js')) {
-      log.info('Found sveltekit project')
+      if (!quiet) log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js'
     }
     if (f.includes('rolluconfig.js')) {
-      log.info('Found svelte project')
+      if (!quiet) log.info('Found svelte project')
       return isTypeScript ? 'svelte-ts' : 'svelte-js'
     }
     if (f.includes('vue.config.js')) {
-      log.info('Found vue project')
+      if (!quiet) log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
     if (f.includes(PACKNAME)) {
@@ -998,11 +999,11 @@ export async function findProjectType() {
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
         if (dependencies.get('react')) {
-          log.info('Found react project')
+          if (!quiet) log.info('Found react project')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (dependencies.get('vue')) {
-          log.info('Found vue project')
+          if (!quiet) log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
       }

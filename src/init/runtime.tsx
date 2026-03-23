@@ -59,11 +59,18 @@ export interface InitLogEntry {
   tone: InitLogTone
 }
 
+export interface InitVersionWarning {
+  currentVersion: string
+  latestVersion: string
+  majorVersion: string
+}
+
 export interface InitRuntimeState {
   screen?: InitScreen
   logs: InitLogEntry[]
   spinner?: string
   prompt?: PromptRequest
+  versionWarning?: InitVersionWarning
 }
 
 let state: InitRuntimeState = {
@@ -198,6 +205,13 @@ export function requestInitSelect(message: string, options: SelectPromptOption[]
       },
     }))
   })
+}
+
+export function setInitVersionWarning(currentVersion: string, latestVersion: string, majorVersion: string) {
+  updateState(current => ({
+    ...current,
+    versionWarning: { currentVersion, latestVersion, majorVersion },
+  }))
 }
 
 function updatePromptError(error?: string) {

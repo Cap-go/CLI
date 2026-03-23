@@ -39,7 +39,8 @@ export async function loginInternal(apikey: string, options: Options, silent = f
     throw new Error('Missing API key')
   }
 
-  await checkAlerts()
+  if (!silent)
+    await checkAlerts()
   // write in file .capgo the apikey in home directory
   const { local } = options
 

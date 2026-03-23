@@ -8,7 +8,7 @@ import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
 import tmp from 'tmp'
 import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
-import { checkAlerts } from '../api/update'
+import { checkVersionStatus } from '../api/update'
 import { addAppInternal } from '../app/add'
 import { markSnag, waitLog } from '../app/debug'
 import { canUseFilePicker, openPackageJsonPicker } from '../build/onboarding/file-picker'
@@ -21,7 +21,7 @@ import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { stopInitInkSession } from './runtime'
+import { setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -329,7 +329,7 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
     const nearestCapacitorConfig = findNearestCapacitorConfig(currentDir)
     const nearestPackageJson = findNearestPackageJson(currentDir)
     const projectDir = nearestCapacitorConfig?.dir || (nearestPackageJson ? dirname(nearestPackageJson) : currentDir)
-    const projectType = await findProjectType()
+    const projectType = await findProjectType({ quiet: true })
     const frameworkKind = getFrameworkKind(projectType)
 
     if (nearestCapacitorConfig?.dir === currentDir) {
@@ -2261,7 +2261,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   pIntro('Capgo onboarding')
   renderInitOnboardingWelcome(initOnboardingSteps.length)
   appId = await ensureWorkspaceReadyForInit(appId) ?? appId
-  await checkAlerts()
+  const versionStatus = await checkVersionStatus()
+  if (versionStatus.isOutdated) {
+    setInitVersionWarning(versionStatus.currentVersion, versionStatus.latestVersion, versionStatus.majorVersion)
+  }
 
   let extConfig: Awaited<ReturnType<typeof getConfig>> | undefined
   if (!options.supaAnon || !options.supaHost) {
@@ -2300,7 +2303,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   if (!doLoginExists() || apikeyCommand) {
     log.start(`Running: ${pm.runner} @capgo/cli@latest login ***`)
     try {
-      await loginInternal(options.apikey, options, false)
+      await loginInternal(options.apikey, options, true)
       log.stop('Login Done ✅')
     }
     catch (error) {
