@@ -12,6 +12,7 @@ import { checkVersionStatus } from '../api/update'
 import { addAppInternal } from '../app/add'
 import { markSnag, waitLog } from '../app/debug'
 import { canUseFilePicker, openPackageJsonPicker } from '../build/onboarding/file-picker'
+import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
 import { uploadBundleInternal } from '../bundle/upload'
 import { addChannelInternal } from '../channel/add'
 import { writeConfigUpdater } from '../config'
@@ -1371,9 +1372,15 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   let pkgVersion = '1.0.0'
   let delta = false
-  const doInstall = await pConfirm({ message: `Automatic Install "@capgo/capacitor-updater" dependency in ${appId}?` })
-  await cancelCommand(doInstall, orgId, apikey)
-  if (doInstall) {
+  const installChoice = await pSelect({
+    message: `Install @capgo/capacitor-updater in your project?`,
+    options: [
+      { value: 'yes', label: '✅ Yes, install it' },
+      { value: 'no', label: '❌ No, I\'ll do it manually' },
+    ],
+  })
+  await cancelCommand(installChoice, orgId, apikey)
+  if (installChoice === 'yes') {
     while (true) {
       const s = pSpinner()
       let versionToInstall = 'latest'
@@ -1462,10 +1469,16 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
 }
 
 async function addCodeStep(orgId: string, apikey: string, appId: string) {
-  const doAddCode = await pConfirm({ message: `Automatic Add "${codeInject}" code and import in ${appId}?` })
-  await cancelCommand(doAddCode, orgId, apikey)
+  const addCodeChoice = await pSelect({
+    message: `Add the Capacitor Updater import to your main file?`,
+    options: [
+      { value: 'yes', label: '✅ Yes, add it' },
+      { value: 'no', label: '❌ No, I\'ll do it manually' },
+    ],
+  })
+  await cancelCommand(addCodeChoice, orgId, apikey)
 
-  if (doAddCode) {
+  if (addCodeChoice === 'yes') {
     const s = pSpinner()
     s.start(`Adding @capacitor-updater to your main file`)
 
@@ -2305,6 +2318,46 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       localSupaAnon: options.supaAnon,
     })
   }
+  // Warn if this doesn't look like a Capacitor project
+  const hasCapacitorConfig = capacitorConfigFiles.some(file => existsSync(join(cwd(), file)))
+  if (!hasCapacitorConfig) {
+    pLog.warn('⚠️  No capacitor.config.* found in the current directory.')
+    pLog.info('   Capgo requires a Capacitor project. Make sure you run this from your project root.')
+    pLog.info('   Learn more: https://capacitorjs.com/docs/getting-started')
+    const continueAnyway = await pSelect({
+      message: 'Continue anyway?',
+      options: [
+        { value: 'yes', label: '✅ Yes, continue' },
+        { value: 'no', label: '❌ No, exit' },
+      ],
+    })
+    if (pIsCancel(continueAnyway) || continueAnyway === 'no') {
+      pOutro('Bye 👋')
+      exit()
+    }
+  }
+  else {
+    const iosDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'ios')
+    const androidDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'android')
+    const hasIos = existsSync(join(cwd(), iosDir))
+    const hasAndroid = existsSync(join(cwd(), androidDir))
+    if (!hasIos && !hasAndroid) {
+      pLog.warn('⚠️  No native platform directories found (ios/ or android/).')
+      pLog.info('   Run "npx cap add ios" or "npx cap add android" to add a platform.')
+      const continueWithout = await pSelect({
+        message: 'Continue without native platforms? Later steps may not work.',
+        options: [
+          { value: 'yes', label: '✅ Yes, continue anyway' },
+          { value: 'no', label: '❌ No, I\'ll add a platform first' },
+        ],
+      })
+      if (pIsCancel(continueWithout) || continueWithout === 'no') {
+        pOutro('Bye 👋\n💡 Run "npx cap add ios" or "npx cap add android", then try again.')
+        exit()
+      }
+    }
+  }
+
   const localConfig = await getLocalConfig()
   appId = getAppId(appId, extConfig?.config)
   options.apikey = apikeyCommand
