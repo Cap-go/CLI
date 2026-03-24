@@ -475,6 +475,8 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
+    // User chose to start over — delete the saved progress
+    cleanupStepsDone()
     return undefined
   }
   catch (err) {
@@ -1227,33 +1229,21 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
   }
 
   globalChannelName = channelName
-  const doChannel = await pConfirm({ message: `Create channel ${channelName} for ${appId} in Capgo?` })
-  await cancelCommand(doChannel, orgId, apikey)
-  if (doChannel) {
-    const s = pSpinner()
-    // create production channel public
-    s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default`)
-    try {
-      const addChannelRes = await addChannelInternal(channelName, appId, {
-        default: true,
-        apikey,
-      }, true)
-      if (!addChannelRes)
-        s.stop(`Channel already added ✅`)
-      else
-        s.stop(`Channel add Done ✅`)
-    }
-    catch (error) {
-      s.stop(`Channel creation failed ❌`)
-      throw error
-    }
+  const s = pSpinner()
+  s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default`)
+  try {
+    const addChannelRes = await addChannelInternal(channelName, appId, {
+      default: true,
+      apikey,
+    }, true)
+    if (!addChannelRes)
+      s.stop(`Channel already added ✅`)
+    else
+      s.stop(`Channel add done ✅`)
   }
-  else {
-    pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default"`)
-    pLog.info(`Alternatively, you can:`)
-    pLog.info(`  • Set the channel in your capacitor.config.ts file`)
-    pLog.info(`  • Use the JavaScript setChannel() method to dynamically set the channel`)
-    pLog.info(`  • Configure channels later from the Capgo web console`)
+  catch (error) {
+    s.stop(`Channel creation failed ❌`)
+    throw error
   }
   await markStep(orgId, apikey, 'add-channel', appId)
   return channelName
