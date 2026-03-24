@@ -2340,17 +2340,40 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
   let organization: Organization
   if (resumed) {
-    // Fetch orgs to find the saved one (we need the full Organization object)
-    const { data: allOrganizations } = await supabase.rpc('get_orgs_v7')
-    const savedOrg = allOrganizations?.find(org => org.gid === resumed.orgId)
-    if (savedOrg) {
-      organization = savedOrg
-      pLog.info(`Using organization "${savedOrg.name}"`)
-    }
-    else {
-      pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
+    // Fetch orgs to validate the saved one still exists and is accessible
+    const { error: orgError, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
+    if (orgError || !allOrganizations) {
+      pLog.error(`Cannot verify organization access: ${orgError ? JSON.stringify(orgError) : 'no data returned'}`)
+      pLog.warn('Falling back to organization selection.')
       organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
       stepToSkip = 0
+    }
+    else {
+      const savedOrg = allOrganizations.find(org => org.gid === resumed.orgId)
+      const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
+      const hasRequiredRole = savedOrg && ['admin', 'super_admin'].includes(normalizeRole(savedOrg.role))
+      const blocked2fa = savedOrg?.enforcing_2fa && !savedOrg['2fa_has_access']
+
+      if (!savedOrg) {
+        pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else if (!hasRequiredRole) {
+        pLog.warn(`You no longer have admin access to "${savedOrg.name}". Please select a different organization.`)
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else if (blocked2fa) {
+        pLog.warn(`Organization "${savedOrg.name}" now requires 2FA. Enable it at https://web.capgo.app/settings/account`)
+        pLog.warn('Please select a different organization or enable 2FA and try again.')
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else {
+        organization = savedOrg
+        pLog.info(`Using organization "${savedOrg.name}"`)
+      }
     }
   }
   else {
