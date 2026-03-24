@@ -51,6 +51,7 @@ let globalChannelName = defaultChannel
 let globalPlatform: 'ios' | 'android' = 'ios'
 let globalDelta = false
 let globalCurrentVersion: string | undefined
+let globalAppId: string | undefined
 
 function readTmpObj() {
   tmpObject ??= readdirSync(tmp.tmpdir)
@@ -391,10 +392,16 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
   }
 }
 
+let globalOrgId: string | undefined
+let globalOrgName: string | undefined
+
 function markStepDone(step: number, pathToPackageJson?: string, channelName?: string) {
   try {
     writeFileSync(getTmpObjectPath(), JSON.stringify({
       step_done: step,
+      orgId: globalOrgId,
+      orgName: globalOrgName,
+      appId: globalAppId,
       pathToPackageJson: pathToPackageJson ?? globalPathToPackageJson,
       channelName: channelName ?? globalChannelName,
       platform: globalPlatform,
@@ -414,14 +421,30 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
   }
 }
 
-async function readStepsDone(orgId: string, apikey: string): Promise<number | undefined> {
+interface ResumeResult {
+  stepDone: number
+  orgId: string
+  orgName: string
+  appId?: string
+}
+
+async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undefined> {
   try {
     const rawData = readFileSync(getTmpObjectPath(), 'utf-8')
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    if (!orgId || !step_done) {
+      pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
+      pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
+      return undefined
+    }
+
     pLog.info(formatInitResumeMessage(step_done, initOnboardingSteps.length))
+    if (orgName) {
+      pLog.info(`   Organization: ${orgName}`)
+    }
     const resumeChoice = await pSelect({
       message: 'Would you like to continue from where you left off?',
       options: [
@@ -446,9 +469,14 @@ async function readStepsDone(orgId: string, apikey: string): Promise<number | un
       if (typeof currentVersion === 'string' && currentVersion.length > 0) {
         globalCurrentVersion = currentVersion
       }
-      return step_done
+      if (savedAppId) {
+        globalAppId = savedAppId
+      }
+      return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
+    // User chose to start over — delete the saved progress
+    cleanupStepsDone()
     return undefined
   }
   catch (err) {
@@ -1201,33 +1229,21 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
   }
 
   globalChannelName = channelName
-  const doChannel = await pConfirm({ message: `Create channel ${channelName} for ${appId} in Capgo?` })
-  await cancelCommand(doChannel, orgId, apikey)
-  if (doChannel) {
-    const s = pSpinner()
-    // create production channel public
-    s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default`)
-    try {
-      const addChannelRes = await addChannelInternal(channelName, appId, {
-        default: true,
-        apikey,
-      }, true)
-      if (!addChannelRes)
-        s.stop(`Channel already added ✅`)
-      else
-        s.stop(`Channel add Done ✅`)
-    }
-    catch (error) {
-      s.stop(`Channel creation failed ❌`)
-      throw error
-    }
+  const s = pSpinner()
+  s.start(`Running: ${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default`)
+  try {
+    const addChannelRes = await addChannelInternal(channelName, appId, {
+      default: true,
+      apikey,
+    }, true)
+    if (!addChannelRes)
+      s.stop(`Channel already added ✅`)
+    else
+      s.stop(`Channel add done ✅`)
   }
-  else {
-    pLog.info(`If you change your mind, run it for yourself with: "${pm.runner} @capgo/cli@latest channel add ${channelName} ${appId} --default"`)
-    pLog.info(`Alternatively, you can:`)
-    pLog.info(`  • Set the channel in your capacitor.config.ts file`)
-    pLog.info(`  • Use the JavaScript setChannel() method to dynamically set the channel`)
-    pLog.info(`  • Configure channels later from the Capgo web console`)
+  catch (error) {
+    s.stop(`Channel creation failed ❌`)
+    throw error
   }
   await markStep(orgId, apikey, 'add-channel', appId)
   return channelName
@@ -2318,13 +2334,65 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
   await verifyUser(supabase, options.apikey, ['upload', 'all', 'read', 'write'])
 
-  const organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+  // Try to resume from saved state before asking for org selection
+  const resumed = await tryResumeOnboarding(options.apikey)
+  let stepToSkip = resumed?.stepDone ?? 0
+
+  let organization: Organization
+  if (resumed) {
+    // Fetch orgs to validate the saved one still exists and is accessible
+    const { error: orgError, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
+    if (orgError || !allOrganizations) {
+      pLog.error(`Cannot verify organization access: ${orgError ? JSON.stringify(orgError) : 'no data returned'}`)
+      pLog.warn('Falling back to organization selection.')
+      organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+      stepToSkip = 0
+    }
+    else {
+      const savedOrg = allOrganizations.find(org => org.gid === resumed.orgId)
+      const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
+      const hasRequiredRole = savedOrg && ['admin', 'super_admin'].includes(normalizeRole(savedOrg.role))
+      const blocked2fa = savedOrg?.enforcing_2fa && !savedOrg['2fa_has_access']
+
+      if (!savedOrg) {
+        pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else if (!hasRequiredRole) {
+        pLog.warn(`You no longer have admin access to "${savedOrg.name}". Please select a different organization.`)
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else if (blocked2fa) {
+        pLog.warn(`Organization "${savedOrg.name}" now requires 2FA. Enable it at https://web.capgo.app/settings/account`)
+        pLog.warn('Please select a different organization or enable 2FA and try again.')
+        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        stepToSkip = 0
+      }
+      else {
+        organization = savedOrg
+        pLog.info(`Using organization "${savedOrg.name}"`)
+      }
+    }
+  }
+  else {
+    organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+  }
+
   const orgId = organization.gid
+  globalOrgId = orgId
+  globalOrgName = organization.name
+
+  if (resumed?.appId) {
+    appId = resumed.appId
+    globalAppId = appId
+  }
+
   const pendingOnboardingSelection = await maybeReusePendingOnboardingApp(organization, options.apikey, appId, supabase)
   appId = pendingOnboardingSelection.appId ?? appId
   await ensureCapacitorProjectReady(orgId, options.apikey, appId, pendingOnboardingSelection.pendingApp)
 
-  let stepToSkip = await readStepsDone(orgId, options.apikey) ?? 0
   if (pendingOnboardingSelection.reusedPendingApp) {
     stepToSkip = Math.max(stepToSkip, 1)
   }
@@ -2351,6 +2419,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       renderCurrentStep(1)
       await checkPrerequisitesStep(orgId, options.apikey)
       appId = await addAppStep(organization, options.apikey, appId, options)
+      globalAppId = appId
       markStepDone(1)
     }
 
