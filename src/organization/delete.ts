@@ -1,13 +1,14 @@
 import type { OrganizationDeleteOptions } from '../schemas/organization'
-import { confirm as confirmC, intro, isCancel, log, outro, select } from '@clack/prompts'
+import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
+  assertCliPermission,
   check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
+  resolveUserIdFromApiKey,
   sendEvent,
-  verifyUser,
 } from '../utils'
 
 export async function deleteOrganizationInternal(
@@ -42,7 +43,11 @@ export async function deleteOrganizationInternal(
     enrichedOptions.supaHost,
     enrichedOptions.supaAnon,
   )
-  const userId = await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
+  await resolveUserIdFromApiKey(supabase, enrichedOptions.apikey)
+  await assertCliPermission(supabase, enrichedOptions.apikey, 'org.delete', { orgId }, {
+    message: `Insufficient permissions to delete organization ${orgId}`,
+    silent,
+  })
 
   await check2FAAccessForOrg(supabase, orgId, silent)
 
@@ -56,28 +61,6 @@ export async function deleteOrganizationInternal(
     if (!silent)
       log.error(`Cannot get organization details ${formatError(orgError)}`)
     throw new Error(`Cannot get organization details: ${formatError(orgError)}`)
-  }
-
-  if (orgData.created_by !== userId) {
-    if (silent)
-      throw new Error('Deleting an organization is restricted to the organization owner')
-
-    log.warn('Deleting an organization is restricted to the organization owner')
-    log.warn('You are not the owner of this organization')
-    log.warn('It\'s strongly recommended that you do not continue!')
-
-    const shouldContinue = await select({
-      message: 'Do you want to continue?',
-      options: [
-        { label: 'Yes', value: 'yes' },
-        { label: 'No', value: 'no' },
-      ],
-    })
-
-    if (isCancel(shouldContinue) || shouldContinue === 'no') {
-      log.error('Canceled deleting the organization')
-      throw new Error('Organization deletion cancelled')
-    }
   }
 
   if (!silent && !enrichedOptions.autoConfirm) {
