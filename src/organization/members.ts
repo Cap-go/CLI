@@ -3,11 +3,12 @@ import { intro, log, outro } from '@clack/prompts'
 import { Table } from '@sauber/table'
 import { checkAlerts } from '../api/update'
 import {
+  assertCliPermission,
   check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
-  verifyUser,
+  resolveUserIdFromApiKey,
 } from '../utils'
 
 interface PasswordPolicyConfig {
@@ -98,7 +99,11 @@ export async function listMembersInternal(orgId: string, options: OptionsBase, s
     enrichedOptions.supaHost,
     enrichedOptions.supaAnon,
   )
-  await verifyUser(supabase, enrichedOptions.apikey, ['read', 'write', 'all'])
+  await resolveUserIdFromApiKey(supabase, enrichedOptions.apikey)
+  await assertCliPermission(supabase, enrichedOptions.apikey, 'org.read_members', { orgId }, {
+    message: `Insufficient permissions to list members of organization ${orgId}`,
+    silent,
+  })
   await check2FAAccessForOrg(supabase, orgId, silent)
 
   // Get organization name and security settings

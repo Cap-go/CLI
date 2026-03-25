@@ -620,28 +620,6 @@ export async function createSupabaseClient(apikey: string, supaHost?: string, su
   })
 }
 
-export async function checkKey(supabase: SupabaseClient<Database>, apikey: string, keymode: Database['public']['Enums']['key_mode'][]) {
-  const { data: apiAccess } = await supabase
-    .rpc('is_allowed_capgkey', { apikey, keymode })
-    .single()
-
-  if (!apiAccess) {
-    log.error(`Invalid API key or insufficient permissions.`)
-    // create a string from keymode array with comma and space and "or" for the last one
-    const keymodeStr = keymode.map((k, i) => {
-      if (keymode.length === 1)
-        return `"${k}"`
-      if (i === keymode.length - 1)
-        return `or "${k}"`
-
-      return `"${k}", `
-    }).join('')
-    const message = `Your key should be: ${keymodeStr} mode.`
-    log.error(message)
-    throw new Error('Invalid API key or insufficient permissions.')
-  }
-}
-
 export async function isPayingOrg(supabase: SupabaseClient<Database>, orgId: string): Promise<boolean> {
   const { data } = await supabase
     .rpc('is_paying_org', { orgid: orgId })
@@ -691,7 +669,7 @@ export const hasOrganizationPerm = (perm: OrganizationPerm, required: Organizati
 
 export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<{ okay: true, data: OrganizationPerm } | { okay: false, error: 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' }> {
   const { data, error } = await supabase
-    .rpc('get_org_perm_for_apikey', { apikey, app_id: appId })
+    .rpc('get_org_perm_for_apikey_v2' as any, { apikey, app_id: appId })
     .single()
 
   if (error) {
@@ -971,27 +949,33 @@ export async function findProjectType(options?: { quiet?: boolean }) {
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     if (f.includes('angular.json')) {
-      if (!quiet) log.info('Found angular project')
+      if (!quiet)
+        log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js'
     }
     if (f.includes('nuxt.config.js') || f.includes('nuxt.config.ts')) {
-      if (!quiet) log.info('Found nuxtjs project')
+      if (!quiet)
+        log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
     if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
-      if (!quiet) log.info('Found nextjs project')
+      if (!quiet)
+        log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js'
     }
     if (f.includes('svelte.config.js')) {
-      if (!quiet) log.info('Found sveltekit project')
+      if (!quiet)
+        log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js'
     }
     if (f.includes('rolluconfig.js')) {
-      if (!quiet) log.info('Found svelte project')
+      if (!quiet)
+        log.info('Found svelte project')
       return isTypeScript ? 'svelte-ts' : 'svelte-js'
     }
     if (f.includes('vue.config.js')) {
-      if (!quiet) log.info('Found vue project')
+      if (!quiet)
+        log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
     if (f.includes(PACKNAME)) {
@@ -999,11 +983,13 @@ export async function findProjectType(options?: { quiet?: boolean }) {
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
         if (dependencies.get('react')) {
-          if (!quiet) log.info('Found react project')
+          if (!quiet)
+            log.info('Found react project')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (dependencies.get('vue')) {
-          if (!quiet) log.info('Found vue project')
+          if (!quiet)
+            log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
       }
@@ -1480,9 +1466,65 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
   return organization
 }
 
-export async function verifyUser(supabase: SupabaseClient<Database>, apikey: string, keymod: Database['public']['Enums']['key_mode'][] = ['all']) {
-  await checkKey(supabase, apikey, keymod)
+export async function getOrganizationWithPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  permissionKey: string,
+): Promise<Organization> {
+  const { error: orgError, data: allOrganizations } = await supabase
+    .rpc('get_orgs_v7')
 
+  if (orgError) {
+    log.error('Cannot get the list of organizations - exiting')
+    log.error(`Error ${JSON.stringify(orgError)}`)
+    throw new Error('Cannot get the list of organizations')
+  }
+
+  if (allOrganizations.length === 0) {
+    log.error('Could not get organization please create an organization first')
+    throw new Error('No organizations available')
+  }
+
+  const permissionChecks = await Promise.all(
+    allOrganizations.map(async (org) => {
+      const allowed = await hasCliPermission(supabase, apikey, permissionKey, { orgId: org.gid })
+      return allowed ? org : null
+    }),
+  )
+  const allowedOrganizations = permissionChecks.filter((org): org is Organization => org !== null)
+
+  if (allowedOrganizations.length === 0) {
+    log.error(`Could not find organization with permission: ${permissionKey}`)
+    throw new Error('Could not find organization with required permission')
+  }
+
+  const organizationUidRaw = (allowedOrganizations.length > 1)
+    ? await select({
+        message: 'Please pick the organization that you want to insert to',
+        options: allowedOrganizations.map((org) => {
+          const twoFaWarning = (org.enforcing_2fa && !org['2fa_has_access']) ? ' ⚠️ (2FA required)' : ''
+          return { value: org.gid, label: `${org.name}${twoFaWarning}` }
+        }),
+      })
+    : allowedOrganizations[0].gid
+
+  if (isCancel(organizationUidRaw)) {
+    log.error('Canceled organization selection, exiting')
+    throw new Error('Organization selection cancelled')
+  }
+
+  const organizationUid = organizationUidRaw as string
+  const organization = allOrganizations.find(org => org.gid === organizationUid)!
+
+  if (organization.enforcing_2fa && !organization['2fa_has_access']) {
+    show2FADeniedError(organization.name)
+  }
+
+  log.info(`Using the organization "${organization.name}" as the app owner`)
+  return organization
+}
+
+export async function resolveUserIdFromApiKey(supabase: SupabaseClient<Database>, apikey: string) {
   const { data: dataUser, error: userIdError } = await supabase
     .rpc('get_user_id', { apikey })
     .single()
@@ -1494,6 +1536,70 @@ export async function verifyUser(supabase: SupabaseClient<Database>, apikey: str
     throw new Error('Cannot authenticate user with provided API key')
   }
   return userId
+}
+
+interface CliPermissionScope {
+  orgId?: string | null
+  appId?: string | null
+  channelId?: number | null
+}
+
+export async function hasCliPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  permissionKey: string,
+  scope: CliPermissionScope = {},
+): Promise<boolean> {
+  const { data, error } = await supabase.rpc('cli_check_permission' as any, {
+    apikey,
+    permission_key: permissionKey,
+    org_id: scope.orgId ?? null,
+    app_id: scope.appId ?? null,
+    channel_id: scope.channelId ?? null,
+  })
+
+  if (error) {
+    log.error(`Cannot check permission ${permissionKey}`)
+    log.error(formatError(error))
+    throw new Error(`Cannot check permission ${permissionKey}`)
+  }
+
+  return !!data
+}
+
+export async function assertCliPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  permissionKey: string,
+  scope: CliPermissionScope = {},
+  options: {
+    message?: string
+    silent?: boolean
+  } = {},
+): Promise<void> {
+  const allowed = await hasCliPermission(supabase, apikey, permissionKey, scope)
+  if (allowed)
+    return
+
+  const message = options.message || `Insufficient permissions for ${permissionKey}`
+  if (!options.silent)
+    log.error(message)
+  throw new Error(message)
+}
+
+export async function getAccessibleAppsForApiKey(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+): Promise<Database['public']['Tables']['apps']['Row'][]> {
+  const { data, error } = await supabase.rpc('get_accessible_apps_for_apikey_v2' as any, { apikey })
+
+  if (error) {
+    log.error('Cannot get accessible apps for API key')
+    log.error(formatError(error))
+    throw new Error('Cannot get accessible apps for API key')
+  }
+
+  return (data || []) as Database['public']['Tables']['apps']['Row'][]
 }
 
 export async function getOrganizationId(supabase: SupabaseClient<Database>, appId: string) {
