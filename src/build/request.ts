@@ -60,7 +60,7 @@ export interface BuildLogger {
   /** Called with upload progress percentage (0-100) */
   uploadProgress: (percent: number) => void
   /** Called with custom messages from the builder (QR codes, etc.) */
-  customMsg: (kind: string, data: Record<string, unknown>) => void
+  customMsg: (kind: string, data: Record<string, unknown>) => void | Promise<void>
 }
 
 /** Default logger that uses @clack/prompts (used by CLI command) */
@@ -111,9 +111,9 @@ function createDefaultLogger(silent: boolean): BuildLogger {
         }
       }
     })(),
-    customMsg: (kind: string, data: Record<string, unknown>) => {
+    customMsg: async (kind: string, data: Record<string, unknown>) => {
       if (!silent) {
-        handleCustomMsg(
+        await handleCustomMsg(
           kind,
           data,
           // eslint-disable-next-line no-console
@@ -422,7 +422,7 @@ async function streamBuildLogs(
         abortSignal.addEventListener('abort', abortListener)
       }
 
-      ws.addEventListener('message', (event: MessageEvent) => {
+      ws.addEventListener('message', async (event: MessageEvent) => {
         let raw = ''
         if (typeof event.data === 'string') {
           raw = event.data
@@ -454,14 +454,14 @@ async function streamBuildLogs(
           parsed = null
         }
 
-        const handleEntry = (entry: { id?: number, message?: string, type?: string, status?: string, kind?: string, data?: Record<string, unknown> }) => {
+        const handleEntry = async (entry: { id?: number, message?: string, type?: string, status?: string, kind?: string, data?: Record<string, unknown> }) => {
           if (entry.type === 'custom_msg' && typeof entry.kind === 'string' && entry.data) {
             lastMessageAt = Date.now()
             if (logger) {
-              logger.customMsg(entry.kind, entry.data)
+              await logger.customMsg(entry.kind, entry.data)
             }
             else if (!silent) {
-              handleCustomMsg(
+              await handleCustomMsg(
                 entry.kind,
                 entry.data,
                 // eslint-disable-next-line no-console
@@ -497,7 +497,7 @@ async function streamBuildLogs(
         if (parsed?.type === 'batch_messages' && Array.isArray(parsed.messages)) {
           let maxId = lastConfirmedId
           for (const entry of parsed.messages) {
-            handleEntry(entry)
+            await handleEntry(entry)
             if (typeof entry.id === 'number')
               maxId = Math.max(maxId, entry.id)
           }
@@ -518,7 +518,7 @@ async function streamBuildLogs(
         }
         else {
           if (parsed) {
-            handleEntry(parsed)
+            await handleEntry(parsed)
           }
           else if (raw) {
             lastMessageAt = Date.now()

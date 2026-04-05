@@ -13,7 +13,7 @@ export async function handleCustomMsg(
   if (kind === 'qr_download_link') {
     const url = data.url
     if (typeof url !== 'string') {
-      warn('⚠ qr_download_link message missing url field')
+      warn('qr_download_link message missing url field')
       return
     }
 
@@ -36,6 +36,6 @@ export async function handleCustomMsg(
   }
 
   // Unknown kind — warn and dump raw data
-  warn(`⚠ Unknown message type "${kind}" — you may need to update the CLI`)
+  warn(`Unknown message type "${kind}" — you may need to update the CLI`)
   log(JSON.stringify(data, null, 2))
 }

@@ -543,12 +543,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                 return [...prev, line]
               })
             },
-            customMsg: (kind: string, data: Record<string, unknown>) => {
-              handleCustomMsg(
+            customMsg: async (kind: string, data: Record<string, unknown>) => {
+              await handleCustomMsg(
                 kind,
                 data,
                 (line: string) => setBuildOutput(prev => [...prev, line]),
-                (line: string) => setBuildOutput(prev => [...prev, `⚠ ${line}`]),
+                (line: string) => setBuildOutput(prev => [...prev, line]),
               )
             },
           }
