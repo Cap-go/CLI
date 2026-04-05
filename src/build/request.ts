@@ -43,6 +43,7 @@ import { createSupabaseClient, findSavedKey, getConfig, getOrganizationId, sendE
 import { mergeCredentials, MIN_OUTPUT_RETENTION_SECONDS, parseOptionalBoolean, parseOutputRetentionSeconds } from './credentials'
 import { buildProvisioningMap } from './credentials-command'
 import { getPlatformDirFromCapacitorConfig } from './platform-paths'
+import { handleCustomMsg } from './qr.js'
 
 /**
  * Callback interface for build logging.
@@ -58,6 +59,8 @@ export interface BuildLogger {
   buildLog: (msg: string) => void
   /** Called with upload progress percentage (0-100) */
   uploadProgress: (percent: number) => void
+  /** Called with custom messages from the builder (QR codes, etc.) */
+  customMsg: (kind: string, data: Record<string, unknown>) => void
 }
 
 /** Default logger that uses @clack/prompts (used by CLI command) */
@@ -108,6 +111,17 @@ function createDefaultLogger(silent: boolean): BuildLogger {
         }
       }
     })(),
+    customMsg: (kind: string, data: Record<string, unknown>) => {
+      if (!silent) {
+        handleCustomMsg(
+          kind,
+          data,
+          // eslint-disable-next-line no-console
+          (line: string) => console.log(line),
+          (line: string) => clackLog.warn(line),
+        )
+      }
+    },
   }
 }
 
@@ -429,7 +443,9 @@ async function streamBuildLogs(
           message?: string
           type?: string
           status?: string
-          messages?: Array<{ id?: number, message?: string, type?: string, status?: string }>
+          kind?: string
+          data?: Record<string, unknown>
+          messages?: Array<{ id?: number, message?: string, type?: string, status?: string, kind?: string, data?: Record<string, unknown> }>
         } | null = null
         try {
           parsed = JSON.parse(raw)
@@ -438,7 +454,23 @@ async function streamBuildLogs(
           parsed = null
         }
 
-        const handleEntry = (entry: { id?: number, message?: string, type?: string, status?: string }) => {
+        const handleEntry = (entry: { id?: number, message?: string, type?: string, status?: string, kind?: string, data?: Record<string, unknown> }) => {
+          if (entry.type === 'custom_msg' && typeof entry.kind === 'string' && entry.data) {
+            lastMessageAt = Date.now()
+            if (logger) {
+              logger.customMsg(entry.kind, entry.data)
+            }
+            else if (!silent) {
+              handleCustomMsg(
+                entry.kind,
+                entry.data,
+                // eslint-disable-next-line no-console
+                (line: string) => console.log(line),
+                (line: string) => clackLog.warn(line),
+              )
+            }
+            return
+          }
           if (entry.type === 'status' && typeof entry.status === 'string') {
             const status = entry.status.toLowerCase()
             lastMessageAt = Date.now()
