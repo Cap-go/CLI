@@ -1,6 +1,7 @@
 import type { FC } from 'react'
 import type { BuildLogger } from '../../request.js'
 import type { ApiKeyData, CertificateData, OnboardingProgress, OnboardingStep, ProfileData } from '../types.js'
+import { handleCustomMsg } from '../../qr.js'
 import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
 import { copyFile, readFile } from 'node:fs/promises'
@@ -541,6 +542,14 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                 }
                 return [...prev, line]
               })
+            },
+            customMsg: async (kind: string, data: Record<string, unknown>) => {
+              await handleCustomMsg(
+                kind,
+                data,
+                (line: string) => setBuildOutput(prev => [...prev, line]),
+                (line: string) => setBuildOutput(prev => [...prev, line]),
+              )
             },
           }
 
