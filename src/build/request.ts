@@ -237,7 +237,7 @@ export type { BuildCredentials, BuildRequestOptions, BuildRequestResponse, Build
  * Returns the final status if detected from the stream, or null if stream ended without status.
  */
 type StatusCheckFn = () => Promise<string | null>
-type WsEntry = {
+interface WsEntry {
   id?: number
   message?: string
   type?: string
@@ -520,8 +520,9 @@ async function streamBuildLogs(
           }
         }
         else {
-          if (parsed)
+          if (parsed) {
             await handleEntry(parsed)
+          }
           else if (raw) {
             lastMessageAt = Date.now()
             processLogMessage(raw)
