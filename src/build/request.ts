@@ -806,16 +806,25 @@ export function shouldIncludeFile(filePath: string, platform: 'ios' | 'android',
   if (platform === 'android' && normalizedPath.startsWith('node_modules/@capacitor/android/'))
     return true
 
-  // Cordova plugins: include the entire package contents. Cordova plugins don't
-  // follow Capacitor's `<pkg>/android/` convention — supporting files like
-  // `build-extras-*.gradle` live at the package root, native sources may live under
-  // `src/android/`, and `plugin.xml` is at the root. Including everything is the
-  // simplest correct behavior.
+  // Cordova plugins: include the entire package contents EXCEPT the plugin's own
+  // nested node_modules. Cordova plugins don't follow Capacitor's `<pkg>/android/`
+  // convention — supporting files like `build-extras-*.gradle` live at the package
+  // root, native sources may live under `src/android/`, and `plugin.xml` is at the
+  // root. We include all of those, but exclude any bundled transitive dependencies
+  // under `<pkg>/node_modules/...` to avoid pulling unrelated code (and arbitrary
+  // size) into the upload bundle.
   if (platform === 'android') {
     for (const cordovaPkg of nativeDeps.cordovaPackages) {
       const cordovaPrefix = `node_modules/${cordovaPkg}/`
-      if (normalizedPath === `node_modules/${cordovaPkg}/package.json` || normalizedPath.startsWith(cordovaPrefix))
+      if (normalizedPath === `node_modules/${cordovaPkg}/package.json`)
         return true
+      if (normalizedPath.startsWith(cordovaPrefix)) {
+        const subpath = normalizedPath.slice(cordovaPrefix.length)
+        // Reject anything inside the plugin's own bundled node_modules.
+        if (subpath === 'node_modules' || subpath.startsWith('node_modules/'))
+          continue
+        return true
+      }
     }
   }
 

@@ -363,6 +363,16 @@ await t('generated build zip includes Cordova plugin files referenced from capac
       "package com.onesignal;",
     )
 
+    // Simulated bundled transitive dependency that must NOT be included.
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'node_modules', 'bundled-dep', 'package.json'),
+      JSON.stringify({ name: 'bundled-dep', version: '1.0.0' }),
+    )
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'node_modules', 'bundled-dep', 'index.js'),
+      "module.exports = {}",
+    )
+
     await zipDirectory(testRoot, zipPath, 'android', {
       android: { path: 'android' },
     })
@@ -389,6 +399,10 @@ await t('generated build zip includes Cordova plugin files referenced from capac
     assert.ok(
       entries.includes('android/capacitor-cordova-android-plugins/build.gradle'),
       'missing capacitor-cordova-android-plugins build.gradle',
+    )
+    assert.ok(
+      !entries.some(e => e.startsWith('node_modules/onesignal-cordova-plugin/node_modules/')),
+      'bundled transitive deps under cordova plugin must be excluded',
     )
   }
   finally {
