@@ -662,7 +662,8 @@ async function pollBuildStatus(
  * Extract native node_modules roots that contain platform folders.
  */
 interface NativeDependencies {
-  packages: Set<string> // Package paths like @capacitor/app
+  packages: Set<string> // Capacitor package paths like @capacitor/app
+  cordovaPackages: Set<string> // Cordova plugin package paths like onesignal-cordova-plugin
   usesSPM: boolean
   usesCocoaPods: boolean
 }
@@ -673,6 +674,7 @@ async function extractNativeDependencies(
   platformDir: string,
 ): Promise<NativeDependencies> {
   const packages = new Set<string>()
+  const cordovaPackages = new Set<string>()
   let usesSPM = false
   let usesCocoaPods = false
 
@@ -748,9 +750,35 @@ async function extractNativeDependencies(
         packages.add(packagePath)
       }
     }
+
+    // Parse Cordova plugin references from capacitor-cordova-android-plugins/build.gradle.
+    // These plugins are NOT listed in capacitor.settings.gradle. They are wired via
+    // `apply from: "../../node_modules/<plugin>/<file>.gradle"` lines that `cap sync`
+    // injects between the PLUGIN GRADLE EXTENSIONS markers. The referenced files live
+    // at the package root, not under an `android/` subfolder, so we must include the
+    // entire package contents in the upload bundle.
+    const cordovaBuildGradlePath = join(projectDir, platformDir, 'capacitor-cordova-android-plugins', 'build.gradle')
+    if (existsSync(cordovaBuildGradlePath)) {
+      const cordovaContent = await readFileAsync(cordovaBuildGradlePath, 'utf-8')
+      // Match: apply from: "../../node_modules/<pkg>/..." (any depth of ../, single or double quotes)
+      const applyFromMatches = cordovaContent.matchAll(/apply\s+from\s*:\s*["'](?:\.\.\/)+node_modules\/([^"']+)["']/g)
+      for (const match of applyFromMatches) {
+        let fullPath = match[1]
+        // Normalize pnpm paths
+        const lastNodeModulesIdx = fullPath.lastIndexOf('node_modules/')
+        if (lastNodeModulesIdx !== -1)
+          fullPath = fullPath.substring(lastNodeModulesIdx + 'node_modules/'.length)
+        // Extract package name: scoped (@scope/pkg) takes two segments, otherwise one
+        const segments = fullPath.split('/')
+        const packagePath = segments[0].startsWith('@') && segments.length >= 2
+          ? `${segments[0]}/${segments[1]}`
+          : segments[0]
+        cordovaPackages.add(packagePath)
+      }
+    }
   }
 
-  return { packages, usesSPM, usesCocoaPods }
+  return { packages, cordovaPackages, usesSPM, usesCocoaPods }
 }
 
 /**
@@ -777,6 +805,28 @@ export function shouldIncludeFile(filePath: string, platform: 'ios' | 'android',
     return true
   if (platform === 'android' && normalizedPath.startsWith('node_modules/@capacitor/android/'))
     return true
+
+  // Cordova plugins: include the entire package contents EXCEPT the plugin's own
+  // nested node_modules. Cordova plugins don't follow Capacitor's `<pkg>/android/`
+  // convention — supporting files like `build-extras-*.gradle` live at the package
+  // root, native sources may live under `src/android/`, and `plugin.xml` is at the
+  // root. We include all of those, but exclude any bundled transitive dependencies
+  // under `<pkg>/node_modules/...` to avoid pulling unrelated code (and arbitrary
+  // size) into the upload bundle.
+  if (platform === 'android') {
+    for (const cordovaPkg of nativeDeps.cordovaPackages) {
+      const cordovaPrefix = `node_modules/${cordovaPkg}/`
+      if (normalizedPath === `node_modules/${cordovaPkg}/package.json`)
+        return true
+      if (normalizedPath.startsWith(cordovaPrefix)) {
+        const subpath = normalizedPath.slice(cordovaPrefix.length)
+        // Reject anything inside the plugin's own bundled node_modules.
+        if (subpath === 'node_modules' || subpath.startsWith('node_modules/'))
+          continue
+        return true
+      }
+    }
+  }
 
   // Check if file is in one of the native dependencies
   for (const packagePath of nativeDeps.packages) {
@@ -856,11 +906,12 @@ function addDirectoryToZip(
       // 1. This directory itself should be included (matches a pattern)
       // 2. This directory is a prefix of a dependency path (need to traverse to reach it)
       const normalizedItemPath = itemZipPath.replace(/\\/g, '/')
+      const allPackages = [...nativeDeps.packages, ...nativeDeps.cordovaPackages]
       const shouldRecurse = shouldIncludeFile(itemZipPath, platform, nativeDeps, platformDir)
         // Ensure we can reach nested platform directories like projects/app/android.
         || platformDir === normalizedItemPath
         || platformDir.startsWith(`${normalizedItemPath}/`)
-        || Array.from(nativeDeps.packages).some((pkg) => {
+        || allPackages.some((pkg) => {
           const depPath = `node_modules/${pkg}/`
           return depPath.startsWith(`${normalizedItemPath}/`) || normalizedItemPath.startsWith(`node_modules/${pkg}`)
         })
