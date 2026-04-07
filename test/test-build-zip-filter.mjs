@@ -23,7 +23,7 @@ function writeFile(filePath, content) {
   writeFileSync(filePath, content, 'utf-8')
 }
 
-const nativeDeps = { packages: new Set(['@capacitor/app']), usesSPM: false, usesCocoaPods: true }
+const nativeDeps = { packages: new Set(['@capacitor/app']), cordovaPackages: new Set(), usesSPM: false, usesCocoaPods: true }
 
 await t('should include package metadata for @capacitor dependencies in zip filter', () => {
   assert.equal(
@@ -302,4 +302,98 @@ await t('generated build zip includes SPM and CocoaPods metadata when both manag
     rmSync(testRoot, { recursive: true, force: true })
   }
 })
+await t('generated build zip includes Cordova plugin files referenced from capacitor-cordova-android-plugins/build.gradle', async () => {
+  const testRoot = mkdtempSync(join(tmpdir(), 'capgo-build-zip-filter-'))
+  const zipPath = join(testRoot, 'build.zip')
+
+  try {
+    writeFile(
+      join(testRoot, 'package.json'),
+      JSON.stringify({
+        dependencies: {
+          '@capacitor/core': '^6.0.0',
+          '@capacitor/android': '^6.0.0',
+          'onesignal-cordova-plugin': '^5.3.0',
+        },
+      }, null, 2),
+    )
+
+    writeFile(
+      join(testRoot, 'capacitor.config.json'),
+      JSON.stringify({
+        appId: 'com.example.app',
+        appName: 'Example',
+        webDir: 'www',
+      }, null, 2),
+    )
+
+    writeFile(join(testRoot, 'www', 'index.html'), '<!doctype html><html></html>')
+
+    // Capacitor settings.gradle only lists @capacitor/android — Cordova plugins are not here.
+    writeFile(
+      join(testRoot, 'android', 'capacitor.settings.gradle'),
+      "include ':capacitor-android'\nproject(':capacitor-android').projectDir = new File('../node_modules/@capacitor/android/capacitor')\n",
+    )
+
+    // Cordova plugins are wired via apply from in this generated file.
+    writeFile(
+      join(testRoot, 'android', 'capacitor-cordova-android-plugins', 'build.gradle'),
+      "apply from: \"cordova.variables.gradle\"\napply from: \"../../node_modules/onesignal-cordova-plugin/build-extras-onesignal.gradle\"\n",
+    )
+
+    writeFile(
+      join(testRoot, 'node_modules', '@capacitor', 'android', 'package.json'),
+      JSON.stringify({ name: '@capacitor/android', version: '6.0.0' }),
+    )
+
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'package.json'),
+      JSON.stringify({ name: 'onesignal-cordova-plugin', version: '5.3.0' }),
+    )
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'build-extras-onesignal.gradle'),
+      "// Onesignal extras\n",
+    )
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'plugin.xml'),
+      "<plugin />\n",
+    )
+    writeFile(
+      join(testRoot, 'node_modules', 'onesignal-cordova-plugin', 'src', 'android', 'OneSignal.java'),
+      "package com.onesignal;",
+    )
+
+    await zipDirectory(testRoot, zipPath, 'android', {
+      android: { path: 'android' },
+    })
+
+    const zip = new AdmZip(zipPath)
+    const entries = zip.getEntries().map(entry => entry.entryName).sort()
+
+    assert.ok(
+      entries.includes('node_modules/onesignal-cordova-plugin/build-extras-onesignal.gradle'),
+      'missing Cordova plugin gradle script referenced via apply from',
+    )
+    assert.ok(
+      entries.includes('node_modules/onesignal-cordova-plugin/plugin.xml'),
+      'missing Cordova plugin.xml at package root',
+    )
+    assert.ok(
+      entries.includes('node_modules/onesignal-cordova-plugin/src/android/OneSignal.java'),
+      'missing Cordova plugin native source under src/android',
+    )
+    assert.ok(
+      entries.includes('node_modules/onesignal-cordova-plugin/package.json'),
+      'missing Cordova plugin package.json',
+    )
+    assert.ok(
+      entries.includes('android/capacitor-cordova-android-plugins/build.gradle'),
+      'missing capacitor-cordova-android-plugins build.gradle',
+    )
+  }
+  finally {
+    rmSync(testRoot, { recursive: true, force: true })
+  }
+})
+
 process.stdout.write('OK\n')
