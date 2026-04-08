@@ -2,12 +2,11 @@ import type { OrganizationDeleteOptions } from '../schemas/organization'
 import { confirm as confirmC, intro, isCancel, log, outro } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
-  assertCliPermission,
+  assertOrgPermission,
   check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
-  resolveUserIdFromApiKey,
   sendEvent,
 } from '../utils'
 
@@ -43,11 +42,7 @@ export async function deleteOrganizationInternal(
     enrichedOptions.supaHost,
     enrichedOptions.supaAnon,
   )
-  await resolveUserIdFromApiKey(supabase, enrichedOptions.apikey)
-  await assertCliPermission(supabase, enrichedOptions.apikey, 'org.delete', { orgId }, {
-    message: `Insufficient permissions to delete organization ${orgId}`,
-    silent,
-  })
+  await assertOrgPermission(supabase, enrichedOptions.apikey, 'org.delete', orgId, `Insufficient permissions to delete organization ${orgId}`, silent)
 
   await check2FAAccessForOrg(supabase, orgId, silent)
 

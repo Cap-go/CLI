@@ -1623,6 +1623,18 @@ export async function assertCliPermission(
   throw new Error(message)
 }
 
+export async function assertOrgPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  permissionKey: string,
+  orgId: string,
+  message: string,
+  silent: boolean,
+): Promise<void> {
+  await resolveUserIdFromApiKey(supabase, apikey, silent)
+  await assertCliPermission(supabase, apikey, permissionKey, { orgId }, { message, silent })
+}
+
 export async function getAccessibleAppsForApiKey(
   supabase: SupabaseClient<Database>,
   apikey: string,
