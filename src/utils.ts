@@ -1507,7 +1507,7 @@ export async function getOrganizationListWithPermission(
 
   if (orgError) {
     log.error('Cannot get the list of organizations - exiting')
-    log.error(`Error ${JSON.stringify(orgError)}`)
+    log.error(formatError(orgError))
     throw new Error('Cannot get the list of organizations')
   }
 
