@@ -263,6 +263,34 @@ function decodeEventData(event: MessageEvent): string {
   return ''
 }
 
+async function dispatchCustomMsg(
+  kind: string,
+  data: Record<string, unknown>,
+  logger: BuildLogger | undefined,
+  silent: boolean,
+): Promise<void> {
+  try {
+    if (logger) {
+      await logger.customMsg(kind, data)
+    }
+    else if (!silent) {
+      await handleCustomMsg(
+        kind,
+        data,
+        // eslint-disable-next-line no-console
+        (line: string) => console.log(line),
+        (line: string) => clackLog.warn(line),
+      )
+    }
+  }
+  catch (error) {
+    if (logger)
+      logger.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
+    else if (!silent)
+      clackLog.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
+  }
+}
+
 async function streamBuildLogs(
   silent: boolean,
   _verbose = false,
@@ -433,26 +461,7 @@ async function streamBuildLogs(
       const handleEntry = async (entry: WsEntry) => {
         if (entry.type === 'custom_msg' && typeof entry.kind === 'string' && entry.data) {
           lastMessageAt = Date.now()
-          try {
-            if (logger) {
-              await logger.customMsg(entry.kind, entry.data)
-            }
-            else if (!silent) {
-              await handleCustomMsg(
-                entry.kind,
-                entry.data,
-                // eslint-disable-next-line no-console
-                (line: string) => console.log(line),
-                (line: string) => clackLog.warn(line),
-              )
-            }
-          }
-          catch (error) {
-            if (logger)
-              logger.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
-            else if (!silent)
-              clackLog.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
-          }
+          await dispatchCustomMsg(entry.kind, entry.data, logger, silent)
           return
         }
         if (entry.type === 'status' && typeof entry.status === 'string') {
