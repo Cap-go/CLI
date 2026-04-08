@@ -536,7 +536,7 @@ async function streamBuildLogs(
             processLogMessage(raw)
           }
 
-          if (parsed && typeof parsed.id === 'number') {
+          if (parsed && typeof parsed.id === 'number' && parsed.id > lastConfirmedId) {
             lastConfirmedId = parsed.id
             sendConfirmation(parsed.id)
           }
