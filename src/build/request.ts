@@ -1066,7 +1066,7 @@ export async function requestBuildInternal(appId: string, options: BuildRequestO
     const host = options.supaHost || 'https://api.capgo.app'
 
     const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-    await resolveUserIdFromApiKey(supabase, options.apikey)
+    await resolveUserIdFromApiKey(supabase, options.apikey, silent)
     await assertCliPermission(supabase, options.apikey, 'app.build_native', { appId }, {
       message: `Insufficient permissions to request a native build for app ${appId}`,
       silent,

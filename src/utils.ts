@@ -1524,7 +1524,7 @@ export async function getOrganizationWithPermission(
   return organization
 }
 
-export async function resolveUserIdFromApiKey(supabase: SupabaseClient<Database>, apikey: string) {
+export async function resolveUserIdFromApiKey(supabase: SupabaseClient<Database>, apikey: string, silent = false) {
   const { data: dataUser, error: userIdError } = await supabase
     .rpc('get_user_id', { apikey })
     .single()
@@ -1532,7 +1532,8 @@ export async function resolveUserIdFromApiKey(supabase: SupabaseClient<Database>
   const userId = (dataUser || '').toString()
 
   if (!userId || userIdError) {
-    log.error(`Invalid API key or insufficient permissions.`)
+    if (!silent)
+      log.error(`Invalid API key or insufficient permissions.`)
     throw new Error('Invalid API key or insufficient permissions.')
   }
   return userId
