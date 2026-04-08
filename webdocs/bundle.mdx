@@ -20,7 +20,6 @@ npx @capgo/cli@latest bundle upload
 Version must be > 0.0.0 and unique. Deleted versions cannot be reused for security.
 External option: Store only a URL link (useful for apps >200MB or privacy requirements).
 Capgo never inspects external content. Add encryption for trustless security.
-Interactive prompts are automatically disabled in CI and other non-interactive environments so uploads do not block automated pipelines.
 
 **Example:**
 
@@ -285,3 +284,4 @@ npx @capgo/cli@latest bundle zip com.example.app --path ./dist
 | **--no-code-check** | <code>boolean</code> | Ignore checking if notifyAppReady() is called in source code and index present in root folder |
 | **--key-v2** | <code>boolean</code> | Use encryption v2 |
 | **--package-json** | <code>string</code> | Paths to package.json files for monorepos (comma-separated) |
+
