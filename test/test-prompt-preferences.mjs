@@ -6,14 +6,14 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 const testHome = mkdtempSync(join(tmpdir(), 'capgo-prompt-prefs-'))
-process.env.HOME = testHome
+const testPreferencesPath = join(testHome, '.capgo-prompt-preferences.json')
 
 console.log('🧪 Testing prompt preference persistence...\n')
 
 const {
   getRememberedPromptPreference,
-  promptPreferencesPath,
   rememberPromptPreference,
+  rememberPromptPreferenceSafely,
 } = await import('../src/promptPreferences.ts')
 
 let failures = 0
@@ -31,18 +31,18 @@ async function test(name, fn) {
 }
 
 await test('missing preference file returns undefined', async () => {
-  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo'), undefined)
-  assert.equal(existsSync(promptPreferencesPath), false)
+  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo', testPreferencesPath), undefined)
+  assert.equal(existsSync(testPreferencesPath), false)
 })
 
 await test('remembered choices persist to disk', async () => {
-  await rememberPromptPreference('uploadStarCapgoRepo', false)
-  await rememberPromptPreference('uploadShowReplicationProgress', true)
+  await rememberPromptPreference('uploadStarCapgoRepo', false, testPreferencesPath)
+  await rememberPromptPreference('uploadShowReplicationProgress', true, testPreferencesPath)
 
-  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo'), false)
-  assert.equal(await getRememberedPromptPreference('uploadShowReplicationProgress'), true)
+  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo', testPreferencesPath), false)
+  assert.equal(await getRememberedPromptPreference('uploadShowReplicationProgress', testPreferencesPath), true)
 
-  const stored = JSON.parse(readFileSync(promptPreferencesPath, 'utf8'))
+  const stored = JSON.parse(readFileSync(testPreferencesPath, 'utf8'))
   assert.deepEqual(stored, {
     uploadStarCapgoRepo: false,
     uploadShowReplicationProgress: true,
@@ -50,8 +50,17 @@ await test('remembered choices persist to disk', async () => {
 })
 
 await test('invalid preference files are ignored safely', async () => {
-  writeFileSync(promptPreferencesPath, '{not-json', 'utf8')
-  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo'), undefined)
+  writeFileSync(testPreferencesPath, '{not-json', 'utf8')
+  assert.equal(await getRememberedPromptPreference('uploadStarCapgoRepo', testPreferencesPath), undefined)
+})
+
+await test('safe preference persistence swallows write errors', async () => {
+  const brokenParent = join(testHome, 'broken-parent')
+  const brokenPreferencesPath = join(brokenParent, '.capgo-prompt-preferences.json')
+  writeFileSync(brokenParent, 'not-a-directory', 'utf8')
+
+  await rememberPromptPreferenceSafely('uploadStarCapgoRepo', true, brokenPreferencesPath)
+  assert.equal(existsSync(brokenPreferencesPath), false)
 })
 
 if (failures > 0) {

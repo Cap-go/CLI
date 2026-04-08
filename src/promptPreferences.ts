@@ -1,6 +1,7 @@
 import { homedir } from 'node:os'
 import { join } from 'node:path'
-import { confirm as pConfirm, isCancel as pIsCancel } from '@clack/prompts'
+import { log, confirm as pConfirm, isCancel as pIsCancel } from '@clack/prompts'
+import { formatError } from './utils'
 import { readSafeFile, writeFileAtomic } from './utils/safeWrites'
 
 export type PromptPreferenceKey = 'uploadShowReplicationProgress' | 'uploadStarCapgoRepo'
@@ -16,9 +17,9 @@ interface RememberedConfirmOptions {
   rememberMessage?: string
 }
 
-async function readPromptPreferences(): Promise<PromptPreferences> {
+async function readPromptPreferences(filePath: string = promptPreferencesPath): Promise<PromptPreferences> {
   try {
-    const content = await readSafeFile(promptPreferencesPath)
+    const content = await readSafeFile(filePath)
     const parsed = JSON.parse(content) as unknown
 
     if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
@@ -33,15 +34,24 @@ async function readPromptPreferences(): Promise<PromptPreferences> {
   }
 }
 
-export async function getRememberedPromptPreference(preferenceKey: PromptPreferenceKey): Promise<boolean | undefined> {
-  const preferences = await readPromptPreferences()
+export async function getRememberedPromptPreference(preferenceKey: PromptPreferenceKey, filePath: string = promptPreferencesPath): Promise<boolean | undefined> {
+  const preferences = await readPromptPreferences(filePath)
   return preferences[preferenceKey]
 }
 
-export async function rememberPromptPreference(preferenceKey: PromptPreferenceKey, value: boolean): Promise<void> {
-  const preferences = await readPromptPreferences()
+export async function rememberPromptPreference(preferenceKey: PromptPreferenceKey, value: boolean, filePath: string = promptPreferencesPath): Promise<void> {
+  const preferences = await readPromptPreferences(filePath)
   preferences[preferenceKey] = value
-  await writeFileAtomic(promptPreferencesPath, `${JSON.stringify(preferences, null, 2)}\n`, { mode: 0o600 })
+  await writeFileAtomic(filePath, `${JSON.stringify(preferences, null, 2)}\n`, { mode: 0o600 })
+}
+
+export async function rememberPromptPreferenceSafely(preferenceKey: PromptPreferenceKey, value: boolean, filePath: string = promptPreferencesPath): Promise<void> {
+  try {
+    await rememberPromptPreference(preferenceKey, value, filePath)
+  }
+  catch (error) {
+    log.warn(`Could not save prompt preference: ${formatError(error)}`)
+  }
 }
 
 export async function confirmWithRememberedChoice({
@@ -68,7 +78,7 @@ export async function confirmWithRememberedChoice({
   })
 
   if (!pIsCancel(shouldRememberChoice) && shouldRememberChoice)
-    await rememberPromptPreference(preferenceKey, choice)
+    await rememberPromptPreferenceSafely(preferenceKey, choice)
 
   return choice
 }
