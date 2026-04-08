@@ -433,17 +433,25 @@ async function streamBuildLogs(
       const handleEntry = async (entry: WsEntry) => {
         if (entry.type === 'custom_msg' && typeof entry.kind === 'string' && entry.data) {
           lastMessageAt = Date.now()
-          if (logger) {
-            await logger.customMsg(entry.kind, entry.data)
+          try {
+            if (logger) {
+              await logger.customMsg(entry.kind, entry.data)
+            }
+            else if (!silent) {
+              await handleCustomMsg(
+                entry.kind,
+                entry.data,
+                // eslint-disable-next-line no-console
+                (line: string) => console.log(line),
+                (line: string) => clackLog.warn(line),
+              )
+            }
           }
-          else if (!silent) {
-            await handleCustomMsg(
-              entry.kind,
-              entry.data,
-              // eslint-disable-next-line no-console
-              (line: string) => console.log(line),
-              (line: string) => clackLog.warn(line),
-            )
+          catch (error) {
+            if (logger)
+              logger.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
+            else if (!silent)
+              clackLog.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
           }
           return
         }
