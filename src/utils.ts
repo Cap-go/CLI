@@ -669,7 +669,7 @@ export const hasOrganizationPerm = (perm: OrganizationPerm, required: Organizati
 
 export async function isAllowedAppOrg(supabase: SupabaseClient<Database>, apikey: string, appId: string): Promise<{ okay: true, data: OrganizationPerm } | { okay: false, error: 'INVALID_APIKEY' | 'NO_APP' | 'NO_ORG' }> {
   const { data, error } = await supabase
-    .rpc('get_org_perm_for_apikey_v2' as any, { apikey, app_id: appId })
+    .rpc('get_org_perm_for_apikey', { apikey, app_id: appId })
     .single()
 
   if (error) {
