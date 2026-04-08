@@ -24,6 +24,7 @@ Use this skill for OTA update workflows in Capgo Cloud.
   - Deleted versions cannot be reused.
   - External URL mode is useful for very large or privacy-sensitive bundles.
   - Encryption is recommended for trustless distribution.
+  - Interactive prompts are disabled automatically in CI and other non-interactive sessions so uploads do not block automation.
 - Important options:
   - `-p, --path <path>`
   - `-c, --channel <channel>`

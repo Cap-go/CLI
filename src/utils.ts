@@ -11,13 +11,14 @@ import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
-import { cwd, env } from 'node:process'
+import { cwd, env, stdin, stdout } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
 import { canParse, format, lessThan, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import AdmZip from 'adm-zip'
+import { isCI } from 'ci-info'
 // Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
 import * as tus from 'tus-js-client'
@@ -188,6 +189,22 @@ export function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+interface PromptInteractivityOptions {
+  silent?: boolean
+  stdinIsTTY?: boolean
+  stdoutIsTTY?: boolean
+  ci?: boolean
+}
+
+export function canPromptInteractively({
+  silent = false,
+  stdinIsTTY = !!stdin.isTTY,
+  stdoutIsTTY = !!stdout.isTTY,
+  ci = isCI,
+}: PromptInteractivityOptions = {}) {
+  return !silent && stdinIsTTY && stdoutIsTTY && !ci
 }
 
 export function projectIsMonorepo(dir: string) {
