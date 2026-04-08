@@ -20,7 +20,7 @@ import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRep
 import { createKeyInternal } from '../key'
 import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
+import { createSupabaseClient, filterOrgsByPermission, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
@@ -939,13 +939,7 @@ async function selectOrganizationForInit(
     throw new Error('No organizations available')
   }
 
-  const permissionChecks = await Promise.all(
-    allOrganizations.map(async (org) => {
-      const allowed = await hasCliPermission(supabase, apikey, 'org.create_app', { orgId: org.gid })
-      return allowed ? org : null
-    }),
-  )
-  const allowedOrganizations = permissionChecks.filter((org): org is Organization => org !== null)
+  const allowedOrganizations = await filterOrgsByPermission(supabase, apikey, allOrganizations, 'org.create_app')
 
   if (allowedOrganizations.length === 0) {
     pLog.error('Could not find organization with permission org.create_app. Ask an organization admin to grant app creation access.')

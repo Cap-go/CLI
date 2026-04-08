@@ -263,6 +263,13 @@ function decodeEventData(event: MessageEvent): string {
   return ''
 }
 
+function warnOrLog(message: string, logger: BuildLogger | undefined, silent: boolean): void {
+  if (logger)
+    logger.warn(message)
+  else if (!silent)
+    clackLog.warn(message)
+}
+
 async function dispatchCustomMsg(
   kind: string,
   data: Record<string, unknown>,
@@ -284,10 +291,7 @@ async function dispatchCustomMsg(
     }
   }
   catch (error) {
-    if (logger)
-      logger.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
-    else if (!silent)
-      clackLog.warn(`Custom message handler encountered an error, continuing... ${String(error)}`)
+    warnOrLog(`Custom message handler encountered an error, continuing... ${String(error)}`, logger, silent)
   }
 }
 
@@ -489,10 +493,7 @@ async function streamBuildLogs(
           ws.send(JSON.stringify({ type: 'confirmed_received', lastId: id }))
         }
         catch (error) {
-          if (logger)
-            logger.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
-          else if (!silent)
-            clackLog.warn(`Failed to send log confirmation, continuing... ${String(error)}`)
+          warnOrLog(`Failed to send log confirmation, continuing... ${String(error)}`, logger, silent)
         }
       }
 

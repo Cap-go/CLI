@@ -1466,6 +1466,21 @@ export async function getOrganization(supabase: SupabaseClient<Database>, roles:
   return organization
 }
 
+export async function filterOrgsByPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  orgs: Organization[],
+  permissionKey: string,
+): Promise<Organization[]> {
+  const checks = await Promise.all(
+    orgs.map(async (org) => {
+      const allowed = await hasCliPermission(supabase, apikey, permissionKey, { orgId: org.gid })
+      return allowed ? org : null
+    }),
+  )
+  return checks.filter((org): org is Organization => org !== null)
+}
+
 export async function getOrganizationWithPermission(
   supabase: SupabaseClient<Database>,
   apikey: string,
@@ -1485,13 +1500,7 @@ export async function getOrganizationWithPermission(
     throw new Error('No organizations available')
   }
 
-  const permissionChecks = await Promise.all(
-    allOrganizations.map(async (org) => {
-      const allowed = await hasCliPermission(supabase, apikey, permissionKey, { orgId: org.gid })
-      return allowed ? org : null
-    }),
-  )
-  const allowedOrganizations = permissionChecks.filter((org): org is Organization => org !== null)
+  const allowedOrganizations = await filterOrgsByPermission(supabase, apikey, allOrganizations, permissionKey)
 
   if (allowedOrganizations.length === 0) {
     log.error(`Could not find organization with permission: ${permissionKey}`)
