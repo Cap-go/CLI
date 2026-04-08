@@ -1532,8 +1532,8 @@ export async function resolveUserIdFromApiKey(supabase: SupabaseClient<Database>
   const userId = (dataUser || '').toString()
 
   if (!userId || userIdError) {
-    log.error(`Cannot auth user with apikey`)
-    throw new Error('Cannot authenticate user with provided API key')
+    log.error(`Invalid API key or insufficient permissions.`)
+    throw new Error('Invalid API key or insufficient permissions.')
   }
   return userId
 }
