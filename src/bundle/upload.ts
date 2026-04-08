@@ -6,7 +6,7 @@ import type { Compatibility, manifestType } from '../utils'
 import type { OptionsUpload } from './upload_interface'
 import { randomUUID } from 'node:crypto'
 import { existsSync, readFileSync } from 'node:fs'
-import { cwd, stdin, stdout } from 'node:process'
+import { cwd } from 'node:process'
 import { S3Client } from '@bradenmacdonald/s3-lite-client'
 import { intro, log, outro, confirm as pConfirm, isCancel as pIsCancel, select as pSelect, spinner as spinnerC } from '@clack/prompts'
 import { Table } from '@sauber/table'
@@ -19,7 +19,7 @@ import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { getRepoStarStatus, isRepoStarredInSession, starRepository } from '../github'
 import { showReplicationProgress } from '../replicationProgress'
-import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
+import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, canPromptInteractively, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, verifyUser, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
 import { checkIndexPosition, searchInDirectory } from './check'
 import { prepareBundlePartialFiles, uploadPartial } from './partial'
@@ -720,7 +720,7 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
 
   // Check if directUpdate is enabled and auto-enable delta updates
   const directUpdateEnabled = extConfig?.config?.plugins?.CapacitorUpdater?.directUpdate === 'always'
-  const interactive = !silent && !!stdin.isTTY && !!stdout.isTTY
+  const interactive = canPromptInteractively({ silent })
   if (directUpdateEnabled && options.delta === undefined) {
     if (interactive) {
       log.info('💡 Direct Update (instant updates) is enabled in your config')
@@ -1315,7 +1315,7 @@ function checkValidOptions(options: OptionsUpload) {
 }
 
 async function maybePromptStarCapgoRepo() {
-  if (!stdin.isTTY || !stdout.isTTY)
+  if (!canPromptInteractively())
     return
 
   const status = getRepoStarStatus()
@@ -1364,7 +1364,7 @@ export async function uploadBundle(appid: string, options: OptionsUpload) {
     // Check if this is a checksum error - offer specific retry option
     const isChecksumError = simpleMessage.includes('Cannot upload the same bundle content')
 
-    const interactive = !!stdin.isTTY && !!stdout.isTTY
+    const interactive = canPromptInteractively()
     // Interactive retry for errors when running in an interactive environment
     if (!options.versionExistsOk && interactive) {
       try {

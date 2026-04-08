@@ -11,13 +11,14 @@ import { spawn } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { homedir, platform as osPlatform } from 'node:os'
 import path, { dirname, join, relative, resolve, sep } from 'node:path'
-import { cwd, env } from 'node:process'
+import { cwd, env, stdin, stdout } from 'node:process'
 import { findMonorepoRoot, findNXMonorepoRoot, isMonorepo, isNXMonorepo } from '@capacitor/cli/dist/util/monorepotools'
 import { findInstallCommand, findPackageManagerRunner, findPackageManagerType } from '@capgo/find-package-manager'
 import { confirm as confirmC, isCancel, log, select, spinner as spinnerC } from '@clack/prompts'
 import { canParse, format, lessThan, parse, parseRange, rangeIntersects } from '@std/semver'
 import { createClient, FunctionsHttpError } from '@supabase/supabase-js'
 import AdmZip from 'adm-zip'
+import { isCI } from 'ci-info'
 // Native fetch is available in Node.js >= 18
 import prettyjson from 'prettyjson'
 import * as tus from 'tus-js-client'
@@ -188,6 +189,22 @@ export function wait(ms: number) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms)
   })
+}
+
+interface PromptInteractivityOptions {
+  silent?: boolean
+  stdinIsTTY?: boolean
+  stdoutIsTTY?: boolean
+  ci?: boolean
+}
+
+export function canPromptInteractively({
+  silent = false,
+  stdinIsTTY = !!stdin.isTTY,
+  stdoutIsTTY = !!stdout.isTTY,
+  ci = isCI,
+}: PromptInteractivityOptions = {}) {
+  return !silent && stdinIsTTY && stdoutIsTTY && !ci
 }
 
 export function projectIsMonorepo(dir: string) {
@@ -971,27 +988,33 @@ export async function findProjectType(options?: { quiet?: boolean }) {
   for await (const f of getFiles(pwd)) {
     // find number of folder in path after pwd
     if (f.includes('angular.json')) {
-      if (!quiet) log.info('Found angular project')
+      if (!quiet)
+        log.info('Found angular project')
       return isTypeScript ? 'angular-ts' : 'angular-js'
     }
     if (f.includes('nuxt.config.js') || f.includes('nuxt.config.ts')) {
-      if (!quiet) log.info('Found nuxtjs project')
+      if (!quiet)
+        log.info('Found nuxtjs project')
       return isTypeScript ? 'nuxtjs-ts' : 'nuxtjs-js'
     }
     if (f.includes('next.config.js') || f.includes('next.config.mjs')) {
-      if (!quiet) log.info('Found nextjs project')
+      if (!quiet)
+        log.info('Found nextjs project')
       return isTypeScript ? 'nextjs-ts' : 'nextjs-js'
     }
     if (f.includes('svelte.config.js')) {
-      if (!quiet) log.info('Found sveltekit project')
+      if (!quiet)
+        log.info('Found sveltekit project')
       return isTypeScript ? 'sveltekit-ts' : 'sveltekit-js'
     }
     if (f.includes('rolluconfig.js')) {
-      if (!quiet) log.info('Found svelte project')
+      if (!quiet)
+        log.info('Found svelte project')
       return isTypeScript ? 'svelte-ts' : 'svelte-js'
     }
     if (f.includes('vue.config.js')) {
-      if (!quiet) log.info('Found vue project')
+      if (!quiet)
+        log.info('Found vue project')
       return isTypeScript ? 'vue-ts' : 'vue-js'
     }
     if (f.includes(PACKNAME)) {
@@ -999,11 +1022,13 @@ export async function findProjectType(options?: { quiet?: boolean }) {
       const dependencies = await getAllPackagesDependencies(folder)
       if (dependencies) {
         if (dependencies.get('react')) {
-          if (!quiet) log.info('Found react project')
+          if (!quiet)
+            log.info('Found react project')
           return isTypeScript ? 'react-ts' : 'react-js'
         }
         if (dependencies.get('vue')) {
-          if (!quiet) log.info('Found vue project')
+          if (!quiet)
+            log.info('Found vue project')
           return isTypeScript ? 'vue-ts' : 'vue-js'
         }
       }
