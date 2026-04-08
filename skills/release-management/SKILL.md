@@ -25,6 +25,7 @@ Use this skill for OTA update workflows in Capgo Cloud.
   - External URL mode is useful for very large or privacy-sensitive bundles.
   - Encryption is recommended for trustless distribution.
   - Interactive prompts are disabled automatically in CI and other non-interactive sessions so uploads do not block automation.
+  - Optional upload prompts can remember the user's answer on the current machine so future uploads can skip the same question.
 - Important options:
   - `-p, --path <path>`
   - `-c, --channel <channel>`
