@@ -20,7 +20,7 @@ import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRep
 import { createKeyInternal } from '../key'
 import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
-import { createSupabaseClient, filterOrgsByPermission, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getOrganizationListWithPermission, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
@@ -926,25 +926,7 @@ async function selectOrganizationForInit(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
   apikey: string,
 ): Promise<Organization> {
-  const { error: orgError, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
-
-  if (orgError) {
-    pLog.error('Cannot get the list of organizations - exiting')
-    pLog.error(`Error ${JSON.stringify(orgError)}`)
-    throw new Error('Cannot get the list of organizations')
-  }
-
-  if (allOrganizations.length === 0) {
-    pLog.error('Could not get organization please create an organization first')
-    throw new Error('No organizations available')
-  }
-
-  const allowedOrganizations = await filterOrgsByPermission(supabase, apikey, allOrganizations, 'org.create_app')
-
-  if (allowedOrganizations.length === 0) {
-    pLog.error('Could not find organization with permission org.create_app. Ask an organization admin to grant app creation access.')
-    throw new Error('Could not find organization with required roles')
-  }
+  const { allOrganizations, allowedOrganizations } = await getOrganizationListWithPermission(supabase, apikey, 'org.create_app')
 
   const organizationUidRaw = allowedOrganizations.length > 1
     ? await pSelect({

@@ -1481,13 +1481,12 @@ export async function filterOrgsByPermission(
   return checks.filter((org): org is Organization => org !== null)
 }
 
-export async function getOrganizationWithPermission(
+export async function getOrganizationListWithPermission(
   supabase: SupabaseClient<Database>,
   apikey: string,
   permissionKey: string,
-): Promise<Organization> {
-  const { error: orgError, data: allOrganizations } = await supabase
-    .rpc('get_orgs_v7')
+): Promise<{ allOrganizations: Organization[], allowedOrganizations: Organization[] }> {
+  const { error: orgError, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
 
   if (orgError) {
     log.error('Cannot get the list of organizations - exiting')
@@ -1506,6 +1505,16 @@ export async function getOrganizationWithPermission(
     log.error(`Could not find organization with permission: ${permissionKey}`)
     throw new Error('Could not find organization with required permission')
   }
+
+  return { allOrganizations, allowedOrganizations }
+}
+
+export async function getOrganizationWithPermission(
+  supabase: SupabaseClient<Database>,
+  apikey: string,
+  permissionKey: string,
+): Promise<Organization> {
+  const { allOrganizations, allowedOrganizations } = await getOrganizationListWithPermission(supabase, apikey, permissionKey)
 
   const organizationUidRaw = (allowedOrganizations.length > 1)
     ? await select({
