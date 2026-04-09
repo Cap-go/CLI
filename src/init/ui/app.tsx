@@ -46,7 +46,26 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
   const columns = stdout?.columns ?? 96
   const rows = stdout?.rows ?? 24
   const contentWidth = Math.max(0, columns - 6)
-  const visibleLogs = snapshot.logs.slice(-Math.max(0, rows - 14))
+  // Estimate how many terminal rows the code diff panel consumes so the log
+  // area (and the prompt/spinner rendered after it) still fit in the viewport
+  // on short terminals. Overhead covers the panel's marginTop, top/bottom
+  // borders, title line, and the marginTop between title and line content.
+  // Long lines that wrap are approximated by counting each line's wrap count.
+  const diffPanelHeight = (() => {
+    const diff = snapshot.codeDiff
+    if (!diff)
+      return 0
+    const innerWidth = Math.max(1, contentWidth - 4)
+    const wrappedLineRows = diff.lines.reduce((sum, line) => {
+      const rendered = `  ${String(line.lineNumber)} │ ${line.text}`
+      return sum + Math.max(1, Math.ceil(rendered.length / innerWidth))
+    }, 0)
+    const noteRows = diff.note !== undefined ? 1 : 0
+    const linesBlockRows = diff.lines.length > 0 ? wrappedLineRows + 1 : 0
+    // 1 (panel marginTop) + 2 (borders) + 1 (title) + noteRows + linesBlockRows
+    return 4 + noteRows + linesBlockRows
+  })()
+  const visibleLogs = snapshot.logs.slice(-Math.max(0, rows - 14 - diffPanelHeight))
   const screen = snapshot.screen
 
   useEffect(() => {

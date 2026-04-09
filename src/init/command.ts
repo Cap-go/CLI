@@ -58,6 +58,26 @@ let globalCodeDiff: InitCodeDiff | undefined
 
 const CODE_DIFF_CONTEXT_LINES = 5
 
+// Render an init-time file path with its project directory prefix so users
+// can tell which nested project was modified when they run `capgo init` from
+// a parent folder (e.g. `CLI/src/main.tsx` instead of `src/main.tsx`).
+function formatInitFilePath(filePath: string): string {
+  try {
+    const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(cwd(), filePath)
+    const cwdPath = cwd()
+    const parentOfCwd = path.dirname(cwdPath)
+    // If cwd has no meaningful parent (e.g. `/`), fall back to the original path.
+    if (parentOfCwd === cwdPath) {
+      return filePath
+    }
+    const rel = path.relative(parentOfCwd, absolute)
+    return rel.length > 0 ? rel : filePath
+  }
+  catch {
+    return filePath
+  }
+}
+
 function buildCodeDiffLines(beforeContent: string, afterContent: string, contextSize: number) {
   const beforeLines = beforeContent.length === 0 ? [] : beforeContent.split('\n')
   const afterLines = afterContent.split('\n')
@@ -540,13 +560,18 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
-    // User chose to start over — delete the saved progress
+    // User chose to start over — delete the saved progress and drop any
+    // restored code diff so a fresh manual path doesn't re-show stale content.
     cleanupStepsDone()
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
     return undefined
   }
   catch (err) {
     pLog.error(`Cannot read which steps have been completed, error:\n${err}`)
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
     return undefined
   }
 }
@@ -1569,12 +1594,13 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         ``,
       ]
       const nuxtFileContent = nuxtFileLines.join('\n')
+      const nuxtDisplayPath = formatInitFilePath(nuxtFilePath)
       if (existsSync(nuxtFilePath)) {
         const currentContent = readFileSync(nuxtFilePath, 'utf8')
         if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
           s.stop()
           globalCodeDiff = {
-            filePath: nuxtFilePath,
+            filePath: nuxtDisplayPath,
             created: false,
             lines: [],
             note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
@@ -1584,7 +1610,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
           writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
           s.stop()
           globalCodeDiff = {
-            filePath: nuxtFilePath,
+            filePath: nuxtDisplayPath,
             created: false,
             lines: buildCodeDiffLines(currentContent, nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
           }
@@ -1594,7 +1620,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
         s.stop()
         globalCodeDiff = {
-          filePath: nuxtFilePath,
+          filePath: nuxtDisplayPath,
           created: true,
           lines: buildCodeDiffLines('', nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
         }
@@ -1658,7 +1684,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       else if (mainFileContent.includes(codeInject)) {
         s.stop()
         globalCodeDiff = {
-          filePath: mainFilePath,
+          filePath: formatInitFilePath(mainFilePath),
           created: false,
           lines: [],
           note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
@@ -1666,11 +1692,14 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         setInitCodeDiff(globalCodeDiff)
       }
       else {
-        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
+        // Note: no trailing `\n` — the original file already has newlines after
+        // `last`, so adding one here would create a spurious blank line that
+        // shows up as an added `+` line in the diff panel.
+        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};`)
         writeFileSync(mainFilePath, newMainFileContent, 'utf8')
         s.stop()
         globalCodeDiff = {
-          filePath: mainFilePath,
+          filePath: formatInitFilePath(mainFilePath),
           created: false,
           lines: buildCodeDiffLines(mainFileContent, newMainFileContent, CODE_DIFF_CONTEXT_LINES),
         }
@@ -2487,6 +2516,16 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const resumed = await tryResumeOnboarding(options.apikey)
   let stepToSkip = resumed?.stepDone ?? 0
 
+  // Whenever a resume is aborted (org no longer available, role lost, 2FA
+  // required, lookup failed) we restart from step 0. Drop any diff that
+  // `tryResumeOnboarding` restored so the freshly walked step 4 doesn't see
+  // stale content from an earlier run.
+  const discardResumedState = () => {
+    stepToSkip = 0
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
+  }
+
   let organization: Organization
   if (resumed) {
     // Fetch orgs to validate the saved one still exists and is accessible
@@ -2495,7 +2534,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       pLog.error(`Cannot verify organization access: ${orgError ? JSON.stringify(orgError) : 'no data returned'}`)
       pLog.warn('Falling back to organization selection.')
       organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
-      stepToSkip = 0
+      discardResumedState()
     }
     else {
       const savedOrg = allOrganizations.find(org => org.gid === resumed.orgId)
@@ -2506,18 +2545,18 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       if (!savedOrg) {
         pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
         organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
-        stepToSkip = 0
+        discardResumedState()
       }
       else if (!hasRequiredRole) {
         pLog.warn(`You no longer have admin access to "${savedOrg.name}". Please select a different organization.`)
         organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
-        stepToSkip = 0
+        discardResumedState()
       }
       else if (blocked2fa) {
         pLog.warn(`Organization "${savedOrg.name}" now requires 2FA. Enable it at https://web.capgo.app/settings/account`)
         pLog.warn('Please select a different organization or enable 2FA and try again.')
         organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
-        stepToSkip = 0
+        discardResumedState()
       }
       else {
         organization = savedOrg
