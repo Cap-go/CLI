@@ -2519,11 +2519,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   // Whenever a resume is aborted (org no longer available, role lost, 2FA
   // required, lookup failed) we restart from step 0. Drop any diff that
   // `tryResumeOnboarding` restored so the freshly walked step 4 doesn't see
-  // stale content from an earlier run.
+  // stale content from an earlier run, and delete the on-disk resume file so
+  // a subsequent `capgo init` run won't re-offer the now-invalid resume
+  // before `markStepDone()` has had a chance to overwrite it.
   const discardResumedState = () => {
     stepToSkip = 0
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    cleanupStepsDone()
   }
 
   let organization: Organization
