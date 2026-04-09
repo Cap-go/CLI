@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import path, { dirname, join } from 'node:path'
 import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
+import open from 'open'
 import tmp from 'tmp'
 import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
 import { checkVersionStatus } from '../api/update'
@@ -1727,22 +1728,100 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
   const pm = getPMAndCommand()
 
-  pLog.info(`🔐 End-to-end encryption`)
-  const isSecurityCritical = await pConfirm({
-    message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
-    initialValue: false,
-  })
-  await cancelCommand(isSecurityCritical, orgId, apikey)
+  // Ask up-front whether the app is security-critical, with an extra option
+  // for users who don't know what encryption is. The "learn more" branch
+  // prints a short overview, optionally opens the docs in a browser, then
+  // loops back to this same prompt.
+  const encryptionDocsUrl = 'https://capgo.app/docs/live-updates/encryption/'
+  type EncryptionChoice = 'critical' | 'not_needed' | 'learn'
+  let isSecurityCritical = false
+  let learnShown = false
+  while (true) {
+    // Option order matters: the first option is highlighted by default in
+    // `@inkjs/ui` Select, so pressing Enter resolves to it. The previous
+    // `pConfirm` for this question defaulted to `false` ("no"), so keep the
+    // safe "not needed" path as the default here to avoid users accidentally
+    // entering the key-creation flow by hammering Enter. Drop the "learn more"
+    // option once the user has already seen the overview — re-offering it
+    // makes no sense and clutters the decision.
+    const options: { value: EncryptionChoice, label: string }[] = [
+      { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+      { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+    ]
+    if (!learnShown)
+      options.push({ value: 'learn', label: '❓ What is encryption? (learn more)' })
+
+    const choice = await pSelect<EncryptionChoice>({
+      message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
+      options,
+    })
+    await cancelCommand(choice, orgId, apikey)
+
+    // The code diff panel from step 4 has served its purpose the moment the
+    // user answers this first question — clear it immediately (before any
+    // follow-up logging or prompts) so both the learn-more overview and the
+    // direct yes/no paths render against the full viewport.
+    if (globalCodeDiff) {
+      globalCodeDiff = undefined
+      setInitCodeDiff(undefined)
+    }
+
+    if (choice === 'learn') {
+      learnShown = true
+      pLog.info(`🔐 End-to-end encryption in Capgo (fast overview):`)
+      pLog.info(`   • Capgo bundles are plain web assets (JS / HTML / CSS) served over HTTPS.`)
+      pLog.info(`   • Without encryption, anyone who obtains a bundle URL can download and read them.`)
+      pLog.info(`   • Capgo's encryption uses a hybrid RSA + AES scheme:`)
+      pLog.info(`       – A random AES session key encrypts the bundle contents.`)
+      pLog.info(`       – Your RSA private key encrypts that AES key and signs a checksum.`)
+      pLog.info(`       – The public RSA key shipped in your app decrypts + verifies it.`)
+      pLog.info(`   • True end-to-end: the private key lives only on your machine, so not even`)
+      pLog.info(`     Capgo can read the bundle contents.`)
+      pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
+      pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
+      pLog.info(`     Most other apps do not need it.`)
+      // Always surface the docs URL so the user can copy it later, even if
+      // they decline to open a browser right now. The leading newline inside
+      // the same message inserts a visual blank row — Ink collapses entries
+      // whose message is just an empty string, so we cannot push a separate
+      // blank log entry.
+      pLog.info(`\n   📖 Full docs: ${encryptionDocsUrl}`)
+
+      const openDocs = await pConfirm({
+        message: `Open the full encryption docs in your browser now?`,
+        initialValue: false,
+      })
+      await cancelCommand(openDocs, orgId, apikey)
+      if (openDocs) {
+        try {
+          await open(encryptionDocsUrl)
+          pLog.info(`   🌐 Opened ${encryptionDocsUrl}`)
+        }
+        catch {
+          pLog.warn(`Could not open your browser automatically. Visit: ${encryptionDocsUrl}`)
+        }
+      }
+      continue
+    }
+
+    isSecurityCritical = choice === 'critical'
+    break
+  }
+
   if (isSecurityCritical) {
     pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
     pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
     pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
 
-    const doEncrypt = await pConfirm({
+    const encryptChoice = await pSelect<'critical' | 'not_needed'>({
       message: `Do you want to use encryption for ${appId}?`,
-      initialValue: true,
+      options: [
+        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+      ],
     })
-    await cancelCommand(doEncrypt, orgId, apikey)
+    await cancelCommand(encryptChoice, orgId, apikey)
+    const doEncrypt = encryptChoice === 'critical'
     if (doEncrypt) {
       pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
       pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
