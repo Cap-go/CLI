@@ -1780,10 +1780,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
       pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
       pLog.info(`     Most other apps do not need it.`)
-      pLog.info(``)
       // Always surface the docs URL so the user can copy it later, even if
-      // they decline to open a browser right now.
-      pLog.info(`   📖 Full docs: ${encryptionDocsUrl}`)
+      // they decline to open a browser right now. The leading newline inside
+      // the same message inserts a visual blank row — Ink collapses entries
+      // whose message is just an empty string, so we cannot push a separate
+      // blank log entry.
+      pLog.info(`\n   📖 Full docs: ${encryptionDocsUrl}`)
 
       const openDocs = await pConfirm({
         message: `Open the full encryption docs in your browser now?`,
