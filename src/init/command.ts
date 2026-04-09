@@ -1863,63 +1863,49 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   }
   let finalSummary: InitEncryptionSummary = skippedSummary
 
+  // Q1 already phrases the "yes" branch as "set up end-to-end encryption",
+  // so there's no second confirmation to ask — a critical answer goes
+  // straight into key creation.
   if (isSecurityCritical) {
-    pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
-    pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
+    if (coreVersion && !normalizedCoreVersion) {
+      pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
+      return
+    }
+    if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
+      pLog.warn(`Encryption is not supported in Capacitor V5.`)
+      return
+    }
 
-    const encryptChoice = await pSelect<'critical' | 'not_needed'>({
-      message: `Do you want to use encryption for ${appId}?`,
-      options: [
-        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
-        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
-      ],
-    })
-    await cancelCommand(encryptChoice, orgId, apikey)
-    const doEncrypt = encryptChoice === 'critical'
-    if (doEncrypt) {
-      if (coreVersion && !normalizedCoreVersion) {
-        pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
-        return
+    const s = pSpinner()
+    s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
+    const keyRes = await createKeyInternal({ force: true }, false)
+    if (keyRes) {
+      s.stop(`key created 🔑`)
+      await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+      finalSummary = enabledSummary
+    }
+    else {
+      s.stop('Error', 'error')
+      pLog.warn(`Cannot create key ❌`)
+      const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
+        { value: 'retry', label: 'Retry key creation' },
+        { value: 'skip', label: 'Continue without encryption' },
+      ])
+
+      if (recoveryChoice === 'retry') {
+        return addEncryptionStep(orgId, apikey, appId)
       }
-      if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
-        pLog.warn(`Encryption is not supported in Capacitor V5.`)
-        return
-      }
 
-      const s = pSpinner()
-      s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-      const keyRes = await createKeyInternal({ force: true }, false)
-      if (keyRes) {
-        s.stop(`key created 🔑`)
-        await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
-        finalSummary = enabledSummary
-      }
-      else {
-        s.stop('Error', 'error')
-        pLog.warn(`Cannot create key ❌`)
-        const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
-          { value: 'retry', label: 'Retry key creation' },
-          { value: 'skip', label: 'Continue without encryption' },
-        ])
-
-        if (recoveryChoice === 'retry') {
-          return addEncryptionStep(orgId, apikey, appId)
-        }
-
-        finalSummary = {
-          enabled: false,
-          title: '⚠️  Encryption NOT ENABLED (key creation failed)',
-          lines: [
-            '   • Key creation failed and you chose to continue without encryption.',
-            `   • You can retry later with: ${pm.runner} @capgo/cli@latest key create`,
-            '   • Meanwhile, never put API keys or backend secrets in the bundle.',
-          ],
-        }
+      finalSummary = {
+        enabled: false,
+        title: '⚠️  Encryption NOT ENABLED (key creation failed)',
+        lines: [
+          '   • Key creation failed and you chose to continue without encryption.',
+          `   • You can retry later with: ${pm.runner} @capgo/cli@latest key create`,
+          '   • Meanwhile, never put API keys or backend secrets in the bundle.',
+        ],
       }
     }
-    // If the user answered "critical" to Q1 then chose "not needed" at Q2,
-    // we keep the default `skippedSummary`.
   }
   // If the user answered "not needed" to Q1, we keep the default
   // `skippedSummary`.
