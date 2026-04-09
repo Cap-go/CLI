@@ -1,8 +1,24 @@
-import type { InitCodeDiff, InitRuntimeState } from '../runtime'
+import type { InitCodeDiff, InitEncryptionSummary, InitRuntimeState } from '../runtime'
 import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
 import React, { useEffect, useState } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
+
+function EncryptionSummaryPanel({ summary, width }: Readonly<{ summary: InitEncryptionSummary, width: number }>) {
+  const borderColor = summary.enabled ? 'green' : 'yellow'
+  return (
+    <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor={borderColor} paddingX={1}>
+      <Text color={borderColor} bold>{summary.title}</Text>
+      {summary.lines.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          {summary.lines.map((line, index) => (
+            <Text key={`enc-${index}`} color="gray">{line}</Text>
+          ))}
+        </Box>
+      )}
+    </Box>
+  )
+}
 
 function CodeDiffPanel({ diff, width }: Readonly<{ diff: InitCodeDiff, width: number }>) {
   const title = diff.created
@@ -65,10 +81,25 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
     // 1 (panel marginTop) + 2 (borders) + 1 (title) + noteRows + linesBlockRows
     return 4 + noteRows + linesBlockRows
   })()
+  // Same overhead math as the diff panel: marginTop + borders + title +
+  // (optional) lines block. Wrap-aware so long bullet lines don't push the
+  // prompt off-screen on narrow terminals.
+  const encryptionPanelHeight = (() => {
+    const summary = snapshot.encryptionSummary
+    if (!summary)
+      return 0
+    const innerWidth = Math.max(1, contentWidth - 4)
+    const wrappedLineRows = summary.lines.reduce((sum, line) => {
+      return sum + Math.max(1, Math.ceil(line.length / innerWidth))
+    }, 0)
+    const linesBlockRows = summary.lines.length > 0 ? wrappedLineRows + 1 : 0
+    // 1 (panel marginTop) + 2 (borders) + 1 (title) + linesBlockRows
+    return 4 + linesBlockRows
+  })()
   // `Array.prototype.slice(-0)` returns the full array because `-0` coerces
   // to `0`, so we cannot feed a zero clamp into slice — explicitly short-
   // circuit to an empty array when there's no viewport budget left for logs.
-  const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight)
+  const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight - encryptionPanelHeight)
   const visibleLogs = visibleLogCount === 0 ? [] : snapshot.logs.slice(-visibleLogCount)
   const screen = snapshot.screen
 
@@ -101,6 +132,10 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
 
       {snapshot.codeDiff && (
         <CodeDiffPanel diff={snapshot.codeDiff} width={contentWidth} />
+      )}
+
+      {snapshot.encryptionSummary && (
+        <EncryptionSummaryPanel summary={snapshot.encryptionSummary} width={contentWidth} />
       )}
 
       {visibleLogs.length > 0 && (

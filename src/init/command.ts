@@ -1,7 +1,7 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
-import type { InitCodeDiff } from './runtime'
+import type { InitCodeDiff, InitEncryptionSummary } from './runtime'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
@@ -24,7 +24,7 @@ import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { setInitCodeDiff, setInitVersionWarning, stopInitInkSession } from './runtime'
+import { setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -56,6 +56,7 @@ let globalDelta = false
 let globalCurrentVersion: string | undefined
 let globalAppId: string | undefined
 let globalCodeDiff: InitCodeDiff | undefined
+let globalEncryptionSummary: InitEncryptionSummary | undefined
 
 const CODE_DIFF_CONTEXT_LINES = 5
 
@@ -471,6 +472,7 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       delta: globalDelta,
       currentVersion: globalCurrentVersion,
       codeDiff: globalCodeDiff,
+      encryptionSummary: globalEncryptionSummary,
     }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
@@ -498,7 +500,7 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff, encryptionSummary } = JSON.parse(rawData)
     if (!orgId || !step_done) {
       pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
       pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
@@ -558,14 +560,36 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
           note: typeof codeDiff.note === 'string' ? codeDiff.note : undefined,
         }
       }
+      // Carry the encryption summary panel forward if the user resumes at
+      // step 6 (where we display it as the persistent "what happened in
+      // step 5" callout).
+      if (
+        step_done === 5
+        && encryptionSummary
+        && typeof encryptionSummary === 'object'
+        && typeof encryptionSummary.title === 'string'
+        && Array.isArray(encryptionSummary.lines)
+      ) {
+        const restoredEncryptionLines = (encryptionSummary.lines as unknown[])
+          .filter((line): line is string => typeof line === 'string')
+        globalEncryptionSummary = {
+          enabled: Boolean(encryptionSummary.enabled),
+          title: encryptionSummary.title,
+          lines: restoredEncryptionLines,
+        }
+        setInitEncryptionSummary(globalEncryptionSummary)
+      }
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
     // User chose to start over — delete the saved progress and drop any
-    // restored code diff so a fresh manual path doesn't re-show stale content.
+    // restored code diff / encryption summary so a fresh manual path
+    // doesn't re-show stale content.
     cleanupStepsDone()
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
   catch (err) {
@@ -573,6 +597,8 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
 }
@@ -1808,6 +1834,35 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     break
   }
 
+  // The final outcome of this step is captured as a persistent summary panel
+  // (mirroring the code-diff panel from step 4) so it survives the transition
+  // to the next step instead of flashing by when logs get cleared. We build
+  // it in a local variable and only push it to the runtime after the step's
+  // work is done — this avoids rendering a premature "enabled" panel while
+  // key creation is still running, and lets the key-failure branch downgrade
+  // it to a "not enabled" summary.
+  const enabledSummary: InitEncryptionSummary = {
+    enabled: true,
+    title: '🔐 Encryption ENABLED',
+    lines: [
+      '   • Private RSA key stays on your machine — do not commit it.',
+      '   • Public RSA key is bundled in the app (extractable by reverse engineering).',
+      '   • Bundles encrypted with a random AES key, key wrapped with your RSA key.',
+      '   • Bundle checksum is signed with your RSA key so the app can verify integrity.',
+      '   • Debugging update failures is slightly harder — keep it off for non-sensitive apps.',
+    ],
+  }
+  const skippedSummary: InitEncryptionSummary = {
+    enabled: false,
+    title: '⏭️  Encryption SKIPPED',
+    lines: [
+      '   • Bundles are plain JS / HTML / CSS, fetchable by anyone who finds the URL.',
+      '   • Never put private API keys or backend secrets in a mobile app.',
+      '   • You can enable encryption later with: capgo key create',
+    ],
+  }
+  let finalSummary: InitEncryptionSummary = skippedSummary
+
   if (isSecurityCritical) {
     pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
     pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
@@ -1823,13 +1878,6 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     await cancelCommand(encryptChoice, orgId, apikey)
     const doEncrypt = encryptChoice === 'critical'
     if (doEncrypt) {
-      pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
-      pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
-      pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
-      pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
-      pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
-      pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
-      pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
       if (coreVersion && !normalizedCoreVersion) {
         pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
         return
@@ -1845,6 +1893,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       if (keyRes) {
         s.stop(`key created 🔑`)
         await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+        finalSummary = enabledSummary
       }
       else {
         s.stop('Error', 'error')
@@ -1858,18 +1907,25 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
           return addEncryptionStep(orgId, apikey, appId)
         }
 
-        pLog.info(`⏭️  Continuing without encryption.`)
+        finalSummary = {
+          enabled: false,
+          title: '⚠️  Encryption NOT ENABLED (key creation failed)',
+          lines: [
+            '   • Key creation failed and you chose to continue without encryption.',
+            '   • You can retry later with: capgo key create',
+            '   • Meanwhile, never put API keys or backend secrets in the bundle.',
+          ],
+        }
       }
     }
-    else {
-      pLog.info(`⏭️  We didn't enable encryption.`)
-    }
+    // If the user answered "critical" to Q1 then chose "not needed" at Q2,
+    // we keep the default `skippedSummary`.
   }
-  else {
-    pLog.info(`⏭️  We didn't enable encryption.`)
-    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
-  }
+  // If the user answered "not needed" to Q1, we keep the default
+  // `skippedSummary`.
+
+  globalEncryptionSummary = finalSummary
+  setInitEncryptionSummary(finalSummary)
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
 
@@ -2605,6 +2661,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     stepToSkip = 0
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     cleanupStepsDone()
   }
 
@@ -2735,6 +2793,14 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       platform = await selectPlatformStep(orgId, options.apikey)
       globalPlatform = platform
       markStepDone(6)
+    }
+
+    // Keep the encryption summary panel visible through step 6 (Select
+    // Platform) as a persistent "what happened in step 5" callout, then
+    // clear it before step 7 so the build output has full viewport.
+    if (globalEncryptionSummary) {
+      globalEncryptionSummary = undefined
+      setInitEncryptionSummary(undefined)
     }
 
     if (stepToSkip < 7) {
