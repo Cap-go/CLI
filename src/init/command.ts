@@ -1735,19 +1735,25 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const encryptionDocsUrl = 'https://capgo.app/docs/live-updates/encryption/'
   type EncryptionChoice = 'critical' | 'not_needed' | 'learn'
   let isSecurityCritical = false
+  let learnShown = false
   while (true) {
     // Option order matters: the first option is highlighted by default in
     // `@inkjs/ui` Select, so pressing Enter resolves to it. The previous
     // `pConfirm` for this question defaulted to `false` ("no"), so keep the
     // safe "not needed" path as the default here to avoid users accidentally
-    // entering the key-creation flow by hammering Enter.
+    // entering the key-creation flow by hammering Enter. Drop the "learn more"
+    // option once the user has already seen the overview — re-offering it
+    // makes no sense and clutters the decision.
+    const options: { value: EncryptionChoice, label: string }[] = [
+      { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+      { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+    ]
+    if (!learnShown)
+      options.push({ value: 'learn', label: '❓ What is encryption? (learn more)' })
+
     const choice = await pSelect<EncryptionChoice>({
       message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
-      options: [
-        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
-        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
-        { value: 'learn', label: '❓ What is encryption? (learn more)' },
-      ],
+      options,
     })
     await cancelCommand(choice, orgId, apikey)
 
@@ -1761,6 +1767,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     }
 
     if (choice === 'learn') {
+      learnShown = true
       pLog.info(`🔐 End-to-end encryption in Capgo (fast overview):`)
       pLog.info(`   • Capgo bundles are plain web assets (JS / HTML / CSS) served over HTTPS.`)
       pLog.info(`   • Without encryption, anyone who obtains a bundle URL can download and read them.`)
@@ -1773,9 +1780,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
       pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
       pLog.info(`     Most other apps do not need it.`)
+      // Always surface the docs URL so the user can copy it later, even if
+      // they decline to open a browser right now.
+      pLog.info(`   📖 Full docs: ${encryptionDocsUrl}`)
 
       const openDocs = await pConfirm({
-        message: `Open the full encryption docs in your browser? (${encryptionDocsUrl})`,
+        message: `Open the full encryption docs in your browser now?`,
         initialValue: false,
       })
       await cancelCommand(openDocs, orgId, apikey)
