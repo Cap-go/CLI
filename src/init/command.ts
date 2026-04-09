@@ -1765,7 +1765,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`       – The public RSA key shipped in your app decrypts + verifies it.`)
       pLog.info(`   • True end-to-end: the private key lives only on your machine, so not even`)
       pLog.info(`     Capgo can read the bundle contents.`)
-      pLog.info(`   • Requires Capacitor v6+. Debugging UPDATE FAILURES is slightly harder once enabled.`)
+      pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
       pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
       pLog.info(`     Most other apps do not need it.`)
 
