@@ -1736,11 +1736,16 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   type EncryptionChoice = 'critical' | 'not_needed' | 'learn'
   let isSecurityCritical = false
   while (true) {
+    // Option order matters: the first option is highlighted by default in
+    // `@inkjs/ui` Select, so pressing Enter resolves to it. The previous
+    // `pConfirm` for this question defaulted to `false` ("no"), so keep the
+    // safe "not needed" path as the default here to avoid users accidentally
+    // entering the key-creation flow by hammering Enter.
     const choice = await pSelect<EncryptionChoice>({
       message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
       options: [
-        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
         { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
         { value: 'learn', label: '❓ What is encryption? (learn more)' },
       ],
     })
