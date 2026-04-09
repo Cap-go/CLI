@@ -2,12 +2,12 @@ import type { OrganizationSetOptions, PasswordPolicyConfig } from '../schemas/or
 import { confirm as confirmC, intro, isCancel, log, outro, text } from '@clack/prompts'
 import { checkAlerts } from '../api/update'
 import {
+  assertOrgPermission,
   check2FAAccessForOrg,
   createSupabaseClient,
   findSavedKey,
   formatError,
   sendEvent,
-  verifyUser,
 } from '../utils'
 
 export async function setOrganizationInternal(
@@ -42,7 +42,7 @@ export async function setOrganizationInternal(
     enrichedOptions.supaHost,
     enrichedOptions.supaAnon,
   )
-  await verifyUser(supabase, enrichedOptions.apikey, ['write', 'all'])
+  await assertOrgPermission(supabase, enrichedOptions.apikey, 'org.update_settings', orgId, `Insufficient permissions to update organization ${orgId}`, silent)
 
   await check2FAAccessForOrg(supabase, orgId, silent)
 

@@ -20,7 +20,7 @@ import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRep
 import { createKeyInternal } from '../key'
 import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getOrganizationListWithPermission, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
@@ -924,34 +924,14 @@ async function maybeReusePendingOnboardingApp(
 
 async function selectOrganizationForInit(
   supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
-  roles: string[],
+  apikey: string,
 ): Promise<Organization> {
-  const { error: orgError, data: allOrganizations } = await supabase.rpc('get_orgs_v7')
+  const { allOrganizations, allowedOrganizations } = await getOrganizationListWithPermission(supabase, apikey, 'org.create_app')
 
-  if (orgError) {
-    pLog.error('Cannot get the list of organizations - exiting')
-    pLog.error(`Error ${JSON.stringify(orgError)}`)
-    throw new Error('Cannot get the list of organizations')
-  }
-
-  const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
-  const normalizedRoles = new Set(roles.map(role => normalizeRole(role)))
-  const adminOrgs = allOrganizations.filter(org => normalizedRoles.has(normalizeRole(org.role)))
-
-  if (allOrganizations.length === 0) {
-    pLog.error('Could not get organization please create an organization first')
-    throw new Error('No organizations available')
-  }
-
-  if (adminOrgs.length === 0) {
-    pLog.error(`Could not find organization with roles: ${roles.join(' or ')} please create an organization or ask the admin to add you to the organization with this roles`)
-    throw new Error('Could not find organization with required roles')
-  }
-
-  const organizationUidRaw = adminOrgs.length > 1
+  const organizationUidRaw = allowedOrganizations.length > 1
     ? await pSelect({
         message: 'Pick the organization that should own this app',
-        options: adminOrgs.map((org) => {
+        options: allowedOrganizations.map((org) => {
           const twoFaWarning = (org.enforcing_2fa && !org['2fa_has_access']) ? '2FA required' : undefined
           return {
             value: org.gid,
@@ -960,7 +940,7 @@ async function selectOrganizationForInit(
           }
         }),
       })
-    : adminOrgs[0].gid
+    : allowedOrganizations[0].gid
 
   if (pIsCancel(organizationUidRaw)) {
     pOutro('Bye 👋\n💡 You can resume the onboarding anytime by running the same command again')
@@ -2385,7 +2365,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   }
 
   const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
-  await verifyUser(supabase, options.apikey, ['upload', 'all', 'read', 'write'])
+  await resolveUserIdFromApiKey(supabase, options.apikey)
 
   // Try to resume from saved state before asking for org selection
   const resumed = await tryResumeOnboarding(options.apikey)
@@ -2398,29 +2378,30 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     if (orgError || !allOrganizations) {
       pLog.error(`Cannot verify organization access: ${orgError ? JSON.stringify(orgError) : 'no data returned'}`)
       pLog.warn('Falling back to organization selection.')
-      organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+      organization = await selectOrganizationForInit(supabase, options.apikey)
       stepToSkip = 0
     }
     else {
       const savedOrg = allOrganizations.find(org => org.gid === resumed.orgId)
-      const normalizeRole = (role: string | null | undefined) => role?.replace(/^org_/, '') ?? ''
-      const hasRequiredRole = savedOrg && ['admin', 'super_admin'].includes(normalizeRole(savedOrg.role))
       const blocked2fa = savedOrg?.enforcing_2fa && !savedOrg['2fa_has_access']
+      const hasCreateAppPermission = savedOrg
+        ? await hasCliPermission(supabase, options.apikey, 'org.create_app', { orgId: savedOrg.gid })
+        : false
 
       if (!savedOrg) {
         pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
-        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        organization = await selectOrganizationForInit(supabase, options.apikey)
         stepToSkip = 0
       }
-      else if (!hasRequiredRole) {
-        pLog.warn(`You no longer have admin access to "${savedOrg.name}". Please select a different organization.`)
-        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+      else if (!hasCreateAppPermission) {
+        pLog.warn(`You no longer have permission to create an app in "${savedOrg.name}". Please select a different organization.`)
+        organization = await selectOrganizationForInit(supabase, options.apikey)
         stepToSkip = 0
       }
       else if (blocked2fa) {
         pLog.warn(`Organization "${savedOrg.name}" now requires 2FA. Enable it at https://web.capgo.app/settings/account`)
         pLog.warn('Please select a different organization or enable 2FA and try again.')
-        organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+        organization = await selectOrganizationForInit(supabase, options.apikey)
         stepToSkip = 0
       }
       else {
@@ -2430,7 +2411,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
   }
   else {
-    organization = await selectOrganizationForInit(supabase, ['admin', 'super_admin'])
+    organization = await selectOrganizationForInit(supabase, options.apikey)
   }
 
   const orgId = organization.gid
