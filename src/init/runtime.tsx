@@ -65,12 +65,26 @@ export interface InitVersionWarning {
   majorVersion: string
 }
 
+export interface InitCodeDiffLine {
+  lineNumber: number
+  text: string
+  kind: 'context' | 'add'
+}
+
+export interface InitCodeDiff {
+  filePath: string
+  created: boolean
+  lines: InitCodeDiffLine[]
+  note?: string
+}
+
 export interface InitRuntimeState {
   screen?: InitScreen
   logs: InitLogEntry[]
   spinner?: string
   prompt?: PromptRequest
   versionWarning?: InitVersionWarning
+  codeDiff?: InitCodeDiff
 }
 
 let state: InitRuntimeState = {
@@ -130,7 +144,7 @@ export function stopInitInkSession(finalMessage?: { text: string, tone: 'green' 
     inkApp = undefined
   }
   started = false
-  state = { screen: undefined, logs: [], spinner: undefined, prompt: undefined }
+  state = { screen: undefined, logs: [], spinner: undefined, prompt: undefined, codeDiff: undefined }
   if (finalMessage)
     stdout.write(`${finalMessage.text}\n`)
 }
@@ -205,6 +219,11 @@ export function requestInitSelect(message: string, options: SelectPromptOption[]
       },
     }))
   })
+}
+
+export function setInitCodeDiff(diff?: InitCodeDiff) {
+  ensureInitInkSession()
+  updateState(current => ({ ...current, codeDiff: diff }))
 }
 
 export function setInitVersionWarning(currentVersion: string, latestVersion: string, majorVersion: string) {

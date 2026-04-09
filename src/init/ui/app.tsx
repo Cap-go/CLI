@@ -1,8 +1,38 @@
-import type { InitRuntimeState } from '../runtime'
+import type { InitCodeDiff, InitRuntimeState } from '../runtime'
 import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
 import React, { useEffect, useState } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
+
+function CodeDiffPanel({ diff, width }: Readonly<{ diff: InitCodeDiff, width: number }>) {
+  const title = diff.created
+    ? `Created ${diff.filePath}`
+    : `Updated ${diff.filePath}`
+  const maxLineNumber = diff.lines.reduce((max, line) => Math.max(max, line.lineNumber), 0)
+  const gutterWidth = Math.max(2, String(maxLineNumber).length)
+  return (
+    <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor="green" paddingX={1}>
+      <Text color="green" bold>{`📝 ${title}`}</Text>
+      {diff.note !== undefined && (
+        <Text color="gray">{`  ${diff.note}`}</Text>
+      )}
+      {diff.lines.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          {diff.lines.map((line, index) => {
+            const marker = line.kind === 'add' ? '+' : ' '
+            const lineNum = String(line.lineNumber).padStart(gutterWidth, ' ')
+            const color = line.kind === 'add' ? 'green' : 'gray'
+            return (
+              <Text key={`diff-${index}`} color={color}>
+                {`${marker} ${lineNum} │ ${line.text}`}
+              </Text>
+            )
+          })}
+        </Box>
+      )}
+    </Box>
+  )
+}
 
 interface InitInkAppProps {
   getSnapshot: () => InitRuntimeState
@@ -45,6 +75,10 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
       {screen && <ProgressSection screen={screen} />}
 
       {screen && <CurrentStepSection screen={screen} />}
+
+      {snapshot.codeDiff && (
+        <CodeDiffPanel diff={snapshot.codeDiff} width={contentWidth} />
+      )}
 
       {visibleLogs.length > 0 && (
         <Box flexDirection="column" marginTop={1} width={contentWidth}>

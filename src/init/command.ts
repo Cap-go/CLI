@@ -1,6 +1,7 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
+import type { InitCodeDiff } from './runtime'
 import { execSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
@@ -22,7 +23,7 @@ import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { setInitVersionWarning, stopInitInkSession } from './runtime'
+import { setInitCodeDiff, setInitVersionWarning, stopInitInkSession } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -53,6 +54,46 @@ let globalPlatform: 'ios' | 'android' = 'ios'
 let globalDelta = false
 let globalCurrentVersion: string | undefined
 let globalAppId: string | undefined
+let globalCodeDiff: InitCodeDiff | undefined
+
+const CODE_DIFF_CONTEXT_LINES = 5
+
+function buildCodeDiffLines(beforeContent: string, afterContent: string, contextSize: number) {
+  const beforeLines = beforeContent.length === 0 ? [] : beforeContent.split('\n')
+  const afterLines = afterContent.split('\n')
+
+  // Find the first line index where the two diverge.
+  let start = 0
+  while (start < beforeLines.length && start < afterLines.length && beforeLines[start] === afterLines[start]) {
+    start++
+  }
+
+  // Find the last line index (from the end) where they still diverge.
+  let endBefore = beforeLines.length - 1
+  let endAfter = afterLines.length - 1
+  while (endBefore >= start && endAfter >= start && beforeLines[endBefore] === afterLines[endAfter]) {
+    endBefore--
+    endAfter--
+  }
+
+  // No divergence — nothing to show.
+  if (endAfter < start) {
+    return []
+  }
+
+  const contextStart = Math.max(0, start - contextSize)
+  const contextEnd = Math.min(afterLines.length - 1, endAfter + contextSize)
+
+  const diffLines: { lineNumber: number, text: string, kind: 'context' | 'add' }[] = []
+  for (let i = contextStart; i <= contextEnd; i++) {
+    diffLines.push({
+      lineNumber: i + 1,
+      text: afterLines[i] ?? '',
+      kind: i >= start && i <= endAfter ? 'add' : 'context',
+    })
+  }
+  return diffLines
+}
 
 function readTmpObj() {
   tmpObject ??= readdirSync(tmp.tmpdir)
@@ -408,6 +449,7 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       platform: globalPlatform,
       delta: globalDelta,
       currentVersion: globalCurrentVersion,
+      codeDiff: globalCodeDiff,
     }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
@@ -435,7 +477,7 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff } = JSON.parse(rawData)
     if (!orgId || !step_done) {
       pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
       pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
@@ -472,6 +514,28 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       }
       if (savedAppId) {
         globalAppId = savedAppId
+      }
+      // Only carry the diff forward if the user is about to land on step 5 (where it's displayed).
+      if (step_done === 4 && codeDiff && typeof codeDiff === 'object' && typeof codeDiff.filePath === 'string' && Array.isArray(codeDiff.lines)) {
+        const restoredLines: { lineNumber: number, text: string, kind: 'context' | 'add' }[] = []
+        for (const rawLine of codeDiff.lines as unknown[]) {
+          if (
+            typeof rawLine === 'object'
+            && rawLine !== null
+            && typeof (rawLine as { lineNumber?: unknown }).lineNumber === 'number'
+            && typeof (rawLine as { text?: unknown }).text === 'string'
+            && ((rawLine as { kind?: unknown }).kind === 'context' || (rawLine as { kind?: unknown }).kind === 'add')
+          ) {
+            const typed = rawLine as { lineNumber: number, text: string, kind: 'context' | 'add' }
+            restoredLines.push({ lineNumber: typed.lineNumber, text: typed.text, kind: typed.kind })
+          }
+        }
+        globalCodeDiff = {
+          filePath: codeDiff.filePath,
+          created: Boolean(codeDiff.created),
+          lines: restoredLines,
+          note: typeof codeDiff.note === 'string' ? codeDiff.note : undefined,
+        }
       }
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
@@ -1482,7 +1546,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     s.start(`Adding @capacitor-updater to your main file`)
 
-    const projectType = await findProjectType()
+    const projectType = await findProjectType({ quiet: true })
     if (projectType === 'nuxtjs-js' || projectType === 'nuxtjs-ts') {
       // Nuxt.js specific logic
       const nuxtDir = join('plugins')
@@ -1496,36 +1560,52 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       else {
         nuxtFilePath = join(nuxtDir, 'capacitorUpdater.client.js')
       }
-      const nuxtFileContent = `
-        import { CapacitorUpdater } from '@capgo/capacitor-updater'
-
-        export default defineNuxtPlugin(() => {
-          CapacitorUpdater.notifyAppReady()
-        })
-      `
+      const nuxtFileLines = [
+        `import { CapacitorUpdater } from '@capgo/capacitor-updater'`,
+        ``,
+        `export default defineNuxtPlugin(() => {`,
+        `  CapacitorUpdater.notifyAppReady()`,
+        `})`,
+        ``,
+      ]
+      const nuxtFileContent = nuxtFileLines.join('\n')
       if (existsSync(nuxtFilePath)) {
         const currentContent = readFileSync(nuxtFilePath, 'utf8')
         if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
-          s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          pLog.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
+          s.stop()
+          globalCodeDiff = {
+            filePath: nuxtFilePath,
+            created: false,
+            lines: [],
+            note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
+          }
         }
         else {
           writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
-          s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          pLog.info('Updated capacitorUpdater.client.ts file with required code')
+          s.stop()
+          globalCodeDiff = {
+            filePath: nuxtFilePath,
+            created: false,
+            lines: buildCodeDiffLines(currentContent, nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
+          }
         }
       }
       else {
         writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
-        s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-        pLog.info('Created plugins directory and capacitorUpdater.client.ts file')
+        s.stop()
+        globalCodeDiff = {
+          filePath: nuxtFilePath,
+          created: true,
+          lines: buildCodeDiffLines('', nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
+        }
       }
+      setInitCodeDiff(globalCodeDiff)
     }
     else {
       // Handle other project types
       let mainFilePath
       if (projectType === 'unknown') {
-        mainFilePath = await findMainFile()
+        mainFilePath = await findMainFile(true)
       }
       else {
         const isTypeScript = projectType.endsWith('-ts')
@@ -1576,12 +1656,25 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         await markStep(orgId, apikey, 'add-code-manual', appId)
       }
       else if (mainFileContent.includes(codeInject)) {
-        s.stop(`Code already added to ${mainFilePath} ✅`)
+        s.stop()
+        globalCodeDiff = {
+          filePath: mainFilePath,
+          created: false,
+          lines: [],
+          note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
+        }
+        setInitCodeDiff(globalCodeDiff)
       }
       else {
         const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
         writeFileSync(mainFilePath, newMainFileContent, 'utf8')
-        s.stop(`Code added to ${mainFilePath} ✅`)
+        s.stop()
+        globalCodeDiff = {
+          filePath: mainFilePath,
+          created: false,
+          lines: buildCodeDiffLines(mainFileContent, newMainFileContent, CODE_DIFF_CONTEXT_LINES),
+        }
+        setInitCodeDiff(globalCodeDiff)
       }
     }
 
@@ -1593,6 +1686,9 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
 }
 
 async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
+  if (globalCodeDiff) {
+    setInitCodeDiff(globalCodeDiff)
+  }
   const dependencies = await getAllPackagesDependencies()
   const coreVersion = dependencies.get('@capacitor/core')
   const normalizedCoreVersion = normalizeConcreteVersion(coreVersion)
@@ -2504,6 +2600,13 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       renderCurrentStep(5)
       await addEncryptionStep(orgId, options.apikey, appId)
       markStepDone(5)
+    }
+
+    // Keep the code diff visible throughout step 5 so users can reference it
+    // while answering the encryption prompt. Only clear it once we move on.
+    if (globalCodeDiff) {
+      globalCodeDiff = undefined
+      setInitCodeDiff(undefined)
     }
 
     if (stepToSkip < 6) {
