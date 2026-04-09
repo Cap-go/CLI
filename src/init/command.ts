@@ -1877,16 +1877,26 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     }
 
     const s = pSpinner()
-    s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-    const keyRes = await createKeyInternal({ force: true }, false)
-    if (keyRes) {
-      s.stop(`key created 🔑`)
+    s.start(`Creating RSA encryption keys`)
+    // Silent mode is critical here: non-silent createKeyInternal calls
+    // clack's `intro()`, `log.*`, and `pConfirm` directly, which write to
+    // stdout and collide with the ink render loop (the same whack-a-mole
+    // gating issue from PR #560 / #579). It also runs
+    // `promptAndSyncCapacitor({ validateIosUpdater: true })` which throws
+    // 'iOS sync validation failed…' on mis-synced projects — step 7
+    // (buildProjectStep) already runs `cap sync` with proper iOS recovery
+    // via handleBrokenIosSync, so we don't need a second sync here.
+    // setupChannel=false avoids a rogue clack confirm when an old private
+    // key is present in the config.
+    try {
+      await createKeyInternal({ force: true, setupChannel: false }, true)
+      s.stop(`Keys created 🔑`)
       await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
       finalSummary = enabledSummary
     }
-    else {
+    catch (error) {
       s.stop('Error', 'error')
-      pLog.warn(`Cannot create key ❌`)
+      pLog.warn(`Cannot create key ❌ ${error instanceof Error ? error.message : String(error)}`)
       const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
         { value: 'retry', label: 'Retry key creation' },
         { value: 'skip', label: 'Continue without encryption' },
