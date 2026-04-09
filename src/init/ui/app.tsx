@@ -65,7 +65,11 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
     // 1 (panel marginTop) + 2 (borders) + 1 (title) + noteRows + linesBlockRows
     return 4 + noteRows + linesBlockRows
   })()
-  const visibleLogs = snapshot.logs.slice(-Math.max(0, rows - 14 - diffPanelHeight))
+  // `Array.prototype.slice(-0)` returns the full array because `-0` coerces
+  // to `0`, so we cannot feed a zero clamp into slice — explicitly short-
+  // circuit to an empty array when there's no viewport budget left for logs.
+  const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight)
+  const visibleLogs = visibleLogCount === 0 ? [] : snapshot.logs.slice(-visibleLogCount)
   const screen = snapshot.screen
 
   useEffect(() => {
