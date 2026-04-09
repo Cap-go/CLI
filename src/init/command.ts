@@ -1890,7 +1890,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     // key is present in the config.
     try {
       await createKeyInternal({ force: true, setupChannel: false }, true)
-      s.stop(`Keys created 🔑`)
+      // Intentionally stop without a success message: the persistent
+      // encryption summary panel renders on the next step and already shows
+      // the outcome. Passing a message here would push it into the rolling
+      // log buffer, which `renderInitOnboardingFrame` wipes when step 6
+      // renders — producing a visible "flash" of the success line.
+      s.stop()
       await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
       finalSummary = enabledSummary
     }
