@@ -1728,8 +1728,6 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
   const pm = getPMAndCommand()
 
-  pLog.info(`🔐 End-to-end encryption`)
-
   // Ask up-front whether the app is security-critical, with an extra option
   // for users who don't know what encryption is. The "learn more" branch
   // prints a short overview, optionally opens the docs in a browser, then
@@ -1747,6 +1745,15 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       ],
     })
     await cancelCommand(choice, orgId, apikey)
+
+    // The code diff panel from step 4 has served its purpose the moment the
+    // user answers this first question — clear it immediately (before any
+    // follow-up logging or prompts) so both the learn-more overview and the
+    // direct yes/no paths render against the full viewport.
+    if (globalCodeDiff) {
+      globalCodeDiff = undefined
+      setInitCodeDiff(undefined)
+    }
 
     if (choice === 'learn') {
       pLog.info(`🔐 End-to-end encryption in Capgo (fast overview):`)
@@ -1781,14 +1788,6 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
     isSecurityCritical = choice === 'critical'
     break
-  }
-
-  // The code diff panel from step 4 has served its purpose by the time the
-  // user has answered the first encryption question — hide it so the rest
-  // of step 5 has the full viewport for prompts and log output.
-  if (globalCodeDiff) {
-    globalCodeDiff = undefined
-    setInitCodeDiff(undefined)
   }
 
   if (isSecurityCritical) {
