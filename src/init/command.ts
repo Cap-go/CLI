@@ -1758,7 +1758,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`       – The public RSA key shipped in your app decrypts + verifies it.`)
       pLog.info(`   • True end-to-end: the private key lives only on your machine, so not even`)
       pLog.info(`     Capgo can read the bundle contents.`)
-      pLog.info(`   • Requires Capacitor v6+. Debugging is slightly harder once enabled.`)
+      pLog.info(`   • Requires Capacitor v6+. Debugging UPDATE FAILURES is slightly harder once enabled.`)
       pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
       pLog.info(`     Most other apps do not need it.`)
 
@@ -1783,16 +1783,28 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     break
   }
 
+  // The code diff panel from step 4 has served its purpose by the time the
+  // user has answered the first encryption question — hide it so the rest
+  // of step 5 has the full viewport for prompts and log output.
+  if (globalCodeDiff) {
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
+  }
+
   if (isSecurityCritical) {
     pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
     pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
     pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
 
-    const doEncrypt = await pConfirm({
+    const encryptChoice = await pSelect<'critical' | 'not_needed'>({
       message: `Do you want to use encryption for ${appId}?`,
-      initialValue: true,
+      options: [
+        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+      ],
     })
-    await cancelCommand(doEncrypt, orgId, apikey)
+    await cancelCommand(encryptChoice, orgId, apikey)
+    const doEncrypt = encryptChoice === 'critical'
     if (doEncrypt) {
       pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
       pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
