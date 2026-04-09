@@ -7,6 +7,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, wri
 import path, { dirname, join } from 'node:path'
 import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
+import open from 'open'
 import tmp from 'tmp'
 import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
 import { checkVersionStatus } from '../api/update'
@@ -1728,11 +1729,60 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
 
   pLog.info(`🔐 End-to-end encryption`)
-  const isSecurityCritical = await pConfirm({
-    message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
-    initialValue: false,
-  })
-  await cancelCommand(isSecurityCritical, orgId, apikey)
+
+  // Ask up-front whether the app is security-critical, with an extra option
+  // for users who don't know what encryption is. The "learn more" branch
+  // prints a short overview, optionally opens the docs in a browser, then
+  // loops back to this same prompt.
+  const encryptionDocsUrl = 'https://capgo.app/docs/live-updates/encryption/'
+  type EncryptionChoice = 'critical' | 'not_needed' | 'learn'
+  let isSecurityCritical = false
+  while (true) {
+    const choice = await pSelect<EncryptionChoice>({
+      message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
+      options: [
+        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+        { value: 'learn', label: '❓ What is encryption? (learn more)' },
+      ],
+    })
+    await cancelCommand(choice, orgId, apikey)
+
+    if (choice === 'learn') {
+      pLog.info(`🔐 End-to-end encryption in Capgo (fast overview):`)
+      pLog.info(`   • Capgo bundles are plain web assets (JS / HTML / CSS) served over HTTPS.`)
+      pLog.info(`   • Without encryption, anyone who obtains a bundle URL can download and read them.`)
+      pLog.info(`   • Capgo's encryption uses a hybrid RSA + AES scheme:`)
+      pLog.info(`       – A random AES session key encrypts the bundle contents.`)
+      pLog.info(`       – Your RSA private key encrypts that AES key and signs a checksum.`)
+      pLog.info(`       – The public RSA key shipped in your app decrypts + verifies it.`)
+      pLog.info(`   • True end-to-end: the private key lives only on your machine, so not even`)
+      pLog.info(`     Capgo can read the bundle contents.`)
+      pLog.info(`   • Requires Capacitor v6+. Debugging is slightly harder once enabled.`)
+      pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
+      pLog.info(`     Most other apps do not need it.`)
+
+      const openDocs = await pConfirm({
+        message: `Open the full encryption docs in your browser? (${encryptionDocsUrl})`,
+        initialValue: false,
+      })
+      await cancelCommand(openDocs, orgId, apikey)
+      if (openDocs) {
+        try {
+          await open(encryptionDocsUrl)
+          pLog.info(`   🌐 Opened ${encryptionDocsUrl}`)
+        }
+        catch {
+          pLog.warn(`Could not open your browser automatically. Visit: ${encryptionDocsUrl}`)
+        }
+      }
+      continue
+    }
+
+    isSecurityCritical = choice === 'critical'
+    break
+  }
+
   if (isSecurityCritical) {
     pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
     pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
