@@ -1780,6 +1780,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
       pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
       pLog.info(`     Most other apps do not need it.`)
+      pLog.info(``)
       // Always surface the docs URL so the user can copy it later, even if
       // they decline to open a browser right now.
       pLog.info(`   📖 Full docs: ${encryptionDocsUrl}`)
