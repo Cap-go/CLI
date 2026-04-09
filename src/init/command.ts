@@ -1858,7 +1858,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     lines: [
       '   • Bundles are plain JS / HTML / CSS, fetchable by anyone who finds the URL.',
       '   • Never put private API keys or backend secrets in a mobile app.',
-      '   • You can enable encryption later with: capgo key create',
+      `   • You can enable encryption later with: ${pm.runner} @capgo/cli@latest key create`,
     ],
   }
   let finalSummary: InitEncryptionSummary = skippedSummary
@@ -1912,7 +1912,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
           title: '⚠️  Encryption NOT ENABLED (key creation failed)',
           lines: [
             '   • Key creation failed and you chose to continue without encryption.',
-            '   • You can retry later with: capgo key create',
+            `   • You can retry later with: ${pm.runner} @capgo/cli@latest key create`,
             '   • Meanwhile, never put API keys or backend secrets in the bundle.',
           ],
         }
