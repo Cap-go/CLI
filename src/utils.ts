@@ -1111,7 +1111,7 @@ export async function findBuildCommandForProjectType(projectType: string) {
   return 'build'
 }
 
-export async function findMainFile() {
+export async function findMainFile(silent = false) {
   // eslint-disable-next-line regexp/no-unused-capturing-group
   const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
   // search for main.ts or main.js in local dir and subdirs
@@ -1123,7 +1123,8 @@ export async function findMainFile() {
     const folders = f.split('/').length - pwdL
     if (folders <= 2 && mainRegex.test(f)) {
       mainFile = f
-      log.info(`Found main file here ${f}`)
+      if (!silent)
+        log.info(`Found main file here ${f}`)
       break
     }
   }
