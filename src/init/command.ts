@@ -2017,7 +2017,7 @@ async function streamCommandInInitPanel(params: {
 
   startInitStreamingOutput({ title: params.title, command: displayCommand })
 
-  const appendChunk = (chunk: Buffer | string) => {
+  const appendChunk = (chunk: { toString(encoding: string): string } | string) => {
     const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8')
     // Capacitor CLI output mixes \r\n and bare \n; split on both but keep
     // non-empty trimmed lines so the panel doesn't fill with blank rows.
