@@ -1,8 +1,8 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
-import type { InitCodeDiff } from './runtime'
-import { execSync, spawnSync } from 'node:child_process'
+import type { InitCodeDiff, InitEncryptionPhase, InitEncryptionSummary } from './runtime'
+import { execSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
 import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
@@ -24,7 +24,7 @@ import { doLoginExists, loginInternal } from '../login'
 import { showReplicationProgress } from '../replicationProgress'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { setInitCodeDiff, setInitVersionWarning, stopInitInkSession } from './runtime'
+import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -56,6 +56,7 @@ let globalDelta = false
 let globalCurrentVersion: string | undefined
 let globalAppId: string | undefined
 let globalCodeDiff: InitCodeDiff | undefined
+let globalEncryptionSummary: InitEncryptionSummary | undefined
 
 const CODE_DIFF_CONTEXT_LINES = 5
 
@@ -471,6 +472,7 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       delta: globalDelta,
       currentVersion: globalCurrentVersion,
       codeDiff: globalCodeDiff,
+      encryptionSummary: globalEncryptionSummary,
     }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
@@ -498,7 +500,7 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff, encryptionSummary } = JSON.parse(rawData)
     if (!orgId || !step_done) {
       pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
       pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
@@ -558,14 +560,45 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
           note: typeof codeDiff.note === 'string' ? codeDiff.note : undefined,
         }
       }
+      // Carry the encryption summary panel forward if the user resumes
+      // anywhere between step 5 (encryption added) and step 7 (build +
+      // cap sync). We need the panel visible on step 6 (the "what
+      // happened in step 5" callout) AND up to step 7, because the
+      // outcome is only fully "enabled" once the native project has
+      // been synced with the new public key.
+      if (
+        step_done >= 5
+        && step_done < 7
+        && encryptionSummary
+        && typeof encryptionSummary === 'object'
+        && typeof encryptionSummary.title === 'string'
+        && typeof encryptionSummary.phase === 'string'
+        && Array.isArray(encryptionSummary.lines)
+      ) {
+        const restoredEncryptionLines = (encryptionSummary.lines as unknown[])
+          .filter((line): line is string => typeof line === 'string')
+        const allowedPhases: InitEncryptionPhase[] = ['enabled', 'pending-sync', 'skipped', 'failed']
+        const restoredPhase = allowedPhases.includes(encryptionSummary.phase as InitEncryptionPhase)
+          ? (encryptionSummary.phase as InitEncryptionPhase)
+          : 'skipped'
+        globalEncryptionSummary = {
+          phase: restoredPhase,
+          title: encryptionSummary.title,
+          lines: restoredEncryptionLines,
+        }
+        setInitEncryptionSummary(globalEncryptionSummary)
+      }
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
     // User chose to start over — delete the saved progress and drop any
-    // restored code diff so a fresh manual path doesn't re-show stale content.
+    // restored code diff / encryption summary so a fresh manual path
+    // doesn't re-show stale content.
     cleanupStepsDone()
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
   catch (err) {
@@ -573,6 +606,8 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
 }
@@ -1808,69 +1843,254 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     break
   }
 
+  // The final outcome of this step is captured as a persistent summary panel
+  // (mirroring the code-diff panel from step 4) so it survives the transition
+  // to the next step instead of flashing by when logs get cleared. We build
+  // it in a local variable and only push it to the runtime after the step's
+  // work is done — this avoids rendering a premature "enabled" panel while
+  // key creation is still running, and lets the key-failure branch downgrade
+  // it to a "not enabled" summary.
+  // Two-phase "enabled" state. Right after key creation the keys exist
+  // locally and the public key is in `capacitor.config.*`, but the native
+  // project has NOT been synced yet — encrypted updates would fail. We
+  // only flip to the fully-enabled summary once `buildProjectStep` has
+  // run `cap sync` successfully. See `maybePromoteEncryptionSummary`.
+  const pendingSyncSummary: InitEncryptionSummary = {
+    phase: 'pending-sync',
+    title: '🔐 Encryption keys generated — awaiting cap sync',
+    lines: [
+      '   • Private RSA key saved locally (.capgo_key_v2) — do not commit it.',
+      '   • Public RSA key written to capacitor.config — not bundled in the native app yet.',
+      '   • Encrypted updates will FAIL until the native project is synced.',
+      `   • Step 7 runs "${pm.runner} cap sync" automatically, which bundles the key.`,
+    ],
+  }
+  const skippedSummary: InitEncryptionSummary = {
+    phase: 'skipped',
+    title: '⏭️  Encryption SKIPPED',
+    lines: [
+      '   • Bundles are plain JS / HTML / CSS, fetchable by anyone who finds the URL.',
+      '   • Never put private API keys or backend secrets in a mobile app.',
+      `   • You can enable encryption later with: ${pm.runner} @capgo/cli@latest key create`,
+    ],
+  }
+  let finalSummary: InitEncryptionSummary = skippedSummary
+
+  // Q1 already phrases the "yes" branch as "set up end-to-end encryption",
+  // so there's no second confirmation to ask — a critical answer goes
+  // straight into key creation.
   if (isSecurityCritical) {
-    pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
-    pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
+    if (coreVersion && !normalizedCoreVersion) {
+      pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
+      return
+    }
+    if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
+      pLog.warn(`Encryption is not supported in Capacitor V5.`)
+      return
+    }
 
-    const encryptChoice = await pSelect<'critical' | 'not_needed'>({
-      message: `Do you want to use encryption for ${appId}?`,
-      options: [
-        { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
-        { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
-      ],
-    })
-    await cancelCommand(encryptChoice, orgId, apikey)
-    const doEncrypt = encryptChoice === 'critical'
-    if (doEncrypt) {
-      pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
-      pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
-      pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
-      pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
-      pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
-      pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
-      pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
-      if (coreVersion && !normalizedCoreVersion) {
-        pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
-        return
-      }
-      if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
-        pLog.warn(`Encryption is not supported in Capacitor V5.`)
-        return
-      }
+    const s = pSpinner()
+    s.start(`Creating RSA encryption keys`)
+    // Silent mode is critical here: non-silent createKeyInternal calls
+    // clack's `intro()`, `log.*`, and `pConfirm` directly, which write to
+    // stdout and collide with the ink render loop (the same whack-a-mole
+    // gating issue from PR #560 / #579). It also runs
+    // `promptAndSyncCapacitor({ validateIosUpdater: true })` which uses
+    // its own clack spinners and a blocking confirm — we want full
+    // control over the sync UI here, so we run `cap sync` ourselves in
+    // the full-screen streaming panel immediately after.
+    // setupChannel=false avoids a rogue clack confirm when an old private
+    // key is present in the config.
+    try {
+      await createKeyInternal({ force: true, setupChannel: false }, true)
+      // Intentionally stop without a success message: the persistent
+      // encryption summary panel renders on the next step and already shows
+      // the outcome. Passing a message here would push it into the rolling
+      // log buffer, which `renderInitOnboardingFrame` wipes when step 6
+      // renders — producing a visible "flash" of the success line.
+      s.stop()
+      await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
 
-      const s = pSpinner()
-      s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-      const keyRes = await createKeyInternal({ force: true }, false)
-      if (keyRes) {
-        s.stop(`key created 🔑`)
-        await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+      // Run `cap sync` now, inside step 5, so the public key we just wrote
+      // to `capacitor.config.*` actually lands in the native projects
+      // before we claim "Encryption ENABLED". The streaming panel takes
+      // over the whole viewport while the sync runs (mirrors the
+      // `capgo build` onboarding log streamer) — this is the only way to
+      // honestly mark encryption enabled without waiting for step 7.
+      //
+      // Platform is not passed because the user hasn't picked one yet
+      // (that happens in step 6). `cap sync` without a platform syncs
+      // every native platform that's already been `cap add`-ed, which is
+      // exactly what we want — the key needs to end up in whichever
+      // native projects exist.
+      const syncResult = await streamCommandInInitPanel({
+        title: '🔐 Syncing native project so the public key is bundled',
+        runner: pm.runner,
+        args: ['cap', 'sync'],
+      })
+      // Small dwell so the user can read the final state of the panel
+      // (success banner or the last few lines of an error) before we
+      // tear it down and move on.
+      await delay(3500)
+      clearInitStreamingOutput()
+
+      if (syncResult.success) {
+        finalSummary = {
+          phase: 'enabled',
+          title: '🔐 Encryption ENABLED',
+          lines: [
+            '   • Private RSA key stays on your machine — do not commit it.',
+            '   • Public RSA key is bundled in the app (extractable by reverse engineering).',
+            '   • Bundles encrypted with a random AES key, key wrapped with your RSA key.',
+            '   • Bundle checksum is signed with your RSA key so the app can verify integrity.',
+          ],
+        }
       }
       else {
-        s.stop('Error', 'error')
-        pLog.warn(`Cannot create key ❌`)
-        const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
-          { value: 'retry', label: 'Retry key creation' },
-          { value: 'skip', label: 'Continue without encryption' },
-        ])
-
-        if (recoveryChoice === 'retry') {
-          return addEncryptionStep(orgId, apikey, appId)
-        }
-
-        pLog.info(`⏭️  Continuing without encryption.`)
+        // Keys exist on disk and in the config, but `cap sync` failed, so
+        // the native project doesn't have the new key yet. Fall back to
+        // pending-sync — step 7's build & sync will retry and, on
+        // success, `promoteEncryptionSummaryToEnabled` will flip it.
+        pLog.warn(`cap sync failed: ${syncResult.error?.message ?? 'unknown error'}`)
+        pLog.warn('Encryption keys were generated but the native project has not been synced yet.')
+        pLog.info('Step 7 will run the build and cap sync again — if that succeeds, encryption becomes fully active.')
+        finalSummary = pendingSyncSummary
       }
     }
-    else {
-      pLog.info(`⏭️  We didn't enable encryption.`)
+    catch (error) {
+      s.stop('Error', 'error')
+      pLog.warn(`Cannot create key ❌ ${error instanceof Error ? error.message : String(error)}`)
+      const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
+        { value: 'retry', label: 'Retry key creation' },
+        { value: 'skip', label: 'Continue without encryption' },
+      ])
+
+      if (recoveryChoice === 'retry') {
+        return addEncryptionStep(orgId, apikey, appId)
+      }
+
+      finalSummary = {
+        phase: 'failed',
+        title: '⚠️  Encryption NOT ENABLED (key creation failed)',
+        lines: [
+          '   • Key creation failed and you chose to continue without encryption.',
+          `   • You can retry later with: ${pm.runner} @capgo/cli@latest key create`,
+          '   • Meanwhile, never put API keys or backend secrets in the bundle.',
+        ],
+      }
     }
   }
-  else {
-    pLog.info(`⏭️  We didn't enable encryption.`)
-    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
-  }
+  // If the user answered "not needed" to Q1, we keep the default
+  // `skippedSummary`.
+
+  globalEncryptionSummary = finalSummary
+  setInitEncryptionSummary(finalSummary)
   await markStep(orgId, apikey, 'add-encryption', appId)
+}
+
+/**
+ * Streams the output of an arbitrary command into the full-screen
+ * streaming panel defined in `runtime.tsx` / `ui/app.tsx`. The Ink tree
+ * switches to "streaming mode" while this helper is active: the normal
+ * onboarding chrome (progress bar, logs, prompts) is hidden so long
+ * command output has room to breathe.
+ *
+ * Returns `true` iff the process exits with code 0. On failure we leave
+ * the panel on-screen with an error banner so the caller can decide how
+ * long to pause before clearing it — that way the user actually has time
+ * to read the failing output.
+ */
+async function streamCommandInInitPanel(params: {
+  title: string
+  runner: string // e.g. "npx", "bunx", "yarn dlx"
+  args: string[]
+}): Promise<{ success: boolean, error?: Error }> {
+  // `pm.runner` can contain a space ("yarn dlx", "pnpm exec"). `spawn`
+  // without `shell:true` can't handle that, and `shell:true` brings
+  // quoting risk, so we split the runner into its own head + tail args.
+  const runnerParts = params.runner.split(' ').filter(Boolean)
+  if (runnerParts.length === 0)
+    return { success: false, error: new Error(`Invalid package manager runner: "${params.runner}"`) }
+  const [runnerCmd, ...runnerArgs] = runnerParts
+  const fullArgs = [...runnerArgs, ...params.args]
+  const displayCommand = `${params.runner} ${params.args.join(' ')}`
+
+  startInitStreamingOutput({ title: params.title, command: displayCommand })
+
+  const appendChunk = (chunk: { toString(encoding: string): string } | string) => {
+    const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8')
+    // Capacitor CLI output mixes \r\n and bare \n; split on both but keep
+    // non-empty trimmed lines so the panel doesn't fill with blank rows.
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.replace(/\r/g, '')
+      if (line.length > 0)
+        appendInitStreamingLine(line)
+    }
+  }
+
+  return new Promise((resolve) => {
+    let child
+    try {
+      child = spawn(runnerCmd, fullArgs, {
+        // stdin ignored — cap sync is non-interactive. stdout/stderr piped
+        // so Node can read them without touching the parent TTY that Ink
+        // is actively rendering into.
+        stdio: ['ignore', 'pipe', 'pipe'],
+      })
+    }
+    catch (error) {
+      updateInitStreamingStatus('error', error instanceof Error ? error.message : String(error))
+      resolve({ success: false, error: error instanceof Error ? error : new Error(String(error)) })
+      return
+    }
+
+    child.stdout?.on('data', appendChunk)
+    child.stderr?.on('data', appendChunk)
+
+    child.once('error', (error) => {
+      updateInitStreamingStatus('error', error.message)
+      resolve({ success: false, error })
+    })
+
+    child.once('close', (code) => {
+      if (code === 0) {
+        updateInitStreamingStatus('success', 'Done')
+        resolve({ success: true })
+        return
+      }
+      const err = new Error(`Command exited with code ${code ?? 'unknown'}`)
+      updateInitStreamingStatus('error', err.message)
+      resolve({ success: false, error: err })
+    })
+  })
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Flip the encryption summary panel from `pending-sync` to fully `enabled`
+ * once `cap sync` has run successfully in `buildProjectStep`. Until that
+ * point the native project hasn't been rebuilt with the new public key, so
+ * claiming "Public RSA key is bundled in the app" would be a lie. Called
+ * after a successful build & sync in `buildProjectStep`.
+ */
+function promoteEncryptionSummaryToEnabled(): void {
+  if (!globalEncryptionSummary || globalEncryptionSummary.phase !== 'pending-sync')
+    return
+  const promoted: InitEncryptionSummary = {
+    phase: 'enabled',
+    title: '🔐 Encryption ENABLED',
+    lines: [
+      '   • Private RSA key stays on your machine — do not commit it.',
+      '   • Public RSA key is bundled in the app (extractable by reverse engineering).',
+      '   • Bundles encrypted with a random AES key, key wrapped with your RSA key.',
+      '   • Bundle checksum is signed with your RSA key so the app can verify integrity.',
+    ],
+  }
+  globalEncryptionSummary = promoted
+  setInitEncryptionSummary(promoted)
 }
 
 async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
@@ -1926,11 +2146,19 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
       }
 
       s.stop('Build & Sync Done ✅')
+      // Now that `cap sync` has actually copied the new public key into
+      // the native project, we can truthfully claim encryption is fully
+      // enabled. Before this point the summary was "pending-sync".
+      promoteEncryptionSummaryToEnabled()
       break
     }
   }
   else {
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
+    // User declined the automatic build — we can't verify cap sync ran,
+    // so leave the encryption summary at `pending-sync` with its
+    // "encrypted updates will fail until the native project is synced"
+    // warning intact.
   }
   await markStep(orgId, apikey, 'build-project', appId)
 }
@@ -2605,6 +2833,8 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     stepToSkip = 0
     globalCodeDiff = undefined
     setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     cleanupStepsDone()
   }
 
@@ -2739,8 +2969,24 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
     if (stepToSkip < 7) {
       renderCurrentStep(7)
+      // NOTE: we deliberately do NOT clear `globalEncryptionSummary` before
+      // this step. The panel's "pending-sync" state is only resolved by a
+      // successful `cap sync` inside `buildProjectStep`, which calls
+      // `promoteEncryptionSummaryToEnabled()` to flip it green in place.
+      // Keeping it mounted through step 7 means the user sees the status
+      // change the moment sync completes, which is much clearer than a
+      // panel that silently disappears.
       await buildProjectStep(orgId, options.apikey, appId, platform)
       markStepDone(7)
+    }
+
+    // Clear the encryption summary after step 7 — by this point it has
+    // either been promoted to green `enabled` or it has stayed yellow
+    // `pending-sync` (user declined the automatic build). Either way, the
+    // next steps (device test, code change, upload) don't need it.
+    if (globalEncryptionSummary) {
+      globalEncryptionSummary = undefined
+      setInitEncryptionSummary(undefined)
     }
 
     if (stepToSkip < 8) {

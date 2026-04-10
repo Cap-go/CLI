@@ -1,8 +1,114 @@
-import type { InitCodeDiff, InitRuntimeState } from '../runtime'
+import type { InitCodeDiff, InitEncryptionSummary, InitRuntimeState, InitStreamingOutput } from '../runtime'
 import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
+import Spinner from 'ink-spinner'
 import React, { useEffect, useState } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
+
+function StreamingOutputPanel({ output, width, rows }: Readonly<{ output: InitStreamingOutput, width: number, rows: number }>) {
+  // Reserve rows for: header (3) + panel borders/title (4) + footer status (2)
+  // + a tiny safety margin (2). The rest is log body.
+  const visibleLineCount = Math.max(5, rows - 11)
+  const visibleLines = output.lines.slice(-visibleLineCount)
+  const borderColor
+    = output.status === 'success'
+      ? 'green'
+      : output.status === 'error'
+        ? 'red'
+        : 'cyan'
+  return (
+    <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor={borderColor} paddingX={1}>
+      <Text color={borderColor} bold>{output.title}</Text>
+      <Text color="gray">{`  $ ${output.command}`}</Text>
+      <Box flexDirection="column" marginTop={1}>
+        {visibleLines.length === 0
+          ? (
+              <Text color="gray" dimColor>(waiting for output...)</Text>
+            )
+          : (
+              visibleLines.map((line, index) => {
+                const trimmed = line.trimStart()
+                const isSuccess = trimmed.startsWith('✔') || trimmed.startsWith('✓') || trimmed.startsWith('[success]')
+                const isError = trimmed.startsWith('✖') || trimmed.startsWith('❌') || trimmed.startsWith('[error]') || trimmed.startsWith('ERROR')
+                const isWarn = trimmed.startsWith('⚠') || trimmed.startsWith('[warn]') || trimmed.startsWith('WARN')
+                const isInfo = trimmed.startsWith('ℹ') || trimmed.startsWith('[info]')
+                const isCap = trimmed.startsWith('[capacitor]')
+                const isPath = /^\s+[a-z]/.test(line) && (line.includes('/') || line.includes('\\'))
+                const color
+                  = isSuccess ? 'green'
+                    : isError ? 'red'
+                      : isWarn ? 'yellow'
+                        : isInfo ? 'cyan'
+                          : isCap ? 'blue'
+                            : isPath ? 'gray'
+                              : undefined
+                const dim = isPath
+                return (
+                  <Text key={`stream-${index}`} color={color} dimColor={dim}>{line}</Text>
+                )
+              })
+            )}
+      </Box>
+      <Box marginTop={1}>
+        {output.status === 'running'
+          ? (
+              <Box>
+                <Text color="cyan"><Spinner type="dots" /></Text>
+                <Text>
+                  {' '}
+                  Running...
+                  {' '}
+                  (
+                  {output.lines.length}
+                  {' '}
+                  lines)
+                </Text>
+              </Box>
+            )
+          : (
+              <Text color={borderColor} bold>
+                {output.status === 'success' ? '✓ ' : '✖ '}
+                {output.statusMessage ?? (output.status === 'success' ? 'Done' : 'Failed')}
+                {' '}
+                (
+                {output.lines.length}
+                {' '}
+                lines)
+              </Text>
+            )}
+      </Box>
+    </Box>
+  )
+}
+
+function encryptionPhaseColor(phase: InitEncryptionSummary['phase']): 'green' | 'yellow' | 'red' {
+  switch (phase) {
+    case 'enabled':
+      return 'green'
+    case 'failed':
+      return 'red'
+    case 'pending-sync':
+    case 'skipped':
+    default:
+      return 'yellow'
+  }
+}
+
+function EncryptionSummaryPanel({ summary, width }: Readonly<{ summary: InitEncryptionSummary, width: number }>) {
+  const borderColor = encryptionPhaseColor(summary.phase)
+  return (
+    <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor={borderColor} paddingX={1}>
+      <Text color={borderColor} bold>{summary.title}</Text>
+      {summary.lines.length > 0 && (
+        <Box flexDirection="column" marginTop={1}>
+          {summary.lines.map((line, index) => (
+            <Text key={`enc-${index}`} color="gray">{line}</Text>
+          ))}
+        </Box>
+      )}
+    </Box>
+  )
+}
 
 function CodeDiffPanel({ diff, width }: Readonly<{ diff: InitCodeDiff, width: number }>) {
   const title = diff.created
@@ -65,10 +171,25 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
     // 1 (panel marginTop) + 2 (borders) + 1 (title) + noteRows + linesBlockRows
     return 4 + noteRows + linesBlockRows
   })()
+  // Same overhead math as the diff panel: marginTop + borders + title +
+  // (optional) lines block. Wrap-aware so long bullet lines don't push the
+  // prompt off-screen on narrow terminals.
+  const encryptionPanelHeight = (() => {
+    const summary = snapshot.encryptionSummary
+    if (!summary)
+      return 0
+    const innerWidth = Math.max(1, contentWidth - 4)
+    const wrappedLineRows = summary.lines.reduce((sum, line) => {
+      return sum + Math.max(1, Math.ceil(line.length / innerWidth))
+    }, 0)
+    const linesBlockRows = summary.lines.length > 0 ? wrappedLineRows + 1 : 0
+    // 1 (panel marginTop) + 2 (borders) + 1 (title) + linesBlockRows
+    return 4 + linesBlockRows
+  })()
   // `Array.prototype.slice(-0)` returns the full array because `-0` coerces
   // to `0`, so we cannot feed a zero clamp into slice — explicitly short-
   // circuit to an empty array when there's no viewport budget left for logs.
-  const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight)
+  const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight - encryptionPanelHeight)
   const visibleLogs = visibleLogCount === 0 ? [] : snapshot.logs.slice(-visibleLogCount)
   const screen = snapshot.screen
 
@@ -78,6 +199,24 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
       unsubscribe()
     }
   }, [getSnapshot, subscribe])
+
+  // When a streaming command is running we hand the entire viewport over to
+  // the streaming panel — no progress bar, no logs, no prompt. This keeps
+  // long-lived `cap sync` output visible without fighting the normal
+  // onboarding chrome for space. The InitHeader stays so the user knows
+  // they're still inside `capgo init`.
+  if (snapshot.streamingOutput) {
+    return (
+      <Box flexDirection="column" padding={1} width={columns}>
+        <InitHeader />
+        <StreamingOutputPanel
+          output={snapshot.streamingOutput}
+          width={contentWidth}
+          rows={rows}
+        />
+      </Box>
+    )
+  }
 
   return (
     <Box flexDirection="column" padding={1} width={columns}>
@@ -101,6 +240,10 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
 
       {snapshot.codeDiff && (
         <CodeDiffPanel diff={snapshot.codeDiff} width={contentWidth} />
+      )}
+
+      {snapshot.encryptionSummary && (
+        <EncryptionSummaryPanel summary={snapshot.encryptionSummary} width={contentWidth} />
       )}
 
       {visibleLogs.length > 0 && (
