@@ -1,11 +1,101 @@
-import type { InitCodeDiff, InitEncryptionSummary, InitRuntimeState } from '../runtime'
+import type { InitCodeDiff, InitEncryptionSummary, InitRuntimeState, InitStreamingOutput } from '../runtime'
 import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
+import Spinner from 'ink-spinner'
 import React, { useEffect, useState } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
 
+function StreamingOutputPanel({ output, width, rows }: Readonly<{ output: InitStreamingOutput, width: number, rows: number }>) {
+  // Reserve rows for: header (3) + panel borders/title (4) + footer status (2)
+  // + a tiny safety margin (2). The rest is log body.
+  const visibleLineCount = Math.max(5, rows - 11)
+  const visibleLines = output.lines.slice(-visibleLineCount)
+  const borderColor
+    = output.status === 'success'
+      ? 'green'
+      : output.status === 'error'
+        ? 'red'
+        : 'cyan'
+  return (
+    <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor={borderColor} paddingX={1}>
+      <Text color={borderColor} bold>{output.title}</Text>
+      <Text color="gray">{`  $ ${output.command}`}</Text>
+      <Box flexDirection="column" marginTop={1}>
+        {visibleLines.length === 0
+          ? (
+              <Text color="gray" dimColor>(waiting for output...)</Text>
+            )
+          : (
+              visibleLines.map((line, index) => {
+                const trimmed = line.trimStart()
+                const isSuccess = trimmed.startsWith('✔') || trimmed.startsWith('✓') || trimmed.startsWith('[success]')
+                const isError = trimmed.startsWith('✖') || trimmed.startsWith('❌') || trimmed.startsWith('[error]') || trimmed.startsWith('ERROR')
+                const isWarn = trimmed.startsWith('⚠') || trimmed.startsWith('[warn]') || trimmed.startsWith('WARN')
+                const isInfo = trimmed.startsWith('ℹ') || trimmed.startsWith('[info]')
+                const isCap = trimmed.startsWith('[capacitor]')
+                const isPath = /^\s+[a-z]/.test(line) && (line.includes('/') || line.includes('\\'))
+                const color
+                  = isSuccess ? 'green'
+                    : isError ? 'red'
+                      : isWarn ? 'yellow'
+                        : isInfo ? 'cyan'
+                          : isCap ? 'blue'
+                            : isPath ? 'gray'
+                              : undefined
+                const dim = isPath
+                return (
+                  <Text key={`stream-${index}`} color={color} dimColor={dim}>{line}</Text>
+                )
+              })
+            )}
+      </Box>
+      <Box marginTop={1}>
+        {output.status === 'running'
+          ? (
+              <Box>
+                <Text color="cyan"><Spinner type="dots" /></Text>
+                <Text>
+                  {' '}
+                  Running...
+                  {' '}
+                  (
+                  {output.lines.length}
+                  {' '}
+                  lines)
+                </Text>
+              </Box>
+            )
+          : (
+              <Text color={borderColor} bold>
+                {output.status === 'success' ? '✓ ' : '✖ '}
+                {output.statusMessage ?? (output.status === 'success' ? 'Done' : 'Failed')}
+                {' '}
+                (
+                {output.lines.length}
+                {' '}
+                lines)
+              </Text>
+            )}
+      </Box>
+    </Box>
+  )
+}
+
+function encryptionPhaseColor(phase: InitEncryptionSummary['phase']): 'green' | 'yellow' | 'red' {
+  switch (phase) {
+    case 'enabled':
+      return 'green'
+    case 'failed':
+      return 'red'
+    case 'pending-sync':
+    case 'skipped':
+    default:
+      return 'yellow'
+  }
+}
+
 function EncryptionSummaryPanel({ summary, width }: Readonly<{ summary: InitEncryptionSummary, width: number }>) {
-  const borderColor = summary.enabled ? 'green' : 'yellow'
+  const borderColor = encryptionPhaseColor(summary.phase)
   return (
     <Box flexDirection="column" marginTop={1} width={width} borderStyle="round" borderColor={borderColor} paddingX={1}>
       <Text color={borderColor} bold>{summary.title}</Text>
@@ -109,6 +199,24 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
       unsubscribe()
     }
   }, [getSnapshot, subscribe])
+
+  // When a streaming command is running we hand the entire viewport over to
+  // the streaming panel — no progress bar, no logs, no prompt. This keeps
+  // long-lived `cap sync` output visible without fighting the normal
+  // onboarding chrome for space. The InitHeader stays so the user knows
+  // they're still inside `capgo init`.
+  if (snapshot.streamingOutput) {
+    return (
+      <Box flexDirection="column" padding={1} width={columns}>
+        <InitHeader />
+        <StreamingOutputPanel
+          output={snapshot.streamingOutput}
+          width={contentWidth}
+          rows={rows}
+        />
+      </Box>
+    )
+  }
 
   return (
     <Box flexDirection="column" padding={1} width={columns}>
