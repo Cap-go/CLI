@@ -1028,7 +1028,7 @@ async function waitForReadyRetry(message: string, orgId: string, apikey: string,
       await cancelCommand(ready, orgId, apikey)
       continue
     }
-    if ((ready as string).trim().toLowerCase() === 'ready')
+    if (typeof ready === 'string' && ready.trim().toLowerCase() === 'ready')
       return
   }
 }
