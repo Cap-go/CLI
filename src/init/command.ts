@@ -997,11 +997,22 @@ async function maybeCancelAfterRepeatedIosSyncFailures(failureCount: number, org
     await exitCanceledInitOnboarding(orgId, apikey)
 }
 
-function runNativeResetCommand(command: string, successMessage: string, failureMessage: string): void {
+function runNativeResetCommand(platformRunner: string, nativePlatform: PlatformChoice, successMessage: string, failureMessage: string): void {
+  const resetAdvice = getNativeProjectResetAdvice(platformRunner, nativePlatform)
   const resetSpinner = pSpinner()
-  resetSpinner.start(`Running: ${command}`)
+  resetSpinner.start(`Running: ${resetAdvice.command}`)
   try {
-    execSync(command, execOption as ExecSyncOptions)
+    const parsedRunner = splitRunnerCommand(platformRunner)
+    rmSync(nativePlatform, { recursive: true, force: true })
+
+    const addResult = spawnSync(parsedRunner.command, [...parsedRunner.args, 'cap', 'add', nativePlatform], { stdio: 'inherit' })
+    if (addResult.error || addResult.status !== 0)
+      throw addResult.error ?? new Error(`cap add ${nativePlatform} failed with code ${addResult.status ?? 'unknown'}`)
+
+    const syncResult = spawnSync(parsedRunner.command, [...parsedRunner.args, 'cap', 'sync', nativePlatform], { stdio: 'inherit' })
+    if (syncResult.error || syncResult.status !== 0)
+      throw syncResult.error ?? new Error(`cap sync ${nativePlatform} failed with code ${syncResult.status ?? 'unknown'}`)
+
     resetSpinner.stop(successMessage)
   }
   catch (err) {
@@ -1047,7 +1058,7 @@ async function handleBrokenIosSync(platformRunner: string, details: string[], or
   await cancelCommand(runResetNow, orgId, apikey)
 
   if (runResetNow) {
-    runNativeResetCommand(resetAdvice.command, 'iOS folder recreated and synced ✅', 'iOS folder reset failed ❌')
+    runNativeResetCommand(platformRunner, 'ios', 'iOS folder recreated and synced ✅', 'iOS folder reset failed ❌')
     return
   }
 
