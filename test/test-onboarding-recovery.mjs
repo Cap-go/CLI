@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -55,7 +55,7 @@ t('support bundle renderer includes commands and docs', () => {
     appId: 'com.example.app',
     currentStep: 'Step 4/12 · Add Integration Code',
     packageManager: 'bun',
-    cwd: '/tmp/example',
+    cwd: '/Users/example/project',
     error: 'Something failed',
     commands: ['bunx @capgo/cli@latest doctor'],
     docs: ['https://capgo.app/docs/getting-started/onboarding/'],
@@ -73,7 +73,7 @@ t('support bundle renderer includes commands and docs', () => {
 
 t('support bundle writer persists a file', () => {
   const originalHome = process.env.HOME
-  const home = join(tmpdir(), `capgo-home-${Date.now()}`)
+  const home = mkdtempSync(join(tmpdir(), 'capgo-home-'))
   process.env.HOME = home
   const filePath = writeOnboardingSupportBundle({
     kind: 'build-init',
@@ -98,7 +98,8 @@ t('support bundle writer persists a file', () => {
 })
 
 t('support bundle writer fails safely when the home path is not writable', () => {
-  const blockedPath = join(tmpdir(), `capgo-support-blocked-${Date.now()}`)
+  const blockedDir = mkdtempSync(join(tmpdir(), 'capgo-support-blocked-'))
+  const blockedPath = join(blockedDir, 'not-a-directory')
   writeFileSync(blockedPath, 'not-a-directory', 'utf8')
 
   const filePath = writeOnboardingSupportBundle({
@@ -110,7 +111,7 @@ t('support bundle writer fails safely when the home path is not writable', () =>
   if (filePath !== null)
     throw new Error('Expected support bundle writer to fail safely')
 
-  rmSync(blockedPath, { force: true })
+  rmSync(blockedDir, { recursive: true, force: true })
 })
 
 if (failures > 0) {
