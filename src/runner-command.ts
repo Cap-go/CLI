@@ -1,9 +1,21 @@
+const allowedRunnerCommands = new Set([
+  'bunx',
+  'npx',
+  'pnpm exec',
+  'yarn dlx',
+])
+
 export function formatRunnerCommand(runner: string, args: string[]): string {
   return `${runner} ${args.join(' ')}`
 }
 
 export function splitRunnerCommand(runner: string): { command: string, args: string[] } {
-  const parts = runner.split(' ').map(part => part.trim()).filter(Boolean)
+  const normalizedRunner = runner.trim().replaceAll(/\s+/g, ' ')
+  if (!allowedRunnerCommands.has(normalizedRunner)) {
+    throw new Error(`Unsupported package manager runner: "${runner}"`)
+  }
+
+  const parts = normalizedRunner.split(' ').map(part => part.trim()).filter(Boolean)
   const [command = runner, ...args] = parts
   return { command, args }
 }

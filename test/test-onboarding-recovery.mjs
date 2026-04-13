@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import process from 'node:process'
 import { getBuildOnboardingRecoveryAdvice } from '../src/build/onboarding/recovery.ts'
 import { renderOnboardingSupportBundle, writeOnboardingSupportBundle } from '../src/onboarding-support.ts'
+import { splitRunnerCommand } from '../src/runner-command.ts'
 
 let failures = 0
 
@@ -33,6 +34,19 @@ t('build onboarding advice suggests login and build request after missing auth',
     throw new Error('Expected login command in recovery advice')
   if (!advice.commands.includes('bunx @capgo/cli@latest build request com.example.app --platform ios'))
     throw new Error('Expected build request command in recovery advice')
+})
+
+t('runner command helper rejects unexpected executors', () => {
+  let threw = false
+  try {
+    splitRunnerCommand('sh -c')
+  }
+  catch {
+    threw = true
+  }
+
+  if (!threw)
+    throw new Error('Expected unsupported runner to throw')
 })
 
 t('support bundle renderer includes commands and docs', () => {

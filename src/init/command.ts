@@ -24,7 +24,7 @@ import { createKeyInternal } from '../key'
 import { doLoginExists, loginInternal } from '../login'
 import { writeOnboardingSupportBundle } from '../onboarding-support'
 import { showReplicationProgress } from '../replicationProgress'
-import { formatRunnerCommand } from '../runner-command'
+import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
@@ -443,8 +443,7 @@ async function maybeRunCapacitorInit(projectDir: string, projectType: string, in
 }
 
 function runCapacitorPlatformAdd(platformName: 'ios' | 'android', runner: string): boolean {
-  const runnerParts = runner.split(' ').filter(Boolean)
-  const [runnerCommand, ...runnerArgs] = runnerParts
+  const { command: runnerCommand, args: runnerArgs } = splitRunnerCommand(runner)
   const command = formatRunnerCommand(runner, ['cap', 'add', platformName])
   const spinner = pSpinner()
   spinner.start(`Running: ${command}`)
@@ -2150,10 +2149,14 @@ async function streamCommandInInitPanel(params: {
   // `pm.runner` can contain a space ("yarn dlx", "pnpm exec"). `spawn`
   // without `shell:true` can't handle that, and `shell:true` brings
   // quoting risk, so we split the runner into its own head + tail args.
-  const runnerParts = params.runner.split(' ').filter(Boolean)
-  if (runnerParts.length === 0)
-    return { success: false, error: new Error(`Invalid package manager runner: "${params.runner}"`) }
-  const [runnerCmd, ...runnerArgs] = runnerParts
+  let runnerCommand
+  try {
+    runnerCommand = splitRunnerCommand(params.runner)
+  }
+  catch (error) {
+    return { success: false, error: error instanceof Error ? error : new Error(String(error)) }
+  }
+  const { command: runnerCmd, args: runnerArgs } = runnerCommand
   const fullArgs = [...runnerArgs, ...params.args]
   const displayCommand = `${params.runner} ${params.args.join(' ')}`
 
