@@ -455,10 +455,20 @@ async function maybeRunCapacitorInit(projectDir: string, projectType: string, in
 }
 
 function runCapacitorPlatformAdd(platformName: 'ios' | 'android', runner: string): boolean {
-  const { command: runnerCommand, args: runnerArgs } = splitRunnerCommand(runner)
   const command = formatRunnerCommand(runner, ['cap', 'add', platformName])
   const spinner = pSpinner()
   spinner.start(`Running: ${command}`)
+
+  let runnerCommand = runner
+  let runnerArgs: string[] = []
+  try {
+    ({ command: runnerCommand, args: runnerArgs } = splitRunnerCommand(runner))
+  }
+  catch (error) {
+    spinner.stop(`Could not add ${platformName} automatically ❌`)
+    pLog.error(formatError(error))
+    return false
+  }
 
   const result = spawnSync(runnerCommand, [...runnerArgs, 'cap', 'add', platformName], { stdio: 'inherit' })
   if (result.error || result.status !== 0) {

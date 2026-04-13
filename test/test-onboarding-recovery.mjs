@@ -75,26 +75,29 @@ t('support bundle writer persists a file', () => {
   const originalHome = process.env.HOME
   const home = mkdtempSync(join(tmpdir(), 'capgo-home-'))
   process.env.HOME = home
-  const filePath = writeOnboardingSupportBundle({
-    kind: 'build-init',
-    appId: 'com.example.app',
-    error: 'broken',
-  })
+  try {
+    const filePath = writeOnboardingSupportBundle({
+      kind: 'build-init',
+      appId: 'com.example.app',
+      error: 'broken',
+    })
 
-  if (!filePath)
-    throw new Error('Expected support bundle file path')
-  if (!existsSync(filePath))
-    throw new Error('Expected support bundle file to exist')
+    if (!filePath)
+      throw new Error('Expected support bundle file path')
+    if (!existsSync(filePath))
+      throw new Error('Expected support bundle file to exist')
 
-  const contents = readFileSync(filePath, 'utf8')
-  if (!contents.includes('Capgo build-init support bundle'))
-    throw new Error('Expected support bundle header in file')
-
-  rmSync(home, { recursive: true, force: true })
-  if (typeof originalHome === 'undefined')
-    delete process.env.HOME
-  else
-    process.env.HOME = originalHome
+    const contents = readFileSync(filePath, 'utf8')
+    if (!contents.includes('Capgo build-init support bundle'))
+      throw new Error('Expected support bundle header in file')
+  }
+  finally {
+    rmSync(home, { recursive: true, force: true })
+    if (originalHome === undefined)
+      delete process.env.HOME
+    else
+      process.env.HOME = originalHome
+  }
 })
 
 t('support bundle writer fails safely when the home path is not writable', () => {
