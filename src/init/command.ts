@@ -374,7 +374,7 @@ async function waitUntilSetupIsDone(message = 'Type "ready" when the setup is do
       },
     })
     cancelBeforeAuthenticatedOnboarding(ready)
-    if ((ready as string).trim().toLowerCase() === 'ready')
+    if (typeof ready === 'string' && ready.trim().toLowerCase() === 'ready')
       return
   }
 }
