@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import process from 'node:process'
@@ -72,6 +72,7 @@ t('support bundle renderer includes commands and docs', () => {
 })
 
 t('support bundle writer persists a file', () => {
+  const originalHome = process.env.HOME
   const home = join(tmpdir(), `capgo-home-${Date.now()}`)
   process.env.HOME = home
   const filePath = writeOnboardingSupportBundle({
@@ -80,6 +81,8 @@ t('support bundle writer persists a file', () => {
     error: 'broken',
   })
 
+  if (!filePath)
+    throw new Error('Expected support bundle file path')
   if (!existsSync(filePath))
     throw new Error('Expected support bundle file to exist')
 
@@ -88,6 +91,26 @@ t('support bundle writer persists a file', () => {
     throw new Error('Expected support bundle header in file')
 
   rmSync(home, { recursive: true, force: true })
+  if (typeof originalHome === 'undefined')
+    delete process.env.HOME
+  else
+    process.env.HOME = originalHome
+})
+
+t('support bundle writer fails safely when the home path is not writable', () => {
+  const blockedPath = join(tmpdir(), `capgo-support-blocked-${Date.now()}`)
+  writeFileSync(blockedPath, 'not-a-directory', 'utf8')
+
+  const filePath = writeOnboardingSupportBundle({
+    kind: 'init',
+    appId: 'com.example.app',
+    error: 'broken',
+  }, blockedPath)
+
+  if (filePath !== null)
+    throw new Error('Expected support bundle writer to fail safely')
+
+  rmSync(blockedPath, { force: true })
 })
 
 if (failures > 0) {

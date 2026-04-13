@@ -1,3 +1,5 @@
+const RUNNER_WHITESPACE_RE = /\s+/g
+
 const allowedRunnerCommands = new Set([
   'bunx',
   'npx',
@@ -10,7 +12,7 @@ export function formatRunnerCommand(runner: string, args: string[]): string {
 }
 
 export function splitRunnerCommand(runner: string): { command: string, args: string[] } {
-  const normalizedRunner = runner.trim().replaceAll(/\s+/g, ' ')
+  const normalizedRunner = runner.trim().replaceAll(RUNNER_WHITESPACE_RE, ' ')
   if (!allowedRunnerCommands.has(normalizedRunner)) {
     throw new Error(`Unsupported package manager runner: "${runner}"`)
   }

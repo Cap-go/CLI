@@ -31,6 +31,9 @@ import {
 } from '../types.js'
 import { Divider, ErrorLine, FilteredTextInput, Header, SpinnerLine, SuccessLine } from './components.js'
 
+const OUTPUT_LINE_SPLIT_RE = /\r?\n/
+const CARRIAGE_RETURN_RE = /\r/g
+
 interface LogEntry { text: string, color?: string }
 
 interface AppProps {
@@ -41,7 +44,14 @@ interface AppProps {
 }
 
 async function runRunnerCommand(runner: string, args: string[]): Promise<{ success: boolean, output: string[] }> {
-  const { command, args: runnerArgs } = splitRunnerCommand(runner)
+  let command = runner
+  let runnerArgs: string[] = []
+  try {
+    ({ command, args: runnerArgs } = splitRunnerCommand(runner))
+  }
+  catch (error) {
+    return { success: false, output: [error instanceof Error ? error.message : String(error)] }
+  }
 
   return new Promise((resolve) => {
     const child = spawn(command, [...runnerArgs, ...args], {
@@ -51,8 +61,8 @@ async function runRunnerCommand(runner: string, args: string[]): Promise<{ succe
 
     const append = (chunk: Buffer | string) => {
       const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8')
-      for (const rawLine of text.split(/\r?\n/)) {
-        const line = rawLine.replace(/\r/g, '').trim()
+      for (const rawLine of text.split(OUTPUT_LINE_SPLIT_RE)) {
+        const line = rawLine.replaceAll(CARRIAGE_RETURN_RE, '').trim()
         if (line)
           output.push(line)
       }

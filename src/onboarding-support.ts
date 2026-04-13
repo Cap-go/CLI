@@ -2,6 +2,11 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { join } from 'node:path'
 
+const NON_SEGMENT_RE = /[^\w.-]+/g
+const DASHES_RE = /-+/g
+const EDGE_DASH_RE = /^-|-$/g
+const TIMESTAMP_RE = /[:.]/g
+
 export interface OnboardingSupportSection {
   title: string
   lines: string[]
@@ -24,11 +29,11 @@ function sanitizeSegment(value: string | undefined, fallback: string): string {
   const trimmed = value?.trim()
   if (!trimmed)
     return fallback
-  return trimmed.replaceAll(/[^\w.-]+/g, '-').replaceAll(/-+/g, '-').replaceAll(/^-|-$/g, '') || fallback
+  return trimmed.replaceAll(NON_SEGMENT_RE, '-').replaceAll(DASHES_RE, '-').replaceAll(EDGE_DASH_RE, '') || fallback
 }
 
 function nowStamp(): string {
-  return new Date().toISOString().replaceAll(/[:.]/g, '-')
+  return new Date().toISOString().replaceAll(TIMESTAMP_RE, '-')
 }
 
 export function renderOnboardingSupportBundle(input: OnboardingSupportBundleInput): string {
@@ -80,15 +85,19 @@ export function renderOnboardingSupportBundle(input: OnboardingSupportBundleInpu
   return `${lines.join('\n')}\n`
 }
 
-export function writeOnboardingSupportBundle(input: OnboardingSupportBundleInput): string {
-  const supportDir = join(homedir(), '.capgo-credentials', 'support')
-  mkdirSync(supportDir, { recursive: true })
+export function writeOnboardingSupportBundle(input: OnboardingSupportBundleInput, supportDir = join(homedir(), '.capgo-credentials', 'support')): string | null {
+  try {
+    mkdirSync(supportDir, { recursive: true })
 
-  const kind = sanitizeSegment(input.kind, 'onboarding')
-  const app = sanitizeSegment(input.appId, 'unknown-app')
-  const filename = `${kind}-${app}-${nowStamp()}.log`
-  const filePath = join(supportDir, filename)
+    const kind = sanitizeSegment(input.kind, 'onboarding')
+    const app = sanitizeSegment(input.appId, 'unknown-app')
+    const filename = `${kind}-${app}-${nowStamp()}.log`
+    const filePath = join(supportDir, filename)
 
-  writeFileSync(filePath, renderOnboardingSupportBundle(input), 'utf8')
-  return filePath
+    writeFileSync(filePath, renderOnboardingSupportBundle(input), 'utf8')
+    return filePath
+  }
+  catch {
+    return null
+  }
 }

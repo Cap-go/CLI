@@ -50,6 +50,7 @@ const frameworkSetupGuides = {
   nuxtjs: 'https://capgo.app/blog/nuxt-mobile-app-capacitor-from-scratch/',
   sveltekit: 'https://capgo.app/blog/creating-mobile-apps-with-sveltekit-and-capacitor/',
 } as const
+type CapacitorConfigSnapshot = Awaited<ReturnType<typeof getConfig>>['config']
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -63,6 +64,17 @@ let globalEncryptionSummary: InitEncryptionSummary | undefined
 let globalCurrentStepNumber = 0
 
 const CODE_DIFF_CONTEXT_LINES = 5
+
+function getNativePlatformAvailability(config?: CapacitorConfigSnapshot) {
+  const iosDir = getPlatformDirFromCapacitorConfig(config, 'ios')
+  const androidDir = getPlatformDirFromCapacitorConfig(config, 'android')
+  return {
+    iosDir,
+    androidDir,
+    ios: existsSync(join(cwd(), iosDir)),
+    android: existsSync(join(cwd(), androidDir)),
+  }
+}
 
 function getInitRecoveryCommands() {
   const pm = getPMAndCommand()
@@ -730,6 +742,7 @@ async function selectRecoveryOption<T extends string>(
   apikey: string,
   message: string,
   options: RecoveryOption<T>[],
+  failureText = message,
 ): Promise<T> {
   type RecoveryChoice = T | '__doctor__' | '__support__' | '__cancel__'
 
@@ -761,8 +774,11 @@ async function selectRecoveryOption<T extends string>(
     }
 
     if (choice === '__support__') {
-      const bundlePath = writeInitSupportBundle(message)
-      pLog.info(`Saved support bundle to ${bundlePath}`)
+      const bundlePath = writeInitSupportBundle(failureText)
+      if (bundlePath)
+        pLog.info(`Saved support bundle to ${bundlePath}`)
+      else
+        pLog.warn('Could not save a support bundle automatically.')
       continue
     }
 
@@ -936,7 +952,10 @@ async function handleBrokenIosSync(platformRunner: string, details: string[], or
       { title: 'Failure details', lines: details },
       { title: 'Recommended commands', lines: [resetAdvice.command, doctor] },
     ])
-    pLog.info(`Support bundle: ${supportBundlePath}`)
+    if (supportBundlePath)
+      pLog.info(`Support bundle: ${supportBundlePath}`)
+    else
+      pLog.warn('Could not save a support bundle automatically.')
   }
 
   if (failureCount % 3 === 0) {
@@ -1661,7 +1680,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         pLog.warn(blocker)
         await selectRecoveryOption(orgId, apikey, 'Fix the project, then choose what to do next.', [
           { value: 'retry', label: 'Retry updater checks' },
-        ])
+        ], blocker)
         continue
       }
 
@@ -1723,7 +1742,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         pLog.error(formatError(error))
         await selectRecoveryOption(orgId, apikey, 'Updater install failed. What do you want to do?', [
           { value: 'retry', label: 'Retry updater install' },
-        ])
+        ], formatError(error))
       }
     }
   }
@@ -2100,11 +2119,12 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
     }
     catch (error) {
       s.stop('Error', 'error')
-      pLog.warn(`Cannot create key ❌ ${error instanceof Error ? error.message : String(error)}`)
+      const failureText = error instanceof Error ? error.message : String(error)
+      pLog.warn(`Cannot create key ❌ ${failureText}`)
       const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
         { value: 'retry', label: 'Retry key creation' },
         { value: 'skip', label: 'Continue without encryption' },
-      ])
+      ], failureText)
 
       if (recoveryChoice === 'retry') {
         return addEncryptionStep(orgId, apikey, appId)
@@ -2238,8 +2258,47 @@ function promoteEncryptionSummaryToEnabled(): void {
   setInitEncryptionSummary(promoted)
 }
 
-async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
+async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android', config?: CapacitorConfigSnapshot) {
   const pm = getPMAndCommand()
+  const addPlatformCommand = formatRunnerCommand(pm.runner, ['cap', 'add', platform])
+
+  while (true) {
+    const availablePlatforms = getNativePlatformAvailability(config)
+    const platformExists = platform === 'ios' ? availablePlatforms.ios : availablePlatforms.android
+    if (platformExists)
+      break
+
+    const missingDir = platform === 'ios' ? availablePlatforms.iosDir : availablePlatforms.androidDir
+    pLog.warn(`⚠️  ${missingDir}/ is missing, so Capgo cannot build the ${platform.toUpperCase()} project yet.`)
+
+    const recoveryChoice = await pSelect({
+      message: `How do you want to continue with ${platform.toUpperCase()}?`,
+      options: [
+        { value: 'add', label: `🛠  Run ${addPlatformCommand} now` },
+        { value: 'doctor', label: 'Run doctor diagnostics now' },
+        { value: 'exit', label: 'Exit onboarding' },
+      ],
+    })
+
+    if (pIsCancel(recoveryChoice) || recoveryChoice === 'exit') {
+      pOutro(`Bye 👋\n💡 Run "${addPlatformCommand}", then try again.`)
+      exit()
+    }
+
+    if (recoveryChoice === 'doctor') {
+      try {
+        await getInfoInternal({ packageJson: globalPathToPackageJson }, false)
+      }
+      catch (error) {
+        pLog.warn(`Doctor found an issue: ${formatError(error)}`)
+      }
+      continue
+    }
+
+    if (!runCapacitorPlatformAdd(platform, pm.runner))
+      pLog.warn(`Still could not add ${platform}.`)
+  }
+
   const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
   await cancelCommand(doBuild, orgId, apikey)
   if (doBuild) {
@@ -2308,28 +2367,68 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
   await markStep(orgId, apikey, 'build-project', appId)
 }
 
-async function selectPlatformStep(orgId: string, apikey: string): Promise<'ios' | 'android'> {
+async function selectPlatformStep(orgId: string, apikey: string, config?: CapacitorConfigSnapshot): Promise<'ios' | 'android'> {
   pLog.info(`📱 Platform selection for onboarding`)
   pLog.info(`   This is just for testing during onboarding - your app will work on all platforms`)
 
-  const platformType = await pSelect({
-    message: 'Which platform do you want to test with during this onboarding?',
-    options: [
-      { value: 'ios', label: 'IOS' },
-      { value: 'android', label: 'Android' },
-    ],
-  })
-  if (pIsCancel(platformType)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
-    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-    exit()
-  }
+  while (true) {
+    const availablePlatforms = getNativePlatformAvailability(config)
+    const options: Array<{ value: 'ios' | 'android', label: string }> = []
+    if (availablePlatforms.ios)
+      options.push({ value: 'ios', label: 'IOS' })
+    if (availablePlatforms.android)
+      options.push({ value: 'android', label: 'Android' })
 
-  const platform = platformType as 'ios' | 'android'
-  pLog.info(`🎯 Testing with: ${platform.toUpperCase()}`)
-  pLog.info(`💡 Note: Onboarding builds will use ${platform} only`)
-  await markStep(orgId, apikey, 'select-platform', platform)
-  return platform
+    if (options.length > 0) {
+      const platformType = await pSelect({
+        message: 'Which platform do you want to test with during this onboarding?',
+        options,
+      })
+      if (pIsCancel(platformType)) {
+        await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
+        pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+        exit()
+      }
+
+      const platform = platformType as 'ios' | 'android'
+      pLog.info(`🎯 Testing with: ${platform.toUpperCase()}`)
+      pLog.info(`💡 Note: Onboarding builds will use ${platform} only`)
+      await markStep(orgId, apikey, 'select-platform', platform)
+      return platform
+    }
+
+    const { pm, capAddAndroid, capAddIos } = getInitRecoveryCommands()
+    pLog.warn(`⚠️  No native platform directories found (${availablePlatforms.iosDir}/ or ${availablePlatforms.androidDir}/).`)
+    const recoveryChoice = await pSelect({
+      message: 'Add a native platform before choosing a test platform.',
+      options: [
+        { value: 'add-ios', label: `🛠  Run ${capAddIos} now` },
+        { value: 'add-android', label: `🛠  Run ${capAddAndroid} now` },
+        { value: 'doctor', label: 'Run doctor diagnostics now' },
+        { value: 'exit', label: 'Exit onboarding' },
+      ],
+    })
+
+    if (pIsCancel(recoveryChoice) || recoveryChoice === 'exit') {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
+      pOutro(`Bye 👋\n💡 Run "${capAddIos}" or "${capAddAndroid}", then try again.`)
+      exit()
+    }
+
+    if (recoveryChoice === 'doctor') {
+      try {
+        await getInfoInternal({ packageJson: globalPathToPackageJson }, false)
+      }
+      catch (error) {
+        pLog.warn(`Doctor found an issue: ${formatError(error)}`)
+      }
+      continue
+    }
+
+    const platformToAdd = recoveryChoice === 'add-ios' ? 'ios' : 'android'
+    if (!runCapacitorPlatformAdd(platformToAdd, pm.runner))
+      pLog.warn(`Still could not add ${platformToAdd}.`)
+  }
 }
 
 async function runDeviceStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
@@ -2656,14 +2755,14 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
         pLog.error(formatError(error))
         await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
           { value: 'retry', label: 'Retry bundle upload' },
-        ])
+        ], formatError(error))
         continue
       }
       if (!uploadRes?.success) {
         s.stop('Upload failed ❌')
         await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
           { value: 'retry', label: 'Retry bundle upload' },
-        ])
+        ], 'Bundle upload did not complete successfully.')
         continue
       }
 
@@ -2914,13 +3013,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
   }
   else {
-    const iosDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'ios')
-    const androidDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'android')
-    const hasIos = existsSync(join(cwd(), iosDir))
-    const hasAndroid = existsSync(join(cwd(), androidDir))
-    if (!hasIos && !hasAndroid) {
+    const availablePlatforms = getNativePlatformAvailability(extConfig?.config)
+    if (!availablePlatforms.ios && !availablePlatforms.android) {
       const { pm, capAddAndroid, capAddIos } = getInitRecoveryCommands()
-      pLog.warn('⚠️  No native platform directories found (ios/ or android/).')
+      pLog.warn(`⚠️  No native platform directories found (${availablePlatforms.iosDir}/ or ${availablePlatforms.androidDir}/).`)
       pLog.info(`   Suggested commands: ${capAddIos} or ${capAddAndroid}`)
       const continueWithout = await pSelect({
         message: 'How do you want to continue?',
@@ -3149,7 +3245,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
 
     if (stepToSkip < 6) {
       renderCurrentStep(6)
-      platform = await selectPlatformStep(orgId, options.apikey)
+      platform = await selectPlatformStep(orgId, options.apikey, extConfig?.config)
       globalPlatform = platform
       markStepDone(6)
     }
@@ -3163,7 +3259,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       // Keeping it mounted through step 7 means the user sees the status
       // change the moment sync completes, which is much clearer than a
       // panel that silently disappears.
-      await buildProjectStep(orgId, options.apikey, appId, platform)
+      await buildProjectStep(orgId, options.apikey, appId, platform, extConfig?.config)
       markStepDone(7)
     }
 
@@ -3215,7 +3311,10 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     const { doctor } = getInitRecoveryCommands()
 
     pLog.error(`Error during onboarding: ${formattedError}`)
-    pLog.error(`Support bundle saved to ${supportBundlePath}`)
+    if (supportBundlePath)
+      pLog.error(`Support bundle saved to ${supportBundlePath}`)
+    else
+      pLog.error('Could not save a support bundle automatically.')
     pLog.error(`Run ${doctor} for extra diagnostics before contacting support@capgo.app`)
     pLog.error('Manual installation guide: https://capgo.app/docs/getting-started/add-an-app/')
     exit(1)
