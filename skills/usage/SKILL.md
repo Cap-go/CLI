@@ -16,7 +16,7 @@ TanStack Intent skills should stay focused and under the validator line limit, s
 
 ## Shared invocation rules
 
-- Prefer `bunx @capgo/cli@latest ...` in user-facing examples in this repo.
+- Prefer `npx @capgo/cli@latest ...` in user-facing examples in this repo.
 - Many commands can infer `appId` and related config from the current Capacitor project.
 - Shared public flags commonly include `-a, --apikey <apikey>` and `--verbose` on commands that support verbose output.
 
@@ -24,7 +24,7 @@ TanStack Intent skills should stay focused and under the validator line limit, s
 
 ### Project setup and diagnostics
 
-- `init [apikey] [appId]`: guided first-time setup for Capgo in a Capacitor app. The interactive flow now runs as a real Ink-based fullscreen onboarding so it uses the same UI stack as `build init` (alias: `build onboarding`), with a persistent dashboard, phase roadmap, progress cards, shared log area, and resume support. When dependency auto-detection fails on macOS, the flow opens a native file picker for `package.json` before falling back to manual path entry. If the user reuses a pending app that was already created in the web onboarding flow, the CLI syncs that selected dashboard app ID back into `capacitor.config.*` before the remaining steps continue. Outside that reused pending-app path, the CLI keeps using the local Capacitor app ID. It can also offer a final `bunx skills add https://github.com/Cap-go/capgo-skills -g -y` install step before the GitHub support prompt; if accepted, the support menu includes `Cap-go/capgo-skills` alongside the updater-only and all-Capgo choices. If native platforms are missing, the onboarding can offer to run `cap add` for you. If iOS sync validation fails during onboarding, the CLI can offer to run a one-line native reset command, wait for you to type `ready` after a manual fix, surface `doctor`, and save a support bundle before you leave the flow.
+- `init [apikey] [appId]`: guided first-time setup for Capgo in a Capacitor app. The interactive flow now runs as a real Ink-based fullscreen onboarding so it uses the same UI stack as `build init` (alias: `build onboarding`), with a persistent dashboard, phase roadmap, progress cards, shared log area, and resume support. When dependency auto-detection fails on macOS, the flow opens a native file picker for `package.json` before falling back to manual path entry. If the user reuses a pending app that was already created in the web onboarding flow, the CLI syncs that selected dashboard app ID back into `capacitor.config.*` before the remaining steps continue. Outside that reused pending-app path, the CLI keeps using the local Capacitor app ID. It can also offer a final `npx skills add https://github.com/Cap-go/capgo-skills -g -y` install step before the GitHub support prompt; if accepted, the support menu includes `Cap-go/capgo-skills` alongside the updater-only and all-Capgo choices. If native platforms are missing, the onboarding can offer to run `cap add` for you. If iOS sync validation fails during onboarding, the CLI can offer to run a one-line native reset command, wait for you to type `ready` after a manual fix, surface `doctor`, and save a support bundle before you leave the flow.
 - `login [apikey]`: store an API key locally.
 - `doctor`: inspect installation health and gather troubleshooting details.
 - `probe`: test whether the update endpoint would deliver an update.
@@ -80,10 +80,10 @@ Load `skills/organization-management/SKILL.md` when working with:
 ## Common command examples
 
 ```bash
-bunx @capgo/cli@latest init YOUR_API_KEY com.example.app
-bunx @capgo/cli@latest login YOUR_API_KEY
-bunx @capgo/cli@latest doctor
-bunx @capgo/cli@latest probe --platform ios
-bunx @capgo/cli@latest app add com.example.app --name "My App"
-bunx @capgo/cli@latest star-all
+npx @capgo/cli@latest init YOUR_API_KEY com.example.app
+npx @capgo/cli@latest login YOUR_API_KEY
+npx @capgo/cli@latest doctor
+npx @capgo/cli@latest probe --platform ios
+npx @capgo/cli@latest app add com.example.app --name "My App"
+npx @capgo/cli@latest star-all
 ```

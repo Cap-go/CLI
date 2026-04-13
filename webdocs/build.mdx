@@ -13,7 +13,7 @@ sidebar:
 **Alias:** `onboarding`
 
 ```bash
-bunx @capgo/cli@latest build init
+npx @capgo/cli@latest build init
 ```
 
 Set up iOS build credentials interactively (creates certificates and profiles automatically)
@@ -22,7 +22,7 @@ If `ios/` is missing, the onboarding can offer to run `cap add ios` for you. Une
 ### <a id="build-request"></a> 🔹 **Request**
 
 ```bash
-bunx @capgo/cli@latest build request
+npx @capgo/cli@latest build request
 ```
 
 Request a native build from Capgo Cloud.
@@ -31,12 +31,12 @@ The build will be processed and sent directly to app stores.
  🔒 SECURITY: Credentials are never stored on Capgo servers. They are auto-deleted
     after build completion. Build outputs may optionally be uploaded for time-limited download links.
 📋 PREREQUISITE: Save credentials first with:
-   `bunx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>`
+   `npx @capgo/cli build credentials save --appId <app-id> --platform <ios|android>`
 
 **Example:**
 
 ```bash
-bunx @capgo/cli@latest build request com.example.app --platform ios --path .
+npx @capgo/cli@latest build request com.example.app --platform ios --path .
 ```
 
 **Options:**
@@ -78,7 +78,7 @@ bunx @capgo/cli@latest build request com.example.app --platform ios --path .
 ### <a id="build-credentials"></a> 🔹 **Credentials**
 
 ```bash
-bunx @capgo/cli@latest build credentials
+npx @capgo/cli@latest build credentials
 ```
 
 Manage build credentials stored locally on your machine.
