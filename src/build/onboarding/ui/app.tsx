@@ -1232,8 +1232,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             <>
               <Text bold>Recovery plan</Text>
               <Box flexDirection="column" marginTop={1} marginLeft={2}>
-                {recoveryAdvice.summary.map((line, index) => (
-                  <Text key={`recovery-summary-${index}`}>{`• ${line}`}</Text>
+                {recoveryAdvice.summary.map(line => (
+                  <Text key={`recovery-summary-${line}`}>{`• ${line}`}</Text>
                 ))}
               </Box>
               {recoveryAdvice.commands.length > 0 && (
@@ -1241,8 +1241,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                   <Newline />
                   <Text bold>Helpful commands</Text>
                   <Box flexDirection="column" marginTop={1} marginLeft={2}>
-                    {recoveryAdvice.commands.map((command, index) => (
-                      <Text key={`recovery-command-${index}`} dimColor>{command}</Text>
+                    {recoveryAdvice.commands.map(command => (
+                      <Text key={`recovery-command-${command}`} dimColor>{command}</Text>
                     ))}
                   </Box>
                 </>
@@ -1252,8 +1252,8 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                   <Newline />
                   <Text bold>Docs</Text>
                   <Box flexDirection="column" marginTop={1} marginLeft={2}>
-                    {recoveryAdvice.docs.map((doc, index) => (
-                      <Text key={`recovery-doc-${index}`} color="cyan">{doc}</Text>
+                    {recoveryAdvice.docs.map(doc => (
+                      <Text key={`recovery-doc-${doc}`} color="cyan">{doc}</Text>
                     ))}
                   </Box>
                 </>

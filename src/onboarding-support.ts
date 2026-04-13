@@ -36,6 +36,23 @@ function nowStamp(): string {
   return new Date().toISOString().replaceAll(TIMESTAMP_RE, '-')
 }
 
+function appendMetadataLine(lines: string[], label: string, value: string | undefined): void {
+  if (value)
+    lines.push(`${label}: ${value}`)
+}
+
+function appendBulletedSection(lines: string[], title: string, items: string[] | undefined): void {
+  if (!items?.length)
+    return
+  lines.push('', `${title}:`, ...items.map(item => `- ${item}`))
+}
+
+function appendPlainSection(lines: string[], title: string, items: string[] | undefined): void {
+  if (!items?.length)
+    return
+  lines.push('', `${title}:`, ...items)
+}
+
 export function renderOnboardingSupportBundle(input: OnboardingSupportBundleInput): string {
   const lines: string[] = [
     `Capgo ${input.kind} support bundle`,
@@ -43,44 +60,18 @@ export function renderOnboardingSupportBundle(input: OnboardingSupportBundleInpu
     `Error: ${input.error}`,
   ]
 
-  if (input.appId)
-    lines.push(`App ID: ${input.appId}`)
-  if (input.currentStep)
-    lines.push(`Current step: ${input.currentStep}`)
-  if (input.packageManager)
-    lines.push(`Package manager: ${input.packageManager}`)
-  if (input.cwd)
-    lines.push(`Working directory: ${input.cwd}`)
+  appendMetadataLine(lines, 'App ID', input.appId)
+  appendMetadataLine(lines, 'Current step', input.currentStep)
+  appendMetadataLine(lines, 'Package manager', input.packageManager)
+  appendMetadataLine(lines, 'Working directory', input.cwd)
+  appendBulletedSection(lines, 'Recommended commands', input.commands)
+  appendBulletedSection(lines, 'Docs', input.docs)
 
-  if (input.commands?.length) {
-    lines.push('', 'Recommended commands:')
-    for (const command of input.commands) {
-      lines.push(`- ${command}`)
-    }
+  for (const section of input.sections ?? []) {
+    appendPlainSection(lines, section.title, section.lines)
   }
 
-  if (input.docs?.length) {
-    lines.push('', 'Docs:')
-    for (const doc of input.docs) {
-      lines.push(`- ${doc}`)
-    }
-  }
-
-  if (input.sections?.length) {
-    for (const section of input.sections) {
-      lines.push('', `${section.title}:`)
-      for (const line of section.lines) {
-        lines.push(line)
-      }
-    }
-  }
-
-  if (input.logs?.length) {
-    lines.push('', 'Recent logs:')
-    for (const line of input.logs) {
-      lines.push(line)
-    }
-  }
+  appendPlainSection(lines, 'Recent logs', input.logs)
 
   return `${lines.join('\n')}\n`
 }
