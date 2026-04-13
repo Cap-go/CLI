@@ -13,8 +13,8 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
 
 - Interactive command that automates iOS certificate and provisioning profile creation.
 - Reduces iOS setup from ~10 manual steps to 1 manual step (creating an API key) + 1 command.
-- Example: `npx @capgo/cli@latest build init`
-- Backward compatibility: `npx @capgo/cli@latest build onboarding` still works.
+- Example: `bunx @capgo/cli@latest build init`
+- Backward compatibility: `bunx @capgo/cli@latest build onboarding` still works.
 - Notes:
   - Uses Ink (React for terminal) for the interactive UI, alongside the main `init` onboarding flow.
   - Requires running inside a Capacitor project directory with an `ios/` folder.
@@ -24,6 +24,8 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
   - Progress persists in `~/.capgo-credentials/onboarding/<appId>.json` — safe to interrupt and resume.
   - Saves credentials to the same `~/.capgo-credentials/credentials.json` used by `build request`.
   - Optionally kicks off the first build at the end.
+  - If the native `ios/` folder is missing, onboarding can offer to run `cap add ios` automatically instead of exiting immediately.
+  - Unexpected failures now keep the user inside the recovery screen, show package-manager-aware commands, and save a support bundle under `~/.capgo-credentials/support/`.
 
 #### What it automates (iOS)
 
@@ -71,7 +73,7 @@ interface BuildLogger {
 
 ### `build request [appId]`
 
-- Example: `npx @capgo/cli@latest build request com.example.app --platform ios --path .`
+- Example: `bunx @capgo/cli@latest build request com.example.app --platform ios --path .`
 - Notes:
   - Zips the current project directory and uploads it to Capgo for building.
   - Builds are processed for store distribution.
@@ -129,7 +131,7 @@ Credentials are stored locally, either globally in `~/.capgo-credentials/credent
 - Example iOS flow:
 
 ```bash
-npx @capgo/cli build credentials save --platform ios \
+bunx @capgo/cli build credentials save --platform ios \
   --certificate ./cert.p12 --p12-password "password" \
   --ios-provisioning-profile ./profile.mobileprovision \
   --apple-key ./AuthKey.p8 --apple-key-id "KEY123" \
@@ -139,7 +141,7 @@ npx @capgo/cli build credentials save --platform ios \
 - Example multi-target iOS flow:
 
 ```bash
-npx @capgo/cli build credentials save --platform ios \
+bunx @capgo/cli build credentials save --platform ios \
   --ios-provisioning-profile ./App.mobileprovision \
   --ios-provisioning-profile com.example.widget=./Widget.mobileprovision
 ```
@@ -147,7 +149,7 @@ npx @capgo/cli build credentials save --platform ios \
 - Example Android flow:
 
 ```bash
-npx @capgo/cli build credentials save --platform android \
+bunx @capgo/cli build credentials save --platform android \
   --keystore ./release.keystore --keystore-alias "my-key" \
   --keystore-key-password "key-pass" \
   --play-config ./service-account.json
@@ -186,8 +188,8 @@ npx @capgo/cli build credentials save --platform android \
 ### `build credentials list`
 
 - Examples:
-  - `npx @capgo/cli build credentials list`
-  - `npx @capgo/cli build credentials list --appId com.example.app`
+  - `bunx @capgo/cli build credentials list`
+  - `bunx @capgo/cli build credentials list --appId com.example.app`
 - Options:
   - `--appId <appId>`
   - `--local`
@@ -195,9 +197,9 @@ npx @capgo/cli build credentials save --platform android \
 ### `build credentials clear`
 
 - Examples:
-  - `npx @capgo/cli build credentials clear`
-  - `npx @capgo/cli build credentials clear --local`
-  - `npx @capgo/cli build credentials clear --appId com.example.app --platform ios`
+  - `bunx @capgo/cli build credentials clear`
+  - `bunx @capgo/cli build credentials clear --local`
+  - `bunx @capgo/cli build credentials clear --appId com.example.app --platform ios`
 - Options:
   - `--appId <appId>`
   - `--platform <platform>`
@@ -208,8 +210,8 @@ npx @capgo/cli build credentials save --platform android \
 - Use to update specific credential fields without re-entering all data.
 - Platform is auto-detected from the supplied options.
 - Examples:
-  - `npx @capgo/cli build credentials update --ios-provisioning-profile ./new-profile.mobileprovision`
-  - `npx @capgo/cli build credentials update --local --keystore ./new-keystore.jks`
+  - `bunx @capgo/cli build credentials update --ios-provisioning-profile ./new-profile.mobileprovision`
+  - `bunx @capgo/cli build credentials update --local --keystore ./new-keystore.jks`
 - Core options:
   - `--appId <appId>`
   - `--platform <platform>`
@@ -222,7 +224,7 @@ npx @capgo/cli build credentials save --platform android \
 
 ### `build credentials migrate`
 
-- Example: `npx @capgo/cli build credentials migrate --platform ios`
+- Example: `bunx @capgo/cli build credentials migrate --platform ios`
 - Notes:
   - Converts `BUILD_PROVISION_PROFILE_BASE64` to `CAPGO_IOS_PROVISIONING_MAP`.
   - Discovers the main bundle ID from the Xcode project automatically.

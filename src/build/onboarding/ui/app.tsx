@@ -2,6 +2,7 @@ import type { FC } from 'react'
 import type { BuildLogger } from '../../request.js'
 import type { ApiKeyData, CertificateData, OnboardingProgress, OnboardingStep, ProfileData } from '../types.js'
 import { handleCustomMsg } from '../../qr.js'
+import { spawn } from 'node:child_process'
 import { Buffer } from 'node:buffer'
 import { existsSync } from 'node:fs'
 import { copyFile, readFile } from 'node:fs/promises'
@@ -13,13 +14,16 @@ import { Box, Newline, Text, useApp, useInput, useStdout } from 'ink'
 import open from 'open'
 // src/build/onboarding/ui/app.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { findSavedKey } from '../../../utils.js'
+import { writeOnboardingSupportBundle } from '../../../onboarding-support.js'
+import { formatRunnerCommand, splitRunnerCommand } from '../../../runner-command.js'
+import { findSavedKey, getPMAndCommand } from '../../../utils.js'
 import { loadSavedCredentials, updateSavedCredentials } from '../../credentials.js'
 import { requestBuildInternal } from '../../request.js'
 import { CertificateLimitError, createCertificate, createProfile, deleteProfile, DuplicateProfileError, ensureBundleId, generateJwt, revokeCertificate, verifyApiKey } from '../apple-api.js'
 import { createP12, DEFAULT_P12_PASSWORD, generateCsr } from '../csr.js'
 import { canUseFilePicker, openFilePicker } from '../file-picker.js'
 import { deleteProgress, getResumeStep, loadProgress, saveProgress } from '../progress.js'
+import { getBuildOnboardingRecoveryAdvice } from '../recovery.js'
 import {
   getPhaseLabel,
 
@@ -34,6 +38,36 @@ interface AppProps {
   initialProgress: OnboardingProgress | null
   /** Resolved iOS directory from capacitor.config (defaults to 'ios') */
   iosDir: string
+}
+
+async function runRunnerCommand(runner: string, args: string[]): Promise<{ success: boolean, output: string[] }> {
+  const { command, args: runnerArgs } = splitRunnerCommand(runner)
+
+  return new Promise((resolve) => {
+    const child = spawn(command, [...runnerArgs, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+    const output: string[] = []
+
+    const append = (chunk: Buffer | string) => {
+      const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8')
+      for (const rawLine of text.split(/\r?\n/)) {
+        const line = rawLine.replace(/\r/g, '').trim()
+        if (line)
+          output.push(line)
+      }
+    }
+
+    child.stdout?.on('data', append)
+    child.stderr?.on('data', append)
+    child.once('error', (error) => {
+      output.push(error.message)
+      resolve({ success: false, output })
+    })
+    child.once('close', (code) => {
+      resolve({ success: code === 0, output })
+    })
+  })
 }
 
 const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
@@ -90,10 +124,19 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
   const [profileData, setProfileData] = useState<ProfileData | null>(initialProgress?.completedSteps.profileCreated || null)
   const [buildUrl, setBuildUrl] = useState('')
   const [buildOutput, setBuildOutput] = useState<string[]>([])
+  const [supportBundlePath, setSupportBundlePath] = useState<string | null>(null)
 
   const addLog = useCallback((text: string, color = 'green') => {
     setLog(prev => [...prev, { text, color }])
   }, [])
+
+  const pm = getPMAndCommand()
+  const addIosCommand = formatRunnerCommand(pm.runner, ['cap', 'add', 'ios'])
+  const syncIosCommand = formatRunnerCommand(pm.runner, ['cap', 'sync', 'ios'])
+  const doctorCommand = formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'doctor'])
+  const buildInitCommand = formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'build', 'init'])
+  const buildRequestCommand = formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'build', 'request', appId, '--platform', 'ios'])
+  const loginCommand = formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'login'])
 
   const exitOnboarding = useCallback((message?: string) => {
     if (exitRequestedRef.current)
@@ -200,19 +243,30 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
       return
     }
     const message = err instanceof Error ? err.message : String(err)
-    if (retryCount === 0) {
-      setError(message)
-      setRetryStep(failedStep)
-      setRetryCount(1)
-      setStep('error')
+    const nextRetryCount = retryCount + 1
+    const bundlePath = writeOnboardingSupportBundle({
+      kind: 'build-init',
+      appId,
+      currentStep: failedStep,
+      packageManager: pm.pm,
+      cwd: process.cwd(),
+      error: message,
+      commands: [buildInitCommand, doctorCommand],
+      docs: ['https://capgo.app/docs/cli/cloud-build/ios/'],
+      logs: [
+        ...log.slice(-12).map(entry => entry.text),
+        ...buildOutput.slice(-12),
+      ],
+    })
+    setSupportBundlePath(bundlePath)
+    setError(message)
+    setRetryStep(failedStep)
+    setRetryCount(nextRetryCount)
+    if (nextRetryCount > 1) {
+      addLog(`⚠ Attempt ${nextRetryCount} failed. Recovery steps and a support bundle are available below.`, 'yellow')
     }
-    else {
-      // Second failure — exit
-      addLog(`✖ ${message}`, 'red')
-      addLog('Run `capgo build init` to retry from where you left off.', 'yellow')
-      setTimeout(() => exitOnboarding(), 100)
-    }
-  }, [retryCount, addLog, exitOnboarding])
+    setStep('error')
+  }, [retryCount, addLog, appId, buildInitCommand, buildOutput, doctorCommand, log, pm.pm])
 
   // ── Credential save logic ──
 
@@ -291,10 +345,28 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     }
 
     if (step === 'no-platform') {
-      setTimeout(() => {
-        if (!cancelled)
-          exit()
-      }, 2000)
+      pickerOpenedRef.current = false
+    }
+
+    if (step === 'adding-platform') {
+      ;(async () => {
+        const result = await runRunnerCommand(pm.runner, ['cap', 'add', 'ios'])
+        if (cancelled)
+          return
+
+        if (result.success && existsSync(join(process.cwd(), iosDir))) {
+          addLog(`✔ Native iOS platform created with ${addIosCommand}`)
+          setError(null)
+          setRetryCount(0)
+          setStep('platform-select')
+          return
+        }
+
+        const detail = result.output.length > 0
+          ? `\n${result.output.slice(-6).join('\n')}`
+          : ''
+        handleError(new Error(`Could not add the iOS platform automatically.${detail}`), 'adding-platform')
+      })()
     }
 
     if (step === 'p8-method-select' && !pickerOpenedRef.current) {
@@ -325,9 +397,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         catch (err) {
           if (cancelled)
             return
-          setError(`Could not read file: ${err instanceof Error ? err.message : String(err)}`)
-          setRetryStep('api-key-instructions')
-          setStep('error')
+          handleError(new Error(`Could not read file: ${err instanceof Error ? err.message : String(err)}`), 'api-key-instructions')
         }
       })()
     }
@@ -519,7 +589,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
           }
           if (!capgoKey) {
             setBuildOutput(prev => [...prev, '⚠ No Capgo API key found.'])
-            setBuildOutput(prev => [...prev, 'Run `capgo login` first, then `capgo build request`.'])
+            setBuildOutput(prev => [...prev, `Run \`${loginCommand}\` first, then \`${buildRequestCommand}\`.`])
             setStep('build-complete')
             return
           }
@@ -574,7 +644,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
           // Build failure is non-fatal — credentials are saved
           if (!cancelled) {
             setBuildOutput(prev => [...prev, `⚠ ${err instanceof Error ? err.message : String(err)}`])
-            setBuildOutput(prev => [...prev, 'Your credentials are saved. Run `npx @capgo/cli@latest build request --platform ios` to try again.'])
+            setBuildOutput(prev => [...prev, `Your credentials are saved. Run \`${buildRequestCommand}\` to try again.`])
             setStep('build-complete')
           }
         }
@@ -603,9 +673,12 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
 
   const progress = STEP_PROGRESS[step] ?? 0
   const phaseLabel = getPhaseLabel(step)
-  const showProgress = step !== 'welcome' && step !== 'platform-select' && step !== 'error' && step !== 'build-complete' && step !== 'requesting-build'
+  const showProgress = step !== 'welcome' && step !== 'platform-select' && step !== 'adding-platform' && step !== 'no-platform' && step !== 'error' && step !== 'build-complete' && step !== 'requesting-build'
   const showHeader = step !== 'requesting-build'
   const showLog = step !== 'requesting-build' && step !== 'build-complete'
+  const recoveryAdvice = error
+    ? getBuildOnboardingRecoveryAdvice(error, retryStep, pm.runner, appId)
+    : null
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -678,14 +751,44 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
       {/* No platform directory */}
       {step === 'no-platform' && (
         <Box flexDirection="column" marginTop={1}>
-          <ErrorLine text="No ios/ directory found." />
+          <ErrorLine text={`No ${iosDir}/ directory found.`} />
           <Newline />
-          <Text>
-            Run
-            <Text bold color="white">npx cap add ios</Text>
-            {' '}
-            first, then re-run onboarding.
-          </Text>
+          <Text>This onboarding flow needs a generated native iOS project before credentials can be created.</Text>
+          <Newline />
+          <Text dimColor>{`Suggested commands: ${addIosCommand} && ${syncIosCommand}`}</Text>
+          <Newline />
+          <Select
+            options={[
+              { label: `🛠  Run ${addIosCommand} now`, value: 'run' },
+              { label: '🔄  I already fixed it, re-check', value: 'recheck' },
+              { label: '✖  Exit onboarding', value: 'exit' },
+            ]}
+            onChange={(value) => {
+              if (value === 'run') {
+                setStep('adding-platform')
+              }
+              else if (value === 'recheck') {
+                if (existsSync(join(process.cwd(), iosDir))) {
+                  addLog(`✔ Found ${iosDir}/ — resuming onboarding.`)
+                  setStep('platform-select')
+                }
+                else {
+                  addLog(`⚠ ${iosDir}/ is still missing. Try ${addIosCommand} or ${doctorCommand}.`, 'yellow')
+                }
+              }
+              else {
+                addLog(`Exiting. Run \`${buildInitCommand}\` after the native iOS folder exists.`, 'yellow')
+                exitOnboarding()
+              }
+            }}
+          />
+        </Box>
+      )}
+
+      {step === 'adding-platform' && (
+        <Box flexDirection="column" marginTop={1}>
+          <SpinnerLine text={`Running ${addIosCommand}...`} />
+          <Text dimColor>{`If this still fails, try ${doctorCommand} and keep the support bundle path from the error screen.`}</Text>
         </Box>
       )}
 
@@ -816,9 +919,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                       setStep('input-key-id')
                     }
                     catch {
-                      setError(`File not found: ${filePath}`)
-                      setRetryStep('api-key-instructions')
-                      setStep('error')
+                      handleError(new Error(`File not found: ${filePath}`), 'api-key-instructions')
                     }
                   }}
                 />
@@ -856,9 +957,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                   setStep('input-key-id')
                 }
                 catch {
-                  setError(`File not found: ${value}`)
-                  setRetryStep('input-p8-path')
-                  setStep('error')
+                  handleError(new Error(`File not found: ${value}`), 'input-p8-path')
                 }
               }}
             />
@@ -990,7 +1089,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             ]}
             onChange={(value) => {
               if (value === '__exit__') {
-                addLog('Exiting. Revoke a certificate manually, then re-run onboarding.', 'yellow')
+                addLog(`Exiting. Revoke a certificate manually in App Store Connect, then resume with ${buildInitCommand}.`, 'yellow')
                 exitOnboarding()
               }
               else {
@@ -1035,7 +1134,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                 setStep('deleting-duplicate-profiles')
               }
               else {
-                addLog('Exiting. Delete duplicate profiles manually in the Apple Developer Portal, then re-run onboarding.', 'yellow')
+                addLog(`Exiting. Delete the duplicate profiles in App Store Connect, then resume with ${buildInitCommand}.`, 'yellow')
                 exitOnboarding()
               }
             }}
@@ -1119,7 +1218,47 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
         <Box flexDirection="column" marginTop={1}>
           <ErrorLine text={error} />
           <Newline />
-          {retryCount <= 1 && retryStep && (
+          {recoveryAdvice && (
+            <>
+              <Text bold>Recovery plan</Text>
+              <Box flexDirection="column" marginTop={1} marginLeft={2}>
+                {recoveryAdvice.summary.map((line, index) => (
+                  <Text key={`recovery-summary-${index}`}>{`• ${line}`}</Text>
+                ))}
+              </Box>
+              {recoveryAdvice.commands.length > 0 && (
+                <>
+                  <Newline />
+                  <Text bold>Helpful commands</Text>
+                  <Box flexDirection="column" marginTop={1} marginLeft={2}>
+                    {recoveryAdvice.commands.map((command, index) => (
+                      <Text key={`recovery-command-${index}`} dimColor>{command}</Text>
+                    ))}
+                  </Box>
+                </>
+              )}
+              {recoveryAdvice.docs.length > 0 && (
+                <>
+                  <Newline />
+                  <Text bold>Docs</Text>
+                  <Box flexDirection="column" marginTop={1} marginLeft={2}>
+                    {recoveryAdvice.docs.map((doc, index) => (
+                      <Text key={`recovery-doc-${index}`} color="cyan">{doc}</Text>
+                    ))}
+                  </Box>
+                </>
+              )}
+            </>
+          )}
+          {supportBundlePath && (
+            <>
+              <Newline />
+              <Text bold>Support bundle</Text>
+              <Text dimColor>{supportBundlePath}</Text>
+            </>
+          )}
+          <Newline />
+          {retryStep && (
             <>
               <Text bold>What do you want to do?</Text>
               <Newline />
@@ -1139,10 +1278,11 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
                     setError(null)
                     setRetryCount(0)
                     pickerOpenedRef.current = false
+                    setSupportBundlePath(null)
                     setStep('welcome')
                   }
                   else {
-                    setError('Run `capgo build init` to resume.')
+                    setError(`Run \`${buildInitCommand}\` to resume.`)
                     exitOnboarding()
                   }
                 }}
@@ -1185,7 +1325,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
             <Text dimColor>
               Run
               {' '}
-              <Text bold color="white">npx @capgo/cli@latest build request --platform ios</Text>
+              <Text bold color="white">{buildRequestCommand}</Text>
               {' '}
               anytime to start a build.
             </Text>
