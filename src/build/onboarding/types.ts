@@ -5,6 +5,7 @@ export type Platform = 'ios' | 'android'
 export type OnboardingStep
   = | 'welcome'
     | 'platform-select'
+    | 'adding-platform'
     | 'credentials-exist'
     | 'backing-up'
     | 'api-key-instructions'
@@ -66,6 +67,7 @@ export interface OnboardingProgress {
 export const STEP_PROGRESS: Record<OnboardingStep, number> = {
   'welcome': 0,
   'platform-select': 0,
+  'adding-platform': 0,
   'credentials-exist': 0,
   'backing-up': 0,
   'api-key-instructions': 5,
@@ -92,6 +94,7 @@ export function getPhaseLabel(step: OnboardingStep): string {
   switch (step) {
     case 'welcome':
     case 'platform-select':
+    case 'adding-platform':
     case 'credentials-exist':
     case 'backing-up':
       return ''
