@@ -874,6 +874,29 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
     log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/settings/organization/plans\n`)
 }
 
+function tryReadKey(path: string): string | undefined {
+  try {
+    if (!existsSync(path))
+      return undefined
+    return readFileSync(path, 'utf8').trim() || undefined
+  }
+  catch {
+    // Swallow permission errors, TOCTOU races, transient fs issues —
+    // the contract is silent best-effort resolution.
+    return undefined
+  }
+}
+
+export function findSavedKeySilent(): string | undefined {
+  const envKey = env.CAPGO_TOKEN?.trim()
+  if (envKey)
+    return envKey
+  const globalKey = tryReadKey(`${homedir()}/.capgo`)
+  if (globalKey)
+    return globalKey
+  return tryReadKey(`.capgo`)
+}
+
 export function findSavedKey(quiet = false) {
   const envKey = env.CAPGO_TOKEN?.trim()
   if (envKey) {

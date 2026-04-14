@@ -16,7 +16,7 @@ import open from 'open'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { writeOnboardingSupportBundle } from '../../../onboarding-support.js'
 import { formatRunnerCommand, splitRunnerCommand } from '../../../runner-command.js'
-import { findSavedKey, getPMAndCommand } from '../../../utils.js'
+import { findSavedKeySilent, getPMAndCommand } from '../../../utils.js'
 import { loadSavedCredentials, updateSavedCredentials } from '../../credentials.js'
 import { requestBuildInternal } from '../../request.js'
 import { CertificateLimitError, createCertificate, createProfile, deleteProfile, DuplicateProfileError, ensureBundleId, generateJwt, revokeCertificate, verifyApiKey } from '../apple-api.js'
@@ -41,6 +41,8 @@ interface AppProps {
   initialProgress: OnboardingProgress | null
   /** Resolved iOS directory from capacitor.config (defaults to 'ios') */
   iosDir: string
+  /** Optional Capgo API key passed via -a/--apikey flag; takes precedence over saved key */
+  apikey?: string
 }
 
 async function runRunnerCommand(runner: string, args: string[]): Promise<{ success: boolean, output: string[] }> {
@@ -80,7 +82,7 @@ async function runRunnerCommand(runner: string, args: string[]): Promise<{ succe
   })
 }
 
-const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
+const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir, apikey }) => {
   const { exit } = useApp()
   const startStep = getResumeStep(initialProgress)
 
@@ -590,13 +592,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     if (step === 'requesting-build') {
       ;(async () => {
         try {
-          let capgoKey: string | undefined
-          try {
-            capgoKey = findSavedKey(true)
-          }
-          catch {
-            // No key found
-          }
+          const capgoKey = apikey ?? findSavedKeySilent()
           if (!capgoKey) {
             setBuildOutput(prev => [...prev, '⚠ No Capgo API key found.'])
             setBuildOutput(prev => [...prev, `Run \`${loginCommand}\` first, then \`${buildRequestCommand}\`.`])

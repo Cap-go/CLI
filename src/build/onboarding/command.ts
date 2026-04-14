@@ -8,7 +8,11 @@ import { getPlatformDirFromCapacitorConfig } from '../platform-paths.js'
 import { loadProgress } from './progress.js'
 import OnboardingApp from './ui/app.js'
 
-export async function onboardingBuilderCommand(): Promise<void> {
+export interface OnboardingBuilderOptions {
+  apikey?: string
+}
+
+export async function onboardingBuilderCommand(options: OnboardingBuilderOptions = {}): Promise<void> {
   // Ink requires an interactive terminal — fail fast in CI/pipes
   if (!process.stdin.isTTY || !process.stdout.isTTY) {
     console.error('Error: `build init` requires an interactive terminal.')
@@ -39,7 +43,7 @@ export async function onboardingBuilderCommand(): Promise<void> {
 
   // Launch Ink app
   const { waitUntilExit } = render(
-    React.createElement(OnboardingApp, { appId, initialProgress: progress, iosDir }),
+    React.createElement(OnboardingApp, { appId, initialProgress: progress, iosDir, apikey: options.apikey }),
   )
 
   await waitUntilExit()
