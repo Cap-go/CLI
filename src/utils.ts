@@ -874,6 +874,20 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
     log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/settings/organization/plans\n`)
 }
 
+export function findSavedKeySilent(): string | undefined {
+  const envKey = env.CAPGO_TOKEN?.trim()
+  if (envKey)
+    return envKey
+  const userHomeDir = homedir()
+  const globalPath = `${userHomeDir}/.capgo`
+  if (existsSync(globalPath))
+    return readFileSync(globalPath, 'utf8').trim() || undefined
+  const localPath = `.capgo`
+  if (existsSync(localPath))
+    return readFileSync(localPath, 'utf8').trim() || undefined
+  return undefined
+}
+
 export function findSavedKey(quiet = false) {
   const envKey = env.CAPGO_TOKEN?.trim()
   if (envKey) {

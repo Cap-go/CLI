@@ -13,7 +13,7 @@ import { Box, Newline, Text, useApp, useInput, useStdout } from 'ink'
 import open from 'open'
 // src/build/onboarding/ui/app.tsx
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import { findSavedKey } from '../../../utils.js'
+import { findSavedKeySilent } from '../../../utils.js'
 import { loadSavedCredentials, updateSavedCredentials } from '../../credentials.js'
 import { requestBuildInternal } from '../../request.js'
 import { CertificateLimitError, createCertificate, createProfile, deleteProfile, DuplicateProfileError, ensureBundleId, generateJwt, revokeCertificate, verifyApiKey } from '../apple-api.js'
@@ -512,15 +512,7 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir, apikey })
     if (step === 'requesting-build') {
       ;(async () => {
         try {
-          let capgoKey: string | undefined = apikey
-          if (!capgoKey) {
-            try {
-              capgoKey = findSavedKey(true)
-            }
-            catch {
-              // No key found
-            }
-          }
+          const capgoKey = apikey ?? findSavedKeySilent()
           if (!capgoKey) {
             setBuildOutput(prev => [...prev, '⚠ No Capgo API key found.'])
             setBuildOutput(prev => [...prev, 'Run `capgo login` first, then `capgo build request`.'])
