@@ -1128,6 +1128,12 @@ npx @capgo/cli@latest build init
 
 Set up iOS build credentials interactively (creates certificates and profiles automatically)
 
+**Options:**
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **-a,** | <code>string</code> | API key to link to your account |
+
 ### <a id="build-request"></a> 🔹 **Request**
 
 ```bash
