@@ -34,9 +34,11 @@ interface AppProps {
   initialProgress: OnboardingProgress | null
   /** Resolved iOS directory from capacitor.config (defaults to 'ios') */
   iosDir: string
+  /** Optional Capgo API key passed via -a/--apikey flag; takes precedence over saved key */
+  apikey?: string
 }
 
-const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
+const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir, apikey }) => {
   const { exit } = useApp()
   const startStep = getResumeStep(initialProgress)
 
@@ -510,12 +512,14 @@ const OnboardingApp: FC<AppProps> = ({ appId, initialProgress, iosDir }) => {
     if (step === 'requesting-build') {
       ;(async () => {
         try {
-          let capgoKey: string | undefined
-          try {
-            capgoKey = findSavedKey(true)
-          }
-          catch {
-            // No key found
+          let capgoKey: string | undefined = apikey
+          if (!capgoKey) {
+            try {
+              capgoKey = findSavedKey(true)
+            }
+            catch {
+              // No key found
+            }
           }
           if (!capgoKey) {
             setBuildOutput(prev => [...prev, '⚠ No Capgo API key found.'])

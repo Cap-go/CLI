@@ -734,6 +734,7 @@ build
   .command('init')
   .alias('onboarding')
   .description('Set up iOS build credentials interactively (creates certificates and profiles automatically)')
+  .option('-a, --apikey <apikey>', 'API key to link to your account')
   .action(onboardingBuilderCommand)
 
 build
