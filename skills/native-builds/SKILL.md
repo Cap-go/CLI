@@ -15,6 +15,9 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
 - Reduces iOS setup from ~10 manual steps to 1 manual step (creating an API key) + 1 command.
 - Example: `npx @capgo/cli@latest build init`
 - Backward compatibility: `npx @capgo/cli@latest build onboarding` still works.
+- Options:
+  - `-a, --apikey <apikey>` — Capgo API key to authenticate with (alternative to the `CAPGO_TOKEN` env var or `~/.capgo` / local `.capgo` file). Takes precedence over a saved key when both are present. Lets the SaaS onboarding wizard render a single copy-pasteable command across bash, zsh, fish, PowerShell, and cmd.exe.
+  - Example: `npx @capgo/cli@latest build init -a cap_xxx`
 - Notes:
   - Uses Ink (React for terminal) for the interactive UI, alongside the main `init` onboarding flow.
   - Requires running inside a Capacitor project directory with an `ios/` folder.
