@@ -27,6 +27,8 @@ Use this skill for Capgo Cloud native iOS and Android build workflows.
   - Progress persists in `~/.capgo-credentials/onboarding/<appId>.json` — safe to interrupt and resume.
   - Saves credentials to the same `~/.capgo-credentials/credentials.json` used by `build request`.
   - Optionally kicks off the first build at the end.
+  - If the native `ios/` folder is missing, onboarding can offer to run `cap add ios` automatically instead of exiting immediately.
+  - Unexpected failures now keep the user inside the recovery screen, show package-manager-aware commands, and save a support bundle under `~/.capgo-credentials/support/`.
 
 #### What it automates (iOS)
 
