@@ -115,7 +115,7 @@
     "prettyjson": "^1.2.5",
     "tmp": "^0.2.5",
     "tus-js-client": "^4.3.1",
-    "typescript": "^5.9.3",
+    "typescript": "^6.0.0",
     "ws": "^8.18.3",
     "zod": "^4.3.6"
   },
