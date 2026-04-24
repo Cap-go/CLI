@@ -92,7 +92,7 @@
     "@sauber/table": "npm:@jsr/sauber__table",
     "@std/semver": "npm:@jsr/std__semver@1.0.8",
     "@supabase/supabase-js": "^2.79.0",
-    "@tanstack/intent": "^0.0.23",
+    "@tanstack/intent": "^0.0.36",
     "@types/adm-zip": "^0.5.7",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^25.0.0",
