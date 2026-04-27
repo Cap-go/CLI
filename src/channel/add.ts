@@ -19,7 +19,7 @@ export async function addChannelInternal(channelId: string, appId: string, optio
     intro('Create channel')
 
   options.apikey = options.apikey || findSavedKey()
-  const extConfig = await getConfig().catch(() => undefined)
+  const extConfig = await getConfig(silent).catch(() => undefined)
   appId = getAppId(appId, extConfig?.config)
 
   if (!options.apikey) {
@@ -34,7 +34,7 @@ export async function addChannelInternal(channelId: string, appId: string, optio
     throw new Error('Missing appId')
   }
 
-  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon)
+  const supabase = await createSupabaseClient(options.apikey, options.supaHost, options.supaAnon, silent)
   await check2FAComplianceForApp(supabase, appId, silent)
   await resolveUserIdFromApiKey(supabase, options.apikey)
   await checkAppExistsAndHasPermissionOrgErr(supabase, options.apikey, appId, OrganizationPerm.admin, silent, true)
@@ -42,7 +42,7 @@ export async function addChannelInternal(channelId: string, appId: string, optio
   if (!silent)
     log.info(`Creating channel ${appId}#${channelId} to Capgo`)
 
-  const data = await findUnknownVersion(supabase, appId)
+  const data = await findUnknownVersion(supabase, appId, { silent })
   if (!data) {
     if (!silent)
       log.error('Cannot find default version for channel creation, please contact Capgo support 🤨')

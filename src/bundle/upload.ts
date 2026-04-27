@@ -18,6 +18,7 @@ import { calcKeyId, encryptChecksum, encryptChecksumV3, encryptSource, generateS
 import { checkAlerts } from '../api/update'
 import { getChecksum } from '../checksum'
 import { getRepoStarStatus, isRepoStarredInSession, starRepository } from '../github'
+import { confirmWithRememberedChoice } from '../promptPreferences'
 import { showReplicationProgress } from '../replicationProgress'
 import { baseKeyV2, BROTLI_MIN_UPDATER_VERSION_V5, BROTLI_MIN_UPDATER_VERSION_V6, BROTLI_MIN_UPDATER_VERSION_V7, canPromptInteractively, checkChecksum, checkCompatibilityCloud, checkPlanValidUpload, checkRemoteCliMessages, createSupabaseClient, deletedFailedVersion, findRoot, findSavedKey, formatError, getAppId, getBundleVersion, getCompatibilityDetails, getConfig, getInstalledVersion, getLocalConfig, getLocalDependencies, getOrganizationId, getPMAndCommand, getRemoteFileConfig, hasOrganizationPerm, isCompatible, isDeprecatedPluginVersion, OrganizationPerm, regexSemver, resolveUserIdFromApiKey, sendEvent, updateConfigUpdater, updateOrCreateChannel, updateOrCreateVersion, UPLOAD_TIMEOUT, uploadTUS, uploadUrl, zipFile } from '../utils'
 import { getVersionSuggestions, interactiveVersionBump } from '../versionHelpers'
@@ -1244,11 +1245,12 @@ export async function uploadBundleInternal(preAppid: string, options: OptionsUpl
   if (interactive && !result.skipped) {
     let shouldShowReplicationProgress = options.showReplicationProgress
     if (shouldShowReplicationProgress === undefined) {
-      const showReplicationProgressPrompt = await pConfirm({
+      shouldShowReplicationProgress = await confirmWithRememberedChoice({
+        preferenceKey: 'uploadShowReplicationProgress',
         message: 'Show Capgo global replication progress for this upload so you can confirm rollout in all regions?',
         initialValue: false,
+        rememberMessage: 'Remember this replication progress preference for future uploads on this machine?',
       })
-      shouldShowReplicationProgress = !pIsCancel(showReplicationProgressPrompt) && showReplicationProgressPrompt
     }
 
     if (shouldShowReplicationProgress) {
@@ -1322,8 +1324,12 @@ async function maybePromptStarCapgoRepo() {
   if (isRepoStarredInSession(status.repository) || !status.ghInstalled || !status.ghLoggedIn || !status.repositoryExists || status.starred)
     return
 
-  const doStar = await pConfirm({ message: `Would you like to star ${status.repository} on GitHub to support Capgo?` })
-  if (pIsCancel(doStar) || !doStar) {
+  const doStar = await confirmWithRememberedChoice({
+    preferenceKey: 'uploadStarCapgoRepo',
+    message: `Would you like to star ${status.repository} on GitHub to support Capgo?`,
+    rememberMessage: 'Remember this GitHub support preference for future uploads on this machine?',
+  })
+  if (!doStar) {
     return
   }
 

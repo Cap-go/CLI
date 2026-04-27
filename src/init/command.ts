@@ -1,16 +1,19 @@
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
-import { execSync, spawnSync } from 'node:child_process'
+import type { InitCodeDiff, InitEncryptionPhase, InitEncryptionSummary } from './runtime'
+import { execSync, spawn, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
-import { cwd, env, exit, platform, stdin, stdout } from 'node:process'
+import { chdir, cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
+import open from 'open'
 import tmp from 'tmp'
 import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
 import { checkVersionStatus } from '../api/update'
 import { addAppInternal } from '../app/add'
 import { markSnag, waitLog } from '../app/debug'
+import { getInfoInternal } from '../app/info'
 import { canUseFilePicker, openPackageJsonPicker } from '../build/onboarding/file-picker'
 import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
 import { uploadBundleInternal } from '../bundle/upload'
@@ -19,10 +22,12 @@ import { writeConfigUpdater } from '../config'
 import { getRepoStarStatus, isRepoStarredInSession, starAllRepositories, starRepository } from '../github'
 import { createKeyInternal } from '../key'
 import { doLoginExists, loginInternal } from '../login'
+import { writeOnboardingSupportBundle } from '../onboarding-support'
 import { showReplicationProgress } from '../replicationProgress'
+import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getOrganizationListWithPermission, getPackageScripts, getPMAndCommand, hasCliPermission, PACKNAME, projectIsMonorepo, resolveUserIdFromApiKey, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { setInitVersionWarning, stopInitInkSession } from './runtime'
+import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
@@ -45,6 +50,7 @@ const frameworkSetupGuides = {
   nuxtjs: 'https://capgo.app/blog/nuxt-mobile-app-capacitor-from-scratch/',
   sveltekit: 'https://capgo.app/blog/creating-mobile-apps-with-sveltekit-and-capacitor/',
 } as const
+type CapacitorConfigSnapshot = Awaited<ReturnType<typeof getConfig>>['config']
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -53,6 +59,139 @@ let globalPlatform: 'ios' | 'android' = 'ios'
 let globalDelta = false
 let globalCurrentVersion: string | undefined
 let globalAppId: string | undefined
+let globalCodeDiff: InitCodeDiff | undefined
+let globalEncryptionSummary: InitEncryptionSummary | undefined
+let globalCurrentStepNumber = 0
+
+const CODE_DIFF_CONTEXT_LINES = 5
+
+function getNativePlatformAvailability(config?: CapacitorConfigSnapshot) {
+  const iosDir = getPlatformDirFromCapacitorConfig(config, 'ios')
+  const androidDir = getPlatformDirFromCapacitorConfig(config, 'android')
+  return {
+    iosDir,
+    androidDir,
+    ios: existsSync(join(cwd(), iosDir)),
+    android: existsSync(join(cwd(), androidDir)),
+  }
+}
+
+function getInitRecoveryCommands() {
+  const pm = getPMAndCommand()
+  return {
+    pm,
+    doctor: formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'doctor']),
+    buildInit: formatRunnerCommand(pm.runner, ['@capgo/cli@latest', 'build', 'init']),
+    capAddIos: formatRunnerCommand(pm.runner, ['cap', 'add', 'ios']),
+    capAddAndroid: formatRunnerCommand(pm.runner, ['cap', 'add', 'android']),
+    capSyncIos: formatRunnerCommand(pm.runner, ['cap', 'sync', 'ios']),
+    capSyncAndroid: formatRunnerCommand(pm.runner, ['cap', 'sync', 'android']),
+  }
+}
+
+function writeInitSupportBundle(error: string, extraSections: { title: string, lines: string[] }[] = []) {
+  const currentStep = globalCurrentStepNumber > 0
+    ? `Step ${globalCurrentStepNumber}/${initOnboardingSteps.length} · ${initOnboardingSteps[globalCurrentStepNumber - 1]?.title ?? 'Unknown step'}`
+    : undefined
+  const { pm, doctor, capAddIos, capAddAndroid } = getInitRecoveryCommands()
+
+  return writeOnboardingSupportBundle({
+    kind: 'init',
+    appId: globalAppId,
+    currentStep,
+    packageManager: pm.pm,
+    cwd: cwd(),
+    error,
+    commands: [doctor, capAddIos, capAddAndroid],
+    docs: [
+      'https://capgo.app/docs/getting-started/onboarding/',
+      'https://capgo.app/docs/getting-started/add-an-app/',
+    ],
+    sections: [
+      {
+        title: 'Onboarding state',
+        lines: [
+          `Channel: ${globalChannelName}`,
+          `Platform: ${globalPlatform}`,
+          `Current version: ${globalCurrentVersion ?? 'unknown'}`,
+        ],
+      },
+      ...extraSections,
+    ],
+  })
+}
+
+async function runInitDoctorDiagnostics(): Promise<void> {
+  try {
+    await getInfoInternal({ packageJson: globalPathToPackageJson }, false)
+  }
+  catch (error) {
+    pLog.warn(`Doctor found an issue: ${formatError(error)}`)
+  }
+}
+
+async function exitCanceledInitOnboarding(orgId: string, apikey: string, message = 'You can resume the onboarding anytime by running the same command again'): Promise<never> {
+  await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
+  pOutro(`Bye 👋\n💡 ${message}`)
+  exit(1)
+}
+
+// Render an init-time file path with its project directory prefix so users
+// can tell which nested project was modified when they run `capgo init` from
+// a parent folder (e.g. `CLI/src/main.tsx` instead of `src/main.tsx`).
+function formatInitFilePath(filePath: string): string {
+  try {
+    const absolute = path.isAbsolute(filePath) ? filePath : path.resolve(cwd(), filePath)
+    const cwdPath = cwd()
+    const parentOfCwd = path.dirname(cwdPath)
+    // If cwd has no meaningful parent (e.g. `/`), fall back to the original path.
+    if (parentOfCwd === cwdPath) {
+      return filePath
+    }
+    const rel = path.relative(parentOfCwd, absolute)
+    return rel.length > 0 ? rel : filePath
+  }
+  catch {
+    return filePath
+  }
+}
+
+function buildCodeDiffLines(beforeContent: string, afterContent: string, contextSize: number) {
+  const beforeLines = beforeContent.length === 0 ? [] : beforeContent.split('\n')
+  const afterLines = afterContent.split('\n')
+
+  // Find the first line index where the two diverge.
+  let start = 0
+  while (start < beforeLines.length && start < afterLines.length && beforeLines[start] === afterLines[start]) {
+    start++
+  }
+
+  // Find the last line index (from the end) where they still diverge.
+  let endBefore = beforeLines.length - 1
+  let endAfter = afterLines.length - 1
+  while (endBefore >= start && endAfter >= start && beforeLines[endBefore] === afterLines[endAfter]) {
+    endBefore--
+    endAfter--
+  }
+
+  // No divergence — nothing to show.
+  if (endAfter < start) {
+    return []
+  }
+
+  const contextStart = Math.max(0, start - contextSize)
+  const contextEnd = Math.min(afterLines.length - 1, endAfter + contextSize)
+
+  const diffLines: { lineNumber: number, text: string, kind: 'context' | 'add' }[] = []
+  for (let i = contextStart; i <= contextEnd; i++) {
+    diffLines.push({
+      lineNumber: i + 1,
+      text: afterLines[i] ?? '',
+      kind: i >= start && i <= endAfter ? 'add' : 'context',
+    })
+  }
+  return diffLines
+}
 
 function readTmpObj() {
   tmpObject ??= readdirSync(tmp.tmpdir)
@@ -205,6 +344,23 @@ function cancelBeforeAuthenticatedOnboarding(command: boolean | string | symbol)
   }
 }
 
+function getCreateAppTemplateCommand() {
+  const { pm } = getPMAndCommand()
+  if (pm === 'bun') {
+    return {
+      display: 'bun create @capacitor/app@latest',
+      command: 'bun',
+      args: ['create', '@capacitor/app@latest'],
+    }
+  }
+
+  return {
+    display: 'npm init @capacitor/app@latest',
+    command: 'npm',
+    args: ['init', '@capacitor/app@latest'],
+  }
+}
+
 async function waitUntilSetupIsDone(message = 'Type "ready" when the setup is done.') {
   while (true) {
     const ready = await pText({
@@ -218,7 +374,7 @@ async function waitUntilSetupIsDone(message = 'Type "ready" when the setup is do
       },
     })
     cancelBeforeAuthenticatedOnboarding(ready)
-    if ((ready as string).trim().toLowerCase() === 'ready')
+    if (typeof ready === 'string' && ready.trim().toLowerCase() === 'ready')
       return
   }
 }
@@ -313,11 +469,39 @@ async function maybeRunCapacitorInit(projectDir: string, projectType: string, in
   }
 }
 
-function runCreateAppTemplate() {
-  stopInitInkSession({ text: 'Starting Capacitor app template creation...', tone: 'green' })
-  const result = spawnSync('npm', ['init', '@capacitor/app@latest'], { stdio: 'inherit' })
+function runCapacitorPlatformAdd(platformName: 'ios' | 'android', runner: string): boolean {
+  const command = formatRunnerCommand(runner, ['cap', 'add', platformName])
+  const spinner = pSpinner()
+  spinner.start(`Running: ${command}`)
+
+  let parsedRunner: { command: string, args: string[] }
+  try {
+    parsedRunner = splitRunnerCommand(runner)
+  }
+  catch (error) {
+    spinner.stop(`Could not add ${platformName} automatically ❌`)
+    pLog.error(formatError(error))
+    return false
+  }
+
+  const result = spawnSync(parsedRunner.command, [...parsedRunner.args, 'cap', 'add', platformName], { stdio: 'inherit' })
   if (result.error || result.status !== 0) {
-    stdout.write('Capacitor app template creation failed. Run npm init @capacitor/app@latest manually and try again.\n')
+    spinner.stop(`Could not add ${platformName} automatically ❌`)
+    if (result.error)
+      pLog.error(formatError(result.error))
+    return false
+  }
+
+  spinner.stop(`${platformName.toUpperCase()} platform added ✅`)
+  return true
+}
+
+function runCreateAppTemplate() {
+  const templateCommand = getCreateAppTemplateCommand()
+  stopInitInkSession({ text: 'Starting Capacitor app template creation...', tone: 'green' })
+  const result = spawnSync(templateCommand.command, templateCommand.args, { stdio: 'inherit' })
+  if (result.error || result.status !== 0) {
+    stdout.write(`Capacitor app template creation failed. Run ${templateCommand.display} manually and try again.\n`)
     exit(1)
   }
 
@@ -377,8 +561,9 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
       return initializedAppId
     }
 
+    const templateCommand = getCreateAppTemplateCommand()
     const createAppNow = await pConfirm({
-      message: 'This folder is not a web app yet. Do you want to start npm init @capacitor/app@latest now?',
+      message: `This folder is not a web app yet. Do you want to start ${templateCommand.display} now?`,
       initialValue: true,
     })
     cancelBeforeAuthenticatedOnboarding(createAppNow)
@@ -386,7 +571,7 @@ async function ensureWorkspaceReadyForInit(initialAppId?: string): Promise<strin
       runCreateAppTemplate()
     }
     else {
-      pLog.info('Create a new Capacitor app first with: npm init @capacitor/app@latest')
+      pLog.info(`Create a new Capacitor app first with: ${templateCommand.display}`)
       pLog.info('Then run this onboarding again from the new app folder.')
       exitBeforeAuthenticatedOnboarding()
     }
@@ -408,6 +593,8 @@ function markStepDone(step: number, pathToPackageJson?: string, channelName?: st
       platform: globalPlatform,
       delta: globalDelta,
       currentVersion: globalCurrentVersion,
+      codeDiff: globalCodeDiff,
+      encryptionSummary: globalEncryptionSummary,
     }))
     if (pathToPackageJson) {
       globalPathToPackageJson = pathToPackageJson
@@ -435,7 +622,7 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
     if (!rawData || rawData.length === 0)
       return undefined
 
-    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion } = JSON.parse(rawData)
+    const { step_done, orgId, orgName, appId: savedAppId, pathToPackageJson, channelName, platform, delta, currentVersion, codeDiff, encryptionSummary } = JSON.parse(rawData)
     if (!orgId || !step_done) {
       pLog.warn('⚠️  Found previous onboarding progress, but it was saved in an older format.')
       pLog.info('   Starting fresh. Your previous progress cannot be resumed.')
@@ -473,16 +660,76 @@ async function tryResumeOnboarding(apikey: string): Promise<ResumeResult | undef
       if (savedAppId) {
         globalAppId = savedAppId
       }
+      // Only carry the diff forward if the user is about to land on step 5 (where it's displayed).
+      if (step_done === 4 && codeDiff && typeof codeDiff === 'object' && typeof codeDiff.filePath === 'string' && Array.isArray(codeDiff.lines)) {
+        const restoredLines: { lineNumber: number, text: string, kind: 'context' | 'add' }[] = []
+        for (const rawLine of codeDiff.lines as unknown[]) {
+          if (
+            typeof rawLine === 'object'
+            && rawLine !== null
+            && typeof (rawLine as { lineNumber?: unknown }).lineNumber === 'number'
+            && typeof (rawLine as { text?: unknown }).text === 'string'
+            && ((rawLine as { kind?: unknown }).kind === 'context' || (rawLine as { kind?: unknown }).kind === 'add')
+          ) {
+            const typed = rawLine as { lineNumber: number, text: string, kind: 'context' | 'add' }
+            restoredLines.push({ lineNumber: typed.lineNumber, text: typed.text, kind: typed.kind })
+          }
+        }
+        globalCodeDiff = {
+          filePath: codeDiff.filePath,
+          created: Boolean(codeDiff.created),
+          lines: restoredLines,
+          note: typeof codeDiff.note === 'string' ? codeDiff.note : undefined,
+        }
+      }
+      // Carry the encryption summary panel forward if the user resumes
+      // anywhere between step 5 (encryption added) and step 7 (build +
+      // cap sync). We need the panel visible on step 6 (the "what
+      // happened in step 5" callout) AND up to step 7, because the
+      // outcome is only fully "enabled" once the native project has
+      // been synced with the new public key.
+      if (
+        step_done >= 5
+        && step_done < 7
+        && encryptionSummary
+        && typeof encryptionSummary === 'object'
+        && typeof encryptionSummary.title === 'string'
+        && typeof encryptionSummary.phase === 'string'
+        && Array.isArray(encryptionSummary.lines)
+      ) {
+        const restoredEncryptionLines = (encryptionSummary.lines as unknown[])
+          .filter((line): line is string => typeof line === 'string')
+        const allowedPhases: InitEncryptionPhase[] = ['enabled', 'pending-sync', 'skipped', 'failed']
+        const restoredPhase = allowedPhases.includes(encryptionSummary.phase as InitEncryptionPhase)
+          ? (encryptionSummary.phase as InitEncryptionPhase)
+          : 'skipped'
+        globalEncryptionSummary = {
+          phase: restoredPhase,
+          title: encryptionSummary.title,
+          lines: restoredEncryptionLines,
+        }
+        setInitEncryptionSummary(globalEncryptionSummary)
+      }
       return { stepDone: step_done, orgId, orgName, appId: savedAppId }
     }
 
-    // User chose to start over — delete the saved progress
+    // User chose to start over — delete the saved progress and drop any
+    // restored code diff / encryption summary so a fresh manual path
+    // doesn't re-show stale content.
     cleanupStepsDone()
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
   catch (err) {
     pLog.error(`Cannot read which steps have been completed, error:\n${err}`)
     pLog.warn('Onboarding will continue but please report it to the capgo team!')
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
     return undefined
   }
 }
@@ -519,23 +766,48 @@ async function selectRecoveryOption<T extends string>(
   apikey: string,
   message: string,
   options: RecoveryOption<T>[],
+  failureText = message,
 ): Promise<T> {
-  type RecoveryChoice = T | '__cancel__'
-  const choice = await pSelect<RecoveryChoice>({
-    message,
-    options: [
-      ...options,
-      { value: '__cancel__', label: 'Exit onboarding' },
-    ],
-  })
+  type RecoveryChoice = T | '__doctor__' | '__support__' | '__cancel__'
 
-  if (pIsCancel(choice) || choice === '__cancel__') {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
-    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-    exit(1)
+  while (true) {
+    const choice = await pSelect<RecoveryChoice>({
+      message,
+      options: [
+        ...options,
+        { value: '__doctor__', label: 'Run doctor diagnostics now' },
+        { value: '__support__', label: 'Save a support bundle' },
+        { value: '__cancel__', label: 'Exit onboarding' },
+      ],
+    })
+
+    if (pIsCancel(choice) || choice === '__cancel__') {
+      await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
+      pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+      exit(1)
+    }
+
+    if (choice === '__doctor__') {
+      try {
+        await getInfoInternal({ packageJson: globalPathToPackageJson }, false)
+      }
+      catch (error) {
+        pLog.warn(`Doctor found an issue: ${formatError(error)}`)
+      }
+      continue
+    }
+
+    if (choice === '__support__') {
+      const bundlePath = writeInitSupportBundle(failureText)
+      if (bundlePath)
+        pLog.info(`Saved support bundle to ${bundlePath}`)
+      else
+        pLog.warn('Could not save a support bundle automatically.')
+      continue
+    }
+
+    return choice as T
   }
-
-  return choice as T
 }
 
 async function askForExistingDirectoryPath(orgId: string, apikey: string, message: string, placeholder?: string): Promise<string> {
@@ -613,6 +885,30 @@ async function warnIfNotInCapacitorRoot() {
     pLog.info('Try running the onboarding from the project root (the folder with capacitor.config.*).')
   }
 
+  if (nearest) {
+    const choice = await pSelect({
+      message: 'How do you want to continue?',
+      options: [
+        { value: 'switch', label: `Switch to ${nearest.dir} and continue there` },
+        { value: 'continue', label: 'Stay here and continue anyway' },
+        { value: 'exit', label: 'Exit onboarding' },
+      ],
+    })
+
+    if (pIsCancel(choice) || choice === 'exit') {
+      pCancel('Operation cancelled.')
+      exit(1)
+    }
+
+    if (choice === 'switch') {
+      chdir(nearest.dir)
+      pLog.info(`Switched to ${nearest.dir}`)
+      return
+    }
+
+    return
+  }
+
   const continueAnyway = await pConfirm({
     message: 'Are you sure you want to continue? If you do, the auto-configuration will probably not work from here.',
     initialValue: false,
@@ -663,56 +959,75 @@ async function syncPendingAppIdToCapacitorConfig(appId: string) {
   }
 }
 
-async function handleBrokenIosSync(platformRunner: string, details: string[], orgId: string, apikey: string, failureCount: number) {
-  const resetAdvice = getNativeProjectResetAdvice(platformRunner, 'ios')
+function logBrokenIosSync(details: string[], resetAdviceSummary: string, resetAdviceCommand: string, doctorCommand: string): void {
   pLog.error('Capgo iOS dependency sync verification failed.')
   for (const detail of details) {
     pLog.error(detail)
   }
   pLog.error('The native iOS project is still broken, so this build step cannot continue yet.')
-  pLog.warn(resetAdvice.summary)
-  pLog.info(resetAdvice.command)
+  pLog.warn(resetAdviceSummary)
+  pLog.info(resetAdviceCommand)
+  pLog.info(`Diagnostics: ${doctorCommand}`)
+}
 
-  if (failureCount % 3 === 0) {
-    const cancelInit = await pConfirm({
-      message: `iOS sync has failed ${failureCount} times. Do you want to cancel init?`,
-      initialValue: false,
-    })
-    await cancelCommand(cancelInit, orgId, apikey)
-    if (cancelInit) {
-      await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
-      pOutro('Bye 👋\n💡 You can resume the onboarding anytime by running the same command again')
-      exit(1)
-    }
-  }
-
-  const runResetNow = await pConfirm({
-    message: 'Would you like me to run this reset command for you now?',
-    initialValue: true,
-  })
-  await cancelCommand(runResetNow, orgId, apikey)
-
-  if (runResetNow) {
-    const resetSpinner = pSpinner()
-    resetSpinner.start(`Running: ${resetAdvice.command}`)
-    try {
-      execSync(resetAdvice.command, execOption as ExecSyncOptions)
-      resetSpinner.stop('iOS folder recreated and synced ✅')
-    }
-    catch (err) {
-      resetSpinner.stop('iOS folder reset failed ❌')
-      pLog.error(formatError(err))
-    }
+function maybeWriteBrokenIosSyncSupportBundle(failureCount: number, details: string[], resetAdviceCommand: string, doctorCommand: string): void {
+  if (failureCount < 2)
     return
-  }
 
-  pLog.info('We will wait while you fix the iOS folder yourself.')
-  pLog.info('When you are ready, type "ready" and I will retry this step.')
+  const supportBundlePath = writeInitSupportBundle('iOS dependency sync verification failed', [
+    { title: 'Failure details', lines: details },
+    { title: 'Recommended commands', lines: [resetAdviceCommand, doctorCommand] },
+  ])
+  if (supportBundlePath)
+    pLog.info(`Support bundle: ${supportBundlePath}`)
+  else
+    pLog.warn('Could not save a support bundle automatically.')
+}
+
+async function maybeCancelAfterRepeatedIosSyncFailures(failureCount: number, orgId: string, apikey: string): Promise<void> {
+  if (failureCount % 3 !== 0)
+    return
+
+  const cancelInit = await pConfirm({
+    message: `iOS sync has failed ${failureCount} times. Do you want to cancel init?`,
+    initialValue: false,
+  })
+  await cancelCommand(cancelInit, orgId, apikey)
+  if (cancelInit)
+    await exitCanceledInitOnboarding(orgId, apikey)
+}
+
+function runNativeResetCommand(platformRunner: string, nativePlatform: PlatformChoice, successMessage: string, failureMessage: string): void {
+  const resetAdvice = getNativeProjectResetAdvice(platformRunner, nativePlatform)
+  const resetSpinner = pSpinner()
+  resetSpinner.start(`Running: ${resetAdvice.command}`)
+  try {
+    const parsedRunner = splitRunnerCommand(platformRunner)
+    rmSync(nativePlatform, { recursive: true, force: true })
+
+    const addResult = spawnSync(parsedRunner.command, [...parsedRunner.args, 'cap', 'add', nativePlatform], { stdio: 'inherit' })
+    if (addResult.error || addResult.status !== 0)
+      throw addResult.error ?? new Error(`cap add ${nativePlatform} failed with code ${addResult.status ?? 'unknown'}`)
+
+    const syncResult = spawnSync(parsedRunner.command, [...parsedRunner.args, 'cap', 'sync', nativePlatform], { stdio: 'inherit' })
+    if (syncResult.error || syncResult.status !== 0)
+      throw syncResult.error ?? new Error(`cap sync ${nativePlatform} failed with code ${syncResult.status ?? 'unknown'}`)
+
+    resetSpinner.stop(successMessage)
+  }
+  catch (err) {
+    resetSpinner.stop(failureMessage)
+    pLog.error(formatError(err))
+  }
+}
+
+async function waitForReadyRetry(message: string, orgId: string, apikey: string, placeholder = 'ready'): Promise<void> {
+  pLog.info(message)
 
   while (true) {
     const ready = await pText({
       message: 'Type "ready" when the iOS folder is fixed.',
-      placeholder: 'ready',
+      placeholder,
       validate: (value) => {
         if (!value?.trim())
           return 'Type "ready" to retry.'
@@ -722,11 +1037,32 @@ async function handleBrokenIosSync(platformRunner: string, details: string[], or
     })
     if (pIsCancel(ready)) {
       await cancelCommand(ready, orgId, apikey)
+      continue
     }
-    if ((ready as string).trim().toLowerCase() === 'ready') {
+    if (typeof ready === 'string' && ready.trim().toLowerCase() === 'ready')
       return
-    }
   }
+}
+
+async function handleBrokenIosSync(platformRunner: string, details: string[], orgId: string, apikey: string, failureCount: number) {
+  const resetAdvice = getNativeProjectResetAdvice(platformRunner, 'ios')
+  const { doctor } = getInitRecoveryCommands()
+  logBrokenIosSync(details, resetAdvice.summary, resetAdvice.command, doctor)
+  maybeWriteBrokenIosSyncSupportBundle(failureCount, details, resetAdvice.command, doctor)
+  await maybeCancelAfterRepeatedIosSyncFailures(failureCount, orgId, apikey)
+
+  const runResetNow = await pConfirm({
+    message: 'Would you like me to run this reset command for you now?',
+    initialValue: true,
+  })
+  await cancelCommand(runResetNow, orgId, apikey)
+
+  if (runResetNow) {
+    runNativeResetCommand(platformRunner, 'ios', 'iOS folder recreated and synced ✅', 'iOS folder reset failed ❌')
+    return
+  }
+
+  await waitForReadyRetry('We will wait while you fix the iOS folder yourself.\nWhen you are ready, type "ready" and I will retry this step.', orgId, apikey)
 }
 
 function validateAppId(value: string | undefined): string | undefined {
@@ -1375,7 +1711,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         pLog.warn(blocker)
         await selectRecoveryOption(orgId, apikey, 'Fix the project, then choose what to do next.', [
           { value: 'retry', label: 'Retry updater checks' },
-        ])
+        ], blocker)
         continue
       }
 
@@ -1437,7 +1773,7 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
         pLog.error(formatError(error))
         await selectRecoveryOption(orgId, apikey, 'Updater install failed. What do you want to do?', [
           { value: 'retry', label: 'Retry updater install' },
-        ])
+        ], formatError(error))
       }
     }
   }
@@ -1462,7 +1798,7 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
     const s = pSpinner()
     s.start(`Adding @capacitor-updater to your main file`)
 
-    const projectType = await findProjectType()
+    const projectType = await findProjectType({ quiet: true })
     if (projectType === 'nuxtjs-js' || projectType === 'nuxtjs-ts') {
       // Nuxt.js specific logic
       const nuxtDir = join('plugins')
@@ -1476,36 +1812,53 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
       else {
         nuxtFilePath = join(nuxtDir, 'capacitorUpdater.client.js')
       }
-      const nuxtFileContent = `
-        import { CapacitorUpdater } from '@capgo/capacitor-updater'
-
-        export default defineNuxtPlugin(() => {
-          CapacitorUpdater.notifyAppReady()
-        })
-      `
+      const nuxtFileLines = [
+        `import { CapacitorUpdater } from '@capgo/capacitor-updater'`,
+        ``,
+        `export default defineNuxtPlugin(() => {`,
+        `  CapacitorUpdater.notifyAppReady()`,
+        `})`,
+        ``,
+      ]
+      const nuxtFileContent = nuxtFileLines.join('\n')
+      const nuxtDisplayPath = formatInitFilePath(nuxtFilePath)
       if (existsSync(nuxtFilePath)) {
         const currentContent = readFileSync(nuxtFilePath, 'utf8')
         if (currentContent.includes('CapacitorUpdater.notifyAppReady()')) {
-          s.stop('Code already added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          pLog.info('Plugins directory and capacitorUpdater.client.ts file already exist with required code')
+          s.stop()
+          globalCodeDiff = {
+            filePath: nuxtDisplayPath,
+            created: false,
+            lines: [],
+            note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
+          }
         }
         else {
           writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
-          s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-          pLog.info('Updated capacitorUpdater.client.ts file with required code')
+          s.stop()
+          globalCodeDiff = {
+            filePath: nuxtDisplayPath,
+            created: false,
+            lines: buildCodeDiffLines(currentContent, nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
+          }
         }
       }
       else {
         writeFileSync(nuxtFilePath, nuxtFileContent, 'utf8')
-        s.stop('Code added to capacitorUpdater.client.ts file inside plugins directory ✅')
-        pLog.info('Created plugins directory and capacitorUpdater.client.ts file')
+        s.stop()
+        globalCodeDiff = {
+          filePath: nuxtDisplayPath,
+          created: true,
+          lines: buildCodeDiffLines('', nuxtFileContent, CODE_DIFF_CONTEXT_LINES),
+        }
       }
+      setInitCodeDiff(globalCodeDiff)
     }
     else {
       // Handle other project types
       let mainFilePath
       if (projectType === 'unknown') {
-        mainFilePath = await findMainFile()
+        mainFilePath = await findMainFile(true)
       }
       else {
         const isTypeScript = projectType.endsWith('-ts')
@@ -1556,12 +1909,28 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
         await markStep(orgId, apikey, 'add-code-manual', appId)
       }
       else if (mainFileContent.includes(codeInject)) {
-        s.stop(`Code already added to ${mainFilePath} ✅`)
+        s.stop()
+        globalCodeDiff = {
+          filePath: formatInitFilePath(mainFilePath),
+          created: false,
+          lines: [],
+          note: 'Already contains CapacitorUpdater.notifyAppReady() — no change needed',
+        }
+        setInitCodeDiff(globalCodeDiff)
       }
       else {
-        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};\n`)
+        // Note: no trailing `\n` — the original file already has newlines after
+        // `last`, so adding one here would create a spurious blank line that
+        // shows up as an added `+` line in the diff panel.
+        const newMainFileContent = mainFileContent.replace(last, `${last}\n${importInject};\n\n${codeInject};`)
         writeFileSync(mainFilePath, newMainFileContent, 'utf8')
-        s.stop(`Code added to ${mainFilePath} ✅`)
+        s.stop()
+        globalCodeDiff = {
+          filePath: formatInitFilePath(mainFilePath),
+          created: false,
+          lines: buildCodeDiffLines(mainFileContent, newMainFileContent, CODE_DIFF_CONTEXT_LINES),
+        }
+        setInitCodeDiff(globalCodeDiff)
       }
     }
 
@@ -1573,6 +1942,9 @@ async function addCodeStep(orgId: string, apikey: string, appId: string) {
 }
 
 async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
+  if (globalCodeDiff) {
+    setInitCodeDiff(globalCodeDiff)
+  }
   const dependencies = await getAllPackagesDependencies()
   const coreVersion = dependencies.get('@capacitor/core')
   const normalizedCoreVersion = normalizeConcreteVersion(coreVersion)
@@ -1582,157 +1954,524 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
 
   const pm = getPMAndCommand()
 
-  pLog.info(`🔐 End-to-end encryption`)
-  const isSecurityCritical = await pConfirm({
-    message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
-    initialValue: false,
-  })
-  await cancelCommand(isSecurityCritical, orgId, apikey)
-  if (isSecurityCritical) {
-    pLog.info(`   Capgo bundles are web assets, so JS, HTML, and CSS can be fetched if someone finds the URL.`)
-    pLog.info(`   That is why we recommend encryption for banking and other high-security apps.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
+  // Ask up-front whether the app is security-critical, with an extra option
+  // for users who don't know what encryption is. The "learn more" branch
+  // prints a short overview, optionally opens the docs in a browser, then
+  // loops back to this same prompt.
+  const encryptionDocsUrl = 'https://capgo.app/docs/live-updates/encryption/'
+  type EncryptionChoice = 'critical' | 'not_needed' | 'learn'
+  let isSecurityCritical = false
+  let learnShown = false
+  while (true) {
+    // Option order matters: the first option is highlighted by default in
+    // `@inkjs/ui` Select, so pressing Enter resolves to it. The previous
+    // `pConfirm` for this question defaulted to `false` ("no"), so keep the
+    // safe "not needed" path as the default here to avoid users accidentally
+    // entering the key-creation flow by hammering Enter. Drop the "learn more"
+    // option once the user has already seen the overview — re-offering it
+    // makes no sense and clutters the decision.
+    const options: { value: EncryptionChoice, label: string }[] = [
+      { value: 'not_needed', label: '❌ No, my app doesn\'t need this' },
+      { value: 'critical', label: '🔐 Yes — set up end-to-end encryption' },
+    ]
+    if (!learnShown)
+      options.push({ value: 'learn', label: '❓ What is encryption? (learn more)' })
 
-    const doEncrypt = await pConfirm({
-      message: `Do you want to use encryption for ${appId}?`,
-      initialValue: true,
+    const choice = await pSelect<EncryptionChoice>({
+      message: `Is ${appId} a security-critical app, like banking, regulated, or sensitive-data handling?`,
+      options,
     })
-    await cancelCommand(doEncrypt, orgId, apikey)
-    if (doEncrypt) {
-      pLog.info(`   ✅ Recommended: encrypted bundles stay unreadable when fetched without the key.`)
-      pLog.info(`   ⚠️  Debugging gets harder, so skip it for normal apps.`)
-      pLog.info(`   🔐 The private key stays on your machine and must not be committed.`)
-      pLog.info(`   🔓 The public key is saved in the app bundle, so it can be extracted by reverse engineering.`)
-      pLog.info(`   🔄 The JavaScript bundle is encrypted with a random AES session key before upload.`)
-      pLog.info(`   🔒 That AES key is stored in Capgo, encrypted with your private RSA key, and the app uses the public RSA key to decrypt it.`)
-      pLog.info(`   ✍️  The bundle checksum is signed with your RSA key, so the app can verify the bundle was not tampered with.`)
-      if (coreVersion && !normalizedCoreVersion) {
-        pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
-        return
-      }
-      if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
-        pLog.warn(`Encryption is not supported in Capacitor V5.`)
-        return
-      }
+    await cancelCommand(choice, orgId, apikey)
 
-      const s = pSpinner()
-      s.start(`Running: ${pm.runner} @capgo/cli@latest key create`)
-      const keyRes = await createKeyInternal({ force: true }, false)
-      if (keyRes) {
-        s.stop(`key created 🔑`)
-        await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+    // The code diff panel from step 4 has served its purpose the moment the
+    // user answers this first question — clear it immediately (before any
+    // follow-up logging or prompts) so both the learn-more overview and the
+    // direct yes/no paths render against the full viewport.
+    if (globalCodeDiff) {
+      globalCodeDiff = undefined
+      setInitCodeDiff(undefined)
+    }
+
+    if (choice === 'learn') {
+      learnShown = true
+      pLog.info(`🔐 End-to-end encryption in Capgo (fast overview):`)
+      pLog.info(`   • Capgo bundles are plain web assets (JS / HTML / CSS) served over HTTPS.`)
+      pLog.info(`   • Without encryption, anyone who obtains a bundle URL can download and read them.`)
+      pLog.info(`   • Capgo's encryption uses a hybrid RSA + AES scheme:`)
+      pLog.info(`       – A random AES session key encrypts the bundle contents.`)
+      pLog.info(`       – Your RSA private key encrypts that AES key and signs a checksum.`)
+      pLog.info(`       – The public RSA key shipped in your app decrypts + verifies it.`)
+      pLog.info(`   • True end-to-end: the private key lives only on your machine, so not even`)
+      pLog.info(`     Capgo can read the bundle contents.`)
+      pLog.info(`   • Requires Capacitor v6+. Debugging update failures is slightly harder once enabled.`)
+      pLog.info(`   • Recommended for banking, healthcare, regulated, or sensitive-data apps.`)
+      pLog.info(`     Most other apps do not need it.`)
+      // Always surface the docs URL so the user can copy it later, even if
+      // they decline to open a browser right now. The leading newline inside
+      // the same message inserts a visual blank row — Ink collapses entries
+      // whose message is just an empty string, so we cannot push a separate
+      // blank log entry.
+      pLog.info(`\n   📖 Full docs: ${encryptionDocsUrl}`)
+
+      const openDocs = await pConfirm({
+        message: `Open the full encryption docs in your browser now?`,
+        initialValue: false,
+      })
+      await cancelCommand(openDocs, orgId, apikey)
+      if (openDocs) {
+        try {
+          await open(encryptionDocsUrl)
+          pLog.info(`   🌐 Opened ${encryptionDocsUrl}`)
+        }
+        catch {
+          pLog.warn(`Could not open your browser automatically. Visit: ${encryptionDocsUrl}`)
+        }
+      }
+      continue
+    }
+
+    isSecurityCritical = choice === 'critical'
+    break
+  }
+
+  // The final outcome of this step is captured as a persistent summary panel
+  // (mirroring the code-diff panel from step 4) so it survives the transition
+  // to the next step instead of flashing by when logs get cleared. We build
+  // it in a local variable and only push it to the runtime after the step's
+  // work is done — this avoids rendering a premature "enabled" panel while
+  // key creation is still running, and lets the key-failure branch downgrade
+  // it to a "not enabled" summary.
+  // Two-phase "enabled" state. Right after key creation the keys exist
+  // locally and the public key is in `capacitor.config.*`, but the native
+  // project has NOT been synced yet — encrypted updates would fail. We
+  // only flip to the fully-enabled summary once `buildProjectStep` has
+  // run `cap sync` successfully. See `maybePromoteEncryptionSummary`.
+  const pendingSyncSummary: InitEncryptionSummary = {
+    phase: 'pending-sync',
+    title: '🔐 Encryption keys generated — awaiting cap sync',
+    lines: [
+      '   • Private RSA key saved locally (.capgo_key_v2) — do not commit it.',
+      '   • Public RSA key written to capacitor.config — not bundled in the native app yet.',
+      '   • Encrypted updates will FAIL until the native project is synced.',
+      `   • Step 7 runs "${pm.runner} cap sync" automatically, which bundles the key.`,
+    ],
+  }
+  const skippedSummary: InitEncryptionSummary = {
+    phase: 'skipped',
+    title: '⏭️  Encryption SKIPPED',
+    lines: [
+      '   • Bundles are plain JS / HTML / CSS, fetchable by anyone who finds the URL.',
+      '   • Never put private API keys or backend secrets in a mobile app.',
+      `   • You can enable encryption later with: ${pm.runner} @capgo/cli@latest key create`,
+    ],
+  }
+  let finalSummary: InitEncryptionSummary = skippedSummary
+
+  // Q1 already phrases the "yes" branch as "set up end-to-end encryption",
+  // so there's no second confirmation to ask — a critical answer goes
+  // straight into key creation.
+  if (isSecurityCritical) {
+    if (coreVersion && !normalizedCoreVersion) {
+      pLog.error(`Cannot parse @capacitor/core version "${coreVersion}". Pin a concrete semver version before enabling encryption.`)
+      return
+    }
+    if (normalizedCoreVersion && lessThan(parse(normalizedCoreVersion), parse('6.0.0'))) {
+      pLog.warn(`Encryption is not supported in Capacitor V5.`)
+      return
+    }
+
+    const s = pSpinner()
+    s.start(`Creating RSA encryption keys`)
+    // Silent mode is critical here: non-silent createKeyInternal calls
+    // clack's `intro()`, `log.*`, and `pConfirm` directly, which write to
+    // stdout and collide with the ink render loop (the same whack-a-mole
+    // gating issue from PR #560 / #579). It also runs
+    // `promptAndSyncCapacitor({ validateIosUpdater: true })` which uses
+    // its own clack spinners and a blocking confirm — we want full
+    // control over the sync UI here, so we run `cap sync` ourselves in
+    // the full-screen streaming panel immediately after.
+    // setupChannel=false avoids a rogue clack confirm when an old private
+    // key is present in the config.
+    try {
+      await createKeyInternal({ force: true, setupChannel: false }, true)
+      // Intentionally stop without a success message: the persistent
+      // encryption summary panel renders on the next step and already shows
+      // the outcome. Passing a message here would push it into the rolling
+      // log buffer, which `renderInitOnboardingFrame` wipes when step 6
+      // renders — producing a visible "flash" of the success line.
+      s.stop()
+      await markSnag('onboarding-v2', orgId, apikey, 'Use encryption v2', appId)
+
+      // Run `cap sync` now, inside step 5, so the public key we just wrote
+      // to `capacitor.config.*` actually lands in the native projects
+      // before we claim "Encryption ENABLED". The streaming panel takes
+      // over the whole viewport while the sync runs (mirrors the
+      // `capgo build` onboarding log streamer) — this is the only way to
+      // honestly mark encryption enabled without waiting for step 7.
+      //
+      // Platform is not passed because the user hasn't picked one yet
+      // (that happens in step 6). `cap sync` without a platform syncs
+      // every native platform that's already been `cap add`-ed, which is
+      // exactly what we want — the key needs to end up in whichever
+      // native projects exist.
+      const syncResult = await streamCommandInInitPanel({
+        title: '🔐 Syncing native project so the public key is bundled',
+        runner: pm.runner,
+        args: ['cap', 'sync'],
+      })
+      // Small dwell so the user can read the final state of the panel
+      // (success banner or the last few lines of an error) before we
+      // tear it down and move on.
+      await delay(3500)
+      clearInitStreamingOutput()
+
+      if (syncResult.success) {
+        finalSummary = {
+          phase: 'enabled',
+          title: '🔐 Encryption ENABLED',
+          lines: [
+            '   • Private RSA key stays on your machine — do not commit it.',
+            '   • Public RSA key is bundled in the app (extractable by reverse engineering).',
+            '   • Bundles encrypted with a random AES key, key wrapped with your RSA key.',
+            '   • Bundle checksum is signed with your RSA key so the app can verify integrity.',
+          ],
+        }
       }
       else {
-        s.stop('Error', 'error')
-        pLog.warn(`Cannot create key ❌`)
-        const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
-          { value: 'retry', label: 'Retry key creation' },
-          { value: 'skip', label: 'Continue without encryption' },
-        ])
-
-        if (recoveryChoice === 'retry') {
-          return addEncryptionStep(orgId, apikey, appId)
-        }
-
-        pLog.info(`⏭️  Continuing without encryption.`)
+        // Keys exist on disk and in the config, but `cap sync` failed, so
+        // the native project doesn't have the new key yet. Fall back to
+        // pending-sync — step 7's build & sync will retry and, on
+        // success, `promoteEncryptionSummaryToEnabled` will flip it.
+        pLog.warn(`cap sync failed: ${syncResult.error?.message ?? 'unknown error'}`)
+        pLog.warn('Encryption keys were generated but the native project has not been synced yet.')
+        pLog.info('Step 7 will run the build and cap sync again — if that succeeds, encryption becomes fully active.')
+        finalSummary = pendingSyncSummary
       }
     }
-    else {
-      pLog.info(`⏭️  We didn't enable encryption.`)
+    catch (error) {
+      s.stop('Error', 'error')
+      const failureText = error instanceof Error ? error.message : String(error)
+      pLog.warn(`Cannot create key ❌ ${failureText}`)
+      const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Encryption key creation failed. What do you want to do?', [
+        { value: 'retry', label: 'Retry key creation' },
+        { value: 'skip', label: 'Continue without encryption' },
+      ], failureText)
+
+      if (recoveryChoice === 'retry') {
+        return addEncryptionStep(orgId, apikey, appId)
+      }
+
+      finalSummary = {
+        phase: 'failed',
+        title: '⚠️  Encryption NOT ENABLED (key creation failed)',
+        lines: [
+          '   • Key creation failed and you chose to continue without encryption.',
+          `   • You can retry later with: ${pm.runner} @capgo/cli@latest key create`,
+          '   • Meanwhile, never put API keys or backend secrets in the bundle.',
+        ],
+      }
     }
   }
-  else {
-    pLog.info(`⏭️  We didn't enable encryption.`)
-    pLog.info(`   📦 Capgo bundles are web assets and can be fetched by anyone who finds the URL.`)
-    pLog.info(`   🔑 Do not put private API keys or backend secrets in a mobile app.`)
-  }
+  // If the user answered "not needed" to Q1, we keep the default
+  // `skippedSummary`.
+
+  globalEncryptionSummary = finalSummary
+  setInitEncryptionSummary(finalSummary)
   await markStep(orgId, apikey, 'add-encryption', appId)
 }
 
-async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
-  const pm = getPMAndCommand()
-  const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
-  await cancelCommand(doBuild, orgId, apikey)
-  if (doBuild) {
-    const projectType = await findProjectType()
-    const buildCommand = await findBuildCommandForProjectType(projectType)
-    const packScripts = getPackageScripts()
-    // check in script build exist
-    if (!packScripts[buildCommand]) {
-      const s = pSpinner()
-      s.start(`Checking project type`)
-      s.stop('Missing build script', 'neutral')
-      pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
-      pLog.info(`💡 Your package.json needs a "${buildCommand}" script to build the app`)
+/**
+ * Streams the output of an arbitrary command into the full-screen
+ * streaming panel defined in `runtime.tsx` / `ui/app.tsx`. The Ink tree
+ * switches to "streaming mode" while this helper is active: the normal
+ * onboarding chrome (progress bar, logs, prompts) is hidden so long
+ * command output has room to breathe.
+ *
+ * Returns `true` iff the process exits with code 0. On failure we leave
+ * the panel on-screen with an error banner so the caller can decide how
+ * long to pause before clearing it — that way the user actually has time
+ * to read the failing output.
+ */
+async function streamCommandInInitPanel(params: {
+  title: string
+  runner: string // e.g. "npx", "bunx", "yarn dlx"
+  args: string[]
+}): Promise<{ success: boolean, error?: Error }> {
+  // `pm.runner` can contain a space ("yarn dlx", "pnpm exec"). `spawn`
+  // without `shell:true` can't handle that, and `shell:true` brings
+  // quoting risk, so we split the runner into its own head + tail args.
+  let runnerCommand
+  try {
+    runnerCommand = splitRunnerCommand(params.runner)
+  }
+  catch (error) {
+    return { success: false, error: error instanceof Error ? error : new Error(String(error)) }
+  }
+  const { command: runnerCmd, args: runnerArgs } = runnerCommand
+  const fullArgs = [...runnerArgs, ...params.args]
+  const displayCommand = `${params.runner} ${params.args.join(' ')}`
 
-      const skipBuild = await pConfirm({
-        message: `Would you like to skip the build for now and continue? You can build manually later.`,
+  startInitStreamingOutput({ title: params.title, command: displayCommand })
+
+  const appendChunk = (chunk: { toString: (encoding: string) => string } | string) => {
+    const text = typeof chunk === 'string' ? chunk : chunk.toString('utf8')
+    // Capacitor CLI output mixes \r\n and bare \n; split on both but keep
+    // non-empty trimmed lines so the panel doesn't fill with blank rows.
+    for (const rawLine of text.split(/\r?\n/)) {
+      const line = rawLine.replace(/\r/g, '')
+      if (line.length > 0)
+        appendInitStreamingLine(line)
+    }
+  }
+
+  return new Promise((resolve) => {
+    let child
+    try {
+      child = spawn(runnerCmd, fullArgs, {
+        // stdin ignored — cap sync is non-interactive. stdout/stderr piped
+        // so Node can read them without touching the parent TTY that Ink
+        // is actively rendering into.
+        stdio: ['ignore', 'pipe', 'pipe'],
       })
-      await cancelCommand(skipBuild, orgId, apikey)
+    }
+    catch (error) {
+      updateInitStreamingStatus('error', error instanceof Error ? error.message : String(error))
+      resolve({ success: false, error: error instanceof Error ? error : new Error(String(error)) })
+      return
+    }
 
-      if (skipBuild) {
-        pLog.info(`⏭️  Skipping build step - you can build manually with: ${pm.pm} run ${buildCommand}`)
-        pLog.info(`📝 After building, run: ${pm.runner} cap sync ${platform}`)
-        await markStep(orgId, apikey, 'build-project-skipped', appId)
+    child.stdout?.on('data', appendChunk)
+    child.stderr?.on('data', appendChunk)
+
+    child.once('error', (error) => {
+      updateInitStreamingStatus('error', error.message)
+      resolve({ success: false, error })
+    })
+
+    child.once('close', (code) => {
+      if (code === 0) {
+        updateInitStreamingStatus('success', 'Done')
+        resolve({ success: true })
         return
       }
+      const err = new Error(`Command exited with code ${code ?? 'unknown'}`)
+      updateInitStreamingStatus('error', err.message)
+      resolve({ success: false, error: err })
+    })
+  })
+}
 
-      pOutro(`Bye 👋\n💡 Add a "${buildCommand}" script to package.json and run the command again`)
+function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Flip the encryption summary panel from `pending-sync` to fully `enabled`
+ * once `cap sync` has run successfully in `buildProjectStep`. Until that
+ * point the native project hasn't been rebuilt with the new public key, so
+ * claiming "Public RSA key is bundled in the app" would be a lie. Called
+ * after a successful build & sync in `buildProjectStep`.
+ */
+function promoteEncryptionSummaryToEnabled(): void {
+  if (!globalEncryptionSummary || globalEncryptionSummary.phase !== 'pending-sync')
+    return
+  const promoted: InitEncryptionSummary = {
+    phase: 'enabled',
+    title: '🔐 Encryption ENABLED',
+    lines: [
+      '   • Private RSA key stays on your machine — do not commit it.',
+      '   • Public RSA key is bundled in the app (extractable by reverse engineering).',
+      '   • Bundles encrypted with a random AES key, key wrapped with your RSA key.',
+      '   • Bundle checksum is signed with your RSA key so the app can verify integrity.',
+    ],
+  }
+  globalEncryptionSummary = promoted
+  setInitEncryptionSummary(promoted)
+}
+
+type PackageManagerInfo = ReturnType<typeof getPMAndCommand>
+type PlatformChoice = 'ios' | 'android'
+type BuildProjectStepOutcome = 'completed' | 'skipped'
+
+async function ensureNativePlatformForBuild(platform: PlatformChoice, config: CapacitorConfigSnapshot | undefined, runner: string): Promise<void> {
+  const addPlatformCommand = formatRunnerCommand(runner, ['cap', 'add', platform])
+
+  while (true) {
+    const availablePlatforms = getNativePlatformAvailability(config)
+    const platformExists = platform === 'ios' ? availablePlatforms.ios : availablePlatforms.android
+    if (platformExists)
+      return
+
+    const missingDir = platform === 'ios' ? availablePlatforms.iosDir : availablePlatforms.androidDir
+    pLog.warn(`⚠️  ${missingDir}/ is missing, so Capgo cannot build the ${platform.toUpperCase()} project yet.`)
+
+    const recoveryChoice = await pSelect({
+      message: `How do you want to continue with ${platform.toUpperCase()}?`,
+      options: [
+        { value: 'add', label: `🛠  Run ${addPlatformCommand} now` },
+        { value: 'doctor', label: 'Run doctor diagnostics now' },
+        { value: 'exit', label: 'Exit onboarding' },
+      ],
+    })
+
+    if (pIsCancel(recoveryChoice) || recoveryChoice === 'exit') {
+      pOutro(`Bye 👋\n💡 Run "${addPlatformCommand}", then try again.`)
       exit()
     }
 
-    const buildAndSyncCommand = `${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`
-    let iosSyncFailureCount = 0
-
-    while (true) {
-      const s = pSpinner()
-      s.start('Checking project type')
-      s.message(`Running: ${buildAndSyncCommand}`)
-      execSync(buildAndSyncCommand, execOption as ExecSyncOptions)
-
-      if (platform === 'ios') {
-        const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
-        if (syncValidation.shouldCheck && !syncValidation.valid) {
-          iosSyncFailureCount += 1
-          s.stop('iOS sync check failed ❌')
-          await handleBrokenIosSync(pm.runner, syncValidation.details, orgId, apikey, iosSyncFailureCount)
-          pLog.info(`Retrying build and sync for iOS (attempt ${iosSyncFailureCount + 1})`)
-          continue
-        }
-      }
-
-      s.stop('Build & Sync Done ✅')
-      break
+    if (recoveryChoice === 'doctor') {
+      await runInitDoctorDiagnostics()
+      continue
     }
+
+    if (!runCapacitorPlatformAdd(platform, runner))
+      pLog.warn(`Still could not add ${platform}.`)
   }
-  else {
+}
+
+async function handleMissingBuildScript(buildCommand: string, appId: string, platform: PlatformChoice, orgId: string, apikey: string, pm: PackageManagerInfo): Promise<BuildProjectStepOutcome> {
+  const spinner = pSpinner()
+  spinner.start('Checking project type')
+  spinner.stop('Missing build script', 'neutral')
+  pLog.warn(`❌ Cannot find "${buildCommand}" script in package.json`)
+  pLog.info(`💡 Your package.json needs a "${buildCommand}" script to build the app`)
+
+  const skipBuild = await pConfirm({
+    message: 'Would you like to skip the build for now and continue? You can build manually later.',
+  })
+  await cancelCommand(skipBuild, orgId, apikey)
+
+  if (skipBuild) {
+    pLog.info(`⏭️  Skipping build step - you can build manually with: ${pm.pm} run ${buildCommand}`)
+    pLog.info(`📝 After building, run: ${pm.runner} cap sync ${platform}`)
+    await markStep(orgId, apikey, 'build-project-skipped', appId)
+    return 'skipped'
+  }
+
+  pOutro(`Bye 👋\n💡 Add a "${buildCommand}" script to package.json and run the command again`)
+  exit()
+}
+
+async function runBuildAndSyncLoop(platform: PlatformChoice, buildAndSyncCommand: string, pm: PackageManagerInfo, orgId: string, apikey: string): Promise<void> {
+  let iosSyncFailureCount = 0
+
+  while (true) {
+    const spinner = pSpinner()
+    spinner.start('Checking project type')
+    spinner.message(`Running: ${buildAndSyncCommand}`)
+    execSync(buildAndSyncCommand, execOption as ExecSyncOptions)
+
+    if (platform === 'ios') {
+      const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
+      if (syncValidation.shouldCheck && !syncValidation.valid) {
+        iosSyncFailureCount += 1
+        spinner.stop('iOS sync check failed ❌')
+        await handleBrokenIosSync(pm.runner, syncValidation.details, orgId, apikey, iosSyncFailureCount)
+        pLog.info(`Retrying build and sync for iOS (attempt ${iosSyncFailureCount + 1})`)
+        continue
+      }
+    }
+
+    spinner.stop('Build & Sync Done ✅')
+    promoteEncryptionSummaryToEnabled()
+    return
+  }
+}
+
+async function runProjectBuildAndSync(appId: string, platform: PlatformChoice, orgId: string, apikey: string, pm: PackageManagerInfo): Promise<BuildProjectStepOutcome> {
+  const projectType = await findProjectType()
+  const buildCommand = await findBuildCommandForProjectType(projectType)
+  const packScripts = getPackageScripts()
+
+  if (!packScripts[buildCommand])
+    return handleMissingBuildScript(buildCommand, appId, platform, orgId, apikey, pm)
+
+  const buildAndSyncCommand = `${pm.pm} run ${buildCommand} && ${pm.runner} cap sync ${platform}`
+  await runBuildAndSyncLoop(platform, buildAndSyncCommand, pm, orgId, apikey)
+  return 'completed'
+}
+
+async function buildProjectStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android', config?: CapacitorConfigSnapshot) {
+  const pm = getPMAndCommand()
+  await ensureNativePlatformForBuild(platform, config, pm.runner)
+
+  const doBuild = await pConfirm({ message: `Automatic build ${appId} with "${pm.pm} run build" ?` })
+  await cancelCommand(doBuild, orgId, apikey)
+  if (!doBuild) {
     pLog.info(`Build yourself with command: ${pm.pm} run build && ${pm.runner} cap sync ${platform}`)
+    await markStep(orgId, apikey, 'build-project', appId)
+    return
   }
+
+  const buildOutcome = await runProjectBuildAndSync(appId, platform, orgId, apikey, pm)
+  if (buildOutcome === 'skipped')
+    return
+
   await markStep(orgId, apikey, 'build-project', appId)
 }
 
-async function selectPlatformStep(orgId: string, apikey: string): Promise<'ios' | 'android'> {
-  pLog.info(`📱 Platform selection for onboarding`)
-  pLog.info(`   This is just for testing during onboarding - your app will work on all platforms`)
+function getSelectablePlatformOptions(config?: CapacitorConfigSnapshot): Array<{ value: PlatformChoice, label: string }> {
+  const availablePlatforms = getNativePlatformAvailability(config)
+  const options: Array<{ value: PlatformChoice, label: string }> = []
+  if (availablePlatforms.ios)
+    options.push({ value: 'ios', label: 'IOS' })
+  if (availablePlatforms.android)
+    options.push({ value: 'android', label: 'Android' })
+  return options
+}
 
+async function promptForSelectedPlatform(orgId: string, apikey: string, options: Array<{ value: PlatformChoice, label: string }>): Promise<PlatformChoice> {
   const platformType = await pSelect({
     message: 'Which platform do you want to test with during this onboarding?',
-    options: [
-      { value: 'ios', label: 'IOS' },
-      { value: 'android', label: 'Android' },
-    ],
+    options,
   })
-  if (pIsCancel(platformType)) {
-    await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
-    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-    exit()
-  }
+  if (pIsCancel(platformType))
+    await exitCanceledInitOnboarding(orgId, apikey)
 
-  const platform = platformType as 'ios' | 'android'
+  const platform = platformType as PlatformChoice
   pLog.info(`🎯 Testing with: ${platform.toUpperCase()}`)
   pLog.info(`💡 Note: Onboarding builds will use ${platform} only`)
   await markStep(orgId, apikey, 'select-platform', platform)
   return platform
+}
+
+async function handleMissingPlatformSelection(orgId: string, apikey: string, availablePlatforms: ReturnType<typeof getNativePlatformAvailability>): Promise<void> {
+  const { pm, capAddAndroid, capAddIos } = getInitRecoveryCommands()
+  pLog.warn(`⚠️  No native platform directories found (${availablePlatforms.iosDir}/ or ${availablePlatforms.androidDir}/).`)
+  const recoveryChoice = await pSelect({
+    message: 'Add a native platform before choosing a test platform.',
+    options: [
+      { value: 'add-ios', label: `🛠  Run ${capAddIos} now` },
+      { value: 'add-android', label: `🛠  Run ${capAddAndroid} now` },
+      { value: 'doctor', label: 'Run doctor diagnostics now' },
+      { value: 'exit', label: 'Exit onboarding' },
+    ],
+  })
+
+  if (pIsCancel(recoveryChoice) || recoveryChoice === 'exit')
+    await exitCanceledInitOnboarding(orgId, apikey, `Run "${capAddIos}" or "${capAddAndroid}", then try again.`)
+
+  if (recoveryChoice === 'doctor') {
+    await runInitDoctorDiagnostics()
+    return
+  }
+
+  const platformToAdd = recoveryChoice === 'add-ios' ? 'ios' : 'android'
+  if (!runCapacitorPlatformAdd(platformToAdd, pm.runner))
+    pLog.warn(`Still could not add ${platformToAdd}.`)
+}
+
+async function selectPlatformStep(orgId: string, apikey: string, config?: CapacitorConfigSnapshot): Promise<'ios' | 'android'> {
+  pLog.info(`📱 Platform selection for onboarding`)
+  pLog.info(`   This is just for testing during onboarding - your app will work on all platforms`)
+
+  while (true) {
+    const options = getSelectablePlatformOptions(config)
+    if (options.length > 0)
+      return promptForSelectedPlatform(orgId, apikey, options)
+
+    await handleMissingPlatformSelection(orgId, apikey, getNativePlatformAvailability(config))
+  }
 }
 
 async function runDeviceStep(orgId: string, apikey: string, appId: string, platform: 'ios' | 'android') {
@@ -2059,14 +2798,14 @@ async function uploadStep(orgId: string, apikey: string, appId: string, newVersi
         pLog.error(formatError(error))
         await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
           { value: 'retry', label: 'Retry bundle upload' },
-        ])
+        ], formatError(error))
         continue
       }
       if (!uploadRes?.success) {
         s.stop('Upload failed ❌')
         await selectRecoveryOption(orgId, apikey, 'Bundle upload failed. What do you want to do?', [
           { value: 'retry', label: 'Retry bundle upload' },
-        ])
+        ], 'Bundle upload did not complete successfully.')
         continue
       }
 
@@ -2317,23 +3056,61 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     }
   }
   else {
-    const iosDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'ios')
-    const androidDir = getPlatformDirFromCapacitorConfig(extConfig?.config, 'android')
-    const hasIos = existsSync(join(cwd(), iosDir))
-    const hasAndroid = existsSync(join(cwd(), androidDir))
-    if (!hasIos && !hasAndroid) {
-      pLog.warn('⚠️  No native platform directories found (ios/ or android/).')
-      pLog.info('   Run "npx cap add ios" or "npx cap add android" to add a platform.')
+    const availablePlatforms = getNativePlatformAvailability(extConfig?.config)
+    if (!availablePlatforms.ios && !availablePlatforms.android) {
+      const { pm, capAddAndroid, capAddIos } = getInitRecoveryCommands()
+      pLog.warn(`⚠️  No native platform directories found (${availablePlatforms.iosDir}/ or ${availablePlatforms.androidDir}/).`)
+      pLog.info(`   Suggested commands: ${capAddIos} or ${capAddAndroid}`)
       const continueWithout = await pSelect({
-        message: 'Continue without native platforms? Later steps may not work.',
+        message: 'How do you want to continue?',
         options: [
-          { value: 'yes', label: '✅ Yes, continue anyway' },
-          { value: 'no', label: '❌ No, I\'ll add a platform first' },
+          { value: 'add-ios', label: `🛠  Run ${capAddIos} now` },
+          { value: 'add-android', label: `🛠  Run ${capAddAndroid} now` },
+          { value: 'yes', label: '✅ Continue without native platforms' },
+          { value: 'no', label: '❌ Exit onboarding' },
         ],
       })
+
       if (pIsCancel(continueWithout) || continueWithout === 'no') {
-        pOutro('Bye 👋\n💡 Run "npx cap add ios" or "npx cap add android", then try again.')
+        pOutro(`Bye 👋\n💡 Run "${capAddIos}" or "${capAddAndroid}", then try again.`)
         exit()
+      }
+
+      if (continueWithout === 'add-ios' || continueWithout === 'add-android') {
+        const platformToAdd = continueWithout === 'add-ios' ? 'ios' : 'android'
+        const added = runCapacitorPlatformAdd(platformToAdd, pm.runner)
+        if (!added) {
+          const recoveryChoice = await pSelect({
+            message: `Could not add ${platformToAdd}. What do you want to do next?`,
+            options: [
+              { value: 'retry', label: `Retry ${platformToAdd} setup` },
+              { value: 'doctor', label: 'Run doctor diagnostics now' },
+              { value: 'continue', label: 'Continue without native platforms' },
+              { value: 'exit', label: 'Exit onboarding' },
+            ],
+          })
+
+          if (pIsCancel(recoveryChoice) || recoveryChoice === 'exit') {
+            pOutro(`Bye 👋\n💡 Run "${platformToAdd === 'ios' ? capAddIos : capAddAndroid}", then try again.`)
+            exit()
+          }
+
+          if (recoveryChoice === 'doctor') {
+            try {
+              await getInfoInternal({ packageJson: globalPathToPackageJson }, false)
+            }
+            catch (error) {
+              pLog.warn(`Doctor found an issue: ${formatError(error)}`)
+            }
+          }
+
+          if (recoveryChoice === 'retry') {
+            const retried = runCapacitorPlatformAdd(platformToAdd, pm.runner)
+            if (!retried) {
+              pLog.warn(`Still could not add ${platformToAdd}. Continuing without native platforms for now.`)
+            }
+          }
+        }
       }
     }
   }
@@ -2371,6 +3148,21 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   const resumed = await tryResumeOnboarding(options.apikey)
   let stepToSkip = resumed?.stepDone ?? 0
 
+  // Whenever a resume is aborted (org no longer available, role lost, 2FA
+  // required, lookup failed) we restart from step 0. Drop any diff that
+  // `tryResumeOnboarding` restored so the freshly walked step 4 doesn't see
+  // stale content from an earlier run, and delete the on-disk resume file so
+  // a subsequent `capgo init` run won't re-offer the now-invalid resume
+  // before `markStepDone()` has had a chance to overwrite it.
+  const discardResumedState = () => {
+    stepToSkip = 0
+    globalCodeDiff = undefined
+    setInitCodeDiff(undefined)
+    globalEncryptionSummary = undefined
+    setInitEncryptionSummary(undefined)
+    cleanupStepsDone()
+  }
+
   let organization: Organization
   if (resumed) {
     // Fetch orgs to validate the saved one still exists and is accessible
@@ -2379,7 +3171,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       pLog.error(`Cannot verify organization access: ${orgError ? JSON.stringify(orgError) : 'no data returned'}`)
       pLog.warn('Falling back to organization selection.')
       organization = await selectOrganizationForInit(supabase, options.apikey)
-      stepToSkip = 0
+      discardResumedState()
     }
     else {
       const savedOrg = allOrganizations.find(org => org.gid === resumed.orgId)
@@ -2391,18 +3183,18 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       if (!savedOrg) {
         pLog.warn(`Previously used organization "${resumed.orgName}" is no longer available. Please select a new one.`)
         organization = await selectOrganizationForInit(supabase, options.apikey)
-        stepToSkip = 0
+        discardResumedState()
       }
       else if (!hasCreateAppPermission) {
         pLog.warn(`You no longer have permission to create an app in "${savedOrg.name}". Please select a different organization.`)
         organization = await selectOrganizationForInit(supabase, options.apikey)
-        stepToSkip = 0
+        discardResumedState()
       }
       else if (blocked2fa) {
         pLog.warn(`Organization "${savedOrg.name}" now requires 2FA. Enable it at https://web.capgo.app/settings/account`)
         pLog.warn('Please select a different organization or enable 2FA and try again.')
         organization = await selectOrganizationForInit(supabase, options.apikey)
-        stepToSkip = 0
+        discardResumedState()
       }
       else {
         organization = savedOrg
@@ -2444,6 +3236,7 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
   let showResumeBanner = stepToSkip > 0
 
   const renderCurrentStep = (stepNumber: number) => {
+    globalCurrentStepNumber = stepNumber
     renderInitOnboardingFrame(stepNumber, totalSteps, { resumed: showResumeBanner })
     showResumeBanner = false
   }
@@ -2487,17 +3280,40 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
       markStepDone(5)
     }
 
+    // Keep the code diff visible throughout step 5 so users can reference it
+    // while answering the encryption prompt. Only clear it once we move on.
+    if (globalCodeDiff) {
+      globalCodeDiff = undefined
+      setInitCodeDiff(undefined)
+    }
+
     if (stepToSkip < 6) {
       renderCurrentStep(6)
-      platform = await selectPlatformStep(orgId, options.apikey)
+      platform = await selectPlatformStep(orgId, options.apikey, extConfig?.config)
       globalPlatform = platform
       markStepDone(6)
     }
 
     if (stepToSkip < 7) {
       renderCurrentStep(7)
-      await buildProjectStep(orgId, options.apikey, appId, platform)
+      // NOTE: we deliberately do NOT clear `globalEncryptionSummary` before
+      // this step. The panel's "pending-sync" state is only resolved by a
+      // successful `cap sync` inside `buildProjectStep`, which calls
+      // `promoteEncryptionSummaryToEnabled()` to flip it green in place.
+      // Keeping it mounted through step 7 means the user sees the status
+      // change the moment sync completes, which is much clearer than a
+      // panel that silently disappears.
+      await buildProjectStep(orgId, options.apikey, appId, platform, extConfig?.config)
       markStepDone(7)
+    }
+
+    // Clear the encryption summary after step 7 — by this point it has
+    // either been promoted to green `enabled` or it has stayed yellow
+    // `pending-sync` (user declined the automatic build). Either way, the
+    // next steps (device test, code change, upload) don't need it.
+    if (globalEncryptionSummary) {
+      globalEncryptionSummary = undefined
+      setInitEncryptionSummary(undefined)
     }
 
     if (stepToSkip < 8) {
@@ -2534,8 +3350,17 @@ export async function initApp(apikeyCommand: string, appId: string, options: Sup
     cleanupStepsDone()
   }
   catch (e) {
-    pLog.error(`Error during onboarding: ${formatError(e)}`)
-    pLog.error(`Error during onboarding.\n if the error persists please contact support@capgo.app\n Or use manual installation: https://capgo.app/docs/getting-started/add-an-app/`)
+    const formattedError = formatError(e)
+    const supportBundlePath = writeInitSupportBundle(formattedError)
+    const { doctor } = getInitRecoveryCommands()
+
+    pLog.error(`Error during onboarding: ${formattedError}`)
+    if (supportBundlePath)
+      pLog.error(`Support bundle saved to ${supportBundlePath}`)
+    else
+      pLog.error('Could not save a support bundle automatically.')
+    pLog.error(`Run ${doctor} for extra diagnostics before contacting support@capgo.app`)
+    pLog.error('Manual installation guide: https://capgo.app/docs/getting-started/add-an-app/')
     exit(1)
   }
 

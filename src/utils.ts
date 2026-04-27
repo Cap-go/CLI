@@ -488,19 +488,21 @@ export async function getAllPackagesDependencies(f: string = findRoot(cwd()), fi
   return dependencies
 }
 
-export async function getConfig() {
+export async function getConfig(silent = false) {
   try {
     const extConfig = await loadConfig()
     if (!extConfig) {
       const message = 'No capacitor config file found, run `cap init` first'
-      log.error(message)
+      if (!silent)
+        log.error(message)
       throw new Error(message)
     }
     return extConfig
   }
   catch (err) {
     const message = `No capacitor config file found, run \`cap init\` first ${formatError(err)}`
-    log.error(message)
+    if (!silent)
+      log.error(message)
     throw new Error(message)
   }
 }
@@ -527,9 +529,9 @@ export async function updateConfigUpdater(newConfig: any): Promise<ExtConfigPair
   return updateConfigbyKey('CapacitorUpdater', newConfig)
 }
 
-export async function getLocalConfig() {
+export async function getLocalConfig(silent = false) {
   try {
-    const extConfig = await getConfig()
+    const extConfig = await getConfig(silent)
     const capConfig: CapgoConfig = {
       host: (extConfig?.config?.plugins?.CapacitorUpdater?.localHost || defaultHost) as string,
       hostWeb: (extConfig?.config?.plugins?.CapacitorUpdater?.localWebHost || defaultHostWeb) as string,
@@ -538,7 +540,8 @@ export async function getLocalConfig() {
     }
 
     if (extConfig?.config?.plugins?.CapacitorUpdater?.localSupa && extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon) {
-      log.info('Using custom supabase instance from capacitor.config.json')
+      if (!silent)
+        log.info('Using custom supabase instance from capacitor.config.json')
       capConfig.supaKey = extConfig?.config?.plugins?.CapacitorUpdater?.localSupaAnon
       capConfig.supaHost = extConfig?.config?.plugins?.CapacitorUpdater?.localSupa
     }
@@ -564,9 +567,9 @@ interface CapgoConfig {
   hostFilesApi: string
   hostApi: string
 }
-export async function getRemoteConfig() {
+export async function getRemoteConfig(silent = false) {
   // call host + /api/get_config and parse the result as json using fetch
-  const localConfig = await getLocalConfig()
+  const localConfig = await getLocalConfig(silent)
   try {
     const response = await fetch(`${localConfig.hostApi}/private/config`)
     if (!response.ok) {
@@ -576,7 +579,8 @@ export async function getRemoteConfig() {
     return { ...data, ...localConfig } as CapgoConfig
   }
   catch {
-    log.info(`Local config ${formatError(localConfig)}`)
+    if (!silent)
+      log.info(`Local config ${formatError(localConfig)}`)
     return localConfig
   }
 }
@@ -614,15 +618,17 @@ export async function getRemoteFileConfig() {
   }
 }
 
-export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string) {
-  const config = await getRemoteConfig()
+export async function createSupabaseClient(apikey: string, supaHost?: string, supaKey?: string, silent = false) {
+  const config = await getRemoteConfig(silent)
   if (supaHost && supaKey) {
-    log.info('Using custom supabase instance from provided options')
+    if (!silent)
+      log.info('Using custom supabase instance from provided options')
     config.supaHost = supaHost
     config.supaKey = supaKey
   }
   if (!config.supaHost || !config.supaKey) {
-    log.error('Cannot connect to server please try again later')
+    if (!silent)
+      log.error('Cannot connect to server please try again later')
     throw new Error('Cannot connect to server please try again later')
   }
   return createClient<Database>(config.supaHost, config.supaKey, {
@@ -844,6 +850,29 @@ export async function checkPlanValidUpload(supabase: SupabaseClient<Database>, o
   ])
   if (trialDays > 0 && warning && !ispaying)
     log.warn(`WARNING !!\nTrial expires in ${trialDays} days, upgrade here: ${config.hostWeb}/settings/organization/plans\n`)
+}
+
+function tryReadKey(path: string): string | undefined {
+  try {
+    if (!existsSync(path))
+      return undefined
+    return readFileSync(path, 'utf8').trim() || undefined
+  }
+  catch {
+    // Swallow permission errors, TOCTOU races, transient fs issues —
+    // the contract is silent best-effort resolution.
+    return undefined
+  }
+}
+
+export function findSavedKeySilent(): string | undefined {
+  const envKey = env.CAPGO_TOKEN?.trim()
+  if (envKey)
+    return envKey
+  const globalKey = tryReadKey(`${homedir()}/.capgo`)
+  if (globalKey)
+    return globalKey
+  return tryReadKey(`.capgo`)
 }
 
 export function findSavedKey(quiet = false) {
@@ -1083,7 +1112,7 @@ export async function findBuildCommandForProjectType(projectType: string) {
   return 'build'
 }
 
-export async function findMainFile() {
+export async function findMainFile(silent = false) {
   // eslint-disable-next-line regexp/no-unused-capturing-group
   const mainRegex = /(main|index)\.(ts|tsx|js|jsx)$/
   // search for main.ts or main.js in local dir and subdirs
@@ -1095,7 +1124,8 @@ export async function findMainFile() {
     const folders = f.split('/').length - pwdL
     if (folders <= 2 && mainRegex.test(f)) {
       mainFile = f
-      log.info(`Found main file here ${f}`)
+      if (!silent)
+        log.info(`Found main file here ${f}`)
       break
     }
   }
@@ -1373,7 +1403,9 @@ export async function sendEvent(capgkey: string, payload: TrackOptions & { notif
     if (verbose) {
       log.info(`Get remove config: for ${payload.event}`)
     }
-    const config = await getRemoteConfig()
+    // Always fetch remote config silently — sendEvent is telemetry and must
+    // not bypass an Ink-controlled stdout (e.g. during `capgo init`).
+    const config = await getRemoteConfig(true)
     if (verbose) {
       log.info(`Sending LogSnag event: ${JSON.stringify(payload)}`)
     }
@@ -1399,7 +1431,7 @@ export async function sendEvent(capgkey: string, payload: TrackOptions & { notif
 
       const response = await fetchResponse.json() as { error?: string }
 
-      if (response.error) {
+      if (response.error && verbose) {
         log.error(`Failed to send LogSnag event: ${response.error}`)
       }
     }

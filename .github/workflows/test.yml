@@ -63,7 +63,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Check spelling with typos
-        uses: crate-ci/typos@v1.45.0
+        uses: crate-ci/typos@v1.45.1
 
   # POSIX path checks
   create-valid-zip-linux:
@@ -316,7 +316,9 @@ jobs:
         run: bun install
       - name: Install local @capgo/cli package
         working-directory: capgo
-        run: bun add -d file:..
+        run: |
+          bun remove @capgo/cli
+          bun add -d file:..
       - name: Run CLI tests
         working-directory: capgo
         run: LOCAL_CLI_PATH="../../../dist/index.js" bun run test:cli

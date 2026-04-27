@@ -65,12 +65,46 @@ export interface InitVersionWarning {
   majorVersion: string
 }
 
+export interface InitCodeDiffLine {
+  lineNumber: number
+  text: string
+  kind: 'context' | 'add'
+}
+
+export interface InitCodeDiff {
+  filePath: string
+  created: boolean
+  lines: InitCodeDiffLine[]
+  note?: string
+}
+
+export type InitEncryptionPhase = 'enabled' | 'pending-sync' | 'skipped' | 'failed'
+
+export interface InitEncryptionSummary {
+  phase: InitEncryptionPhase
+  title: string
+  lines: string[]
+}
+
+export type InitStreamingOutputStatus = 'running' | 'success' | 'error'
+
+export interface InitStreamingOutput {
+  title: string
+  command: string
+  lines: string[]
+  status: InitStreamingOutputStatus
+  statusMessage?: string
+}
+
 export interface InitRuntimeState {
   screen?: InitScreen
   logs: InitLogEntry[]
   spinner?: string
   prompt?: PromptRequest
   versionWarning?: InitVersionWarning
+  codeDiff?: InitCodeDiff
+  encryptionSummary?: InitEncryptionSummary
+  streamingOutput?: InitStreamingOutput
 }
 
 let state: InitRuntimeState = {
@@ -130,7 +164,7 @@ export function stopInitInkSession(finalMessage?: { text: string, tone: 'green' 
     inkApp = undefined
   }
   started = false
-  state = { screen: undefined, logs: [], spinner: undefined, prompt: undefined }
+  state = { screen: undefined, logs: [], spinner: undefined, prompt: undefined, codeDiff: undefined, encryptionSummary: undefined, streamingOutput: undefined }
   if (finalMessage)
     stdout.write(`${finalMessage.text}\n`)
 }
@@ -205,6 +239,66 @@ export function requestInitSelect(message: string, options: SelectPromptOption[]
       },
     }))
   })
+}
+
+export function setInitCodeDiff(diff?: InitCodeDiff) {
+  ensureInitInkSession()
+  updateState(current => ({ ...current, codeDiff: diff }))
+}
+
+export function setInitEncryptionSummary(summary?: InitEncryptionSummary) {
+  ensureInitInkSession()
+  updateState(current => ({ ...current, encryptionSummary: summary }))
+}
+
+export function startInitStreamingOutput(params: { title: string, command: string }) {
+  ensureInitInkSession()
+  updateState(current => ({
+    ...current,
+    streamingOutput: {
+      title: params.title,
+      command: params.command,
+      lines: [],
+      status: 'running',
+      statusMessage: undefined,
+    },
+  }))
+}
+
+export function appendInitStreamingLine(line: string) {
+  ensureInitInkSession()
+  updateState((current) => {
+    if (!current.streamingOutput)
+      return current
+    return {
+      ...current,
+      streamingOutput: {
+        ...current.streamingOutput,
+        lines: [...current.streamingOutput.lines, line],
+      },
+    }
+  })
+}
+
+export function updateInitStreamingStatus(status: InitStreamingOutputStatus, statusMessage?: string) {
+  ensureInitInkSession()
+  updateState((current) => {
+    if (!current.streamingOutput)
+      return current
+    return {
+      ...current,
+      streamingOutput: {
+        ...current.streamingOutput,
+        status,
+        statusMessage,
+      },
+    }
+  })
+}
+
+export function clearInitStreamingOutput() {
+  ensureInitInkSession()
+  updateState(current => ({ ...current, streamingOutput: undefined }))
 }
 
 export function setInitVersionWarning(currentVersion: string, latestVersion: string, majorVersion: string) {
