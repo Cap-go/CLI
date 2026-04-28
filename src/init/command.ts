@@ -1,3 +1,4 @@
+import type { Buffer } from 'node:buffer'
 import type { ExecSyncOptions } from 'node:child_process'
 import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
@@ -2312,6 +2313,19 @@ function promoteEncryptionSummaryToEnabled(): void {
 type PackageManagerInfo = ReturnType<typeof getPMAndCommand>
 type PlatformChoice = 'ios' | 'android'
 type BuildProjectStepOutcome = 'completed' | 'skipped'
+type RunDeviceStepOutcome = { args: string[], command: string } | { args: undefined, command: string }
+
+export interface CapacitorRunTarget {
+  name: string
+  api: string | undefined
+  id: string
+}
+
+const iosRunTargetActions = {
+  refresh: '__refresh__',
+  simulator: '__simulator__',
+  skip: '__skip__',
+} as const
 
 async function ensureNativePlatformForBuild(platform: PlatformChoice, config: CapacitorConfigSnapshot | undefined, runner: string): Promise<void> {
   const addPlatformCommand = formatRunnerCommand(runner, ['cap', 'add', platform])
@@ -2430,6 +2444,167 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
   await markStep(orgId, apikey, 'build-project', appId)
 }
 
+function runPackageRunnerSync(runner: string, args: string[], options: Parameters<typeof spawnSync>[2]) {
+  const parsedRunner = splitRunnerCommand(runner)
+  return spawnSync(parsedRunner.command, [...parsedRunner.args, ...args], options)
+}
+
+function getSpawnOutputText(output: string | Buffer | null | undefined): string {
+  if (!output)
+    return ''
+  return typeof output === 'string' ? output.trim() : output.toString('utf8').trim()
+}
+
+export function parseCapacitorRunTargetList(output: string): CapacitorRunTarget[] {
+  const parsed = JSON.parse(output.trim())
+  if (!Array.isArray(parsed))
+    return []
+
+  return parsed
+    .filter((target): target is Record<string, unknown> => typeof target === 'object' && target !== null)
+    .map((target) => {
+      const id = typeof target.id === 'string' ? target.id.trim() : ''
+      const rawName = typeof target.name === 'string' ? target.name.trim() : ''
+      const api = typeof target.api === 'string' ? target.api.trim() : undefined
+      return {
+        id,
+        name: rawName || id,
+        api,
+      }
+    })
+    .filter((target): target is CapacitorRunTarget => target.id.length > 0 && target.name.length > 0)
+}
+
+export function getPhysicalIosRunTargets(targets: CapacitorRunTarget[]): CapacitorRunTarget[] {
+  return targets.filter(target => !/\(simulator\)$/i.test(target.name))
+}
+
+function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice): { targets: CapacitorRunTarget[], error?: Error } {
+  try {
+    const result = runPackageRunnerSync(runner, ['cap', 'run', platformName, '--list', '--json'], {
+      stdio: 'pipe',
+      encoding: 'utf8',
+    })
+
+    if (result.error)
+      return { targets: [], error: result.error }
+
+    if (result.status !== 0) {
+      const stderr = getSpawnOutputText(result.stderr)
+      const stdout = getSpawnOutputText(result.stdout)
+      return { targets: [], error: new Error(stderr || stdout || `cap run ${platformName} --list exited with code ${result.status ?? 'unknown'}`) }
+    }
+
+    return { targets: parseCapacitorRunTargetList(getSpawnOutputText(result.stdout)) }
+  }
+  catch (error) {
+    return { targets: [], error: error instanceof Error ? error : new Error(String(error)) }
+  }
+}
+
+function getRunDeviceCommand(pm: PackageManagerInfo, platformName: PlatformChoice, target?: CapacitorRunTarget): RunDeviceStepOutcome {
+  const args = ['cap', 'run', platformName]
+  if (target)
+    args.push('--target', target.id)
+  return { args, command: formatRunnerCommand(pm.runner, args) }
+}
+
+function getSkippedRunDeviceCommand(pm: PackageManagerInfo, platformName: PlatformChoice): RunDeviceStepOutcome {
+  const args = ['cap', 'run', platformName]
+  return { args: undefined, command: formatRunnerCommand(pm.runner, args) }
+}
+
+async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<RunDeviceStepOutcome> {
+  pLog.info('Connect your iPhone or iPad, unlock it, and tap Trust if prompted.')
+
+  while (true) {
+    const result = getCapacitorRunTargetList(pm.runner, 'ios')
+    if (result.error)
+      pLog.warn(`Could not check connected iOS devices: ${formatError(result.error)}`)
+
+    const physicalTargets = getPhysicalIosRunTargets(result.targets)
+
+    if (physicalTargets.length === 1) {
+      const target = physicalTargets[0]
+      pLog.info(`Found physical iOS device: ${target.name}`)
+      return getRunDeviceCommand(pm, 'ios', target)
+    }
+
+    if (physicalTargets.length > 1) {
+      const selectedTarget = await pSelect({
+        message: 'Which physical iOS device should onboarding use?',
+        options: [
+          ...physicalTargets.map(target => ({
+            value: target.id,
+            label: target.name,
+            hint: target.id,
+          })),
+          { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
+          { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
+          { value: iosRunTargetActions.skip, label: 'Skip running now' },
+        ],
+      })
+
+      if (pIsCancel(selectedTarget))
+        await exitCanceledInitOnboarding(orgId, apikey)
+
+      if (selectedTarget === iosRunTargetActions.refresh)
+        continue
+      if (selectedTarget === iosRunTargetActions.simulator)
+        return getRunDeviceCommand(pm, 'ios')
+      if (selectedTarget === iosRunTargetActions.skip)
+        return getSkippedRunDeviceCommand(pm, 'ios')
+
+      const target = physicalTargets.find(({ id }) => id === selectedTarget)
+      if (target)
+        return getRunDeviceCommand(pm, 'ios', target)
+
+      pLog.warn('That iOS device is no longer available. Checking again.')
+      continue
+    }
+
+    pLog.warn('No physical iOS device detected yet.')
+    const nextAction = await pSelect({
+      message: 'Connect and unlock your iPhone, then check again.',
+      options: [
+        { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
+        { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
+        { value: iosRunTargetActions.skip, label: 'Skip running now' },
+      ],
+    })
+
+    if (pIsCancel(nextAction))
+      await exitCanceledInitOnboarding(orgId, apikey)
+
+    if (nextAction === iosRunTargetActions.refresh)
+      continue
+    if (nextAction === iosRunTargetActions.simulator)
+      return getRunDeviceCommand(pm, 'ios')
+    return getSkippedRunDeviceCommand(pm, 'ios')
+  }
+}
+
+async function resolveRunDeviceCommand(orgId: string, apikey: string, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
+  if (platformName !== 'ios')
+    return getRunDeviceCommand(pm, platformName)
+
+  const targetKind = await pSelect({
+    message: 'Where do you want to run the iOS app?',
+    options: [
+      { value: 'physical', label: 'Physical iPhone or iPad' },
+      { value: 'simulator', label: 'iOS Simulator' },
+    ],
+  })
+
+  if (pIsCancel(targetKind))
+    await exitCanceledInitOnboarding(orgId, apikey)
+
+  if (targetKind === 'simulator')
+    return getRunDeviceCommand(pm, 'ios')
+
+  return selectPhysicalIosRunTarget(orgId, apikey, pm)
+}
+
 function getSelectablePlatformOptions(config?: CapacitorConfigSnapshot): Array<{ value: PlatformChoice, label: string }> {
   const availablePlatforms = getNativePlatformAvailability(config)
   const options: Array<{ value: PlatformChoice, label: string }> = []
@@ -2499,14 +2674,31 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
   const doRun = await pConfirm({ message: `Run ${appId} on ${platform.toUpperCase()} device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
+    const runCommand = await resolveRunDeviceCommand(orgId, apikey, pm, platform)
+    if (!runCommand.args) {
+      pLog.info(`Skipped device launch. You can run it manually with: ${runCommand.command}`)
+      await markStep(orgId, apikey, 'run-device', appId)
+      return
+    }
+
     const s = pSpinner()
-    s.start(`Running: ${pm.runner} cap run ${platform}`)
-    const runResult = spawnSync(pm.runner, ['cap', 'run', platform], { stdio: 'inherit' })
-    const runFailed = runResult.error || runResult.status !== 0
+    s.start(`Running: ${runCommand.command}`)
+
+    let runResult: ReturnType<typeof spawnSync> | undefined
+    let runError: Error | undefined
+    try {
+      runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
+    }
+    catch (error) {
+      runError = error instanceof Error ? error : new Error(String(error))
+    }
+    const runFailed = runError || runResult?.error || runResult?.status !== 0
 
     if (runFailed) {
       const platformName = platform === 'ios' ? 'iOS' : 'Android'
       s.stop(`App failed to start ❌`)
+      if (runError || runResult?.error)
+        pLog.error(formatError(runError ?? runResult?.error))
       pLog.error(`The app failed to start on your ${platformName} device.`)
 
       const openIDE = await pConfirm({
@@ -2516,12 +2708,27 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
       if (!pIsCancel(openIDE) && openIDE) {
         const s2 = pSpinner()
         s2.start(`Opening ${platform === 'ios' ? 'Xcode' : 'Android Studio'}...`)
-        spawnSync(pm.runner, ['cap', 'open', platform], { stdio: 'inherit' })
-        s2.stop(`IDE opened ✅`)
-        pLog.info(`Please run the app manually from ${platform === 'ios' ? 'Xcode' : 'Android Studio'}`)
+        try {
+          const openResult = runPackageRunnerSync(pm.runner, ['cap', 'open', platform], { stdio: 'inherit' })
+          if (openResult.error || openResult.status !== 0) {
+            s2.stop(`Could not open ${platform === 'ios' ? 'Xcode' : 'Android Studio'} ❌`)
+            if (openResult.error)
+              pLog.error(formatError(openResult.error))
+            pLog.info(`You can run the app manually with: ${runCommand.command}`)
+          }
+          else {
+            s2.stop(`IDE opened ✅`)
+            pLog.info(`Please run the app manually from ${platform === 'ios' ? 'Xcode' : 'Android Studio'}`)
+          }
+        }
+        catch (error) {
+          s2.stop(`Could not open ${platform === 'ios' ? 'Xcode' : 'Android Studio'} ❌`)
+          pLog.error(formatError(error))
+          pLog.info(`You can run the app manually with: ${runCommand.command}`)
+        }
       }
       else {
-        pLog.info(`You can run the app manually with: ${pm.runner} cap run ${platform}`)
+        pLog.info(`You can run the app manually with: ${runCommand.command}`)
       }
     }
     else {
