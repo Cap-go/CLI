@@ -2328,7 +2328,8 @@ const iosRunTargetActions = {
 } as const
 const IOS_SIMULATOR_TARGET_SUFFIX_RE = /\(simulator\)$/i
 const INVALID_CAPACITOR_RUN_TARGET_IDS = new Set(['?'])
-type IosRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
+type IosRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh | typeof iosRunTargetActions.simulator
+type IosSimulatorRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
 
 async function ensureNativePlatformForBuild(platform: PlatformChoice, config: CapacitorConfigSnapshot | undefined, runner: string): Promise<void> {
   const addPlatformCommand = formatRunnerCommand(runner, ['cap', 'add', platform])
@@ -2493,6 +2494,10 @@ export function getPhysicalIosRunTargets(targets: CapacitorRunTarget[]): Capacit
   return targets.filter(target => !IOS_SIMULATOR_TARGET_SUFFIX_RE.test(target.name))
 }
 
+export function getSimulatorIosRunTargets(targets: CapacitorRunTarget[]): CapacitorRunTarget[] {
+  return targets.filter(target => IOS_SIMULATOR_TARGET_SUFFIX_RE.test(target.name))
+}
+
 function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice): { targets: CapacitorRunTarget[], error?: Error } {
   try {
     const result = runPackageRunnerSync(runner, ['cap', 'run', platformName, '--list', '--json'], {
@@ -2533,6 +2538,11 @@ function handleSinglePhysicalIosRunTarget(pm: PackageManagerInfo, target: Capaci
   return getRunDeviceCommand(pm, 'ios', target)
 }
 
+function handleSingleSimulatorIosRunTarget(pm: PackageManagerInfo, target: CapacitorRunTarget): RunDeviceStepOutcome {
+  pLog.info(`Found iOS Simulator: ${target.name}`)
+  return getRunDeviceCommand(pm, 'ios', target)
+}
+
 async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo, physicalTargets: CapacitorRunTarget[]): Promise<IosRunTargetResolution> {
   const selectedTarget = await pSelect({
     message: 'Which physical iOS device should onboarding use?',
@@ -2554,7 +2564,7 @@ async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string
   if (selectedTarget === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
   if (selectedTarget === iosRunTargetActions.simulator)
-    return getRunDeviceCommand(pm, 'ios')
+    return iosRunTargetActions.simulator
   if (selectedTarget === iosRunTargetActions.skip)
     return getSkippedRunDeviceCommand(pm, 'ios')
 
@@ -2583,8 +2593,82 @@ async function handleMissingPhysicalIosRunTargets(orgId: string, apikey: string,
   if (nextAction === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
   if (nextAction === iosRunTargetActions.simulator)
-    return getRunDeviceCommand(pm, 'ios')
+    return iosRunTargetActions.simulator
   return getSkippedRunDeviceCommand(pm, 'ios')
+}
+
+async function handleMultipleSimulatorIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo, simulatorTargets: CapacitorRunTarget[]): Promise<IosSimulatorRunTargetResolution> {
+  const selectedTarget = await pSelect({
+    message: 'Which iOS Simulator should onboarding use?',
+    options: [
+      ...simulatorTargets.map(target => ({
+        value: target.id,
+        label: target.name,
+        hint: target.id,
+      })),
+      { value: iosRunTargetActions.refresh, label: 'Check again for simulators' },
+      { value: iosRunTargetActions.skip, label: 'Skip running now' },
+    ],
+  })
+
+  if (pIsCancel(selectedTarget))
+    await exitCanceledInitOnboarding(orgId, apikey)
+
+  if (selectedTarget === iosRunTargetActions.refresh)
+    return iosRunTargetActions.refresh
+  if (selectedTarget === iosRunTargetActions.skip)
+    return getSkippedRunDeviceCommand(pm, 'ios')
+
+  const target = simulatorTargets.find(({ id }) => id === selectedTarget)
+  if (target)
+    return getRunDeviceCommand(pm, 'ios', target)
+
+  pLog.warn('That iOS Simulator is no longer available. Checking again.')
+  return iosRunTargetActions.refresh
+}
+
+async function handleMissingSimulatorIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<IosSimulatorRunTargetResolution> {
+  pLog.warn('No iOS Simulator target detected yet.')
+  const nextAction = await pSelect({
+    message: 'Open Xcode or install a simulator, then check again.',
+    options: [
+      { value: iosRunTargetActions.refresh, label: 'Check again for simulators' },
+      { value: iosRunTargetActions.skip, label: 'Skip running now' },
+    ],
+  })
+
+  if (pIsCancel(nextAction))
+    await exitCanceledInitOnboarding(orgId, apikey)
+
+  if (nextAction === iosRunTargetActions.refresh)
+    return iosRunTargetActions.refresh
+  return getSkippedRunDeviceCommand(pm, 'ios')
+}
+
+async function selectSimulatorIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo, initialTargets?: CapacitorRunTarget[]): Promise<RunDeviceStepOutcome> {
+  let knownTargets = initialTargets
+
+  while (true) {
+    const result = knownTargets
+      ? { targets: knownTargets }
+      : getCapacitorRunTargetList(pm.runner, 'ios')
+    knownTargets = undefined
+
+    if ('error' in result && result.error)
+      pLog.warn(`Could not check iOS Simulator targets: ${formatError(result.error)}`)
+
+    const simulatorTargets = getSimulatorIosRunTargets(result.targets)
+
+    if (simulatorTargets.length === 1)
+      return handleSingleSimulatorIosRunTarget(pm, simulatorTargets[0])
+
+    const selectionResult = simulatorTargets.length > 1
+      ? await handleMultipleSimulatorIosRunTargets(orgId, apikey, pm, simulatorTargets)
+      : await handleMissingSimulatorIosRunTargets(orgId, apikey, pm)
+    if (selectionResult === iosRunTargetActions.refresh)
+      continue
+    return selectionResult
+  }
 }
 
 async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<RunDeviceStepOutcome> {
@@ -2605,6 +2689,8 @@ async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: Pac
       : await handleMissingPhysicalIosRunTargets(orgId, apikey, pm)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
+    if (selectionResult === iosRunTargetActions.simulator)
+      return selectSimulatorIosRunTarget(orgId, apikey, pm, result.targets)
     return selectionResult
   }
 }
@@ -2625,7 +2711,7 @@ async function resolveRunDeviceCommand(orgId: string, apikey: string, pm: Packag
     await exitCanceledInitOnboarding(orgId, apikey)
 
   if (targetKind === 'simulator')
-    return getRunDeviceCommand(pm, 'ios')
+    return selectSimulatorIosRunTarget(orgId, apikey, pm)
 
   return selectPhysicalIosRunTarget(orgId, apikey, pm)
 }

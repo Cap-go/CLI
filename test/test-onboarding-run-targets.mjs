@@ -3,6 +3,7 @@
 import assert from 'node:assert/strict'
 import {
   getPhysicalIosRunTargets,
+  getSimulatorIosRunTargets,
   parseCapacitorRunTargetList,
 } from '../src/init/command.ts'
 
@@ -52,6 +53,19 @@ test('filters physical iOS devices from simulator targets', () => {
   assert.deepEqual(physicalTargets, [
     { name: 'Martin iPhone', api: 'iOS 26.0', id: 'device-1' },
     { name: 'QA iPad', api: 'iOS 25.5', id: 'device-2' },
+  ])
+})
+
+test('filters iOS Simulator targets from physical devices', () => {
+  const simulatorTargets = getSimulatorIosRunTargets([
+    { name: 'Martin iPhone', api: 'iOS 26.0', id: 'device-1' },
+    { name: 'iPad Pro (simulator)', api: 'iOS 26.0', id: 'sim-1' },
+    { name: 'iPhone 17 (simulator)', api: 'iOS 26.0', id: 'sim-2' },
+  ])
+
+  assert.deepEqual(simulatorTargets, [
+    { name: 'iPad Pro (simulator)', api: 'iOS 26.0', id: 'sim-1' },
+    { name: 'iPhone 17 (simulator)', api: 'iOS 26.0', id: 'sim-2' },
   ])
 })
 
