@@ -29,7 +29,7 @@ import { setChannel } from './channel/set'
 import { generateDocs } from './docs'
 import { defaultStarRepo } from './github'
 import { starAllRepositoriesCommand, starRepositoryCommand } from './github-command'
-import { initApp } from './init'
+import { initApp, testRunDeviceCommand } from './init'
 import { createKey, deleteOldKey, saveKeyCommand } from './key'
 import { login } from './login'
 import { startMcpServer } from './mcp/server'
@@ -65,6 +65,7 @@ program
 
 This includes adding code for updates, building, uploading your app, and verifying update functionality.
 Capgo bundles are web assets and can be fetched by anyone who knows the URL. Use encryption for banking, regulated, or other high-security apps.
+During the iOS run-on-device step, choose a physical iPhone/iPad or simulator. If you choose a physical device, the CLI lets you connect, unlock, and check again before it launches the app.
 
 Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .action(initApp)
@@ -72,6 +73,17 @@ Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .option('-i, --icon <icon>', `App icon path for display in Capgo Cloud`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
+
+program
+  .command('run-device [platform]')
+  .description(`📱 Test the same Capacitor device target picker used by init onboarding.
+
+For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
+Use --no-launch to print the resolved command without starting the app.
+
+Example: npx @capgo/cli@latest run-device ios --no-launch`)
+  .action(testRunDeviceCommand)
+  .option('--no-launch', `Resolve and print the run command without starting the app`)
 
 program
   .command('star [repository]')

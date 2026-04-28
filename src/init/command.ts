@@ -28,12 +28,18 @@ import { showReplicationProgress } from '../replicationProgress'
 import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
+import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitScreen, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
   local: boolean
 }
+
+interface RunDeviceTestOptions {
+  launch?: boolean
+}
+
+type RunDeviceCancelHandler = () => Promise<never>
 const importInject = 'import { CapacitorUpdater } from \'@capgo/capacitor-updater\''
 const codeInject = 'CapacitorUpdater.notifyAppReady()'
 // create regex to find line who start by 'import ' and end by ' from '
@@ -134,6 +140,11 @@ async function runInitDoctorDiagnostics(): Promise<void> {
 async function exitCanceledInitOnboarding(orgId: string, apikey: string, message = 'You can resume the onboarding anytime by running the same command again'): Promise<never> {
   await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
   pOutro(`Bye 👋\n💡 ${message}`)
+  exit(1)
+}
+
+async function exitCanceledRunDeviceTest(): Promise<never> {
+  pOutro('Run-device test canceled.')
   exit(1)
 }
 
@@ -2543,7 +2554,7 @@ function handleSingleSimulatorIosRunTarget(pm: PackageManagerInfo, target: Capac
   return getRunDeviceCommand(pm, 'ios', target)
 }
 
-async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo, physicalTargets: CapacitorRunTarget[]): Promise<IosRunTargetResolution> {
+async function handleMultiplePhysicalIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, physicalTargets: CapacitorRunTarget[]): Promise<IosRunTargetResolution> {
   const selectedTarget = await pSelect({
     message: 'Which physical iOS device should onboarding use?',
     options: [
@@ -2559,7 +2570,7 @@ async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string
   })
 
   if (pIsCancel(selectedTarget))
-    await exitCanceledInitOnboarding(orgId, apikey)
+    await cancelHandler()
 
   if (selectedTarget === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
@@ -2576,7 +2587,7 @@ async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string
   return iosRunTargetActions.refresh
 }
 
-async function handleMissingPhysicalIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<IosRunTargetResolution> {
+async function handleMissingPhysicalIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo): Promise<IosRunTargetResolution> {
   pLog.warn('No physical iOS device detected yet.')
   const nextAction = await pSelect({
     message: 'Connect and unlock your iPhone, then check again.',
@@ -2588,7 +2599,7 @@ async function handleMissingPhysicalIosRunTargets(orgId: string, apikey: string,
   })
 
   if (pIsCancel(nextAction))
-    await exitCanceledInitOnboarding(orgId, apikey)
+    await cancelHandler()
 
   if (nextAction === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
@@ -2597,7 +2608,7 @@ async function handleMissingPhysicalIosRunTargets(orgId: string, apikey: string,
   return getSkippedRunDeviceCommand(pm, 'ios')
 }
 
-async function handleMultipleSimulatorIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo, simulatorTargets: CapacitorRunTarget[]): Promise<IosSimulatorRunTargetResolution> {
+async function handleMultipleSimulatorIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, simulatorTargets: CapacitorRunTarget[]): Promise<IosSimulatorRunTargetResolution> {
   const selectedTarget = await pSelect({
     message: 'Which iOS Simulator should onboarding use?',
     options: [
@@ -2612,7 +2623,7 @@ async function handleMultipleSimulatorIosRunTargets(orgId: string, apikey: strin
   })
 
   if (pIsCancel(selectedTarget))
-    await exitCanceledInitOnboarding(orgId, apikey)
+    await cancelHandler()
 
   if (selectedTarget === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
@@ -2627,7 +2638,7 @@ async function handleMultipleSimulatorIosRunTargets(orgId: string, apikey: strin
   return iosRunTargetActions.refresh
 }
 
-async function handleMissingSimulatorIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<IosSimulatorRunTargetResolution> {
+async function handleMissingSimulatorIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo): Promise<IosSimulatorRunTargetResolution> {
   pLog.warn('No iOS Simulator target detected yet.')
   const nextAction = await pSelect({
     message: 'Open Xcode or install a simulator, then check again.',
@@ -2638,14 +2649,14 @@ async function handleMissingSimulatorIosRunTargets(orgId: string, apikey: string
   })
 
   if (pIsCancel(nextAction))
-    await exitCanceledInitOnboarding(orgId, apikey)
+    await cancelHandler()
 
   if (nextAction === iosRunTargetActions.refresh)
     return iosRunTargetActions.refresh
   return getSkippedRunDeviceCommand(pm, 'ios')
 }
 
-async function selectSimulatorIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo, initialTargets?: CapacitorRunTarget[]): Promise<RunDeviceStepOutcome> {
+async function selectSimulatorIosRunTarget(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, initialTargets?: CapacitorRunTarget[]): Promise<RunDeviceStepOutcome> {
   let knownTargets = initialTargets
 
   while (true) {
@@ -2663,15 +2674,15 @@ async function selectSimulatorIosRunTarget(orgId: string, apikey: string, pm: Pa
       return handleSingleSimulatorIosRunTarget(pm, simulatorTargets[0])
 
     const selectionResult = simulatorTargets.length > 1
-      ? await handleMultipleSimulatorIosRunTargets(orgId, apikey, pm, simulatorTargets)
-      : await handleMissingSimulatorIosRunTargets(orgId, apikey, pm)
+      ? await handleMultipleSimulatorIosRunTargets(cancelHandler, pm, simulatorTargets)
+      : await handleMissingSimulatorIosRunTargets(cancelHandler, pm)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
     return selectionResult
   }
 }
 
-async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<RunDeviceStepOutcome> {
+async function selectPhysicalIosRunTarget(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo): Promise<RunDeviceStepOutcome> {
   pLog.info('Connect your iPhone or iPad, unlock it, and tap Trust if prompted.')
 
   while (true) {
@@ -2685,17 +2696,17 @@ async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: Pac
       return handleSinglePhysicalIosRunTarget(pm, physicalTargets[0])
 
     const selectionResult = physicalTargets.length > 1
-      ? await handleMultiplePhysicalIosRunTargets(orgId, apikey, pm, physicalTargets)
-      : await handleMissingPhysicalIosRunTargets(orgId, apikey, pm)
+      ? await handleMultiplePhysicalIosRunTargets(cancelHandler, pm, physicalTargets)
+      : await handleMissingPhysicalIosRunTargets(cancelHandler, pm)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
     if (selectionResult === iosRunTargetActions.simulator)
-      return selectSimulatorIosRunTarget(orgId, apikey, pm, result.targets)
+      return selectSimulatorIosRunTarget(cancelHandler, pm, result.targets)
     return selectionResult
   }
 }
 
-async function resolveRunDeviceCommand(orgId: string, apikey: string, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
+async function resolveRunDeviceCommand(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
   if (platformName !== 'ios')
     return getRunDeviceCommand(pm, platformName)
 
@@ -2708,12 +2719,12 @@ async function resolveRunDeviceCommand(orgId: string, apikey: string, pm: Packag
   })
 
   if (pIsCancel(targetKind))
-    await exitCanceledInitOnboarding(orgId, apikey)
+    await cancelHandler()
 
   if (targetKind === 'simulator')
-    return selectSimulatorIosRunTarget(orgId, apikey, pm)
+    return selectSimulatorIosRunTarget(cancelHandler, pm)
 
-  return selectPhysicalIosRunTarget(orgId, apikey, pm)
+  return selectPhysicalIosRunTarget(cancelHandler, pm)
 }
 
 function getSelectablePlatformOptions(config?: CapacitorConfigSnapshot): Array<{ value: PlatformChoice, label: string }> {
@@ -2767,6 +2778,67 @@ async function handleMissingPlatformSelection(orgId: string, apikey: string, ava
     pLog.warn(`Still could not add ${platformToAdd}.`)
 }
 
+function normalizeRunDevicePlatform(platformName: string | undefined): PlatformChoice {
+  const normalized = (platformName || 'ios').toLowerCase()
+  if (normalized === 'ios' || normalized === 'android')
+    return normalized
+  throw new Error('Platform must be "ios" or "android".')
+}
+
+export async function testRunDeviceCommand(platformName?: string, options: RunDeviceTestOptions = {}) {
+  try {
+    const pm = getPMAndCommand()
+    const platformNameChoice = normalizeRunDevicePlatform(platformName)
+
+    pIntro('Run device test')
+    setInitScreen({
+      title: 'Run Device Test',
+      introLines: [
+        'This uses the same device target picker as init onboarding.',
+        platformNameChoice === 'ios'
+          ? 'For iOS, choose a physical device or simulator, then refresh target discovery if needed.'
+          : 'For Android, this runs Capacitor directly.',
+      ],
+      phaseLabel: 'Device target',
+      statusLine: `Platform: ${platformNameChoice.toUpperCase()}`,
+      tone: 'blue',
+    })
+
+    const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
+    if (!runCommand.args) {
+      pOutro(`Skipped device launch. Manual command: ${runCommand.command}`)
+      return
+    }
+
+    if (options.launch === false) {
+      pOutro(`Resolved run command: ${runCommand.command}`)
+      return
+    }
+
+    const s = pSpinner()
+    s.start(`Running: ${runCommand.command}`)
+
+    const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
+    const runFailed = runResult.error || runResult.status !== 0
+
+    if (runFailed) {
+      s.stop('App failed to start ❌')
+      if (runResult.error)
+        pLog.error(formatError(runResult.error))
+      pLog.info(`You can run the command manually with: ${runCommand.command}`)
+      pCancel('Run-device test failed.')
+      exit(1)
+    }
+
+    s.stop('App started ✅')
+    pOutro(`Run-device test finished. Manual command: ${runCommand.command}`)
+  }
+  catch (error) {
+    pCancel(`Run-device test failed: ${formatError(error)}`)
+    exit(1)
+  }
+}
+
 async function selectPlatformStep(orgId: string, apikey: string, config?: CapacitorConfigSnapshot): Promise<'ios' | 'android'> {
   pLog.info(`📱 Platform selection for onboarding`)
   pLog.info(`   This is just for testing during onboarding - your app will work on all platforms`)
@@ -2785,7 +2857,7 @@ async function runDeviceStep(orgId: string, apikey: string, appId: string, platf
   const doRun = await pConfirm({ message: `Run ${appId} on ${platform.toUpperCase()} device now to test the initial version?` })
   await cancelCommand(doRun, orgId, apikey)
   if (doRun) {
-    const runCommand = await resolveRunDeviceCommand(orgId, apikey, pm, platform)
+    const runCommand = await resolveRunDeviceCommand(() => exitCanceledInitOnboarding(orgId, apikey), pm, platform)
     if (!runCommand.args) {
       pLog.info(`Skipped device launch. You can run it manually with: ${runCommand.command}`)
       await markStep(orgId, apikey, 'run-device', appId)

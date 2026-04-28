@@ -24,6 +24,7 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 ## 📋 Table of Contents
 
 - 🚀 [Init](#init)
+- 📱 [Run-device](#run-device)
 - 🔹 [Star](#star)
 - 🔹 [Star-all](#star-all)
 - 👨‍⚕️ [Doctor](#doctor)
@@ -102,6 +103,29 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | **-i,** | <code>string</code> | App icon path for display in Capgo Cloud |
 | **--supa-host** | <code>string</code> | Custom Supabase host URL (for self-hosting or Capgo development) |
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
+
+
+## <a id="run-device"></a> 📱 **Run-device**
+
+```bash
+npx @capgo/cli@latest run-device
+```
+
+📱 Test the same Capacitor device target picker used by init onboarding.
+For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
+Use --no-launch to print the resolved command without starting the app.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest run-device ios --no-launch
+```
+
+## <a id="options"></a> Options
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **--no-launch** | <code>boolean</code> | Resolve and print the run command without starting the app |
 
 
 ## <a id="star"></a> 🔹 **Star**

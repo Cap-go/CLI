@@ -1,0 +1,29 @@
+---
+title: 📱 run-device
+description: "📱 Test the same Capacitor device target picker used by init onboarding."
+sidebar_label: run-device
+sidebar:
+  order: 2
+---
+
+📱 Test the same Capacitor device target picker used by init onboarding.
+
+```bash
+npx @capgo/cli@latest run-device
+```
+
+For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
+Use --no-launch to print the resolved command without starting the app.
+
+**Example:**
+
+```bash
+npx @capgo/cli@latest run-device ios --no-launch
+```
+
+## <a id="options"></a> Options
+
+| Param          | Type          | Description          |
+| -------------- | ------------- | -------------------- |
+| **--no-launch** | <code>boolean</code> | Resolve and print the run command without starting the app |
+
