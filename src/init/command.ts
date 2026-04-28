@@ -2524,6 +2524,18 @@ function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice)
   }
 }
 
+async function getCapacitorRunTargetListWithStatus(pm: PackageManagerInfo, platformName: PlatformChoice, message: string): Promise<{ targets: CapacitorRunTarget[], error?: Error }> {
+  const s = pSpinner()
+  s.start(message)
+  await new Promise<void>(resolve => setTimeout(resolve, 0))
+  try {
+    return getCapacitorRunTargetList(pm.runner, platformName)
+  }
+  finally {
+    s.stop()
+  }
+}
+
 function getRunDeviceCommand(pm: PackageManagerInfo, platformName: PlatformChoice, target?: CapacitorRunTarget): RunDeviceStepOutcome {
   const args = ['cap', 'run', platformName]
   if (target)
@@ -2644,7 +2656,7 @@ async function selectSimulatorIosRunTarget(cancelHandler: RunDeviceCancelHandler
   while (true) {
     const result = knownTargets
       ? { targets: knownTargets }
-      : getCapacitorRunTargetList(pm.runner, 'ios')
+      : await getCapacitorRunTargetListWithStatus(pm, 'ios', 'Checking iOS Simulators...')
     knownTargets = undefined
 
     if ('error' in result && result.error)
@@ -2665,7 +2677,7 @@ async function selectPhysicalIosRunTarget(cancelHandler: RunDeviceCancelHandler,
   pLog.info('Connect your iPhone or iPad, unlock it, and tap Trust if prompted.')
 
   while (true) {
-    const result = getCapacitorRunTargetList(pm.runner, 'ios')
+    const result = await getCapacitorRunTargetListWithStatus(pm, 'ios', 'Checking connected iOS devices...')
     if (result.error)
       pLog.warn(`Could not check connected iOS devices: ${formatError(result.error)}`)
 
@@ -2738,7 +2750,7 @@ async function handleMissingCapacitorRunTargets(cancelHandler: RunDeviceCancelHa
 
 async function selectCapacitorRunTarget(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
   while (true) {
-    const result = getCapacitorRunTargetList(pm.runner, platformName)
+    const result = await getCapacitorRunTargetListWithStatus(pm, platformName, 'Checking available Android devices and emulators...')
     if (result.error)
       pLog.warn(`Could not check available devices: ${formatError(result.error)}`)
 

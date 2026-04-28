@@ -3,6 +3,7 @@ import { exit, stdin, stdout } from 'node:process'
 import { cancel as clackCancel, isCancel as clackIsCancel, log as clackLog, select as clackSelect } from '@clack/prompts'
 import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from '../init/command'
 import { cancel as pCancel, log as pLog, outro as pOutro, spinner as pSpinner } from '../init/prompts'
+import { setInitScreen } from '../init/runtime'
 import { formatRunnerCommand } from '../runner-command'
 import { formatError, getPMAndCommand } from '../utils'
 
@@ -70,6 +71,23 @@ async function selectRunDevicePlatform(platformName: string | undefined, interac
   return selectedPlatform as PlatformChoice
 }
 
+function setRunDeviceScreen(platformName: PlatformChoice): void {
+  const platformLabel = platformName === 'ios' ? 'iOS' : 'Android'
+  setInitScreen({
+    headerTitle: '📱  Capgo Run Device',
+    title: 'Run Device',
+    introLines: [
+      `${platformLabel} selected.`,
+      platformName === 'ios'
+        ? 'Pick a physical device or simulator.'
+        : 'Pick a device or emulator.',
+    ],
+    phaseLabel: 'Device',
+    statusLine: 'Reload the list if your target is not visible yet.',
+    tone: 'blue',
+  })
+}
+
 function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }, interactive: boolean): void {
   if (interactive) {
     const s = pSpinner()
@@ -125,6 +143,7 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
       return
     }
 
+    setRunDeviceScreen(platformNameChoice)
     const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
     if (!runCommand.args) {
       finishRunDeviceTest(`Skipped device launch. Manual command: ${runCommand.command}`, interactive)

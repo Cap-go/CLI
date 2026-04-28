@@ -37,6 +37,18 @@ test('parses Capacitor run target list output', () => {
   ])
 })
 
+test('parses Android device and emulator targets', () => {
+  const targets = parseCapacitorRunTargetList(JSON.stringify([
+    { name: 'Google sdk_gphone16k_arm64', api: 'API 37', id: 'emulator-5554' },
+    { name: 'Pixel 9a (emulator)', api: 'API 37.0', id: 'Pixel_9a' },
+  ]))
+
+  assert.deepEqual(targets, [
+    { name: 'Google sdk_gphone16k_arm64', api: 'API 37', id: 'emulator-5554' },
+    { name: 'Pixel 9a (emulator)', api: 'API 37.0', id: 'Pixel_9a' },
+  ])
+})
+
 test('returns an empty target list for malformed Capacitor output', () => {
   assert.deepEqual(parseCapacitorRunTargetList(''), [])
   assert.deepEqual(parseCapacitorRunTargetList('not json'), [])
