@@ -1563,7 +1563,6 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       if (addChoice === 'change') {
         currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
         confirmedAppId = undefined
-        await saveAppIdToCapacitorConfig(currentAppId)
         continue
       }
 
@@ -1575,6 +1574,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
       try {
         await addAppInternal(currentAppId, options, organization, true)
+        await saveAppIdToCapacitorConfig(currentAppId)
       }
       catch (innerError) {
         s.stop(`App add failed ❌`)
@@ -1604,8 +1604,6 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
 
         currentAppId = await askForReplacementAppId(supabase, organization, apikey, currentAppId)
         confirmedAppId = undefined
-        await saveAppIdToCapacitorConfig(currentAppId)
-
         pLog.info(`🔄 Trying with new app ID: ${currentAppId}`)
         continue
       }

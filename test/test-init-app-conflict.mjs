@@ -48,6 +48,7 @@ function createSupabaseStub(results) {
 await t('app conflict detector matches duplicate app errors', () => {
   assert.equal(isAppAlreadyExistsError(new Error('App com.example.app already exists')), true)
   assert.equal(isAppAlreadyExistsError(new Error('duplicate key value violates unique constraint')), true)
+  assert.equal(isAppAlreadyExistsError({ code: '23505', message: 'duplicate key value violates unique constraint' }), true)
   assert.equal(isAppAlreadyExistsError(new Error('23505')), true)
   assert.equal(isAppAlreadyExistsError(new Error('network unavailable')), false)
 })

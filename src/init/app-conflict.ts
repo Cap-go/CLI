@@ -1,5 +1,20 @@
 export function isAppAlreadyExistsError(error: unknown): boolean {
-  const errorMessage = (error instanceof Error ? error.message : String(error)).toLowerCase()
+  const errorMessage = (() => {
+    if (error instanceof Error)
+      return error.message
+    if (error && typeof error === 'object') {
+      const candidate = error as {
+        message?: unknown
+        details?: unknown
+        hint?: unknown
+        code?: unknown
+      }
+      return [candidate.message, candidate.details, candidate.hint, candidate.code]
+        .filter((value): value is string | number => typeof value === 'string' || typeof value === 'number')
+        .join(' ')
+    }
+    return String(error)
+  })().toLowerCase()
   return errorMessage.includes('already exist')
     || errorMessage.includes('duplicate key')
     || errorMessage.includes('23505')
