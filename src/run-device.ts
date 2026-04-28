@@ -1,4 +1,5 @@
 import { exit, stdin, stdout } from 'node:process'
+import { log as clackLog } from '@clack/prompts'
 import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from './init/command'
 import { cancel as pCancel, intro as pIntro, log as pLog, outro as pOutro, spinner as pSpinner } from './init/prompts'
 import { setInitScreen } from './init/runtime'
@@ -19,17 +20,82 @@ function canSelectRunDeviceTargetInteractively(): boolean {
 }
 
 function handleNonInteractiveIosRunDevice(pm: ReturnType<typeof getPMAndCommand>): never {
-  pLog.info('Non-interactive mode: iOS target selection needs an interactive terminal.')
-  pLog.info(`List targets with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--list'])}`)
-  pLog.info(`Run a concrete target with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
-  pCancel('Run-device test failed.')
+  clackLog.info('Non-interactive mode: iOS target selection needs an interactive terminal.')
+  clackLog.info(`List targets with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--list'])}`)
+  clackLog.info(`Run a concrete target with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
+  clackLog.error('Run-device test failed.')
   exit(1)
 }
 
+function failRunDeviceTest(message: string, interactive: boolean): never {
+  if (interactive)
+    pCancel(message)
+  else
+    clackLog.error(message)
+  exit(1)
+}
+
+function finishRunDeviceTest(message: string, interactive: boolean): void {
+  if (interactive)
+    pOutro(message)
+  else
+    clackLog.info(message)
+}
+
+function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }, interactive: boolean): void {
+  if (interactive) {
+    const s = pSpinner()
+    s.start(`Running: ${runCommand.command}`)
+
+    const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
+    const runFailed = runResult.error || runResult.status !== 0
+
+    if (runFailed) {
+      s.stop('App failed to start ❌')
+      if (runResult.error)
+        pLog.error(formatError(runResult.error))
+      pLog.info(`You can run the command manually with: ${runCommand.command}`)
+      failRunDeviceTest('Run-device test failed.', interactive)
+    }
+
+    s.stop('App started ✅')
+    return
+  }
+
+  clackLog.info(`Running: ${runCommand.command}`)
+  const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
+  const runFailed = runResult.error || runResult.status !== 0
+
+  if (runFailed) {
+    if (runResult.error)
+      clackLog.error(formatError(runResult.error))
+    clackLog.info(`You can run the command manually with: ${runCommand.command}`)
+    failRunDeviceTest('Run-device test failed.', interactive)
+  }
+
+  clackLog.info('App started')
+}
+
 export async function testRunDeviceCommand(platformName?: string, options: RunDeviceTestOptions = {}) {
+  const interactive = canSelectRunDeviceTargetInteractively()
   try {
     const pm = getPMAndCommand()
     const platformNameChoice = normalizeRunDevicePlatform(platformName)
+
+    if (platformNameChoice === 'ios' && !interactive)
+      handleNonInteractiveIosRunDevice(pm)
+
+    if (!interactive) {
+      const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
+      if (!runCommand.args || options.launch === false) {
+        finishRunDeviceTest(`Resolved run command: ${runCommand.command}`, interactive)
+        return
+      }
+
+      runResolvedDeviceCommand(pm, runCommand, interactive)
+      finishRunDeviceTest(`Run-device test finished. Manual command: ${runCommand.command}`, interactive)
+      return
+    }
 
     pIntro('Run device test')
     setInitScreen({
@@ -45,40 +111,21 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
       tone: 'blue',
     })
 
-    if (platformNameChoice === 'ios' && !canSelectRunDeviceTargetInteractively())
-      handleNonInteractiveIosRunDevice(pm)
-
     const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
     if (!runCommand.args) {
-      pOutro(`Skipped device launch. Manual command: ${runCommand.command}`)
+      finishRunDeviceTest(`Skipped device launch. Manual command: ${runCommand.command}`, interactive)
       return
     }
 
     if (options.launch === false) {
-      pOutro(`Resolved run command: ${runCommand.command}`)
+      finishRunDeviceTest(`Resolved run command: ${runCommand.command}`, interactive)
       return
     }
 
-    const s = pSpinner()
-    s.start(`Running: ${runCommand.command}`)
-
-    const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
-    const runFailed = runResult.error || runResult.status !== 0
-
-    if (runFailed) {
-      s.stop('App failed to start ❌')
-      if (runResult.error)
-        pLog.error(formatError(runResult.error))
-      pLog.info(`You can run the command manually with: ${runCommand.command}`)
-      pCancel('Run-device test failed.')
-      exit(1)
-    }
-
-    s.stop('App started ✅')
-    pOutro(`Run-device test finished. Manual command: ${runCommand.command}`)
+    runResolvedDeviceCommand(pm, runCommand, interactive)
+    finishRunDeviceTest(`Run-device test finished. Manual command: ${runCommand.command}`, interactive)
   }
   catch (error) {
-    pCancel(`Run-device test failed: ${formatError(error)}`)
-    exit(1)
+    failRunDeviceTest(`Run-device test failed: ${formatError(error)}`, interactive)
   }
 }
