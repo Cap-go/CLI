@@ -11,6 +11,31 @@ interface RunDeviceTestOptions {
   launch?: boolean
 }
 
+interface RunDeviceOutput {
+  fail: (message: string) => never
+  finish: (message: string) => void
+}
+
+const interactiveRunDeviceOutput: RunDeviceOutput = {
+  fail(message: string): never {
+    pCancel(message)
+    exit(1)
+  },
+  finish(message: string): void {
+    pOutro(message)
+  },
+}
+
+const nonInteractiveRunDeviceOutput: RunDeviceOutput = {
+  fail(message: string): never {
+    clackLog.error(message)
+    exit(1)
+  },
+  finish(message: string): void {
+    clackLog.info(message)
+  },
+}
+
 async function exitCanceledRunDeviceTest(): Promise<never> {
   pOutro('Run device test canceled.')
   exit(1)
@@ -26,21 +51,6 @@ function handleNonInteractiveIosRunDevice(pm: ReturnType<typeof getPMAndCommand>
   clackLog.info(`Run a specific device with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
   clackLog.error('Run device test failed.')
   exit(1)
-}
-
-function failRunDeviceTest(message: string, interactive: boolean): never {
-  if (interactive)
-    pCancel(message)
-  else
-    clackLog.error(message)
-  exit(1)
-}
-
-function finishRunDeviceTest(message: string, interactive: boolean): void {
-  if (interactive)
-    pOutro(message)
-  else
-    clackLog.info(message)
 }
 
 function getNonInteractiveRunDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, platformName: PlatformChoice): { args: string[], command: string } {
@@ -88,26 +98,25 @@ function setRunDeviceScreen(platformName: PlatformChoice): void {
   })
 }
 
-function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }, interactive: boolean): void {
-  if (interactive) {
-    const s = pSpinner()
-    s.start(`Running: ${runCommand.command}`)
+function runResolvedDeviceCommandInteractive(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }): void {
+  const s = pSpinner()
+  s.start(`Running: ${runCommand.command}`)
 
-    const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
-    const runFailed = runResult.error || runResult.status !== 0
+  const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
+  const runFailed = runResult.error || runResult.status !== 0
 
-    if (runFailed) {
-      s.stop('App failed to start ❌')
-      if (runResult.error)
-        pLog.error(formatError(runResult.error))
-      pLog.info(`You can run the command manually with: ${runCommand.command}`)
-      failRunDeviceTest('Run device test failed.', interactive)
-    }
-
-    s.stop('App started ✅')
-    return
+  if (runFailed) {
+    s.stop('App failed to start ❌')
+    if (runResult.error)
+      pLog.error(formatError(runResult.error))
+    pLog.info(`You can run the command manually with: ${runCommand.command}`)
+    interactiveRunDeviceOutput.fail('Run device test failed.')
   }
 
+  s.stop('App started ✅')
+}
+
+function runResolvedDeviceCommandNonInteractive(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }): void {
   clackLog.info(`Running: ${runCommand.command}`)
   const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
   const runFailed = runResult.error || runResult.status !== 0
@@ -116,7 +125,7 @@ function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCom
     if (runResult.error)
       clackLog.error(formatError(runResult.error))
     clackLog.info(`You can run the command manually with: ${runCommand.command}`)
-    failRunDeviceTest('Run device test failed.', interactive)
+    nonInteractiveRunDeviceOutput.fail('Run device test failed.')
   }
 
   clackLog.info('App started')
@@ -124,6 +133,7 @@ function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCom
 
 export async function testRunDeviceCommand(platformName?: string, options: RunDeviceTestOptions = {}) {
   const interactive = canSelectRunDeviceTargetInteractively()
+  const output = interactive ? interactiveRunDeviceOutput : nonInteractiveRunDeviceOutput
   try {
     const pm = getPMAndCommand()
     const platformNameChoice = await selectRunDevicePlatform(platformName, interactive)
@@ -131,34 +141,34 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
     if (!interactive) {
       const runCommand = getNonInteractiveRunDeviceCommand(pm, platformNameChoice)
       if (options.launch === false) {
-        finishRunDeviceTest(`Resolved run command: ${runCommand.command}`, interactive)
+        output.finish(`Resolved run command: ${runCommand.command}`)
         return
       }
 
       if (platformNameChoice === 'ios')
         handleNonInteractiveIosRunDevice(pm)
 
-      runResolvedDeviceCommand(pm, runCommand, interactive)
-      finishRunDeviceTest(`Run device test finished. Manual command: ${runCommand.command}`, interactive)
+      runResolvedDeviceCommandNonInteractive(pm, runCommand)
+      output.finish(`Run device test finished. Manual command: ${runCommand.command}`)
       return
     }
 
     setRunDeviceScreen(platformNameChoice)
     const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
     if (!runCommand.args) {
-      finishRunDeviceTest(`Skipped device launch. Manual command: ${runCommand.command}`, interactive)
+      output.finish(`Skipped device launch. Manual command: ${runCommand.command}`)
       return
     }
 
     if (options.launch === false) {
-      finishRunDeviceTest(`Resolved run command: ${runCommand.command}`, interactive)
+      output.finish(`Resolved run command: ${runCommand.command}`)
       return
     }
 
-    runResolvedDeviceCommand(pm, runCommand, interactive)
-    finishRunDeviceTest(`Run device test finished. Manual command: ${runCommand.command}`, interactive)
+    runResolvedDeviceCommandInteractive(pm, runCommand)
+    output.finish(`Run device test finished. Manual command: ${runCommand.command}`)
   }
   catch (error) {
-    failRunDeviceTest(`Run device test failed: ${formatError(error)}`, interactive)
+    output.fail(`Run device test failed: ${formatError(error)}`)
   }
 }

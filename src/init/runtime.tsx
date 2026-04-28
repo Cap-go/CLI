@@ -115,6 +115,7 @@ let state: InitRuntimeState = {
 const listeners = new Set<() => void>()
 let inkApp: ReturnType<typeof render> | undefined
 let started = false
+let keepAliveTimer: ReturnType<typeof setInterval> | undefined
 
 function emit() {
   listeners.forEach(listener => listener())
@@ -157,9 +158,14 @@ export function ensureInitInkSession() {
     subscribe,
     updatePromptError,
   }))
+  keepAliveTimer ??= setInterval(() => {}, 1000)
 }
 
 export function stopInitInkSession(finalMessage?: { text: string, tone: 'green' | 'yellow' }) {
+  if (keepAliveTimer) {
+    clearInterval(keepAliveTimer)
+    keepAliveTimer = undefined
+  }
   if (inkApp) {
     inkApp.unmount()
     inkApp = undefined
