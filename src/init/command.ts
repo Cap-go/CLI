@@ -4,6 +4,7 @@ import type { Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
 import type { InitCodeDiff, InitEncryptionPhase, InitEncryptionSummary } from './runtime'
 import { execSync, spawn, spawnSync } from 'node:child_process'
+import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
 import { chdir, cwd, env, exit, platform, stdin, stdout } from 'node:process'
@@ -1468,7 +1469,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
 
         // Generate alternative suggestions with validation
         const rawSuggestions = [
-          `${appId}-${Math.random().toString(36).substring(2, 6)}`,
+          `${appId}-${randomBytes(2).toString('hex')}`,
           `${appId}.dev`,
           `${appId}.app`,
           `${appId}-${Date.now().toString().slice(-4)}`,
