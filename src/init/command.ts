@@ -1,20 +1,20 @@
 import type { Buffer } from 'node:buffer'
 import type { ExecSyncOptions } from 'node:child_process'
-import type { Options, PendingOnboardingApp } from '../api/app'
+import type { ExistingOrganizationApp, Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
 import type { InitCodeDiff, InitEncryptionPhase, InitEncryptionSummary } from './runtime'
 import { execSync, spawn, spawnSync } from 'node:child_process'
-import { randomBytes } from 'node:crypto'
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import path, { dirname, join } from 'node:path'
 import { chdir, cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
 import open from 'open'
 import tmp from 'tmp'
-import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
+import { checkAppIdsExist, completePendingOnboardingApp, findAppInOrganization, listPendingOnboardingApps } from '../api/app'
 import { checkVersionStatus } from '../api/update'
 import { addAppInternal } from '../app/add'
 import { markSnag, waitLog } from '../app/debug'
+import { deleteAppInternal } from '../app/delete'
 import { getInfoInternal } from '../app/info'
 import { canUseFilePicker, openPackageJsonPicker } from '../build/onboarding/file-picker'
 import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
@@ -27,10 +27,12 @@ import { doLoginExists, loginInternal } from '../login'
 import { writeOnboardingSupportBundle } from '../onboarding-support'
 import { showReplicationProgress } from '../replicationProgress'
 import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
-import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
+import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
+import { buildAppIdConflictSuggestions, isAppAlreadyExistsError } from './app-conflict'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
+import { CAPGO_UPDATER_PACKAGE, getUpdaterInstallState } from './updater'
 
 interface SuperOptions extends Options {
   local: boolean
@@ -44,6 +46,7 @@ const regexImport = /import.*from.*/g
 const defaultChannel = 'production'
 const channelNameRegex = /^[\w.-]+$/
 const appIdRegex = /^[a-z0-9]+(?:\.[\w-]+)+$/i
+const whitespaceSplitPattern = /\s+/
 const execOption = { stdio: 'pipe' }
 const capacitorConfigFiles = ['capacitor.config.ts', 'capacitor.config.js', 'capacitor.config.json']
 const capacitorGettingStartedUrl = 'https://capacitorjs.com/docs/getting-started'
@@ -55,6 +58,7 @@ const frameworkSetupGuides = {
   sveltekit: 'https://capgo.app/blog/creating-mobile-apps-with-sveltekit-and-capacitor/',
 } as const
 type CapacitorConfigSnapshot = Awaited<ReturnType<typeof getConfig>>['config']
+type CancelablePromptValue = boolean | string | symbol
 
 let tmpObject: tmp.FileResult['name'] | undefined
 let globalPathToPackageJson: string | undefined
@@ -341,7 +345,7 @@ function exitBeforeAuthenticatedOnboarding() {
   exit(1)
 }
 
-function cancelBeforeAuthenticatedOnboarding(command: boolean | string | symbol) {
+function cancelBeforeAuthenticatedOnboarding(command: CancelablePromptValue) {
   if (pIsCancel(command)) {
     pCancel('Operation cancelled.')
     exitBeforeAuthenticatedOnboarding()
@@ -1025,12 +1029,18 @@ function runNativeResetCommand(platformRunner: string, nativePlatform: PlatformC
   }
 }
 
-async function waitForReadyRetry(message: string, orgId: string, apikey: string, placeholder = 'ready'): Promise<void> {
+async function waitForReadyConfirmation(
+  message: string,
+  orgId: string,
+  apikey: string,
+  prompt = 'Type "ready" when the manual fix is done.',
+  placeholder = 'ready',
+): Promise<void> {
   pLog.info(message)
 
   while (true) {
     const ready = await pText({
-      message: 'Type "ready" when the iOS folder is fixed.',
+      message: prompt,
       placeholder,
       validate: (value) => {
         if (!value?.trim())
@@ -1046,6 +1056,10 @@ async function waitForReadyRetry(message: string, orgId: string, apikey: string,
     if (typeof ready === 'string' && ready.trim().toLowerCase() === 'ready')
       return
   }
+}
+
+async function waitForReadyRetry(message: string, orgId: string, apikey: string, placeholder = 'ready'): Promise<void> {
+  await waitForReadyConfirmation(message, orgId, apikey, 'Type "ready" when the iOS folder is fixed.', placeholder)
 }
 
 async function handleBrokenIosSync(platformRunner: string, details: string[], orgId: string, apikey: string, failureCount: number) {
@@ -1426,24 +1440,149 @@ async function checkPrerequisitesStep(orgId: string, apikey: string) {
   await markStep(orgId, apikey, 'check-prerequisites', 'checked')
 }
 
+type ExistingAppConflictResolution = 'use-existing' | 'recreate' | 'choose-different' | 'not-owned'
+
+async function completeExistingAppPendingOnboarding(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  appId: string,
+) {
+  const s = pSpinner()
+  s.start(`Preparing existing app ${appId}`)
+  try {
+    await completePendingOnboardingApp(supabase, organization.gid, appId)
+    s.stop('Existing app prepared ✅')
+  }
+  catch (error) {
+    s.stop('Could not prepare existing app ❌')
+    throw error
+  }
+}
+
+async function resolveExistingAppConflict(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  apikey: string,
+  appId: string,
+  options: SuperOptions,
+): Promise<ExistingAppConflictResolution> {
+  const existingApp: ExistingOrganizationApp | null = await findAppInOrganization(supabase, organization.gid, appId)
+  if (!existingApp)
+    return 'not-owned'
+
+  pLog.warn(`App ID "${appId}" already exists in "${organization.name}".`)
+  if (existingApp.name?.trim())
+    pLog.info(`Found existing app "${existingApp.name}" in your Capgo account.`)
+
+  const useExistingApp = await pConfirm({
+    message: 'You already created this app. Do you want to use it?',
+    initialValue: true,
+  })
+  await cancelCommand(useExistingApp, organization.gid, apikey)
+
+  if (useExistingApp === true) {
+    if (existingApp.need_onboarding)
+      await completeExistingAppPendingOnboarding(supabase, organization, appId)
+
+    await saveAppIdToCapacitorConfig(appId)
+    return 'use-existing'
+  }
+
+  const deleteExistingApp = await pConfirm({
+    message: 'Do you want to delete it to recreate it again?',
+    initialValue: false,
+  })
+  await cancelCommand(deleteExistingApp, organization.gid, apikey)
+
+  if (deleteExistingApp === true) {
+    const s = pSpinner()
+    s.start(`Deleting existing app ${appId}`)
+    try {
+      await deleteAppInternal(appId, { ...options, apikey }, true, true)
+      s.stop('Existing app deleted ✅')
+    }
+    catch (error) {
+      s.stop('Could not delete existing app ❌')
+      pLog.warn(`Could not delete the existing app: ${formatError(error)}`)
+      return 'choose-different'
+    }
+
+    return 'recreate'
+  }
+
+  return 'choose-different'
+}
+
+async function askForReplacementAppId(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  apikey: string,
+  baseAppId: string,
+): Promise<string> {
+  const rawSuggestions = buildAppIdConflictSuggestions(baseAppId)
+  const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
+  const suggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
+
+  if (suggestions.length === 0) {
+    pLog.warn('No available suggestions found. Please enter a custom app ID.')
+    return askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
+  }
+
+  pLog.info('💡 Here are some available suggestions:')
+  suggestions.forEach((suggestion, idx) => {
+    pLog.info(`   ${idx + 1}. ${suggestion}`)
+  })
+
+  const choice = await pSelect({
+    message: 'What would you like to do?',
+    options: [
+      ...suggestions.map((suggestion, idx) => ({
+        value: `suggest-${idx}`,
+        label: `Use ${suggestion}`,
+      })),
+      { value: 'custom', label: 'Enter a custom app ID' },
+      { value: 'cancel', label: 'Cancel onboarding' },
+    ],
+  })
+
+  await cancelCommand(choice, organization.gid, apikey)
+
+  if (choice === 'cancel') {
+    await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', undefined, '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+    exit()
+  }
+
+  if (choice === 'custom')
+    return askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
+
+  const suggestionIndex = Number.parseInt((choice as string).replace('suggest-', ''), 10)
+  return suggestions[suggestionIndex]
+}
+
 async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions): Promise<string> {
   const pm = getPMAndCommand()
   let currentAppId = appId
+  let confirmedAppId: string | undefined
 
   while (true) {
-    const addChoice = await pSelect({
-      message: `Add ${currentAppId} to Capgo?`,
-      options: [
-        { value: 'yes', label: '✅ Yes, add it' },
-        { value: 'change', label: '❌ No, use a different app ID' },
-      ],
-    })
-    await cancelCommand(addChoice, organization.gid, apikey)
+    if (confirmedAppId !== currentAppId) {
+      const addChoice = await pSelect({
+        message: `Add ${currentAppId} to Capgo?`,
+        options: [
+          { value: 'yes', label: '✅ Yes, add it' },
+          { value: 'change', label: '❌ No, use a different app ID' },
+        ],
+      })
+      await cancelCommand(addChoice, organization.gid, apikey)
 
-    if (addChoice === 'change') {
-      currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
-      await saveAppIdToCapacitorConfig(currentAppId)
-      continue
+      if (addChoice === 'change') {
+        currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
+        confirmedAppId = undefined
+        continue
+      }
+
+      confirmedAppId = currentAppId
     }
 
     try {
@@ -1451,6 +1590,7 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       s.start(`Running: ${pm.runner} @capgo/cli@latest app add ${currentAppId}`)
       try {
         await addAppInternal(currentAppId, options, organization, true)
+        await saveAppIdToCapacitorConfig(currentAppId)
       }
       catch (innerError) {
         s.stop(`App add failed ❌`)
@@ -1461,77 +1601,25 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       return currentAppId
     }
     catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-
-      // Check if the error is about app already existing
-      if (errorMessage.includes('already exist') || errorMessage.includes('duplicate key') || errorMessage.includes('23505')) {
-        pLog.error(`❌ App ID "${currentAppId}" is already taken`)
-
-        // Generate alternative suggestions with validation
-        const rawSuggestions = [
-          `${appId}-${randomBytes(2).toString('hex')}`,
-          `${appId}.dev`,
-          `${appId}.app`,
-          `${appId}-${Date.now().toString().slice(-4)}`,
-          `${appId}2`,
-          `${appId}3`,
-        ]
-
-        // Validate suggestions against database to only show available ones
+      if (isAppAlreadyExistsError(error)) {
         const supabase = await createSupabaseClient(options.apikey ?? apikey, options.supaHost, options.supaAnon)
-        const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
-        const availableSuggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
 
-        // If no suggestions are available, ask for custom input
-        if (availableSuggestions.length === 0) {
-          pLog.warn(`No available suggestions found. Please enter a custom app ID.`)
-          currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
-        }
-        else {
-          const suggestions = availableSuggestions
-
-          pLog.info(`💡 Here are some available suggestions:`)
-          suggestions.forEach((suggestion, idx) => {
-            pLog.info(`   ${idx + 1}. ${suggestion}`)
-          })
-
-          const choice = await pSelect({
-            message: 'What would you like to do?',
-            options: [
-              { value: 'suggest1', label: `Use ${suggestions[0]}` },
-              ...(suggestions[1] ? [{ value: 'suggest2', label: `Use ${suggestions[1]}` }] : []),
-              ...(suggestions[2] ? [{ value: 'suggest3', label: `Use ${suggestions[2]}` }] : []),
-              ...(suggestions[3] ? [{ value: 'suggest4', label: `Use ${suggestions[3]}` }] : []),
-              { value: 'custom', label: 'Enter a custom app ID' },
-              { value: 'cancel', label: 'Cancel onboarding' },
-            ].filter(Boolean) as any[],
-          })
-
-          if (pIsCancel(choice)) {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', undefined, '🤷')
-            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-            exit()
-          }
-
-          if (choice === 'cancel') {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
-            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-            exit()
-          }
-
-          if (choice === 'custom') {
-            currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
-          }
-          else {
-            // Use one of the suggestions
-            const suggestionIndex = Number.parseInt((choice as string).replace('suggest', '')) - 1
-            currentAppId = suggestions[suggestionIndex]
-          }
+        const conflictResolution = await resolveExistingAppConflict(supabase, organization, apikey, currentAppId, options)
+        if (conflictResolution === 'use-existing') {
+          await markStep(organization.gid, apikey, 'add-app', currentAppId)
+          return currentAppId
         }
 
-        // Save the new app ID to capacitor config
-        await saveAppIdToCapacitorConfig(currentAppId)
+        if (conflictResolution === 'recreate') {
+          confirmedAppId = currentAppId
+          continue
+        }
 
+        if (conflictResolution === 'not-owned')
+          pLog.error(`❌ App ID "${currentAppId}" is already taken`)
+
+        currentAppId = await askForReplacementAppId(supabase, organization, apikey, currentAppId)
+        confirmedAppId = undefined
         pLog.info(`🔄 Trying with new app ID: ${currentAppId}`)
         continue
       }
@@ -1590,99 +1678,108 @@ async function addChannelStep(orgId: string, apikey: string, appId: string) {
   return channelName
 }
 
-async function getAssistedDependencies(stepsDone: number) {
+function rememberPackageJsonPath(packageJsonPath: string): void {
+  globalPathToPackageJson = packageJsonPath
+}
+
+function cancelPackageJsonSelection(command: boolean | string | symbol): void {
+  if (pIsCancel(command)) {
+    pCancel('Operation cancelled.')
+    exit(1)
+  }
+}
+
+function validatePackageJsonPath(value: string | undefined): string | undefined {
+  const trimmedValue = value?.trim()
+  if (!trimmedValue)
+    return 'Path is required.'
+  if (!existsSync(trimmedValue))
+    return `Path ${trimmedValue} does not exist`
+  if (path.basename(trimmedValue) !== PACKNAME)
+    return 'Selected a file that is not a package.json file'
+}
+
+async function selectPackageJsonFromTree(): Promise<string> {
+  let currentPath = cwd()
+  let selectedEntry = PACKNAME as string | symbol
+  while (true) {
+    const options = readdirSync(currentPath)
+      .map(dir => ({ value: dir, label: dir }))
+    options.push({ value: '..', label: '..' })
+    selectedEntry = await pSelect({
+      message: 'Select package.json file:',
+      options,
+    })
+    cancelPackageJsonSelection(selectedEntry)
+    if (typeof selectedEntry !== 'string')
+      continue
+
+    if (!statSync(join(currentPath, selectedEntry)).isDirectory() && selectedEntry !== PACKNAME) {
+      pLog.error(`Selected a file that is not a package.json file`)
+      continue
+    }
+    currentPath = join(currentPath, selectedEntry)
+    if (selectedEntry === PACKNAME)
+      return currentPath
+  }
+}
+
+async function promptForPackageJsonPath(): Promise<string> {
+  const packageJsonPath = await pText({
+    message: 'Enter path to package.json file:',
+    validate: validatePackageJsonPath,
+  }) as string
+  cancelPackageJsonSelection(packageJsonPath)
+  return packageJsonPath.trim()
+}
+
+async function resolvePackageJsonPath(): Promise<string | null> {
+  const doSelect = await pConfirm({ message: 'Would you like to select the package.json file manually?' })
+  cancelPackageJsonSelection(doSelect)
+  if (!doSelect)
+    return null
+
+  const useNativePicker = canUseFilePicker()
+  if (useNativePicker) {
+    const selectedPath = await openPackageJsonPicker()
+    if (selectedPath) {
+      const validationError = validatePackageJsonPath(selectedPath)
+      if (!validationError)
+        return selectedPath
+      pLog.error(validationError)
+    }
+
+    pLog.info('Falling back to manual path entry.')
+  }
+
+  if (!useNativePicker) {
+    const useTreeSelect = await pConfirm({ message: 'Would you like to use a tree selector to choose the package.json file?' })
+    cancelPackageJsonSelection(useTreeSelect)
+    if (useTreeSelect)
+      return selectPackageJsonFromTree()
+  }
+
+  return promptForPackageJsonPath()
+}
+
+async function getAssistedDependencies() {
   // here we will assume that getAllPackagesDependencies uses 'findRoot(cwd())' for the first argument
   const root = join(findRoot(cwd()), PACKNAME)
-  const packageJsonPath = globalPathToPackageJson ?? root
-  const dependencies = await getAllPackagesDependencies(undefined, packageJsonPath)
+  let packageJsonPath = globalPathToPackageJson ?? root
+  let dependencies = await getAllPackagesDependencies(undefined, packageJsonPath)
   if (dependencies.size === 0 || !dependencies.has('@capacitor/core')) {
     pLog.warn('No adequate dependencies found')
-    const doSelect = await pConfirm({ message: 'Would you like to select the package.json file manually?' })
-    if (pIsCancel(doSelect)) {
-      pCancel('Operation cancelled.')
-      exit(1)
-    }
-    if (doSelect) {
-      const useNativePicker = canUseFilePicker()
-      if (useNativePicker) {
-        const selectedPath = await openPackageJsonPicker()
-        if (selectedPath) {
-          if (path.basename(selectedPath) !== PACKNAME) {
-            pLog.error('Selected a file that is not a package.json file')
-          }
-          else if (!existsSync(selectedPath)) {
-            pLog.error(`Path ${selectedPath} does not exist`)
-          }
-          else {
-            markStepDone(stepsDone, selectedPath)
-            return { dependencies: await getAllPackagesDependencies(undefined, selectedPath), path: selectedPath }
-          }
-        }
-
-        pLog.info('Falling back to manual path entry.')
-      }
-
-      if (!useNativePicker) {
-        const useTreeSelect = await pConfirm({ message: 'Would you like to use a tree selector to choose the package.json file?' })
-        if (pIsCancel(useTreeSelect)) {
-          pCancel('Operation cancelled.')
-          exit(1)
-        }
-
-        if (useTreeSelect) {
-          let currentPath = cwd()
-          let selectedEntry = PACKNAME as string | symbol
-          while (true) {
-            const options = readdirSync(currentPath)
-              .map(dir => ({ value: dir, label: dir }))
-            options.push({ value: '..', label: '..' })
-            selectedEntry = await pSelect({
-              message: 'Select package.json file:',
-              options,
-            })
-            if (pIsCancel(selectedEntry)) {
-              pCancel('Operation cancelled.')
-              exit(1)
-            }
-            if (!statSync(join(currentPath, selectedEntry)).isDirectory() && selectedEntry !== PACKNAME) {
-              pLog.error(`Selected a file that is not a package.json file`)
-              continue
-            }
-            currentPath = join(currentPath, selectedEntry)
-            if (selectedEntry === PACKNAME) {
-              break
-            }
-          }
-          markStepDone(stepsDone, currentPath)
-          return { dependencies: await getAllPackagesDependencies(undefined, currentPath), path: currentPath }
-        }
-      }
-
-      const packageJsonPath = await pText({
-        message: 'Enter path to package.json file:',
-        validate: (value) => {
-          if (!value?.trim())
-            return 'Path is required.'
-          if (!existsSync(value))
-            return `Path ${value} does not exist`
-          if (path.basename(value) !== PACKNAME)
-            return 'Selected a file that is not a package.json file'
-        },
-      }) as string
-      if (pIsCancel(packageJsonPath)) {
-        pCancel('Operation cancelled.')
-        exit(1)
-      }
-      const selectedPackageJsonPath = packageJsonPath.trim()
-      markStepDone(stepsDone, selectedPackageJsonPath)
-      return { dependencies: await getAllPackagesDependencies(undefined, selectedPackageJsonPath), path: selectedPackageJsonPath }
+    const selectedPackageJsonPath = await resolvePackageJsonPath()
+    if (selectedPackageJsonPath) {
+      packageJsonPath = selectedPackageJsonPath
+      dependencies = await getAllPackagesDependencies(undefined, packageJsonPath)
     }
   }
 
-  // even in the default case, let's mark the path to package.json
+  // even in the default case, remember the path to package.json
   // this will help with bundle upload
-  markStepDone(stepsDone, root)
-  return { dependencies: await getAllPackagesDependencies(undefined, root), path: root }
+  rememberPackageJsonPath(packageJsonPath)
+  return { dependencies, path: packageJsonPath }
 }
 
 const urlMigrateV5 = 'https://capacitorjs.com/docs/updating/5-0'
@@ -1708,6 +1805,122 @@ function getUpdaterInstallBlocker(dependencies: Map<string, string>, packageMana
   return undefined
 }
 
+function getUpdaterVersionToInstall(coreVersion: string, logSelection = true): { versionToInstall: string, shouldOfferDirectInstall: boolean } {
+  if (lessThan(parse(coreVersion), parse('6.0.0'))) {
+    if (logSelection) {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v5`)
+      pLog.warn(`Consider upgrading to Capacitor v6 or higher to support the latest mobile OS features: ${urlMigrateV6}`)
+    }
+    return { versionToInstall: '^5.0.0', shouldOfferDirectInstall: false }
+  }
+  if (lessThan(parse(coreVersion), parse('7.0.0'))) {
+    if (logSelection) {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v6`)
+      pLog.warn(`Consider upgrading to Capacitor v7 or higher to support the latest mobile OS features: ${urlMigrateV7}`)
+    }
+    return { versionToInstall: '^6.0.0', shouldOfferDirectInstall: false }
+  }
+  if (lessThan(parse(coreVersion), parse('8.0.0'))) {
+    if (logSelection) {
+      pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v7`)
+      pLog.warn(`Consider upgrading to Capacitor v8 to support the latest mobile OS features: ${urlMigrateV8}`)
+    }
+    return { versionToInstall: '^7.0.0', shouldOfferDirectInstall: false }
+  }
+
+  if (logSelection)
+    pLog.info(`@capacitor/core version is ${coreVersion}, installing latest capacitor-updater`)
+  return { versionToInstall: 'latest', shouldOfferDirectInstall: true }
+}
+
+function getUpdaterInstallCommand(pm: PackageManagerInfo, versionToInstall: string, force = false): string {
+  const forceFlag = force ? ' --force' : ''
+  return `${pm.installCommand}${forceFlag} ${CAPGO_UPDATER_PACKAGE}@${versionToInstall}`
+}
+
+function formatSpawnOutput(output: string | Buffer | null | undefined): string {
+  if (!output)
+    return ''
+  return typeof output === 'string' ? output : output.toString('utf8')
+}
+
+function runUpdaterInstallCommand(pm: PackageManagerInfo, packageJsonPath: string, versionToInstall: string): void {
+  const [command, ...args] = pm.installCommand.split(whitespaceSplitPattern).filter(Boolean)
+  if (!command)
+    throw new Error('Cannot determine package manager install command')
+
+  const result = spawnSync(command, [...args, '--force', `${CAPGO_UPDATER_PACKAGE}@${versionToInstall}`], {
+    stdio: 'pipe',
+    cwd: dirname(packageJsonPath),
+  })
+  if (result.error || result.status !== 0) {
+    const output = [formatSpawnOutput(result.stdout), formatSpawnOutput(result.stderr)]
+      .map(text => text.trim())
+      .filter(Boolean)
+      .join('\n')
+    const outputDetails = output ? `\n${output}` : ''
+    const message = `Updater install failed with code ${result.status ?? 'unknown'}${outputDetails}`
+    throw result.error ?? new Error(message)
+  }
+}
+
+function logUpdaterInstallStateDetails(packageJsonPath: string, details: string[], manualCommand: string): void {
+  pLog.warn(`${CAPGO_UPDATER_PACKAGE} is not ready yet.`)
+  for (const detail of details) {
+    pLog.warn(detail)
+  }
+  pLog.info(`Run this in ${dirname(packageJsonPath)}: ${manualCommand}`)
+}
+
+async function waitForVerifiedUpdaterInstall(
+  orgId: string,
+  apikey: string,
+  packageJsonPath: string,
+  pm: PackageManagerInfo,
+  versionToInstall: string,
+  options: { allowAutoRetry?: boolean, failureText?: string } = {},
+) {
+  const manualCommand = getUpdaterInstallCommand(pm, versionToInstall)
+
+  while (true) {
+    const state = getUpdaterInstallState(packageJsonPath)
+    if (state.ready) {
+      pLog.info(`${CAPGO_UPDATER_PACKAGE} found in package.json and node_modules ✅`)
+      return state
+    }
+
+    logUpdaterInstallStateDetails(packageJsonPath, state.details, manualCommand)
+
+    if (options.allowAutoRetry) {
+      const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Updater install is not complete yet. What do you want to do?', [
+        { value: 'retry-auto', label: 'Retry automatic updater install' },
+        { value: 'manual', label: 'Install it manually, then continue' },
+      ], options.failureText ?? state.details.join('\n'))
+
+      if (recoveryChoice === 'retry-auto') {
+        const s = pSpinner()
+        try {
+          s.start(`Running: ${getUpdaterInstallCommand(pm, versionToInstall, true)}`)
+          runUpdaterInstallCommand(pm, packageJsonPath, versionToInstall)
+          s.stop('Updater install command finished ✅')
+        }
+        catch (error) {
+          s.stop('Updater install failed ❌')
+          pLog.error(formatError(error))
+        }
+        continue
+      }
+    }
+
+    await waitForReadyConfirmation(
+      `Install ${CAPGO_UPDATER_PACKAGE} manually, then come back here.`,
+      orgId,
+      apikey,
+      `Type "ready" when ${CAPGO_UPDATER_PACKAGE} is installed.`,
+    )
+  }
+}
+
 async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
   const pm = getPMAndCommand()
   let pkgVersion = '1.0.0'
@@ -1720,90 +1933,72 @@ async function addUpdaterStep(orgId: string, apikey: string, appId: string) {
     ],
   })
   await cancelCommand(installChoice, orgId, apikey)
-  if (installChoice === 'yes') {
-    while (true) {
+
+  while (true) {
+    const { dependencies, path } = await getAssistedDependencies()
+    const blocker = getUpdaterInstallBlocker(dependencies, pm)
+    if (blocker) {
+      pLog.warn(blocker)
+      await selectRecoveryOption(orgId, apikey, 'Fix the project, then choose what to do next.', [
+        { value: 'retry', label: 'Retry updater checks' },
+      ], blocker)
+      continue
+    }
+
+    const coreVersion = normalizeConcreteVersion(dependencies.get('@capacitor/core'))!
+    const { versionToInstall, shouldOfferDirectInstall } = getUpdaterVersionToInstall(coreVersion)
+    pkgVersion = getBundleVersion(undefined, path) || pkgVersion
+
+    if (installChoice === 'yes') {
       const s = pSpinner()
-      let versionToInstall = 'latest'
-      let shouldOfferDirectInstall = false
-      // 3 because this is the 4th step, ergo 3 steps have already been done
-      const { dependencies, path } = await getAssistedDependencies(3)
-      s.start(`Checking if @capgo/capacitor-updater is installed`)
+      s.start(`Checking if ${CAPGO_UPDATER_PACKAGE} is installed`)
+      const installState = getUpdaterInstallState(path)
 
-      const blocker = getUpdaterInstallBlocker(dependencies, pm)
-      if (blocker) {
-        s.stop('Updater install blocked ❌')
-        pLog.warn(blocker)
-        await selectRecoveryOption(orgId, apikey, 'Fix the project, then choose what to do next.', [
-          { value: 'retry', label: 'Retry updater checks' },
-        ], blocker)
-        continue
-      }
-
-      const coreVersion = normalizeConcreteVersion(dependencies.get('@capacitor/core'))!
-      if (lessThan(parse(coreVersion), parse('6.0.0'))) {
-        pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v5`)
-        pLog.warn(`Consider upgrading to Capacitor v6 or higher to support the latest mobile OS features: ${urlMigrateV6}`)
-        versionToInstall = '^5.0.0'
-      }
-      else if (lessThan(parse(coreVersion), parse('7.0.0'))) {
-        pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v6`)
-        pLog.warn(`Consider upgrading to Capacitor v7 or higher to support the latest mobile OS features: ${urlMigrateV7}`)
-        versionToInstall = '^6.0.0'
-      }
-      else if (lessThan(parse(coreVersion), parse('8.0.0'))) {
-        pLog.info(`@capacitor/core version is ${coreVersion}, installing compatible capacitor-updater v7`)
-        pLog.warn(`Consider upgrading to Capacitor v8 to support the latest mobile OS features: ${urlMigrateV8}`)
-        versionToInstall = '^7.0.0'
+      if (installState.ready) {
+        s.stop(`Capgo already installed ✅`)
       }
       else {
-        pLog.info(`@capacitor/core version is ${coreVersion}, installing latest capacitor-updater`)
-        versionToInstall = 'latest'
-        shouldOfferDirectInstall = true
-      }
-
-      try {
-        const installedVersion = await getInstalledVersion('@capgo/capacitor-updater', dirname(path), path)
-        pkgVersion = getBundleVersion(undefined, path) || pkgVersion
-        if (installedVersion) {
-          s.stop(`Capgo already installed ✅`)
-        }
-        else {
-          await execSync(`${pm.installCommand} --force @capgo/capacitor-updater@${versionToInstall}`, { ...execOption, cwd: dirname(path) } as ExecSyncOptions)
+        try {
+          runUpdaterInstallCommand(pm, path, versionToInstall)
           s.stop(`Install Done ✅`)
-          let doDirectInstall: boolean | symbol = false
-          if (shouldOfferDirectInstall) {
-            doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
-            await cancelCommand(doDirectInstall, orgId, apikey)
-          }
-          s.start(`Updating config file`)
-          delta = !!doDirectInstall
-          const directInstall = doDirectInstall
-            ? {
-                directUpdate: 'always',
-                autoSplashscreen: true,
-              }
-            : {}
-          if (doDirectInstall) {
-            await updateConfigbyKey('SplashScreen', { launchAutoHide: false })
-          }
-          await updateConfigUpdater({ version: pkgVersion, appId, autoUpdate: true, ...directInstall })
-          s.stop(`Config file updated ✅`)
         }
-
-        break
-      }
-      catch (error) {
-        s.stop('Updater install failed ❌')
-        pLog.error(formatError(error))
-        await selectRecoveryOption(orgId, apikey, 'Updater install failed. What do you want to do?', [
-          { value: 'retry', label: 'Retry updater install' },
-        ], formatError(error))
+        catch (error) {
+          s.stop('Updater install failed ❌')
+          pLog.error(formatError(error))
+        }
       }
     }
+    else {
+      pLog.info(`Install it manually with: "${getUpdaterInstallCommand(pm, versionToInstall)}"`)
+    }
+
+    await waitForVerifiedUpdaterInstall(orgId, apikey, path, pm, versionToInstall, {
+      allowAutoRetry: installChoice === 'yes',
+    })
+
+    let doDirectInstall: boolean | symbol = false
+    if (shouldOfferDirectInstall) {
+      doDirectInstall = await pConfirm({ message: `Do you want to set instant updates in ${appId}? Read more about it here: https://capgo.app/docs/live-updates/update-behavior/#applying-updates-immediately` })
+      await cancelCommand(doDirectInstall, orgId, apikey)
+    }
+
+    const s = pSpinner()
+    s.start(`Updating config file`)
+    delta = !!doDirectInstall
+    const directInstall = doDirectInstall
+      ? {
+          directUpdate: 'always',
+          autoSplashscreen: true,
+        }
+      : {}
+    if (doDirectInstall) {
+      await updateConfigbyKey('SplashScreen', { launchAutoHide: false })
+    }
+    await updateConfigUpdater({ version: pkgVersion, appId, autoUpdate: true, ...directInstall })
+    s.stop(`Config file updated ✅`)
+    break
   }
-  else {
-    pLog.info(`If you change your mind, run it for yourself with: "${pm.installCommand} @capgo/capacitor-updater@latest"`)
-  }
+
   await markStep(orgId, apikey, 'add-updater', appId)
   return { pkgVersion, delta }
 }
@@ -2138,6 +2333,7 @@ async function addEncryptionStep(orgId: string, apikey: string, appId: string) {
       // every native platform that's already been `cap add`-ed, which is
       // exactly what we want — the key needs to end up in whichever
       // native projects exist.
+      await ensureUpdaterReadyBeforeSync(pm, orgId, apikey)
       const syncResult = await streamCommandInInitPanel({
         title: '🔐 Syncing native project so the public key is bundled',
         runner: pm.runner,
@@ -2409,14 +2605,94 @@ async function handleMissingBuildScript(buildCommand: string, appId: string, pla
   exit()
 }
 
+async function getCompatibleUpdaterVersionForPackage(packageJsonPath: string, pm: PackageManagerInfo): Promise<string> {
+  try {
+    const dependencies = await getAllPackagesDependencies(undefined, packageJsonPath)
+    const blocker = getUpdaterInstallBlocker(dependencies, pm)
+    if (blocker)
+      return 'latest'
+
+    const coreVersion = normalizeConcreteVersion(dependencies.get('@capacitor/core'))!
+    return getUpdaterVersionToInstall(coreVersion, false).versionToInstall
+  }
+  catch {
+    return 'latest'
+  }
+}
+
+async function handleBuildAndSyncFailure(
+  platform: PlatformChoice,
+  buildAndSyncCommand: string,
+  pm: PackageManagerInfo,
+  orgId: string,
+  apikey: string,
+  error: unknown,
+): Promise<'retry' | 'completed'> {
+  const formattedError = formatError(error)
+  const packageJsonPath = globalPathToPackageJson ?? join(findRoot(cwd()), PACKNAME)
+  const updaterState = getUpdaterInstallState(packageJsonPath)
+
+  pLog.error(`Build or sync failed: ${formattedError}`)
+
+  if (!updaterState.ready) {
+    pLog.warn(`Capacitor sync cannot wire ${CAPGO_UPDATER_PACKAGE} until it is declared and installed.`)
+    const versionToInstall = await getCompatibleUpdaterVersionForPackage(packageJsonPath, pm)
+    await waitForVerifiedUpdaterInstall(orgId, apikey, packageJsonPath, pm, versionToInstall, {
+      failureText: formattedError,
+    })
+    return 'retry'
+  }
+
+  const recoveryChoice = await selectRecoveryOption(orgId, apikey, 'Build or sync failed. What do you want to do?', [
+    { value: 'retry', label: 'Retry build and sync' },
+    { value: 'manual', label: 'Fix it manually, then continue' },
+  ], formattedError)
+
+  if (recoveryChoice === 'retry')
+    return 'retry'
+
+  await waitForReadyConfirmation(
+    `Run or fix this command manually, then come back here:\n${buildAndSyncCommand}`,
+    orgId,
+    apikey,
+    'Type "ready" when build and sync are done.',
+  )
+
+  return 'retry'
+}
+
+async function ensureUpdaterReadyBeforeSync(pm: PackageManagerInfo, orgId: string, apikey: string): Promise<void> {
+  const packageJsonPath = globalPathToPackageJson ?? join(findRoot(cwd()), PACKNAME)
+  const updaterState = getUpdaterInstallState(packageJsonPath)
+  if (updaterState.ready)
+    return
+
+  pLog.warn(`Capacitor sync needs ${CAPGO_UPDATER_PACKAGE} declared in package.json and installed first.`)
+  const versionToInstall = await getCompatibleUpdaterVersionForPackage(packageJsonPath, pm)
+  await waitForVerifiedUpdaterInstall(orgId, apikey, packageJsonPath, pm, versionToInstall, {
+    failureText: updaterState.details.join('\n'),
+  })
+}
+
 async function runBuildAndSyncLoop(platform: PlatformChoice, buildAndSyncCommand: string, pm: PackageManagerInfo, orgId: string, apikey: string): Promise<void> {
   let iosSyncFailureCount = 0
 
   while (true) {
+    await ensureUpdaterReadyBeforeSync(pm, orgId, apikey)
+
     const spinner = pSpinner()
     spinner.start('Checking project type')
     spinner.message(`Running: ${buildAndSyncCommand}`)
-    execSync(buildAndSyncCommand, execOption as ExecSyncOptions)
+    try {
+      execSync(buildAndSyncCommand, execOption as ExecSyncOptions)
+    }
+    catch (error) {
+      spinner.stop('Build or sync failed ❌')
+      const recovery = await handleBuildAndSyncFailure(platform, buildAndSyncCommand, pm, orgId, apikey, error)
+      if (recovery === 'completed')
+        return
+      continue
+    }
 
     if (platform === 'ios') {
       const syncValidation = validateIosUpdaterSync(cwd(), globalPathToPackageJson)
