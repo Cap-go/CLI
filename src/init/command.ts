@@ -2326,6 +2326,7 @@ const iosRunTargetActions = {
   simulator: '__simulator__',
   skip: '__skip__',
 } as const
+type IosRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
 
 async function ensureNativePlatformForBuild(platform: PlatformChoice, config: CapacitorConfigSnapshot | undefined, runner: string): Promise<void> {
   const addPlatformCommand = formatRunnerCommand(runner, ['cap', 'add', platform])
@@ -2514,6 +2515,65 @@ function getSkippedRunDeviceCommand(pm: PackageManagerInfo, platformName: Platfo
   return { args: undefined, command: formatRunnerCommand(pm.runner, args) }
 }
 
+function handleSinglePhysicalIosRunTarget(pm: PackageManagerInfo, target: CapacitorRunTarget): RunDeviceStepOutcome {
+  pLog.info(`Found physical iOS device: ${target.name}`)
+  return getRunDeviceCommand(pm, 'ios', target)
+}
+
+async function handleMultiplePhysicalIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo, physicalTargets: CapacitorRunTarget[]): Promise<IosRunTargetResolution> {
+  const selectedTarget = await pSelect({
+    message: 'Which physical iOS device should onboarding use?',
+    options: [
+      ...physicalTargets.map(target => ({
+        value: target.id,
+        label: target.name,
+        hint: target.id,
+      })),
+      { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
+      { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
+      { value: iosRunTargetActions.skip, label: 'Skip running now' },
+    ],
+  })
+
+  if (pIsCancel(selectedTarget))
+    await exitCanceledInitOnboarding(orgId, apikey)
+
+  if (selectedTarget === iosRunTargetActions.refresh)
+    return iosRunTargetActions.refresh
+  if (selectedTarget === iosRunTargetActions.simulator)
+    return getRunDeviceCommand(pm, 'ios')
+  if (selectedTarget === iosRunTargetActions.skip)
+    return getSkippedRunDeviceCommand(pm, 'ios')
+
+  const target = physicalTargets.find(({ id }) => id === selectedTarget)
+  if (target)
+    return getRunDeviceCommand(pm, 'ios', target)
+
+  pLog.warn('That iOS device is no longer available. Checking again.')
+  return iosRunTargetActions.refresh
+}
+
+async function handleMissingPhysicalIosRunTargets(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<IosRunTargetResolution> {
+  pLog.warn('No physical iOS device detected yet.')
+  const nextAction = await pSelect({
+    message: 'Connect and unlock your iPhone, then check again.',
+    options: [
+      { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
+      { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
+      { value: iosRunTargetActions.skip, label: 'Skip running now' },
+    ],
+  })
+
+  if (pIsCancel(nextAction))
+    await exitCanceledInitOnboarding(orgId, apikey)
+
+  if (nextAction === iosRunTargetActions.refresh)
+    return iosRunTargetActions.refresh
+  if (nextAction === iosRunTargetActions.simulator)
+    return getRunDeviceCommand(pm, 'ios')
+  return getSkippedRunDeviceCommand(pm, 'ios')
+}
+
 async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: PackageManagerInfo): Promise<RunDeviceStepOutcome> {
   pLog.info('Connect your iPhone or iPad, unlock it, and tap Trust if prompted.')
 
@@ -2524,63 +2584,15 @@ async function selectPhysicalIosRunTarget(orgId: string, apikey: string, pm: Pac
 
     const physicalTargets = getPhysicalIosRunTargets(result.targets)
 
-    if (physicalTargets.length === 1) {
-      const target = physicalTargets[0]
-      pLog.info(`Found physical iOS device: ${target.name}`)
-      return getRunDeviceCommand(pm, 'ios', target)
-    }
+    if (physicalTargets.length === 1)
+      return handleSinglePhysicalIosRunTarget(pm, physicalTargets[0])
 
-    if (physicalTargets.length > 1) {
-      const selectedTarget = await pSelect({
-        message: 'Which physical iOS device should onboarding use?',
-        options: [
-          ...physicalTargets.map(target => ({
-            value: target.id,
-            label: target.name,
-            hint: target.id,
-          })),
-          { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
-          { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
-          { value: iosRunTargetActions.skip, label: 'Skip running now' },
-        ],
-      })
-
-      if (pIsCancel(selectedTarget))
-        await exitCanceledInitOnboarding(orgId, apikey)
-
-      if (selectedTarget === iosRunTargetActions.refresh)
-        continue
-      if (selectedTarget === iosRunTargetActions.simulator)
-        return getRunDeviceCommand(pm, 'ios')
-      if (selectedTarget === iosRunTargetActions.skip)
-        return getSkippedRunDeviceCommand(pm, 'ios')
-
-      const target = physicalTargets.find(({ id }) => id === selectedTarget)
-      if (target)
-        return getRunDeviceCommand(pm, 'ios', target)
-
-      pLog.warn('That iOS device is no longer available. Checking again.')
+    const selectionResult = physicalTargets.length > 1
+      ? await handleMultiplePhysicalIosRunTargets(orgId, apikey, pm, physicalTargets)
+      : await handleMissingPhysicalIosRunTargets(orgId, apikey, pm)
+    if (selectionResult === iosRunTargetActions.refresh)
       continue
-    }
-
-    pLog.warn('No physical iOS device detected yet.')
-    const nextAction = await pSelect({
-      message: 'Connect and unlock your iPhone, then check again.',
-      options: [
-        { value: iosRunTargetActions.refresh, label: 'Check again for connected devices' },
-        { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
-        { value: iosRunTargetActions.skip, label: 'Skip running now' },
-      ],
-    })
-
-    if (pIsCancel(nextAction))
-      await exitCanceledInitOnboarding(orgId, apikey)
-
-    if (nextAction === iosRunTargetActions.refresh)
-      continue
-    if (nextAction === iosRunTargetActions.simulator)
-      return getRunDeviceCommand(pm, 'ios')
-    return getSkippedRunDeviceCommand(pm, 'ios')
+    return selectionResult
   }
 }
 
