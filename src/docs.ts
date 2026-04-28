@@ -197,8 +197,10 @@ export function generateDocs(filePath: string = './README.md', folderPath?: stri
     // Options table - for all commands (even command groups may have global options)
     if (cmd.options.length > 0) {
       if (!isSubcommand) {
-        // Only add the Options title for the main command
-        section += `## <a id="options"></a> Options\n\n`
+        const optionsAnchor = skipMainHeading ? 'options' : `${cmdName}-options`
+        const optionsHeading = skipMainHeading ? '##' : '###'
+        // In README each command is already a top-level section, so options sit underneath it.
+        section += `${optionsHeading} <a id="${optionsAnchor}"></a> Options\n\n`
       }
       else {
         section += `**Options:**\n\n`

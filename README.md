@@ -95,7 +95,7 @@ During the iOS run-on-device step, choose a physical iPhone/iPad or simulator. I
 npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 ```
 
-## <a id="options"></a> Options
+### <a id="init-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
@@ -121,7 +121,7 @@ Use --no-launch to print the resolved command without starting the app.
 npx @capgo/cli@latest run-device ios --no-launch
 ```
 
-## <a id="options"></a> Options
+### <a id="run-device-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
@@ -147,7 +147,7 @@ npx @capgo/cli@latest star-all
 ⭐ Star all Capgo GitHub repositories with a small random delay between each request.
 If you do not pass repositories, this defaults to all Cap-go repositories whose name starts with `capacitor-`.
 
-## <a id="options"></a> Options
+### <a id="star-all-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
@@ -171,7 +171,7 @@ This command helps diagnose issues with your setup.
 npx @capgo/cli@latest doctor
 ```
 
-## <a id="options"></a> Options
+### <a id="doctor-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
@@ -195,7 +195,7 @@ Use --apikey=******** in any command to override it.
 npx @capgo/cli@latest login YOUR_API_KEY
 ```
 
-## <a id="options"></a> Options
+### <a id="login-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |
@@ -1248,7 +1248,7 @@ and reports whether an update would be delivered, or explains why not.
 npx @capgo/cli@latest probe --platform ios
 ```
 
-## <a id="options"></a> Options
+### <a id="probe-options"></a> Options
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |

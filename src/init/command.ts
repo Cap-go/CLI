@@ -28,18 +28,14 @@ import { showReplicationProgress } from '../replicationProgress'
 import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
-import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitScreen, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
+import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
 
 interface SuperOptions extends Options {
   local: boolean
 }
 
-interface RunDeviceTestOptions {
-  launch?: boolean
-}
-
-type RunDeviceCancelHandler = () => Promise<never>
+export type RunDeviceCancelHandler = () => Promise<never>
 const importInject = 'import { CapacitorUpdater } from \'@capgo/capacitor-updater\''
 const codeInject = 'CapacitorUpdater.notifyAppReady()'
 // create regex to find line who start by 'import ' and end by ' from '
@@ -140,11 +136,6 @@ async function runInitDoctorDiagnostics(): Promise<void> {
 async function exitCanceledInitOnboarding(orgId: string, apikey: string, message = 'You can resume the onboarding anytime by running the same command again'): Promise<never> {
   await markSnag('onboarding-v2', orgId, apikey, 'canceled', undefined, '🤷')
   pOutro(`Bye 👋\n💡 ${message}`)
-  exit(1)
-}
-
-async function exitCanceledRunDeviceTest(): Promise<never> {
-  pOutro('Run-device test canceled.')
   exit(1)
 }
 
@@ -2322,9 +2313,9 @@ function promoteEncryptionSummaryToEnabled(): void {
 }
 
 type PackageManagerInfo = ReturnType<typeof getPMAndCommand>
-type PlatformChoice = 'ios' | 'android'
+export type PlatformChoice = 'ios' | 'android'
 type BuildProjectStepOutcome = 'completed' | 'skipped'
-type RunDeviceStepOutcome = { args: string[], command: string } | { args: undefined, command: string }
+export type RunDeviceStepOutcome = { args: string[], command: string } | { args: undefined, command: string }
 
 export interface CapacitorRunTarget {
   name: string
@@ -2459,7 +2450,7 @@ async function buildProjectStep(orgId: string, apikey: string, appId: string, pl
   await markStep(orgId, apikey, 'build-project', appId)
 }
 
-function runPackageRunnerSync(runner: string, args: string[], options: Parameters<typeof spawnSync>[2]) {
+export function runPackageRunnerSync(runner: string, args: string[], options: Parameters<typeof spawnSync>[2]) {
   const parsedRunner = splitRunnerCommand(runner)
   return spawnSync(parsedRunner.command, [...parsedRunner.args, ...args], options)
 }
@@ -2706,7 +2697,7 @@ async function selectPhysicalIosRunTarget(cancelHandler: RunDeviceCancelHandler,
   }
 }
 
-async function resolveRunDeviceCommand(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
+export async function resolveRunDeviceCommand(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<RunDeviceStepOutcome> {
   if (platformName !== 'ios')
     return getRunDeviceCommand(pm, platformName)
 
@@ -2778,65 +2769,11 @@ async function handleMissingPlatformSelection(orgId: string, apikey: string, ava
     pLog.warn(`Still could not add ${platformToAdd}.`)
 }
 
-function normalizeRunDevicePlatform(platformName: string | undefined): PlatformChoice {
+export function normalizeRunDevicePlatform(platformName: string | undefined): PlatformChoice {
   const normalized = (platformName || 'ios').toLowerCase()
   if (normalized === 'ios' || normalized === 'android')
     return normalized
   throw new Error('Platform must be "ios" or "android".')
-}
-
-export async function testRunDeviceCommand(platformName?: string, options: RunDeviceTestOptions = {}) {
-  try {
-    const pm = getPMAndCommand()
-    const platformNameChoice = normalizeRunDevicePlatform(platformName)
-
-    pIntro('Run device test')
-    setInitScreen({
-      title: 'Run Device Test',
-      introLines: [
-        'This uses the same device target picker as init onboarding.',
-        platformNameChoice === 'ios'
-          ? 'For iOS, choose a physical device or simulator, then refresh target discovery if needed.'
-          : 'For Android, this runs Capacitor directly.',
-      ],
-      phaseLabel: 'Device target',
-      statusLine: `Platform: ${platformNameChoice.toUpperCase()}`,
-      tone: 'blue',
-    })
-
-    const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
-    if (!runCommand.args) {
-      pOutro(`Skipped device launch. Manual command: ${runCommand.command}`)
-      return
-    }
-
-    if (options.launch === false) {
-      pOutro(`Resolved run command: ${runCommand.command}`)
-      return
-    }
-
-    const s = pSpinner()
-    s.start(`Running: ${runCommand.command}`)
-
-    const runResult = runPackageRunnerSync(pm.runner, runCommand.args, { stdio: 'inherit' })
-    const runFailed = runResult.error || runResult.status !== 0
-
-    if (runFailed) {
-      s.stop('App failed to start ❌')
-      if (runResult.error)
-        pLog.error(formatError(runResult.error))
-      pLog.info(`You can run the command manually with: ${runCommand.command}`)
-      pCancel('Run-device test failed.')
-      exit(1)
-    }
-
-    s.stop('App started ✅')
-    pOutro(`Run-device test finished. Manual command: ${runCommand.command}`)
-  }
-  catch (error) {
-    pCancel(`Run-device test failed: ${formatError(error)}`)
-    exit(1)
-  }
 }
 
 async function selectPlatformStep(orgId: string, apikey: string, config?: CapacitorConfigSnapshot): Promise<'ios' | 'android'> {

@@ -1,1 +1,1 @@
-export { initApp, testRunDeviceCommand } from './command'
+export { initApp } from './command'
