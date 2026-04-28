@@ -1,5 +1,5 @@
 import type { ExecSyncOptions } from 'node:child_process'
-import type { Options, PendingOnboardingApp } from '../api/app'
+import type { ExistingOrganizationApp, Options, PendingOnboardingApp } from '../api/app'
 import type { Organization } from '../utils'
 import type { InitCodeDiff, InitEncryptionPhase, InitEncryptionSummary } from './runtime'
 import { execSync, spawn, spawnSync } from 'node:child_process'
@@ -9,10 +9,11 @@ import { chdir, cwd, env, exit, platform, stdin, stdout } from 'node:process'
 import { canParse, format, increment, lessThan, parse } from '@std/semver'
 import open from 'open'
 import tmp from 'tmp'
-import { checkAppIdsExist, completePendingOnboardingApp, listPendingOnboardingApps } from '../api/app'
+import { checkAppIdsExist, completePendingOnboardingApp, findAppInOrganization, listPendingOnboardingApps } from '../api/app'
 import { checkVersionStatus } from '../api/update'
 import { addAppInternal } from '../app/add'
 import { markSnag, waitLog } from '../app/debug'
+import { deleteAppInternal } from '../app/delete'
 import { getInfoInternal } from '../app/info'
 import { canUseFilePicker, openPackageJsonPicker } from '../build/onboarding/file-picker'
 import { getPlatformDirFromCapacitorConfig } from '../build/platform-paths'
@@ -26,6 +27,7 @@ import { writeOnboardingSupportBundle } from '../onboarding-support'
 import { showReplicationProgress } from '../replicationProgress'
 import { formatRunnerCommand, splitRunnerCommand } from '../runner-command'
 import { createSupabaseClient, findBuildCommandForProjectType, findMainFile, findMainFileForProjectType, findProjectType, findRoot, findSavedKey, formatError, getAllPackagesDependencies, getAppId, getBundleVersion, getConfig, getInstalledVersion, getLocalConfig, getNativeProjectResetAdvice, getPackageScripts, getPMAndCommand, PACKNAME, projectIsMonorepo, updateConfigbyKey, updateConfigUpdater, validateIosUpdaterSync, verifyUser } from '../utils'
+import { buildAppIdConflictSuggestions, isAppAlreadyExistsError } from './app-conflict'
 import { cancel as pCancel, confirm as pConfirm, intro as pIntro, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner, text as pText } from './prompts'
 import { appendInitStreamingLine, clearInitStreamingOutput, setInitCodeDiff, setInitEncryptionSummary, setInitVersionWarning, startInitStreamingOutput, stopInitInkSession, updateInitStreamingStatus } from './runtime'
 import { formatInitResumeMessage, initOnboardingSteps, renderInitOnboardingComplete, renderInitOnboardingFrame, renderInitOnboardingWelcome } from './ui'
@@ -1422,24 +1424,150 @@ async function checkPrerequisitesStep(orgId: string, apikey: string) {
   await markStep(orgId, apikey, 'check-prerequisites', 'checked')
 }
 
+type ExistingAppConflictResolution = 'use-existing' | 'recreate' | 'choose-different' | 'not-owned'
+
+async function completeExistingAppPendingOnboarding(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  appId: string,
+) {
+  const s = pSpinner()
+  s.start(`Preparing existing app ${appId}`)
+  try {
+    await completePendingOnboardingApp(supabase, organization.gid, appId)
+    s.stop('Existing app prepared ✅')
+  }
+  catch (error) {
+    s.stop('Could not prepare existing app ❌')
+    throw error
+  }
+}
+
+async function resolveExistingAppConflict(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  apikey: string,
+  appId: string,
+  options: SuperOptions,
+): Promise<ExistingAppConflictResolution> {
+  const existingApp: ExistingOrganizationApp | null = await findAppInOrganization(supabase, organization.gid, appId)
+  if (!existingApp)
+    return 'not-owned'
+
+  pLog.warn(`App ID "${appId}" already exists in "${organization.name}".`)
+  if (existingApp.name?.trim())
+    pLog.info(`Found existing app "${existingApp.name}" in your Capgo account.`)
+
+  const useExistingApp = await pConfirm({
+    message: 'You already created this app. Do you want to use it?',
+    initialValue: true,
+  })
+  await cancelCommand(useExistingApp, organization.gid, apikey)
+
+  if (useExistingApp === true) {
+    if (existingApp.need_onboarding)
+      await completeExistingAppPendingOnboarding(supabase, organization, appId)
+
+    await saveAppIdToCapacitorConfig(appId)
+    return 'use-existing'
+  }
+
+  const deleteExistingApp = await pConfirm({
+    message: 'Do you want to delete it to recreate it again?',
+    initialValue: false,
+  })
+  await cancelCommand(deleteExistingApp, organization.gid, apikey)
+
+  if (deleteExistingApp === true) {
+    const s = pSpinner()
+    s.start(`Deleting existing app ${appId}`)
+    try {
+      await deleteAppInternal(appId, { ...options, apikey }, true, true)
+      s.stop('Existing app deleted ✅')
+    }
+    catch (error) {
+      s.stop('Could not delete existing app ❌')
+      pLog.warn(`Could not delete the existing app: ${formatError(error)}`)
+      return 'choose-different'
+    }
+
+    return 'recreate'
+  }
+
+  return 'choose-different'
+}
+
+async function askForReplacementAppId(
+  supabase: Awaited<ReturnType<typeof createSupabaseClient>>,
+  organization: Organization,
+  apikey: string,
+  baseAppId: string,
+): Promise<string> {
+  const rawSuggestions = buildAppIdConflictSuggestions(baseAppId)
+  const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
+  const suggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
+
+  if (suggestions.length === 0) {
+    pLog.warn('No available suggestions found. Please enter a custom app ID.')
+    return askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
+  }
+
+  pLog.info('💡 Here are some available suggestions:')
+  suggestions.forEach((suggestion, idx) => {
+    pLog.info(`   ${idx + 1}. ${suggestion}`)
+  })
+
+  const choice = await pSelect({
+    message: 'What would you like to do?',
+    options: [
+      ...suggestions.map((suggestion, idx) => ({
+        value: `suggest-${idx}`,
+        label: `Use ${suggestion}`,
+      })),
+      { value: 'custom', label: 'Enter a custom app ID' },
+      { value: 'cancel', label: 'Cancel onboarding' },
+    ],
+  })
+
+  await cancelCommand(choice, organization.gid, apikey)
+
+  if (choice === 'cancel') {
+    await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
+    pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
+    exit()
+  }
+
+  if (choice === 'custom')
+    return askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
+
+  const suggestionIndex = Number.parseInt((choice as string).replace('suggest-', ''), 10)
+  return suggestions[suggestionIndex]
+}
+
 async function addAppStep(organization: Organization, apikey: string, appId: string, options: SuperOptions): Promise<string> {
   const pm = getPMAndCommand()
   let currentAppId = appId
+  let confirmedAppId: string | undefined
 
   while (true) {
-    const addChoice = await pSelect({
-      message: `Add ${currentAppId} to Capgo?`,
-      options: [
-        { value: 'yes', label: '✅ Yes, add it' },
-        { value: 'change', label: '❌ No, use a different app ID' },
-      ],
-    })
-    await cancelCommand(addChoice, organization.gid, apikey)
+    if (confirmedAppId !== currentAppId) {
+      const addChoice = await pSelect({
+        message: `Add ${currentAppId} to Capgo?`,
+        options: [
+          { value: 'yes', label: '✅ Yes, add it' },
+          { value: 'change', label: '❌ No, use a different app ID' },
+        ],
+      })
+      await cancelCommand(addChoice, organization.gid, apikey)
 
-    if (addChoice === 'change') {
-      currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
-      await saveAppIdToCapacitorConfig(currentAppId)
-      continue
+      if (addChoice === 'change') {
+        currentAppId = await askForAppId('Enter the correct app ID (e.g., com.example.app):')
+        confirmedAppId = undefined
+        await saveAppIdToCapacitorConfig(currentAppId)
+        continue
+      }
+
+      confirmedAppId = currentAppId
     }
 
     try {
@@ -1457,75 +1585,25 @@ async function addAppStep(organization: Organization, apikey: string, appId: str
       return currentAppId
     }
     catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error)
-
-      // Check if the error is about app already existing
-      if (errorMessage.includes('already exist') || errorMessage.includes('duplicate key') || errorMessage.includes('23505')) {
-        pLog.error(`❌ App ID "${currentAppId}" is already taken`)
-
-        // Generate alternative suggestions with validation
-        const rawSuggestions = [
-          `${appId}-${Math.random().toString(36).substring(2, 6)}`,
-          `${appId}.dev`,
-          `${appId}.app`,
-          `${appId}-${Date.now().toString().slice(-4)}`,
-          `${appId}2`,
-          `${appId}3`,
-        ]
-
-        // Validate suggestions against database to only show available ones
+      if (isAppAlreadyExistsError(error)) {
         const supabase = await createSupabaseClient(options.apikey ?? apikey, options.supaHost, options.supaAnon)
-        const existingResults = await checkAppIdsExist(supabase, rawSuggestions)
-        const availableSuggestions = rawSuggestions.filter((_, idx) => !existingResults[idx].exists).slice(0, 4)
 
-        // If no suggestions are available, ask for custom input
-        if (availableSuggestions.length === 0) {
-          pLog.warn(`No available suggestions found. Please enter a custom app ID.`)
-          currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
-        }
-        else {
-          const suggestions = availableSuggestions
-
-          pLog.info(`💡 Here are some available suggestions:`)
-          suggestions.forEach((suggestion, idx) => {
-            pLog.info(`   ${idx + 1}. ${suggestion}`)
-          })
-
-          const choice = await pSelect({
-            message: 'What would you like to do?',
-            options: [
-              { value: 'suggest1', label: `Use ${suggestions[0]}` },
-              ...(suggestions[1] ? [{ value: 'suggest2', label: `Use ${suggestions[1]}` }] : []),
-              ...(suggestions[2] ? [{ value: 'suggest3', label: `Use ${suggestions[2]}` }] : []),
-              ...(suggestions[3] ? [{ value: 'suggest4', label: `Use ${suggestions[3]}` }] : []),
-              { value: 'custom', label: 'Enter a custom app ID' },
-              { value: 'cancel', label: 'Cancel onboarding' },
-            ].filter(Boolean) as any[],
-          })
-
-          if (pIsCancel(choice)) {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled', undefined, '🤷')
-            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-            exit()
-          }
-
-          if (choice === 'cancel') {
-            await markSnag('onboarding-v2', organization.gid, apikey, 'canceled-appid-conflict', '🤷')
-            pOutro(`Bye 👋\n💡 You can resume the onboarding anytime by running the same command again`)
-            exit()
-          }
-
-          if (choice === 'custom') {
-            currentAppId = await askForAppId('Enter your custom app ID (e.g., com.example.myapp):')
-          }
-          else {
-            // Use one of the suggestions
-            const suggestionIndex = Number.parseInt((choice as string).replace('suggest', '')) - 1
-            currentAppId = suggestions[suggestionIndex]
-          }
+        const conflictResolution = await resolveExistingAppConflict(supabase, organization, apikey, currentAppId, options)
+        if (conflictResolution === 'use-existing') {
+          await markStep(organization.gid, apikey, 'add-app', currentAppId)
+          return currentAppId
         }
 
-        // Save the new app ID to capacitor config
+        if (conflictResolution === 'recreate') {
+          confirmedAppId = currentAppId
+          continue
+        }
+
+        if (conflictResolution === 'not-owned')
+          pLog.error(`❌ App ID "${currentAppId}" is already taken`)
+
+        currentAppId = await askForReplacementAppId(supabase, organization, apikey, currentAppId)
+        confirmedAppId = undefined
         await saveAppIdToCapacitorConfig(currentAppId)
 
         pLog.info(`🔄 Trying with new app ID: ${currentAppId}`)
