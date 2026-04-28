@@ -1,3 +1,4 @@
+import type { PlatformChoice } from '../init/command'
 import { exit, stdin, stdout } from 'node:process'
 import { log as clackLog } from '@clack/prompts'
 import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from '../init/command'
@@ -42,6 +43,11 @@ function finishRunDeviceTest(message: string, interactive: boolean): void {
     clackLog.info(message)
 }
 
+function getNonInteractiveRunDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, platformName: PlatformChoice): { args: string[], command: string } {
+  const args = ['cap', 'run', platformName]
+  return { args, command: formatRunnerCommand(pm.runner, args) }
+}
+
 function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }, interactive: boolean): void {
   if (interactive) {
     const s = pSpinner()
@@ -82,15 +88,15 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
     const pm = getPMAndCommand()
     const platformNameChoice = normalizeRunDevicePlatform(platformName)
 
-    if (platformNameChoice === 'ios' && !interactive)
-      handleNonInteractiveIosRunDevice(pm)
-
     if (!interactive) {
-      const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
-      if (!runCommand.args || options.launch === false) {
+      const runCommand = getNonInteractiveRunDeviceCommand(pm, platformNameChoice)
+      if (options.launch === false) {
         finishRunDeviceTest(`Resolved run command: ${runCommand.command}`, interactive)
         return
       }
+
+      if (platformNameChoice === 'ios')
+        handleNonInteractiveIosRunDevice(pm)
 
       runResolvedDeviceCommand(pm, runCommand, interactive)
       finishRunDeviceTest(`Run device test finished. Manual command: ${runCommand.command}`, interactive)
