@@ -24,7 +24,8 @@ Follow the documentation here: https://capacitorjs.com/docs/getting-started/
 ## 📋 Table of Contents
 
 - 🚀 [Init](#init)
-- 📱 [Run-device](#run-device)
+- 📱 [Run](#run)
+  - [Device](#run-device)
 - 🔹 [Star](#star)
 - 🔹 [Star-all](#star-all)
 - 👨‍⚕️ [Doctor](#doctor)
@@ -105,10 +106,14 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 | **--supa-anon** | <code>string</code> | Custom Supabase anon key (for self-hosting) |
 
 
-## <a id="run-device"></a> 📱 **Run-device**
+## <a id="run"></a> 📱 **Run**
+
+📱 Run and test Capacitor app targets from the CLI.
+
+### <a id="run-device"></a> 🔹 **Device**
 
 ```bash
-npx @capgo/cli@latest run-device
+npx @capgo/cli@latest run device
 ```
 
 📱 Test the same Capacitor device target picker used by init onboarding.
@@ -118,10 +123,10 @@ Use --no-launch to print the resolved command without starting the app.
 **Example:**
 
 ```bash
-npx @capgo/cli@latest run-device ios --no-launch
+npx @capgo/cli@latest run device ios --no-launch
 ```
 
-### <a id="run-device-options"></a> Options
+**Options:**
 
 | Param          | Type          | Description          |
 | -------------- | ------------- | -------------------- |

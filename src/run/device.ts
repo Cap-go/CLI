@@ -1,17 +1,17 @@
 import { exit, stdin, stdout } from 'node:process'
 import { log as clackLog } from '@clack/prompts'
-import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from './init/command'
-import { cancel as pCancel, intro as pIntro, log as pLog, outro as pOutro, spinner as pSpinner } from './init/prompts'
-import { setInitScreen } from './init/runtime'
-import { formatRunnerCommand } from './runner-command'
-import { formatError, getPMAndCommand } from './utils'
+import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from '../init/command'
+import { cancel as pCancel, log as pLog, outro as pOutro, spinner as pSpinner } from '../init/prompts'
+import { setInitScreen } from '../init/runtime'
+import { formatRunnerCommand } from '../runner-command'
+import { formatError, getPMAndCommand } from '../utils'
 
 interface RunDeviceTestOptions {
   launch?: boolean
 }
 
 async function exitCanceledRunDeviceTest(): Promise<never> {
-  pOutro('Run-device test canceled.')
+  pOutro('Run device test canceled.')
   exit(1)
 }
 
@@ -23,7 +23,7 @@ function handleNonInteractiveIosRunDevice(pm: ReturnType<typeof getPMAndCommand>
   clackLog.info('Non-interactive mode: iOS target selection needs an interactive terminal.')
   clackLog.info(`List targets with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--list'])}`)
   clackLog.info(`Run a concrete target with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
-  clackLog.error('Run-device test failed.')
+  clackLog.error('Run device test failed.')
   exit(1)
 }
 
@@ -55,7 +55,7 @@ function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCom
       if (runResult.error)
         pLog.error(formatError(runResult.error))
       pLog.info(`You can run the command manually with: ${runCommand.command}`)
-      failRunDeviceTest('Run-device test failed.', interactive)
+      failRunDeviceTest('Run device test failed.', interactive)
     }
 
     s.stop('App started ✅')
@@ -70,7 +70,7 @@ function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCom
     if (runResult.error)
       clackLog.error(formatError(runResult.error))
     clackLog.info(`You can run the command manually with: ${runCommand.command}`)
-    failRunDeviceTest('Run-device test failed.', interactive)
+    failRunDeviceTest('Run device test failed.', interactive)
   }
 
   clackLog.info('App started')
@@ -93,12 +93,12 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
       }
 
       runResolvedDeviceCommand(pm, runCommand, interactive)
-      finishRunDeviceTest(`Run-device test finished. Manual command: ${runCommand.command}`, interactive)
+      finishRunDeviceTest(`Run device test finished. Manual command: ${runCommand.command}`, interactive)
       return
     }
 
-    pIntro('Run device test')
     setInitScreen({
+      headerTitle: '📱  Capgo Run Device',
       title: 'Run Device Test',
       introLines: [
         'This uses the same device target picker as init onboarding.',
@@ -123,9 +123,9 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
     }
 
     runResolvedDeviceCommand(pm, runCommand, interactive)
-    finishRunDeviceTest(`Run-device test finished. Manual command: ${runCommand.command}`, interactive)
+    finishRunDeviceTest(`Run device test finished. Manual command: ${runCommand.command}`, interactive)
   }
   catch (error) {
-    failRunDeviceTest(`Run-device test failed: ${formatError(error)}`, interactive)
+    failRunDeviceTest(`Run device test failed: ${formatError(error)}`, interactive)
   }
 }

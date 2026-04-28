@@ -35,7 +35,7 @@ import { login } from './login'
 import { startMcpServer } from './mcp/server'
 import { addOrganization, deleteOrganization, listMembers, listOrganizations, setOrganization } from './organization'
 import { probe } from './probe'
-import { testRunDeviceCommand } from './run-device'
+import { testRunDeviceCommand } from './run/device'
 import { getUserId } from './user/account'
 import { formatError } from './utils'
 
@@ -75,14 +75,18 @@ Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
   .option('--supa-host <supaHost>', optionDescriptions.supaHost)
   .option('--supa-anon <supaAnon>', optionDescriptions.supaAnon)
 
-program
-  .command('run-device [platform]')
+const run = program
+  .command('run')
+  .description(`📱 Run and test Capacitor app targets from the CLI.`)
+
+run
+  .command('device [platform]')
   .description(`📱 Test the same Capacitor device target picker used by init onboarding.
 
 For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
 Use --no-launch to print the resolved command without starting the app.
 
-Example: npx @capgo/cli@latest run-device ios --no-launch`)
+Example: npx @capgo/cli@latest run device ios --no-launch`)
   .action(testRunDeviceCommand)
   .option('--no-launch', `Resolve and print the run command without starting the app`)
 

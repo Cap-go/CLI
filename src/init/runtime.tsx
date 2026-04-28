@@ -10,6 +10,7 @@ export type InitLogTone = 'cyan' | 'yellow' | 'green' | 'red'
 export type InitScreenTone = 'cyan' | 'blue' | 'green' | 'yellow'
 
 export interface InitScreen {
+  headerTitle?: string
   title?: string
   introLines?: string[]
   phaseLabel?: string
@@ -170,8 +171,8 @@ export function stopInitInkSession(finalMessage?: { text: string, tone: 'green' 
 }
 
 export function setInitScreen(screen: InitScreen) {
-  ensureInitInkSession()
   updateState(current => ({ ...current, screen }))
+  ensureInitInkSession()
 }
 
 export function pushInitLog(message: string, tone: InitLogTone) {

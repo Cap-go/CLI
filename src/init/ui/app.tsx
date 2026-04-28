@@ -208,7 +208,7 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
   if (snapshot.streamingOutput) {
     return (
       <Box flexDirection="column" padding={1} width={columns}>
-        <InitHeader />
+        <InitHeader title={screen?.headerTitle} />
         <StreamingOutputPanel
           output={snapshot.streamingOutput}
           width={contentWidth}
@@ -220,7 +220,7 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
 
   return (
     <Box flexDirection="column" padding={1} width={columns}>
-      <InitHeader />
+      <InitHeader title={screen?.headerTitle} />
 
       {snapshot.versionWarning && (
         <Box marginTop={1} width={contentWidth}>
