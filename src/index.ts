@@ -77,13 +77,15 @@ Example: npx @capgo/cli@latest init YOUR_API_KEY com.example.app`)
 
 const run = program
   .command('run')
-  .description(`📱 Run and test Capacitor app targets from the CLI.`)
+  .description(`📱 Run Capacitor apps on devices from the CLI.`)
 
 run
   .command('device [platform]')
-  .description(`📱 Test the same Capacitor device target picker used by init onboarding.
+  .description(`📱 Run your Capacitor app on a connected device or simulator.
 
-For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
+If you omit the platform in an interactive terminal, Capgo asks whether to run iOS or Android first.
+The command lists available devices and simulators, lets you reload the list, and runs with your selection.
+For iOS, this asks whether to use a physical iPhone/iPad or simulator before showing devices.
 Use --no-launch to print the resolved command without starting the app.
 
 Example: npx @capgo/cli@latest run device ios --no-launch`)

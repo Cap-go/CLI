@@ -108,7 +108,7 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 
 ## <a id="run"></a> 📱 **Run**
 
-📱 Run and test Capacitor app targets from the CLI.
+📱 Run Capacitor apps on devices from the CLI.
 
 ### <a id="run-device"></a> 🔹 **Device**
 
@@ -116,8 +116,10 @@ npx @capgo/cli@latest init YOUR_API_KEY com.example.app
 npx @capgo/cli@latest run device
 ```
 
-📱 Test the same Capacitor device target picker used by init onboarding.
-For iOS, this asks whether to use a physical iPhone/iPad or simulator, supports checking again for targets, and runs with the resolved target when available.
+📱 Run your Capacitor app on a connected device or simulator.
+If you omit the platform in an interactive terminal, Capgo asks whether to run iOS or Android first.
+The command lists available devices and simulators, lets you reload the list, and runs with your selection.
+For iOS, this asks whether to use a physical iPhone/iPad or simulator before showing devices.
 Use --no-launch to print the resolved command without starting the app.
 
 **Example:**

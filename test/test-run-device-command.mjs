@@ -2,6 +2,7 @@
 
 import assert from 'node:assert/strict'
 import { spawnSync } from 'node:child_process'
+import { execPath } from 'node:process'
 
 let failures = 0
 
@@ -18,7 +19,7 @@ function test(name, fn) {
 }
 
 test('resolves iOS run device command without launching in non-interactive mode', () => {
-  const result = spawnSync('node', ['dist/index.js', 'run', 'device', 'ios', '--no-launch'], {
+  const result = spawnSync(execPath, ['dist/index.js', 'run', 'device', 'ios', '--no-launch'], {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
   })
@@ -28,6 +29,17 @@ test('resolves iOS run device command without launching in non-interactive mode'
   assert.match(output, /Resolved run command:/)
   assert.match(output, /cap run ios/)
   assert.doesNotMatch(output, /Run device test failed/)
+})
+
+test('requires a platform when run non-interactively without launching', () => {
+  const result = spawnSync(execPath, ['dist/index.js', 'run', 'device', '--no-launch'], {
+    encoding: 'utf8',
+    stdio: ['pipe', 'pipe', 'pipe'],
+  })
+  const output = `${result.stdout}\n${result.stderr}`
+
+  assert.notEqual(result.status, 0, output)
+  assert.match(output, /Platform is required in non-interactive mode/)
 })
 
 if (failures > 0) {

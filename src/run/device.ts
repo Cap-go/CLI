@@ -2,7 +2,7 @@ import type { PlatformChoice } from '../init/command'
 import { exit, stdin, stdout } from 'node:process'
 import { log as clackLog } from '@clack/prompts'
 import { normalizeRunDevicePlatform, resolveRunDeviceCommand, runPackageRunnerSync } from '../init/command'
-import { cancel as pCancel, log as pLog, outro as pOutro, spinner as pSpinner } from '../init/prompts'
+import { cancel as pCancel, isCancel as pIsCancel, log as pLog, outro as pOutro, select as pSelect, spinner as pSpinner } from '../init/prompts'
 import { setInitScreen } from '../init/runtime'
 import { formatRunnerCommand } from '../runner-command'
 import { formatError, getPMAndCommand } from '../utils'
@@ -21,9 +21,9 @@ function canSelectRunDeviceTargetInteractively(): boolean {
 }
 
 function handleNonInteractiveIosRunDevice(pm: ReturnType<typeof getPMAndCommand>): never {
-  clackLog.info('Non-interactive mode: iOS target selection needs an interactive terminal.')
-  clackLog.info(`List targets with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--list'])}`)
-  clackLog.info(`Run a concrete target with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
+  clackLog.info('Non-interactive mode: iOS device selection needs an interactive terminal.')
+  clackLog.info(`List devices with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--list'])}`)
+  clackLog.info(`Run a specific device with: ${formatRunnerCommand(pm.runner, ['cap', 'run', 'ios', '--target', '<id>'])}`)
   clackLog.error('Run device test failed.')
   exit(1)
 }
@@ -46,6 +46,45 @@ function finishRunDeviceTest(message: string, interactive: boolean): void {
 function getNonInteractiveRunDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, platformName: PlatformChoice): { args: string[], command: string } {
   const args = ['cap', 'run', platformName]
   return { args, command: formatRunnerCommand(pm.runner, args) }
+}
+
+async function selectRunDevicePlatform(platformName: string | undefined, interactive: boolean): Promise<PlatformChoice> {
+  if (platformName)
+    return normalizeRunDevicePlatform(platformName)
+
+  if (!interactive)
+    throw new Error('Platform is required in non-interactive mode. Pass "ios" or "android".')
+
+  const selectedPlatform = await pSelect({
+    message: 'Which platform do you want to run?',
+    options: [
+      { value: 'ios', label: 'iOS' },
+      { value: 'android', label: 'Android' },
+    ],
+  })
+
+  if (pIsCancel(selectedPlatform))
+    await exitCanceledRunDeviceTest()
+
+  return selectedPlatform as PlatformChoice
+}
+
+function setRunDeviceScreen(platformName?: PlatformChoice): void {
+  setInitScreen({
+    headerTitle: '📱  Capgo Run Device',
+    title: 'Run On Device',
+    introLines: [
+      platformName
+        ? 'Choose where to run your app.'
+        : 'Choose a platform, then pick a device or simulator.',
+      platformName === 'ios'
+        ? 'For iOS, use a physical iPhone/iPad or an iOS Simulator.'
+        : 'Reload the list if your device is not visible yet.',
+    ],
+    phaseLabel: platformName ? 'Device' : 'Platform',
+    statusLine: platformName ? `Platform: ${platformName.toUpperCase()}` : 'Choose iOS or Android',
+    tone: 'blue',
+  })
 }
 
 function runResolvedDeviceCommand(pm: ReturnType<typeof getPMAndCommand>, runCommand: { args: string[], command: string }, interactive: boolean): void {
@@ -86,7 +125,10 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
   const interactive = canSelectRunDeviceTargetInteractively()
   try {
     const pm = getPMAndCommand()
-    const platformNameChoice = normalizeRunDevicePlatform(platformName)
+    if (interactive)
+      setRunDeviceScreen(platformName ? normalizeRunDevicePlatform(platformName) : undefined)
+
+    const platformNameChoice = await selectRunDevicePlatform(platformName, interactive)
 
     if (!interactive) {
       const runCommand = getNonInteractiveRunDeviceCommand(pm, platformNameChoice)
@@ -103,19 +145,7 @@ export async function testRunDeviceCommand(platformName?: string, options: RunDe
       return
     }
 
-    setInitScreen({
-      headerTitle: '📱  Capgo Run Device',
-      title: 'Run Device Test',
-      introLines: [
-        'This uses the same device target picker as init onboarding.',
-        platformNameChoice === 'ios'
-          ? 'For iOS, choose a physical device or simulator, then refresh target discovery if needed.'
-          : 'For Android, this runs Capacitor directly.',
-      ],
-      phaseLabel: 'Device target',
-      statusLine: `Platform: ${platformNameChoice.toUpperCase()}`,
-      tone: 'blue',
-    })
+    setRunDeviceScreen(platformNameChoice)
 
     const runCommand = await resolveRunDeviceCommand(exitCanceledRunDeviceTest, pm, platformNameChoice)
     if (!runCommand.args) {
