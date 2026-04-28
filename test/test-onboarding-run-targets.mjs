@@ -49,6 +49,16 @@ test('parses Android device and emulator targets', () => {
   ])
 })
 
+test('parses Capacitor JSON output with package manager warnings', () => {
+  const targets = parseCapacitorRunTargetList(`npm warn Unknown project config "shamefully-hoist".
+npm warn Unknown project config "strict-peer-dependencies".
+[{"name":"iPhone martin","api":"iOS 26.4.2","id":"00008140-000931C01442801C"}]`)
+
+  assert.deepEqual(targets, [
+    { name: 'iPhone martin', api: 'iOS 26.4.2', id: '00008140-000931C01442801C' },
+  ])
+})
+
 test('returns an empty target list for malformed Capacitor output', () => {
   assert.deepEqual(parseCapacitorRunTargetList(''), [])
   assert.deepEqual(parseCapacitorRunTargetList('not json'), [])

@@ -2324,6 +2324,20 @@ export interface CapacitorRunTarget {
   id: string
 }
 
+interface CapacitorRunTargetListResult {
+  targets: CapacitorRunTarget[]
+  error?: Error
+}
+
+interface PackageRunnerListResult {
+  stdout: string
+  stderr: string
+  status: number | null
+  signal: NodeJS.Signals | null
+  error?: Error
+  timedOut?: boolean
+}
+
 const iosRunTargetActions = {
   refresh: '__refresh__',
   simulator: '__simulator__',
@@ -2331,6 +2345,7 @@ const iosRunTargetActions = {
 } as const
 const IOS_SIMULATOR_TARGET_SUFFIX_RE = /\(simulator\)$/i
 const INVALID_CAPACITOR_RUN_TARGET_IDS = new Set(['?'])
+const DEFAULT_CAPACITOR_RUN_TARGET_LIST_TIMEOUT_MS = 30_000
 type IosRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh | typeof iosRunTargetActions.simulator
 type IosSimulatorRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
 type CapacitorRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
@@ -2464,22 +2479,38 @@ function getSpawnOutputText(output: string | Buffer | null | undefined): string 
 }
 
 export function parseCapacitorRunTargetList(output: string): CapacitorRunTarget[] {
+  return parseCapacitorRunTargetListResult(output).targets
+}
+
+function extractCapacitorRunTargetJson(output: string): string {
   const trimmed = output.trim()
+  if (!trimmed || trimmed.startsWith('['))
+    return trimmed
+
+  const jsonStart = trimmed.indexOf('[')
+  const jsonEnd = trimmed.lastIndexOf(']')
+  return jsonStart >= 0 && jsonEnd > jsonStart
+    ? trimmed.slice(jsonStart, jsonEnd + 1)
+    : trimmed
+}
+
+function parseCapacitorRunTargetListResult(output: string): CapacitorRunTargetListResult {
+  const trimmed = extractCapacitorRunTargetJson(output)
   if (!trimmed)
-    return []
+    return { targets: [], error: new Error('Capacitor returned no target list output.') }
 
   let parsed: unknown
   try {
     parsed = JSON.parse(trimmed)
   }
   catch {
-    return []
+    return { targets: [], error: new Error('Capacitor returned an invalid target list.') }
   }
 
   if (!Array.isArray(parsed))
-    return []
+    return { targets: [], error: new Error('Capacitor returned target list data in an unexpected format.') }
 
-  return parsed
+  const targets = parsed
     .filter((target): target is Record<string, unknown> => typeof target === 'object' && target !== null)
     .map((target) => {
       const id = typeof target.id === 'string' ? target.id.trim() : ''
@@ -2492,6 +2523,8 @@ export function parseCapacitorRunTargetList(output: string): CapacitorRunTarget[
       }
     })
     .filter((target): target is CapacitorRunTarget => target.id.length > 0 && !INVALID_CAPACITOR_RUN_TARGET_IDS.has(target.id) && target.name.length > 0)
+
+  return { targets }
 }
 
 export function getPhysicalIosRunTargets(targets: CapacitorRunTarget[]): CapacitorRunTarget[] {
@@ -2502,38 +2535,131 @@ export function getSimulatorIosRunTargets(targets: CapacitorRunTarget[]): Capaci
   return targets.filter(target => IOS_SIMULATOR_TARGET_SUFFIX_RE.test(target.name))
 }
 
-function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice): { targets: CapacitorRunTarget[], error?: Error } {
+function getCapacitorRunTargetListTimeoutMs(): number {
+  const rawTimeout = env.CAPGO_RUN_DEVICE_LIST_TIMEOUT_MS
+  if (!rawTimeout)
+    return DEFAULT_CAPACITOR_RUN_TARGET_LIST_TIMEOUT_MS
+
+  const timeout = Number.parseInt(rawTimeout, 10)
+  return Number.isFinite(timeout) && timeout > 0
+    ? timeout
+    : DEFAULT_CAPACITOR_RUN_TARGET_LIST_TIMEOUT_MS
+}
+
+function runPackageRunnerForTargetList(runner: string, args: string[], timeoutMs: number): Promise<PackageRunnerListResult> {
+  let parsedRunner: ReturnType<typeof splitRunnerCommand>
   try {
-    const result = runPackageRunnerSync(runner, ['cap', 'run', platformName, '--list', '--json'], {
-      stdio: 'pipe',
-      encoding: 'utf8',
+    parsedRunner = splitRunnerCommand(runner)
+  }
+  catch (error) {
+    return Promise.resolve({
+      stdout: '',
+      stderr: '',
+      status: null,
+      signal: null,
+      error: error instanceof Error ? error : new Error(String(error)),
     })
+  }
 
-    if (result.error)
-      return { targets: [], error: result.error }
+  return new Promise((resolve) => {
+    let stdoutText = ''
+    let stderrText = ''
+    let settled = false
+    let timeout: ReturnType<typeof setTimeout> | undefined
 
-    if (result.status !== 0) {
-      const stderr = getSpawnOutputText(result.stderr)
-      const stdout = getSpawnOutputText(result.stdout)
-      return { targets: [], error: new Error(stderr || stdout || `cap run ${platformName} --list exited with code ${result.status ?? 'unknown'}`) }
+    const finish = (result: Omit<PackageRunnerListResult, 'stdout' | 'stderr'>) => {
+      if (settled)
+        return
+      settled = true
+      if (timeout)
+        clearTimeout(timeout)
+      resolve({
+        stdout: stdoutText,
+        stderr: stderrText,
+        ...result,
+      })
     }
 
-    return { targets: parseCapacitorRunTargetList(getSpawnOutputText(result.stdout)) }
+    const child = spawn(parsedRunner.command, [...parsedRunner.args, ...args], {
+      stdio: ['ignore', 'pipe', 'pipe'],
+    })
+
+    timeout = setTimeout(() => {
+      child.kill('SIGTERM')
+      finish({
+        status: null,
+        signal: 'SIGTERM',
+        timedOut: true,
+      })
+    }, timeoutMs)
+
+    child.stdout?.on('data', chunk => stdoutText += chunk.toString())
+    child.stderr?.on('data', chunk => stderrText += chunk.toString())
+    child.on('error', error => finish({
+      status: null,
+      signal: null,
+      error,
+    }))
+    child.on('close', (status, signal) => finish({
+      status,
+      signal,
+    }))
+  })
+}
+
+function createCapacitorRunTargetListError(runner: string, platformName: PlatformChoice, result: PackageRunnerListResult): Error {
+  const args = ['cap', 'run', platformName, '--list', '--json']
+  const command = formatRunnerCommand(runner, args)
+  const output = getSpawnOutputText(result.stderr) || getSpawnOutputText(result.stdout)
+
+  if (result.timedOut) {
+    const seconds = Math.max(1, Math.ceil(getCapacitorRunTargetListTimeoutMs() / 1000))
+    return new Error(`Timed out after ${seconds}s while checking ${platformName} targets. Run manually to see the native error: ${command}`)
+  }
+
+  if (result.error)
+    return new Error(`${formatError(result.error)}. Run manually to see the native error: ${command}`)
+
+  return new Error(output || `cap run ${platformName} --list exited with code ${result.status ?? 'unknown'}. Run manually to see the native error: ${command}`)
+}
+
+async function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice): Promise<CapacitorRunTargetListResult> {
+  try {
+    const args = ['cap', 'run', platformName, '--list', '--json']
+    const result = await runPackageRunnerForTargetList(runner, args, getCapacitorRunTargetListTimeoutMs())
+
+    if (result.timedOut || result.error)
+      return { targets: [], error: createCapacitorRunTargetListError(runner, platformName, result) }
+
+    if (result.status !== 0)
+      return { targets: [], error: createCapacitorRunTargetListError(runner, platformName, result) }
+
+    const parseResult = parseCapacitorRunTargetListResult(getSpawnOutputText(result.stdout))
+    if (parseResult.error)
+      return { targets: [], error: new Error(`${formatError(parseResult.error)} Run manually to see the native output: ${formatRunnerCommand(runner, args)}`) }
+
+    return parseResult
   }
   catch (error) {
     return { targets: [], error: error instanceof Error ? error : new Error(String(error)) }
   }
 }
 
-async function getCapacitorRunTargetListWithStatus(pm: PackageManagerInfo, platformName: PlatformChoice, message: string): Promise<{ targets: CapacitorRunTarget[], error?: Error }> {
+async function getCapacitorRunTargetListWithStatus(pm: PackageManagerInfo, platformName: PlatformChoice, message: string): Promise<CapacitorRunTargetListResult> {
   const s = pSpinner()
   s.start(message)
   await new Promise<void>(resolve => setTimeout(resolve, 0))
   try {
-    return getCapacitorRunTargetList(pm.runner, platformName)
+    const result = await getCapacitorRunTargetList(pm.runner, platformName)
+    if (result.error)
+      s.stop('Device check failed ❌', 'error')
+    else
+      s.stop()
+    return result
   }
-  finally {
-    s.stop()
+  catch (error) {
+    s.stop('Device check failed ❌', 'error')
+    return { targets: [], error: error instanceof Error ? error : new Error(String(error)) }
   }
 }
 
@@ -2582,10 +2708,10 @@ async function handlePhysicalIosRunTargets(cancelHandler: RunDeviceCancelHandler
   return iosRunTargetActions.refresh
 }
 
-async function handleMissingPhysicalIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo): Promise<IosRunTargetResolution> {
-  pLog.warn('No physical iOS device detected yet.')
+async function handleMissingPhysicalIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, listError?: Error): Promise<IosRunTargetResolution> {
+  pLog.warn(listError ? 'The iOS device list is unavailable right now.' : 'No physical iOS device detected yet.')
   const nextAction = await pSelect({
-    message: 'Connect and unlock your iPhone, then check again.',
+    message: listError ? 'Fix the error above, then reload the list.' : 'Connect and unlock your iPhone, then check again.',
     options: [
       { value: iosRunTargetActions.refresh, label: 'Reload list' },
       { value: iosRunTargetActions.simulator, label: 'Use iOS Simulator instead' },
@@ -2633,10 +2759,10 @@ async function handleSimulatorIosRunTargets(cancelHandler: RunDeviceCancelHandle
   return iosRunTargetActions.refresh
 }
 
-async function handleMissingSimulatorIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo): Promise<IosSimulatorRunTargetResolution> {
-  pLog.warn('No iOS Simulator detected yet.')
+async function handleMissingSimulatorIosRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, listError?: Error): Promise<IosSimulatorRunTargetResolution> {
+  pLog.warn(listError ? 'The iOS Simulator list is unavailable right now.' : 'No iOS Simulator detected yet.')
   const nextAction = await pSelect({
-    message: 'Open Xcode or install a simulator, then check again.',
+    message: listError ? 'Fix the error above, then reload the list.' : 'Open Xcode or install a simulator, then check again.',
     options: [
       { value: iosRunTargetActions.refresh, label: 'Reload list' },
       { value: iosRunTargetActions.skip, label: 'Skip running now' },
@@ -2667,7 +2793,7 @@ async function selectSimulatorIosRunTarget(cancelHandler: RunDeviceCancelHandler
 
     const selectionResult = simulatorTargets.length > 0
       ? await handleSimulatorIosRunTargets(cancelHandler, pm, simulatorTargets)
-      : await handleMissingSimulatorIosRunTargets(cancelHandler, pm)
+      : await handleMissingSimulatorIosRunTargets(cancelHandler, pm, result.error)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
     return selectionResult
@@ -2686,7 +2812,7 @@ async function selectPhysicalIosRunTarget(cancelHandler: RunDeviceCancelHandler,
 
     const selectionResult = physicalTargets.length > 0
       ? await handlePhysicalIosRunTargets(cancelHandler, pm, physicalTargets)
-      : await handleMissingPhysicalIosRunTargets(cancelHandler, pm)
+      : await handleMissingPhysicalIosRunTargets(cancelHandler, pm, result.error)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
     if (selectionResult === iosRunTargetActions.simulator)
@@ -2730,11 +2856,11 @@ async function handleCapacitorRunTargets(cancelHandler: RunDeviceCancelHandler, 
   return iosRunTargetActions.refresh
 }
 
-async function handleMissingCapacitorRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice): Promise<CapacitorRunTargetResolution> {
+async function handleMissingCapacitorRunTargets(cancelHandler: RunDeviceCancelHandler, pm: PackageManagerInfo, platformName: PlatformChoice, listError?: Error): Promise<CapacitorRunTargetResolution> {
   const targetLabel = getRunTargetLabel(platformName)
-  pLog.warn(`No ${targetLabel} detected yet.`)
+  pLog.warn(listError ? `The ${targetLabel} list is unavailable right now.` : `No ${targetLabel} detected yet.`)
   const nextAction = await pSelect({
-    message: 'Connect or start one, then reload the list.',
+    message: listError ? 'Fix the error above, then reload the list.' : 'Connect or start one, then reload the list.',
     options: [
       { value: iosRunTargetActions.refresh, label: 'Reload list' },
       { value: iosRunTargetActions.skip, label: 'Skip running now' },
@@ -2757,7 +2883,7 @@ async function selectCapacitorRunTarget(cancelHandler: RunDeviceCancelHandler, p
 
     const selectionResult = result.targets.length > 0
       ? await handleCapacitorRunTargets(cancelHandler, pm, platformName, result.targets)
-      : await handleMissingCapacitorRunTargets(cancelHandler, pm, platformName)
+      : await handleMissingCapacitorRunTargets(cancelHandler, pm, platformName, result.error)
     if (selectionResult === iosRunTargetActions.refresh)
       continue
     return selectionResult

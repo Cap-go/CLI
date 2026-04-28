@@ -2,7 +2,7 @@ import type { InitCodeDiff, InitEncryptionSummary, InitRuntimeState, InitStreami
 import { Alert } from '@inkjs/ui'
 import { Box, Text, useStdout } from 'ink'
 import Spinner from 'ink-spinner'
-import React, { useEffect, useState } from 'react'
+import React, { useSyncExternalStore } from 'react'
 import { CurrentStepSection, InitHeader, ProgressSection, PromptArea, ScreenIntro, SpinnerArea } from './components'
 
 function StreamingOutputPanel({ output, width, rows }: Readonly<{ output: InitStreamingOutput, width: number, rows: number }>) {
@@ -147,7 +147,7 @@ interface InitInkAppProps {
 }
 
 export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }: Readonly<InitInkAppProps>) {
-  const [snapshot, setSnapshot] = useState(getSnapshot())
+  const snapshot = useSyncExternalStore(subscribe, getSnapshot, getSnapshot)
   const { stdout } = useStdout()
   const columns = stdout?.columns ?? 96
   const rows = stdout?.rows ?? 24
@@ -192,13 +192,6 @@ export default function InitInkApp({ getSnapshot, subscribe, updatePromptError }
   const visibleLogCount = Math.max(0, rows - 14 - diffPanelHeight - encryptionPanelHeight)
   const visibleLogs = visibleLogCount === 0 ? [] : snapshot.logs.slice(-visibleLogCount)
   const screen = snapshot.screen
-
-  useEffect(() => {
-    const unsubscribe = subscribe(() => setSnapshot(getSnapshot()))
-    return () => {
-      unsubscribe()
-    }
-  }, [getSnapshot, subscribe])
 
   // When a streaming command is running we hand the entire viewport over to
   // the streaming panel — no progress bar, no logs, no prompt. This keeps
