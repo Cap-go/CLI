@@ -31,7 +31,7 @@ test('resolves iOS run device command without launching in non-interactive mode'
   assert.doesNotMatch(output, /Run device test failed/)
 })
 
-test('requires a platform when run non-interactively without launching', () => {
+test('requires an interactive terminal when no platform is provided', () => {
   const result = spawnSync(execPath, ['dist/index.js', 'run', 'device', '--no-launch'], {
     encoding: 'utf8',
     stdio: ['pipe', 'pipe', 'pipe'],
@@ -39,7 +39,8 @@ test('requires a platform when run non-interactively without launching', () => {
   const output = `${result.stdout}\n${result.stderr}`
 
   assert.notEqual(result.status, 0, output)
-  assert.match(output, /Platform is required in non-interactive mode/)
+  assert.match(output, /No platform provided/)
+  assert.match(output, /choose iOS or Android/)
 })
 
 if (failures > 0) {
