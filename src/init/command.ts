@@ -2326,6 +2326,8 @@ const iosRunTargetActions = {
   simulator: '__simulator__',
   skip: '__skip__',
 } as const
+const IOS_SIMULATOR_TARGET_SUFFIX_RE = /\(simulator\)$/i
+const INVALID_CAPACITOR_RUN_TARGET_IDS = new Set(['?'])
 type IosRunTargetResolution = RunDeviceStepOutcome | typeof iosRunTargetActions.refresh
 
 async function ensureNativePlatformForBuild(platform: PlatformChoice, config: CapacitorConfigSnapshot | undefined, runner: string): Promise<void> {
@@ -2457,7 +2459,18 @@ function getSpawnOutputText(output: string | Buffer | null | undefined): string 
 }
 
 export function parseCapacitorRunTargetList(output: string): CapacitorRunTarget[] {
-  const parsed = JSON.parse(output.trim())
+  const trimmed = output.trim()
+  if (!trimmed)
+    return []
+
+  let parsed: unknown
+  try {
+    parsed = JSON.parse(trimmed)
+  }
+  catch {
+    return []
+  }
+
   if (!Array.isArray(parsed))
     return []
 
@@ -2473,11 +2486,11 @@ export function parseCapacitorRunTargetList(output: string): CapacitorRunTarget[
         api,
       }
     })
-    .filter((target): target is CapacitorRunTarget => target.id.length > 0 && target.name.length > 0)
+    .filter((target): target is CapacitorRunTarget => target.id.length > 0 && !INVALID_CAPACITOR_RUN_TARGET_IDS.has(target.id) && target.name.length > 0)
 }
 
 export function getPhysicalIosRunTargets(targets: CapacitorRunTarget[]): CapacitorRunTarget[] {
-  return targets.filter(target => !/\(simulator\)$/i.test(target.name))
+  return targets.filter(target => !IOS_SIMULATOR_TARGET_SUFFIX_RE.test(target.name))
 }
 
 function getCapacitorRunTargetList(runner: string, platformName: PlatformChoice): { targets: CapacitorRunTarget[], error?: Error } {

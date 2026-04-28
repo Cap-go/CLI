@@ -26,6 +26,7 @@ test('parses Capacitor run target list output', () => {
     { name: 'iPhone 17 (simulator)', api: 'iOS 26.0', id: 'A-B-C-D' },
     { name: '', api: 'iOS 26.0', id: 'FALLBACK-ID' },
     { name: 'Missing ID', api: 'iOS 26.0' },
+    { name: 'Unresolved iPhone', api: 'iOS 26.0', id: '?' },
   ]))
 
   assert.deepEqual(targets, [
@@ -33,6 +34,12 @@ test('parses Capacitor run target list output', () => {
     { name: 'iPhone 17 (simulator)', api: 'iOS 26.0', id: 'A-B-C-D' },
     { name: 'FALLBACK-ID', api: 'iOS 26.0', id: 'FALLBACK-ID' },
   ])
+})
+
+test('returns an empty target list for malformed Capacitor output', () => {
+  assert.deepEqual(parseCapacitorRunTargetList(''), [])
+  assert.deepEqual(parseCapacitorRunTargetList('not json'), [])
+  assert.deepEqual(parseCapacitorRunTargetList(JSON.stringify({ name: 'Not a list' })), [])
 })
 
 test('filters physical iOS devices from simulator targets', () => {
