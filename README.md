@@ -1,3 +1,11 @@
+> [!WARNING]
+> # This repository is deprecated
+>
+> The Capgo CLI now lives in the main [Capgo monorepo](https://github.com/Cap-go/capgo).
+> This repository will be archived. Please open new issues, pull requests, and CLI development work in the Capgo monorepo instead.
+>
+> For current CLI documentation, use the [Capgo CLI docs](https://capgo.app/docs/cli/overview/).
+
 # Capgo CLI
   <a href="https://capgo.app/"><img src='https://raw.githubusercontent.com/Cap-go/capgo/main/assets/capgo_banner.png' alt='Capgo - Instant updates for capacitor'/></a>
 
